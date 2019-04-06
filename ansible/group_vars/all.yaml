@@ -1,0 +1,23 @@
+---
+# Default cr spec
+meta:
+  name: demosf
+namespace: default
+state: present
+
+# sf_image_name_base: "quay.io/software-factory"
+# Use local image for now...
+sf_image_name_base: "172.30.1.1:5000/myproject"
+
+gerrit_image_name: "{{ sf_image_name_base }}/sf-gerrit"
+
+sf_image_pull_policy: "IfNotPresent"
+sf_cluster_name: "{{ meta.name }}"
+
+
+gerrit_volume_name: "{{ sf_cluster_name }}-gerrit"
+gerritsshkey: "{{ sf_cluster_name }}-gerrit-ssh"
+gerritadminuser: "{{ sf_cluster_name }}-gerrit-admin"
+# TODO: generate and store in a secret
+gerrit_admin_email: "admin@localhost"
+gerrit_admin_password: "admin"

@@ -1,0 +1,271 @@
+---
+- name: Create Gerrit Volume
+  k8s:
+    state: "{{ state }}"
+    definition:
+      apiVersion: v1
+      kind: PersistentVolume
+      metadata:
+        name: "{{ gerrit_volume_name }}-{{ item }}"
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        capacity:
+          storage: 1Gi
+        hostPath:
+          path: "/data-gerrit-{{ item }}"
+        persistentVolumeReclaimPolicy: Retain
+  with_items:
+    - db
+    - git
+
+- name: Check if secrets are generated
+  set_fact:
+    gerrit_ssh_key: "{{ lookup('k8s', api_version='v1', kind='Secret', namespace=namespace, resource_name=gerritsshkey) }}"
+    gerrit_admin_user: "{{ lookup('k8s', api_version='v1', kind='Secret', namespace=namespace, resource_name=gerritadminuser) }}"
+
+- name: Create ssh key
+  when: not gerrit_ssh_key
+  block:
+    - name: Create ssh key
+      command: "ssh-keygen -f /opt/ansible/ssh-{{ sf_cluster_name }} -t rsa -N '' -C gerrit"
+      args:
+        creates: "/opt/ansible/ssh-{{ sf_cluster_name }}"
+
+    - name: Create ssh secret
+      k8s:
+        state: "{{ state }}"
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            labels:
+              sf_cluster: "{{ sf_cluster_name }}"
+            name: "{{ gerritsshkey }}"
+            namespace: "{{ namespace }}"
+          type: Opaque
+          data:
+            ssh_host_rsa_key: "{{ lookup('file', '/opt/ansible/ssh-' + sf_cluster_name) | b64encode }}"
+            ssh_host_rsa_key.pub: "{{ lookup('file', '/opt/ansible/ssh-' + sf_cluster_name + '.pub') | b64encode }}"
+
+- name: Create admin user secret
+  k8s:
+    state: "{{ state }}"
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        labels:
+          sf_cluster: "{{ sf_cluster_name }}"
+        name: "{{ gerritadminuser }}"
+        namespace: "{{ namespace }}"
+      type: Opaque
+      data:
+        admin_email: "{{ gerrit_admin_email | b64encode }}"
+        admin_http_password: "{{ gerrit_admin_password | b64encode }}"
+        admin_ssh_key.pub: "{{ lookup('file', '/opt/ansible/ssh-' + sf_cluster_name + '.pub') | b64encode }}"
+
+- name: Create gerrit config
+  k8s:
+    state: "{{ state }}"
+    definition:
+      kind: ConfigMap
+      apiVersion: v1
+      metadata:
+        name: "{{ sf_cluster_name }}-gerrit"
+        namespace: "{{ namespace }}"
+        labels:
+          sf_cluster: "{{ sf_cluster_name }}"
+      data:
+        # TODO: figure out why secret volume can't create sub-path
+        "ssh_host_rsa_key": |-
+          {{ lookup('file', '/opt/ansible/ssh-' + sf_cluster_name) }}
+        "ssh_host_rsa_key.pub": |-
+          {{ lookup('file', '/opt/ansible/ssh-' + sf_cluster_name + '.pub') }}
+        "gerrit.config": |-
+          [gerrit]
+          	basePath = git
+          	canonicalWebUrl = http://localhost:8080/
+          [database]
+          	type = h2
+          	database = db/ReviewDB
+          [index]
+          	type = LUCENE
+          [auth]
+            type = HTTP
+            gitBasicAuth = true
+            loginUrl = /r/login
+            logoutUrl = /auth/logout
+          [sendemail]
+            enable = false
+          	smtpServer = localhost
+          [sshd]
+          	listenAddress = *:29418
+          [httpd]
+          	listenUrl = http://*:8080/
+          [cache]
+          	directory = cache
+          [container]
+          	javaOptions = "-Dflogger.backend_factory=com.google.common.flogger.backend.log4j.Log4jBackendFactory#getInstance"
+          	javaOptions = "-Dflogger.logging_context=com.google.gerrit.server.logging.LoggingContext#getInstance"
+          	user = gerrit
+          	javaHome = /usr/lib/jvm/java-1.8.0/jre/
+          	javaOptions = -Djava.security.egd=file:/dev/./urandom
+          	war = /usr/lib64/gerrit/release.war
+          [receive]
+          	enableSignedPush = false
+
+- name: Create Gerrit Deployment
+  k8s:
+    state: "{{ state }}"
+    definition:
+      kind: "Deployment"
+      apiVersion: "extensions/v1beta1"
+      metadata:
+        name: "{{ sf_cluster_name }}-gerrit"
+        namespace: "{{ namespace }}"
+        labels:
+          sf_cluster: "{{ sf_cluster_name }}"
+      spec:
+        replicas: "1"
+        selector:
+          matchLabels:
+            app: "{{ sf_cluster_name }}-gerrit"
+            sf_cluster: "{{ sf_cluster_name }}"
+        template:
+          metadata:
+            name: "{{ sf_cluster_name }}-gerrit"
+            labels:
+              app: "{{ sf_cluster_name }}-gerrit"
+              sf_cluster: "{{ sf_cluster_name }}"
+          spec:
+            containers:
+            - name: "{{ sf_cluster_name }}-gerrit"
+              image: "{{ gerrit_image_name }}"
+              imagePullPolicy: "{{ sf_image_pull_policy }}"
+              ports:
+              - name: "ssh"
+                containerPort: "29418"
+                protocol: TCP
+              - name: "web"
+                containerPort: "8080"
+                protocol: TCP
+              volumeMounts:
+              - mountPath: "/var/log/gerrit"
+                name: gerrit-log-volume
+              - mountPath: "/var/lib/gerrit/.gerritcodereview"
+                name: gerrit-tmp-volume
+              - mountPath: "/var/lib/gerrit/tmp"
+                name: gerrit-tmp-volume
+              - mountPath: "/var/lib/gerrit/cache"
+                name: gerrit-cache-volume
+              - mountPath: "/var/lib/gerrit/index"
+                name: gerrit-index-volume
+              - mountPath: "/var/lib/gerrit/git"
+                name: gerrit-git-volume
+              - mountPath: "/var/lib/gerrit/db"
+                name: gerrit-db-volume
+              - mountPath: "/var/lib/gerrit/.init"
+                name: gerrit-admininit-volume
+              - mountPath: "/etc/gerrit"
+                name: gerrit-config-runtime
+              - mountPath: "/etc/gerrit-config/"
+              #  subPath: "gerrit.config"
+                name: gerrit-config-volume
+              # - mountPath: "/etc/gerrit/ssh_host_rsa_key"
+              #   subPath: "ssh_host_rsa_key"
+              #   name: gerrit-ssh-key-volume
+              #   readOnly: True
+              # - mountPath: "/etc/gerrit/ssh_host_rsa_key.pub"
+              #   subPath: "ssh_host_rsa_key.pub"
+              #   name: gerrit-ssh-key
+              #   readOnly: True
+              command:
+                - "/uid_entrypoint"
+                - "/usr/bin/java"
+                - "-Djava.security.egd=file:///dev/urandom"
+                - "-jar"
+                - "/usr/lib64/gerrit/release.war"
+                - "daemon"
+                - "-d"
+                - "/var/lib/gerrit/"
+                - "--console-log"
+            initContainers:
+            - name: "{{ sf_cluster_name }}-gerrit-init"
+              image: "{{ gerrit_image_name }}"
+              imagePullPolicy: "{{ sf_image_pull_policy }}"
+              command:
+                - "/uid_entrypoint"
+                - 'sh'
+                - '-c'
+                - |
+                    cp /etc/gerrit-config/* /etc/gerrit/;
+                    /usr/bin/java -jar /usr/lib64/gerrit/release.war init -d /var/lib/gerrit --batch --no-auto-start --skip-plugins
+              volumeMounts:
+              - mountPath: "/var/lib/gerrit/.gerritcodereview"
+                name: gerrit-tmp-volume
+              - mountPath: "/var/lib/gerrit/cache"
+                name: gerrit-cache-volume
+              - mountPath: "/var/lib/gerrit/index"
+                name: gerrit-index-volume
+              - mountPath: "/var/lib/gerrit/git"
+                name: gerrit-git-volume
+              - mountPath: "/var/lib/gerrit/db"
+                name: gerrit-db-volume
+              - mountPath: "/var/lib/gerrit/.init"
+                name: gerrit-admininit-volume
+              - mountPath: "/etc/gerrit"
+                name: gerrit-config-runtime
+              - mountPath: "/etc/gerrit-config/"
+              #  subPath: "gerrit.config"
+                name: gerrit-config-volume
+            volumes:
+              - name: gerrit-config-runtime
+                emptyDir: {}
+              - name: gerrit-log-volume
+                emptyDir: {}
+              - name: gerrit-index-volume
+                emptyDir: {}
+              - name: gerrit-tmp-volume
+                emptyDir: {}
+              - name: gerrit-git-volume
+              - name: gerrit-db-volume
+              - name: gerrit-cache-volume
+                emptyDir: {}
+              - name: gerrit-admininit-volume
+                secret:
+                  secretName: "{{ gerritadminuser }}"
+                  defaultMode: 256
+              - name: gerrit-config-volume
+                configMap:
+                  name: "{{ sf_cluster_name }}-gerrit"
+              - name: gerrit-ssh-key-volume
+                secret:
+                  secretName: "{{ gerritsshkey }}"
+                  defaultMode: 256
+
+- name: Create Gerrit Service
+  k8s:
+    state: "{{ state }}"
+    definition:
+      kind: Service
+      apiVersion: v1
+      metadata:
+        name: "{{ sf_cluster_name }}-gerrit"
+        namespace: "{{ namespace }}"
+        labels:
+          sf_cluster: "{{ sf_cluster_name }}"
+      spec:
+        type: ClusterIP
+        selector:
+          app: "{{ sf_cluster_name }}-gerrit"
+          sf_cluster: "{{ sf_cluster_name }}"
+        ports:
+        - name: "web"
+          port: 80
+          protocol: TCP
+          targetPort: 8080
+        - name: "ssh"
+          port: 29418
+          protocol: TCP
+          targetPort: 29418

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sf-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: sf-operator
+  template:
+    metadata:
+      labels:
+        name: sf-operator
+    spec:
+      serviceAccountName: sf-operator
+      containers:
+        - name: ansible
+          command:
+          - /uid_entrypoint
+          - /usr/local/bin/ao-logs
+          - /tmp/ansible-operator/runner
+          - stdout
+          # TODO: use a public name
+          image: "172.30.1.1:5000/myproject/sf-operator"
+          imagePullPolicy: "Never"
+          volumeMounts:
+          - mountPath: /tmp/ansible-operator/runner
+            name: runner
+            readOnly: true
+        - name: operator
+          image: "172.30.1.1:5000/myproject/sf-operator"
+          imagePullPolicy: "Never"
+          volumeMounts:
+          - mountPath: /tmp/ansible-operator/runner
+            name: runner
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "sf-operator"
+      volumes:
+        - name: runner
+          emptyDir: {}

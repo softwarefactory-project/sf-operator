@@ -1,0 +1,5 @@
+---
+- version: v1alpha1
+  group: operator.softwarefactory-project.io
+  kind: Gerrit
+  playbook: /opt/ansible/gerrit.yaml

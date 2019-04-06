@@ -1,0 +1,5 @@
+---
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - debug: msg="Running Software Factory Operator Playbook"
