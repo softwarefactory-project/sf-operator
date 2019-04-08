@@ -6,3 +6,5 @@
     - import_role:
         name: sf_deploy_gerrit
       when: "'gerrit' in services"
+    - import_role:
+        name: create_config
