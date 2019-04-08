@@ -8,6 +8,5 @@
       when: "'gerrit' in services"
     - import_role:
         name: create_config
-    - pause:
     - import_role:
         name: deploy_zuul

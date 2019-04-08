@@ -1,24 +1,20 @@
 - name: Deploy Gerrit
   k8s:
+    state: "{{ state }}"
     definition:
       apiVersion: "{{ sf_api_version }}"
       kind: "Gerrit"
       metadata:
-        name: "{{ sf_cluster_name }}"
+        name: "{{ sf_cluster_name }}-gerrit"
         namespace: "{{ namespace }}"
         labels:
           sf_cluster: "{{ sf_cluster_name }}"
       spec:
         size: 1
-  # Remove this when gerrit crd are managed
-  when: False
 
 - name: Wait for Service
   set_fact:
     gerrit_service: "{{ lookup('k8s', api_version='v1', kind='Service', namespace=namespace, resource_name=sf_cluster_name+'-gerrit')}}"
-  until: gerrit_service
-  retries: 5
-  delay: 10
 
 - name: Create convenient fact
   set_fact:
@@ -49,7 +45,7 @@
   register: gerrit_zuul_account
 
 - name: Create zuul gerrit account
-  #when: gerrit_zuul_account.status == 404
+  when: gerrit_zuul_account.status == 404
   block:
     - name: Create zuul ssh key
       vars:
@@ -57,7 +53,7 @@
         key_comment: "zuul"
         secret_name: "{{ sf_cluster_name }}-zuul-ssh-secret"
         k8s_labels:
-          app: "{{ sf_cluster_name }}-zuul"
+          app: "zuul"
           zuul_cluster: "{{ sf_cluster_name }}-zuul"
       import_role:
         name: create_ssh_key

@@ -23,7 +23,7 @@
 
 - name: Clone config project
   git:
-    repo: "{{ gerrit_git }}/config.git"
+    repo: "{{ gerrit_api }}/config.git"
     dest: "/opt/ansible/git-{{ sf_cluster_name }}-config"
     key_file: "/opt/ansible/ssh-{{ sf_cluster_name }}"
   ignore_errors: yes
@@ -109,7 +109,7 @@
 
 - name: Clone demo-project project
   git:
-    repo: "{{ gerrit_git }}/demo-project.git"
+    repo: "{{ gerrit_api }}/demo-project.git"
     dest: "/opt/ansible/git-{{ sf_cluster_name }}-demo-project"
     key_file: "/opt/ansible/ssh-{{ sf_cluster_name }}"
   ignore_errors: yes

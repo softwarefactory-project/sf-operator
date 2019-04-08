@@ -1,5 +1,7 @@
 ---
 - name: Create Gerrit Volume
+  # This needs to be done outside of the operator...
+  when: false
   k8s:
     state: "{{ state }}"
     definition:
@@ -7,6 +9,7 @@
       kind: PersistentVolume
       metadata:
         name: "{{ gerrit_volume_name }}-{{ item }}"
+        namespace: "{{ namespace }}"
       spec:
         accessModes:
         - ReadWriteOnce
@@ -251,7 +254,7 @@
       kind: Service
       apiVersion: v1
       metadata:
-        name: "{{ sf_cluster_name }}-gerrit"
+        name: "{{ sf_cluster_name }}"
         namespace: "{{ namespace }}"
         labels:
           sf_cluster: "{{ sf_cluster_name }}"

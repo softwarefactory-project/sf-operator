@@ -14,21 +14,6 @@
         name: "{{ secret_name }}"
         namespace: "{{ namespace }}"
       type: Opaque
-      stringData:
-        id_rsa: |
-          {{lookup('file', '/opt/ansible/ssh-' + key_name) }}
-
-- name: Create ssh pub secret
-  k8s:
-    state: "{{ state }}"
-    definition:
-      apiVersion: v1
-      kind: Secret
-      metadata:
-        labels: "{{ k8s_labels }}"
-        name: "{{ secret_name }}-pub"
-        namespace: "{{ namespace }}"
-      type: Opaque
-      stringData:
-        id_rsa.pub: |
-          {{lookup('file', '/opt/ansible/ssh-' + key_name + '.pub') }}
+      data:
+        id_rsa: "{{ lookup('file', '/opt/ansible/ssh-' + key_name) | b64encode }}"
+        id_rsa.pub: "{{ lookup('file', '/opt/ansible/ssh-' + key_name + '.pub') | b64encode }}"

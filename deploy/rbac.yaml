@@ -8,7 +8,6 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  creationTimestamp: null
   name: sf-operator
 rules:
 - apiGroups:
@@ -18,6 +17,7 @@ rules:
   - services
   - endpoints
   - persistentvolumeclaims
+  - persistentvolumes
   - events
   - configmaps
   - secrets
@@ -60,7 +60,6 @@ rules:
   - '*'
   verbs:
   - '*'
-
 
 ---
 
