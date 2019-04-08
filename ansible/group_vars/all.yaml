@@ -5,6 +5,18 @@ meta:
 namespace: default
 state: present
 
+services:
+  - gerrit
+  - zuul
+fqdn: sftests.com
+
+
+sf_cluster_name: "{{ meta.name }}"
+
+
+
+sf_api_version: "operator.softwarefactory-project.io/v1alpha1"
+
 # sf_image_name_base: "quay.io/software-factory"
 # Use local image for now...
 sf_image_name_base: "172.30.1.1:5000/myproject"

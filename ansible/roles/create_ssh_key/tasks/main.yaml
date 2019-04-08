@@ -1,0 +1,34 @@
+- name: Create ssh key
+  command: "ssh-keygen -f /opt/ansible/ssh-{{ key_name }} -t rsa -N '' -C '{{ key_comment }}'"
+  args:
+    creates: "/opt/ansible/ssh-{{ key_name }}"
+
+- name: Create ssh secret
+  k8s:
+    state: "{{ state }}"
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        labels: "{{ k8s_labels }}"
+        name: "{{ secret_name }}"
+        namespace: "{{ namespace }}"
+      type: Opaque
+      stringData:
+        id_rsa: |-
+          {{lookup('file', '/opt/ansible/ssh-' + key_name) }}
+
+- name: Create ssh pub secret
+  k8s:
+    state: "{{ state }}"
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        labels: "{{ k8s_labels }}"
+        name: "{{ secret_name }}-pub"
+        namespace: "{{ namespace }}"
+      type: Opaque
+      stringData:
+        id_rsa.pub: |-
+          {{lookup('file', '/opt/ansible/ssh-' + key_name + '.pub') }}

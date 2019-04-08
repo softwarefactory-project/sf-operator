@@ -3,3 +3,8 @@
   group: operator.softwarefactory-project.io
   kind: Gerrit
   playbook: /opt/ansible/gerrit.yaml
+
+- version: v1alpha1
+  group: oeprator.softwarefactory-project.io
+  kind: SoftwareFactory
+  playbook: /opt/ansible/software-factory.yaml

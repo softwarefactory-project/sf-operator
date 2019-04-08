@@ -3,3 +3,6 @@
   gather_facts: no
   tasks:
     - debug: msg="Running Software Factory Operator Playbook"
+    - import_role:
+        name: sf_deploy_gerrit
+      when: "'gerrit' in services"
