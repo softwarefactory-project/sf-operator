@@ -22,7 +22,9 @@
 
 - name: Create convenient fact
   set_fact:
+    gerrit_ip: "{{ gerrit_service.spec.clusterIP }}"
     gerrit_api: "http://{{ gerrit_service.spec.clusterIP }}"
+    gerrit_git: "ssh://admin@{{ gerrit_service.spec.clusterIP }}:29418"
     # TODO: load this from a secret to be created by the gerrit operator
     gerrit_admin_password: "admin"
 
@@ -47,7 +49,7 @@
   register: gerrit_zuul_account
 
 - name: Create zuul gerrit account
-  when: gerrit_zuul_account.status == 404
+  #when: gerrit_zuul_account.status == 404
   block:
     - name: Create zuul ssh key
       vars:

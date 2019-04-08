@@ -1,5 +1,5 @@
 - name: Create ssh key
-  command: "ssh-keygen -f /opt/ansible/ssh-{{ key_name }} -t rsa -N '' -C '{{ key_comment }}'"
+  command: "ssh-keygen -f /opt/ansible/ssh-{{ key_name }} -m PEM -t rsa -N '' -C '{{ key_comment }}'"
   args:
     creates: "/opt/ansible/ssh-{{ key_name }}"
 
@@ -15,7 +15,7 @@
         namespace: "{{ namespace }}"
       type: Opaque
       stringData:
-        id_rsa: |-
+        id_rsa: |
           {{lookup('file', '/opt/ansible/ssh-' + key_name) }}
 
 - name: Create ssh pub secret
@@ -30,5 +30,5 @@
         namespace: "{{ namespace }}"
       type: Opaque
       stringData:
-        id_rsa.pub: |-
+        id_rsa.pub: |
           {{lookup('file', '/opt/ansible/ssh-' + key_name + '.pub') }}

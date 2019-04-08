@@ -1,0 +1,34 @@
+- name: Deploy Zuul
+  k8s:
+    state: "{{ state }}"
+    definition:
+      apiVersion: "operator.zuul-ci.org/v1alpha1"
+      kind: "Zuul"
+      metadata:
+        name: "{{ sf_cluster_name }}-zuul"
+        namespace: "{{ namespace }}"
+        labels:
+          sf_cluster: "{{ sf_cluster_name }}"
+      spec:
+        merger:
+          min: 0
+          max: 5
+        executor:
+          min: 1
+          max: 5
+        sshsecretname: "{{ sf_cluster_name }}-zuul-ssh-secret"
+        connections:
+          - name: gerrit
+            driver: gerrit
+            server: "{{ gerrit_ip }}"
+            user: zuul
+            canonical_hostname: "{{ fqdn }}"
+        tenants:
+          - tenant:
+              name: demo
+              source:
+                gerrit:
+                  "config-projects":
+                    - config
+                  "untrusted-projects":
+                    - demo-project
