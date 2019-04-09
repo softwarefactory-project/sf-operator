@@ -2,7 +2,6 @@
 # Default cr spec
 meta:
   name: demosf
-namespace: default
 state: present
 
 services:
@@ -13,6 +12,7 @@ fqdn: sftests.com
 
 sf_cluster_name: "{{ meta.name }}"
 
+namespace: "{{ meta.namespace|default('default') }}"
 
 
 sf_api_version: "operator.softwarefactory-project.io/v1alpha1"
