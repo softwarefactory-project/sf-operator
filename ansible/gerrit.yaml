@@ -1,7 +1,0 @@
----
-- hosts: localhost
-  gather_facts: no
-  tasks:
-    - debug: msg="Running Gerrit Operator Playbook"
-    - import_role:
-        name: deploy_gerrit

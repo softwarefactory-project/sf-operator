@@ -15,7 +15,23 @@
 # under the License.
 #
 
-- version: v1alpha1
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: softwarefactories.softwarefactory-project.io
+spec:
   group: softwarefactory-project.io
-  kind: SoftwareFactory
-  role: /opt/ansible/roles/sf
+  names:
+    kind: SoftwareFactory
+    listKind: SoftwareFactoryList
+    plural: softwarefactories
+    singular: softwarefactory
+    shortNames:
+      - sf
+  scope: Namespaced
+  subresources:
+    status: {}
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true

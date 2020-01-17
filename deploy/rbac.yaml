@@ -1,3 +1,20 @@
+# This file is managed by the configuration.dhall file, all changes will be lost.
+#
+# Copyright 2020 Red Hat
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -15,30 +32,22 @@ rules:
   resources:
   - pods
   - services
+  - services/finalizers
   - endpoints
   - persistentvolumeclaims
-  - persistentvolumes
   - events
   - configmaps
   - secrets
+  - ingresses
   verbs:
-  - '*'
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
-  verbs:
+  - create
+  - delete
   - get
-- apiGroups:
-  - apps
-  - extensions
-  resources:
-  - deployments
-  - daemonsets
-  - replicasets
-  - statefulsets
-  verbs:
-  - '*'
+  - list
+  - patch
+  - update
+  - watch
+
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -46,6 +55,7 @@ rules:
   verbs:
   - get
   - create
+
 - apiGroups:
   - apps
   resourceNames:
@@ -54,12 +64,35 @@ rules:
   - deployments/finalizers
   verbs:
   - update
+
 - apiGroups:
-  - operator.softwarefactory-project.io
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+
+- apiGroups:
+  - softwarefactory-project.io
   resources:
   - '*'
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 
 ---
 
@@ -73,16 +106,4 @@ subjects:
 roleRef:
   kind: Role
   name: sf-operator
-  apiGroup: rbac.authorization.k8s.io
----
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: sf-operator-zuul
-subjects:
-- kind: ServiceAccount
-  name: sf-operator
-roleRef:
-  kind: Role
-  name: zuul-operator
   apiGroup: rbac.authorization.k8s.io
