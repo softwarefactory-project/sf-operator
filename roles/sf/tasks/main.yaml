@@ -1,0 +1,25 @@
+---
+- include_role:
+    name: zuul-ensure-gearman-tls
+
+- include_role:
+    name: zuul-ensure-executor-ssh-key
+
+- name: Convert spec to template input
+  json_to_dhall:
+    schema: "({{ sf_app_path }}).Input.Type"
+    json: "{{ json_spec | to_json }}"
+  vars:
+    json_spec:
+      name: "{{ sf_name }}"
+      components: "{{ raw_spec['components'] | default({}) }}"
+      connections: "{{ raw_spec['connections'] | default({}) }}"
+      tenant: "{{ raw_spec['tenant'] | default({}) }}"
+  register: _dhall
+
+- include_role:
+    name: dhall
+  vars:
+    expression: |
+      {{ kubernetes_deploy_path }}
+      (({{ sf_app_path }}).Application {{ _dhall.result }})

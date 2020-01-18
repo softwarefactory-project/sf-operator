@@ -1,0 +1,11 @@
+sf_name: "{{ meta.name | default('sf') }}"
+namespace: "{{ meta.namespace | default('default') }}"
+state: "{{ k8s_state | default('present') }}"
+sf_app_path: "/opt/ansible/conf/sf/applications/SoftwareFactory.dhall"
+kubernetes_deploy_path: "/opt/ansible/conf/operator/deploy/Kubernetes.dhall"
+
+zuul_name: "{{ sf_name }}-zuul"
+
+# Here we use softwarefactory_spec to get un-modified cr
+# see: https://github.com/operator-framework/operator-sdk/issues/1770
+raw_spec: "{{ vars['_softwarefactory-project_io_softwarefactory_spec'] | default(spec) }}"

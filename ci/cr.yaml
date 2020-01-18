@@ -1,0 +1,15 @@
+apiVersion: softwarefactory-project.io/v1alpha1
+kind: SoftwareFactory
+metadata:
+  name: sf
+spec:
+  tenant:
+   name: local
+   projects:
+     - source: opendev.org
+       config:
+         - zuul/base-zuul-jobs
+       untrusted:
+         - zuul/zuul-jobs
+  components: {}
+  connections: {}

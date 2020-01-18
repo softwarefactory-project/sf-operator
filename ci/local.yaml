@@ -1,0 +1,20 @@
+- hosts: localhost
+  gather_facts: no
+  vars:
+    kubernetes_deploy_path: ../conf/operator/deploy/Kubernetes.dhall
+    sf_app_path: ../conf/sf/applications/SoftwareFactory.dhall
+    meta:
+      name: sf
+      namespace: myproject
+    spec:
+      tenant:
+        name: local
+        projects:
+          - source: opendev.org
+            config:
+              - zuul/zuul-base-jobs
+            untrusted:
+              - zuul/zuul-jobs
+
+  roles:
+    - sf

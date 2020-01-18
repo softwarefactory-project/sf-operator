@@ -1,0 +1,11 @@
+name: sf
+tenant:
+ name: local
+ projects:
+   - source: opendev.org
+     config:
+       - zuul/zuul-base-jobs
+     untrusted:
+       - zuul/zuul-jobs
+components: {}
+connections: {}
