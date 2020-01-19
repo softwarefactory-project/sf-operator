@@ -205,7 +205,7 @@ let DefaultKey =
 
 in  { Input = Input
     , Schemas = Schemas
-    , Types = { Mqtt = Mqtt }
+    , Types = { Mqtt = Mqtt, Git = Git }
     , Application =
             \(input : Input.Type)
         ->  let merger-service =

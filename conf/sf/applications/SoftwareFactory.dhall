@@ -2,11 +2,15 @@
 
 let Zuul = ../../zuul/applications/Zuul.dhall
 
+let ZuulHelpers = ../../zuul/applications/helpers.dhall
+
 let SecretRef = { secretName : Text, key : Optional Text }
 
 let Schemas =
       { Components =
-          { Type = { mqtt : Optional Bool }, default = { mqtt = Some False } }
+          { Type = { mqtt : Optional Bool, test-config : Optional Bool }
+          , default = { mqtt = Some False, test-config = Some False }
+          }
       }
 
 let TenantSource = { source : Text, config : List Text, untrusted : List Text }
@@ -88,14 +92,12 @@ let addOpendevGit =
       ->  let opendev =
                 { name = "opendev.org", baseurl = "https://opendev.org" }
 
-          in  Some
-                ( Optional/fold
-                    (List Zuul.Schemas.Connection.Git)
-                    gits
-                    (List Zuul.Schemas.Connection.Git)
-                    (\(some : List Zuul.Schemas.Connection.Git) -> some)
-                    [ opendev ]
-                )
+          in  Optional/fold
+                (List Zuul.Schemas.Connection.Git)
+                gits
+                (List Zuul.Schemas.Connection.Git)
+                (\(some : List Zuul.Schemas.Connection.Git) -> some)
+                [ opendev ]
 
 let OptionalBool =
           \(toggle : Optional Bool)
@@ -113,13 +115,64 @@ let addService =
 in  { Input = Input
     , Application =
             \(input : Input.Type)
-        ->  let zuul-config =
+        ->  let tenant =
+                        if OptionalBool input.components.test-config
+
+                  then      input.tenant
+                        //  { projects =
+                                  input.tenant.projects
+                                # [ { source = "local-config"
+                                    , config = [ "config" ]
+                                    , untrusted = [] : List Text
+                                    }
+                                  ]
+                            }
+
+                  else  input.tenant
+
+            let test-config =
+                  { name = "config"
+                  , dir = "/config"
+                  , files =
+                    [ { path = "zuul.yaml"
+                      , content =
+                          ''
+                          - pipeline:
+                              name: periodic
+                              manager: independent
+                              trigger:
+                                timer:
+                                  - time: '* * * * * *'
+
+                          - job:
+                              name: test-job
+                              parent: null
+                              run: base.yaml
+
+                          - project:
+                              periodic:
+                                jobs:
+                                  - test-job
+                          ''
+                      }
+                    , { path = "base.yaml"
+                      , content =
+                          ''
+                          - hosts: localhost
+                            tasks:
+                              - debug: msg='Test job is running'
+                              - pause: seconds=30
+                          ''
+                      }
+                    ]
+                  }
+
+            let zuul-config =
                   Operator.Schemas.Volume::{
                   , name = "zuul-config"
                   , dir = "/etc/zuul-scheduler"
                   , files =
-                    [ { path = "main.yaml", content = Tenant/show input.tenant }
-                    ]
+                    [ { path = "main.yaml", content = Tenant/show tenant } ]
                   }
 
             let nodepool-config =
@@ -154,7 +207,19 @@ in  { Input = Input
                     }
                   , connections =
                           input.connections
-                      //  { gits = addOpendevGit input.connections.gits
+                      //  { gits = Some
+                              (   addOpendevGit input.connections.gits
+                                # (       if OptionalBool
+                                               input.components.test-config
+
+                                    then  [ { name = "local-config"
+                                            , baseurl = "git://config"
+                                            }
+                                          ]
+
+                                    else  [] : List Zuul.Types.Git
+                                  )
+                              )
                           , mqtts =
                                     if OptionalBool input.components.mqtt
 
@@ -198,16 +263,34 @@ in  { Input = Input
                                   }
                                 ]
                             }
+                        # addService
+                            input.components.test-config
+                            (     ZuulHelpers.Services.InternalConfig
+                              //  { container =
+                                          ZuulHelpers.Services.InternalConfig.container
+                                      //  { image = sf-image "git-daemon" }
+                                  }
+                            )
                     , kind = "sf"
                     , volumes =
                             \(serviceType : Operator.Types.ServiceType)
                         ->  let empty = [] : List Operator.Schemas.Volume.Type
 
+                            let test-config =
+                                        if OptionalBool
+                                             input.components.test-config
+
+                                  then  [ test-config ]
+
+                                  else  empty
+
                             let generated-conf =
                                   merge
-                                    { _All = [ zuul-config, nodepool-config ]
+                                    { _All =
+                                          [ zuul-config, nodepool-config ]
+                                        # test-config
                                     , Database = empty
-                                    , Config = empty
+                                    , Config = test-config
                                     , Scheduler = empty
                                     , Launcher = empty
                                     , Executor = empty

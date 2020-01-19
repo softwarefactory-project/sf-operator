@@ -9,6 +9,7 @@
     spec:
       components:
         mqtt: true
+        test-config: true
       tenant:
         name: local
         projects:

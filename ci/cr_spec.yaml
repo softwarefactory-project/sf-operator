@@ -9,4 +9,5 @@ tenant:
        - zuul/zuul-jobs
 components:
   mqtt: true
+  test-config: true
 connections: {}
