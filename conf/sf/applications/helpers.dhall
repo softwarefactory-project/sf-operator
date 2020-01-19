@@ -163,6 +163,15 @@ let Zookeeper =
         , "CMD /usr/libexec/zookeeper"
         ]
 
+let Mosquitto =
+      Container/child
+        "base"
+        "mosquitto"
+        [ install [ "mosquitto" ]
+        , "USER mosquitto"
+        , "CMD /usr/sbin/mosquitto -c /etc/mosquitto/mosquitto.conf"
+        ]
+
 let Config =
       Container/child
         "base"
@@ -208,6 +217,7 @@ let ContainersList =
       , Nodepool.Base
       , Nodepool.Launcher
       , Zookeeper
+      , Mosquitto
       , Config
       , CentosPod
       ]

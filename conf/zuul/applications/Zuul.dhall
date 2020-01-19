@@ -18,7 +18,12 @@ let GitHub = { name : Text, app_id : Natural, app_key : UserSecret }
 
 let Pagure = { name : Text }
 
-let Mqtt = { name : Text }
+let Mqtt =
+      { name : Text
+      , server : Text
+      , user : Optional Text
+      , password : Optional UserSecret
+      }
 
 let GitLab = { name : Text }
 
@@ -200,6 +205,7 @@ let DefaultKey =
 
 in  { Input = Input
     , Schemas = Schemas
+    , Types = { Mqtt = Mqtt }
     , Application =
             \(input : Input.Type)
         ->  let merger-service =
@@ -371,6 +377,38 @@ in  { Input = Input
                           ''
                     )
 
+            let mqtts-conf =
+                  Helpers.mkConns
+                    Mqtt
+                    input.connections.mqtts
+                    (     \(mqtt : Mqtt)
+                      ->  let user =
+                                Optional/fold
+                                  Text
+                                  mqtt.user
+                                  Text
+                                  (\(some : Text) -> "user=${some}")
+                                  ""
+
+                          let password =
+                                Optional/fold
+                                  UserSecret
+                                  mqtt.password
+                                  Text
+                                  (     \(password : UserSecret)
+                                    ->  "password=%(ZUUL_MQTT_PASSWORD)"
+                                  )
+                                  ""
+
+                          in  ''
+                              [connection ${mqtt.name}]
+                              driver=mqtt
+                              server=${mqtt.server}
+                              ${user}
+                              ${password}
+                              ''
+                    )
+
             let zuul-conf =
                       ''
                       [gearman]
@@ -411,6 +449,7 @@ in  { Input = Input
                   ++  gits-conf
                   ++  gerrits-conf
                   ++  githubs-conf
+                  ++  mqtts-conf
 
             let nodepool-conf =
                   ''
@@ -605,6 +644,38 @@ in  { Input = Input
                                 )
                                 NoEnvSecret
 
+                        let mqtt-password =
+                                  \(conn : Mqtt)
+                              ->  Optional/fold
+                                    UserSecret
+                                    conn.password
+                                    (List Operator.Schemas.EnvSecret.Type)
+                                    (     \(some : UserSecret)
+                                      ->  [ { name = "ZUUL_MQTT_PASSWORD"
+                                            , secret = some.secretName
+                                            , key =
+                                                DefaultText some.key "CHANGE_ME"
+                                            }
+                                          ]
+                                    )
+                                    NoEnvSecret
+
+                        let mqtt-passwords =
+                              Prelude.List.concat
+                                Operator.Schemas.EnvSecret.Type
+                                ( Prelude.List.map
+                                    Mqtt
+                                    (List Operator.Schemas.EnvSecret.Type)
+                                    mqtt-password
+                                    ( Optional/fold
+                                        (List Mqtt)
+                                        input.connections.mqtts
+                                        (List Mqtt)
+                                        (\(some : List Mqtt) -> some)
+                                        ([] : List Mqtt)
+                                    )
+                                )
+
                         let zk-hosts =
                               Optional/fold
                                 UserSecret
@@ -620,9 +691,9 @@ in  { Input = Input
                                 NoEnvSecret
 
                         in  merge
-                              { _All = db-uri # zk-hosts
+                              { _All = db-uri # zk-hosts # mqtt-passwords
                               , Database = NoEnvSecret
-                              , Scheduler = db-uri # zk-hosts
+                              , Scheduler = db-uri # zk-hosts # mqtt-passwords
                               , Launcher = zk-hosts
                               , Executor = NoEnvSecret
                               , Gateway = db-uri # zk-hosts

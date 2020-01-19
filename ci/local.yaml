@@ -7,6 +7,8 @@
       name: sf
       namespace: myproject
     spec:
+      components:
+        mqtt: true
       tenant:
         name: local
         projects:

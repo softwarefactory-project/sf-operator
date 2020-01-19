@@ -154,7 +154,21 @@ in  { Input = Input
                     }
                   , connections =
                           input.connections
-                      //  { gits = addOpendevGit input.connections.gits }
+                      //  { gits = addOpendevGit input.connections.gits
+                          , mqtts =
+                                    if OptionalBool input.components.mqtt
+
+                              then  Some
+                                      [ { name = "mqtt"
+                                        , server = "mosquitto"
+                                        , user = None Text
+                                        , password =
+                                            None Zuul.Schemas.UserSecret.Type
+                                        }
+                                      ]
+
+                              else  None (List Zuul.Types.Mqtt)
+                          }
                   , executor = Zuul.Schemas.Executor::{
                     , image = Some (zuul-image "executor")
                     , ssh_key = Zuul.Schemas.UserSecret::{
@@ -167,7 +181,23 @@ in  { Input = Input
 
             in      ZuulApp
                 //  { name = input.name
-                    , services = ZuulApp.services
+                    , services =
+                          ZuulApp.services
+                        # addService
+                            input.components.mqtt
+                            Operator.Schemas.Service::{
+                            , name = "mosquitto"
+                            , container = Operator.Schemas.Container::{
+                              , image = sf-image "mosquitto"
+                              }
+                            , ports = Some
+                                [ Operator.Schemas.Port::{
+                                  , host = Some 1883
+                                  , container = 1883
+                                  , name = "mqtt"
+                                  }
+                                ]
+                            }
                     , kind = "sf"
                     , volumes =
                             \(serviceType : Operator.Types.ServiceType)

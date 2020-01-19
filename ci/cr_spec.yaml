@@ -7,5 +7,6 @@ tenant:
        - zuul/zuul-base-jobs
      untrusted:
        - zuul/zuul-jobs
-components: {}
+components:
+  mqtt: true
 connections: {}
