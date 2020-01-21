@@ -1,0 +1,49 @@
+- name: Lookup zuul conf secret
+  set_fact:
+    old_zuul_conf: "{{ zuul_conf_secret.data['zuul.conf'] | checksum }}"
+    new_zuul_conf: "{{ lookup('k8s', api_version='v1', kind='Secret', namespace=namespace, resource_name=zuul_name + '-secret-zuul').data['zuul.conf'] | checksum }}"
+    scheduler: "{{ lookup('k8s', api_version='v1', kind='StatefulSet', namespace=namespace, resource_name=zuul_name + '-scheduler') }}"
+
+- name: Restart zuul
+  when: >
+    new_zuul_conf != old_zuul_conf or (
+      scheduler.spec.template.metadata.labels.version is defined and
+      scheduler.spec.template.metadata.labels.version != new_zuul_conf )
+  vars:
+    services:
+        - kind: StatefulSet
+          name: "{{ zuul_name }}-scheduler"
+        - kind: StatefulSet
+          name: "{{ zuul_name }}-executor"
+        - kind: Deployment
+          name: "{{ zuul_name }}-web"
+    extra_services:
+        - kind: Deployment
+          name: "{{ zuul_name }}-merger"
+
+  block:
+    - name: Dump pipelines qeues
+      dump_zuul_changes:
+      register: zuul_changes
+
+    - name: Patch service
+      k8s:
+        state: present
+        namespace: "{{ namespace }}"
+        merge_type: merge
+        wait: true
+        definition:
+          apiVersion: v1
+          kind: "{{ item.kind }}"
+          metadata:
+            name: "{{ item.name }}"
+          spec:
+            template:
+              metadata:
+                labels:
+                  version: "{{ new_zuul_conf }}"
+      loop: "{% if merger.count is defined and merger.count > 0 %}{{ services | union(extra_services) }}{% else %}{{ services }}{% endif %}"
+
+    - name: Reload pipeline queues
+      load_zuul_changes:
+        changes: "{{ zuul_changes }}"

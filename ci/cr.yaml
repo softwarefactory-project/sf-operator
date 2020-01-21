@@ -8,8 +8,9 @@ spec:
    projects:
      - source: opendev.org
        config:
-         - zuul/base-zuul-jobs
+         - zuul/zuul-base-jobs
        untrusted:
          - zuul/zuul-jobs
-  components: {}
+  components:
+    mqtt: true
   connections: {}

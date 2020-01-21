@@ -1,9 +1,14 @@
 ---
 - include_role:
-    name: zuul-ensure-gearman-tls
+    name: zuul-lookup-conf
+  vars:
+    zuul_name: "{{ sf_name }}"
 
 - include_role:
-    name: zuul-ensure-executor-ssh-key
+    name: "{{ item }}"
+  loop:
+    - zuul-ensure-gearman-tls
+    - zuul-ensure-executor-ssh-key
 
 - name: Convert spec to template input
   json_to_dhall:
@@ -23,3 +28,9 @@
     expression: |
       {{ kubernetes_deploy_path }}
       (({{ sf_app_path }}).Application {{ _dhall.result }})
+
+- include_role:
+    name: zuul-restart-when-zuul-conf-changed
+  vars:
+    zuul_name: "{{ sf_name }}"
+  when: zuul_conf_secret.data is defined
