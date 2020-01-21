@@ -13,5 +13,6 @@
     , env-secrets =
             \(serviceType : ../types/ServiceType.dhall)
         ->  [] : List ../types/EnvSecret.dhall
+    , openshift = True
     }
 }

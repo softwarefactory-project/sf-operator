@@ -6,4 +6,5 @@
 , secrets : forall (serviceType : ./ServiceType.dhall) -> List ./Volume.dhall
 , env-secrets :
     forall (serviceType : ./ServiceType.dhall) -> List ./EnvSecret.dhall
+, openshift : Bool
 }

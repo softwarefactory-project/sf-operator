@@ -511,11 +511,13 @@ let renderResources =
                   (\(cm : Kubernetes.Ingress.Type) -> k8s.Ingress cm)
                   ingresses
 
+          let {- TODO: setup openshift route -} noRoute = [] : List k8s
+
           in    transformSecrets
               # transformServices
               # transformDeployments
               # transformStatefulset
-              # transformIngresses
+              # (if app.openshift then noRoute else transformIngresses)
 
 in      \(app : ../types/Application.dhall)
     ->  { apiVersion = "v1", kind = "List", items = renderResources app }
