@@ -1,3 +1,4 @@
 - name: Lookup zuul conf secret
   set_fact:
     zuul_conf_secret: "{{ lookup('k8s', api_version='v1', kind='Secret', namespace=namespace, resource_name=zuul_name + '-secret-zuul') }}"
+    zuul_tenants_secret: "{{ lookup('k8s', api_version='v1', kind='Secret', namespace=namespace, resource_name=zuul_name + '-secret-zuul-config') }}"

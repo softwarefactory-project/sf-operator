@@ -34,3 +34,9 @@
   vars:
     zuul_name: "{{ sf_name }}"
   when: zuul_conf_secret.data is defined
+
+- include_role:
+    name: zuul-reconfigure-tenant-when-conf-changed
+  vars:
+    zuul_name: "{{ sf_name }}"
+  when: zuul_tenants_secret.data is defined

@@ -26,7 +26,9 @@ RUN pip3 install --upgrade openshift "gear==0.13.0"
 # unarchive: bzip2 and tar
 # generate zuul ssh-keys or certificate: openssh and openssl
 # manage configuration: git
-RUN dnf install -y bzip2 tar openssh openssl git
+# fix for https://github.com/operator-framework/operator-sdk/issues/2204 : kubectl
+RUN dnf install -y bzip2 tar openssh openssl git http://mirror.centos.org/centos/7/os/x86_64/Packages/bash-completion-2.1-6.el7.noarch.rpm http://mirror.centos.org/centos/7/paas/x86_64/openshift-origin/origin-clients-3.11.0-1.el7.git.0.62803d0.x86_64.rpm
+
 
 # Install dhall-to-json
 RUN python3 -c 'import pathlib, urllib.request;from hashlib import sha256;fail = lambda s: (print(s), exit(1));u, h = "https://github.com/dhall-lang/dhall-haskell/releases/download/1.29.0/dhall-json-1.6.1-x86_64-linux.tar.bz2", "7e65f933fb215629d18d23bc774688c598d4c11b62865f3546ee23ae36b25290";output = pathlib.Path("/bin").expanduser();local = pathlib.Path("~/.cache/").expanduser() / h;notLocal = not local.exists() or sha256(local.read_bytes()).hexdigest() != h;print(u + ": downloading") if notLocal else True;req = urllib.request.urlopen(u) if notLocal else True;data = req.read() if notLocal else local.read_bytes();digest = sha256(data).hexdigest();fail(u + ": expected " + h + "got " + digest) if digest != h else True;local.parent.mkdir(parents=True, exist_ok=True);local.write_bytes(data) if notLocal else True;print(u + ": extracted to " + str(output));from subprocess import Popen, PIPE;p = Popen("tar -xf - --strip-components=2 -j --mode='a+x' -C".split() + [str(output)], stdin=PIPE);p.communicate(data);fail(u + ": failed to extract") if p.wait() else True' && rm -Rf ~/.cache/
