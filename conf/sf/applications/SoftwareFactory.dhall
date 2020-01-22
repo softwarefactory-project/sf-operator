@@ -143,6 +143,10 @@ in  { Input = Input
                               trigger:
                                 timer:
                                   - time: '* * * * * *'
+                              success:
+                                sql:
+                              failure:
+                                sql:
 
                           - job:
                               name: test-job

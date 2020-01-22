@@ -13,4 +13,5 @@ spec:
          - zuul/zuul-jobs
   components:
     mqtt: true
+    test-config: false
   connections: {}
