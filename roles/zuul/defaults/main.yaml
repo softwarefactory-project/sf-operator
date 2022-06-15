@@ -1,9 +1,0 @@
-zuul_name: "{{ meta.name | default('zuul') }}"
-namespace: "{{ meta.namespace | default('default') }}"
-state: "{{ k8s_state | default('present') }}"
-zuul_app_path: "/opt/ansible/conf/zuul/applications/Zuul.dhall"
-kubernetes_deploy_path: "/opt/ansible/conf/operator/deploy/Kubernetes.dhall"
-
-# Here we use zuul_spec to get un-modified cr
-# see: https://github.com/operator-framework/operator-sdk/issues/1770
-raw_spec: "{{ vars['_operator_zuul-ci_org_zuul_spec'] }}"
