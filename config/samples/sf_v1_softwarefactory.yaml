@@ -1,0 +1,6 @@
+apiVersion: sf.softwarefactory-project.io/v1
+kind: SoftwareFactory
+metadata:
+  name: softwarefactory-sample
+spec:
+  # TODO(user): Add fields here
