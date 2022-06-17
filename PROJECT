@@ -1,0 +1,6 @@
+domain: softwarefactory-project.io
+layout:
+- go.kubebuilder.io/v3
+projectName: sf-operator
+repo: github.com/softwarefactory-project/sf-operator
+version: "3"
