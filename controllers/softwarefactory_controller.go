@@ -1,23 +1,15 @@
-/*
-Copyright 2022.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright (C) 2022 Red Hat
+// SPDX-License-Identifier: Apache-2.0
+//
+// This package contains the main Reconcile loop.
 
 package controllers
 
 import (
 	"context"
+	"time"
+
+	"github.com/go-logr/logr"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,21 +29,76 @@ type SoftwareFactoryReconciler struct {
 //+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=softwarefactories/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=softwarefactories/finalizers,verbs=update
 
+type SFController struct {
+	*SoftwareFactoryReconciler
+	cr  *sfv1.SoftwareFactory
+	ns  string
+	log logr.Logger
+	ctx context.Context
+}
+
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the SoftwareFactory object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
 func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	var sf sfv1.SoftwareFactory
+	if err := r.Get(ctx, req.NamespacedName, &sf); err != nil {
+		log.Error(err, "unable to fetch SoftwareFactory resource")
+		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	var sfc = &SFController{
+		SoftwareFactoryReconciler: r,
+		cr:                        &sf,
+		ns:                        req.NamespacedName.Namespace,
+		log:                       log,
+		ctx:                       ctx,
+	}
 
-	return ctrl.Result{}, nil
+	// Keycloak is enabled if gerrit is enabled
+	keycloakEnabled := sf.Spec.Gerrit
+
+	// Mariadb is enabled if etherpad or lodgeit is enabled.
+	mariadbEnabled := sf.Spec.Etherpad || sf.Spec.Lodgeit || keycloakEnabled
+	mariadbStatus := sfc.DeployMariadb(mariadbEnabled)
+
+	etherpadStatus := true
+	lodgeitStatus := true
+	zuulStatus := true
+	keycloakStatus := true
+	if mariadbStatus {
+		etherpadStatus = sfc.DeployEtherpad(sf.Spec.Etherpad)
+		// lodgeitStatus = sfc.DeployLodgeit(sf.Spec.Lodgit)
+		// zuulStatus = sfc.DeployZuul(sf.Spec.Zuul)
+		// Keycloak is enabled if gerrit is enabled
+		keycloakStatus = sfc.DeployKeycloak(keycloakEnabled)
+
+	}
+
+	gerritStatus := true
+	if keycloakStatus {
+		gerritStatus = sfc.DeployGerrit(sf.Spec.Gerrit)
+	}
+
+	sf.Status.Ready = mariadbStatus && keycloakStatus && etherpadStatus && zuulStatus && gerritStatus && lodgeitStatus && keycloakStatus
+	if err := r.Status().Update(ctx, &sf); err != nil {
+		log.Error(err, "unable to update Software Factory status")
+		return ctrl.Result{}, err
+	}
+	if !sf.Status.Ready {
+		log.V(1).Info("Reconcile running...")
+		delay, _ := time.ParseDuration("5s")
+		return ctrl.Result{RequeueAfter: delay}, nil
+	} else {
+		log.V(1).Info("Reconcile completed!", "sf", sf)
+		return ctrl.Result{}, nil
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.

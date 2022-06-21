@@ -12,11 +12,16 @@ import (
 
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Important: Run "make manifests" to regenerate code after modifying this file
+
+	// Deploy the gerrit service
+	Gerrit bool `json:"gerrit,omitempty"`
 
 	// Deploy the etherpad service.
 	Etherpad bool `json:"etherpad,omitempty"`
+
+	// Deploy the lodgeit service
+	Lodgeit bool `json:"lodgeit,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

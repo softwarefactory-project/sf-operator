@@ -38,6 +38,12 @@ spec:
               etherpad:
                 description: Deploy the etherpad service.
                 type: boolean
+              gerrit:
+                description: Deploy the gerrit service
+                type: boolean
+              lodgeit:
+                description: Deploy the lodgeit service
+                type: boolean
             type: object
           status:
             description: SoftwareFactoryStatus defines the observed state of SoftwareFactory
