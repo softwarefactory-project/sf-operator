@@ -1,8 +1,9 @@
 apiVersion: sf.softwarefactory-project.io/v1
 kind: SoftwareFactory
 metadata:
-  name: softwarefactory-sample
+  name: my-sf
 spec:
+  fqdn: "sftests.com"
   etherpad: false
   lodgeit: false
   gerrit: true

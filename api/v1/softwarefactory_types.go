@@ -14,6 +14,8 @@ import (
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
 
+	FQDN string `json:"fqdn"`
+
 	// Deploy the gerrit service
 	Gerrit bool `json:"gerrit,omitempty"`
 

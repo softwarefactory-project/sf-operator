@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -31,6 +32,13 @@ func create_secret_env(env string, secret string) apiv1.EnvVar {
 				Key: secret,
 			},
 		},
+	}
+}
+
+func create_env(env string, value string) apiv1.EnvVar {
+	return apiv1.EnvVar{
+		Name:  env,
+		Value: value,
 	}
 }
 
@@ -196,6 +204,20 @@ func create_service(ns string, name string, port int32, port_name string) apiv1.
 				"run": name,
 			},
 		}}
+}
+
+func create_http_probe(path string, port int) *apiv1.Probe {
+	return &apiv1.Probe{
+		ProbeHandler: apiv1.ProbeHandler{
+			HTTPGet: &apiv1.HTTPGetAction{
+				Path: path,
+				Port: intstr.FromInt(port),
+			},
+		},
+		TimeoutSeconds:   3,
+		PeriodSeconds:    5,
+		FailureThreshold: 20,
+	}
 }
 
 // Get a resources, returning if it was found

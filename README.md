@@ -23,3 +23,17 @@ kubectl apply -f config/samples/
 MY_NS=$(kubectl config view | awk '/namespace/ { print $2 }')
 go run ./main.go --namespace $MY_NS
 ```
+
+## Cheat Sheet
+
+```
+# Get a service logs (from the first container):
+kubectl logs deployment/keycloak -f
+
+# Join a service container (by getting the container name with it's label):
+function getPodName { kubectl get pods -lrun=$1 -o  'jsonpath={.items[0].metadata.name}'; }
+kubectl exec -it $(getPodName "keycloak") sh
+
+# Reset deployment
+kubectl delete softwarefactory my-sf && kubectl apply -f config/samples && go run ./main.go --namespace $MY_NS
+```
