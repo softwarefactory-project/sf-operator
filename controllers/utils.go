@@ -65,13 +65,37 @@ func create_volume_cm(name string, config_map_ref string) apiv1.Volume {
 }
 
 // Create a default persistent volume claim.
+// With kind, PVC should be automatically provisioned with https://github.com/rancher/local-path-provisioner
+// If the PVC is stuck in `Pending`, then a local hostPath must be created, e.g.:
+/*
+   apiVersion: v1
+   kind: PersistentVolume
+   metadata:
+     name: pv-kind4
+   spec:
+     storageClassName: standard
+     accessModes:
+       - ReadWriteOnce
+     capacity:
+       storage: 1Gi
+     hostPath:
+       path: /src/pvs4
+*/
 func create_pvc(ns string, name string) apiv1.PersistentVolumeClaim {
 	return apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 		},
-		Spec: apiv1.PersistentVolumeClaimSpec{},
+		Spec: apiv1.PersistentVolumeClaimSpec{
+			StorageClassName: strPtr("standard"),
+			AccessModes:      []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
+			Resources: apiv1.ResourceRequirements{
+				Requests: apiv1.ResourceList{
+					"storage": *resource.NewQuantity(1*1000*1000*1000, resource.DecimalSI),
+				},
+			},
+		},
 	}
 }
 
@@ -82,37 +106,7 @@ func create_statefulset(ns string, name string, image string) appsv1.StatefulSet
 		Image:           image,
 		ImagePullPolicy: "IfNotPresent",
 	}
-	pvc := apiv1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Spec: apiv1.PersistentVolumeClaimSpec{
-			// With kind, PVC should be automatically provisioned with https://github.com/rancher/local-path-provisioner
-			// If the PVC is stuck in `Pending`, then a local hostPath must be created, e.g.:
-			/*
-			   apiVersion: v1
-			   kind: PersistentVolume
-			   metadata:
-			     name: pv-kind4
-			   spec:
-			     storageClassName: standard
-			     accessModes:
-			       - ReadWriteOnce
-			     capacity:
-			       storage: 2Gi
-			     hostPath:
-			       path: /src/pvs4
-			*/
-			StorageClassName: strPtr("standard"),
-			AccessModes:      []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
-			Resources: apiv1.ResourceRequirements{
-				Requests: apiv1.ResourceList{
-					"storage": *resource.NewQuantity(1*1000*1000*1000, resource.DecimalSI),
-				},
-			},
-		},
-	}
+	pvc := create_pvc(ns, name)
 	return appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

@@ -77,7 +77,9 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// lodgeitStatus = sfc.DeployLodgeit(sf.Spec.Lodgit)
 		// zuulStatus = sfc.DeployZuul(sf.Spec.Zuul)
 		// Keycloak is enabled if gerrit is enabled
-		keycloakStatus = sfc.DeployKeycloak(keycloakEnabled)
+
+		// TODO: Reactivate - do no work yet
+		// keycloakStatus = sfc.DeployKeycloak(keycloakEnabled)
 
 	}
 
@@ -86,7 +88,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		gerritStatus = sfc.DeployGerrit(sf.Spec.Gerrit)
 	}
 
-	sf.Status.Ready = mariadbStatus && keycloakStatus && etherpadStatus && zuulStatus && gerritStatus && lodgeitStatus && keycloakStatus
+	sf.Status.Ready = mariadbStatus && etherpadStatus && zuulStatus && gerritStatus && lodgeitStatus && keycloakStatus
 	if err := r.Status().Update(ctx, &sf); err != nil {
 		log.Error(err, "unable to update Software Factory status")
 		return ctrl.Result{}, err
@@ -96,7 +98,8 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		delay, _ := time.ParseDuration("5s")
 		return ctrl.Result{RequeueAfter: delay}, nil
 	} else {
-		sfc.SetupIngress(keycloakEnabled)
+		// TODO: Reactivate - do no work yet
+		// sfc.SetupIngress(keycloakEnabled)
 		log.V(1).Info("Reconcile completed!", "sf", sf)
 		return ctrl.Result{}, nil
 	}
