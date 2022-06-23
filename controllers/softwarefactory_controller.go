@@ -96,6 +96,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		delay, _ := time.ParseDuration("5s")
 		return ctrl.Result{RequeueAfter: delay}, nil
 	} else {
+		sfc.SetupIngress(keycloakEnabled)
 		log.V(1).Info("Reconcile completed!", "sf", sf)
 		return ctrl.Result{}, nil
 	}

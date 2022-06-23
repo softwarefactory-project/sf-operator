@@ -9,6 +9,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 )
 
 const (
@@ -181,4 +182,8 @@ func (r *SFController) DeployEtherpad(enabled bool) bool {
 
 func makeEtherpatSettings(db_password []byte, admin_password []byte) string {
 	return fmt.Sprintf(etherpadSettingsTemplate, db_password, admin_password)
+}
+
+func (r *SFController) IngressEtherpad() netv1.IngressRule {
+	return create_ingress_rule("etherpad." + r.cr.Spec.FQDN, "etherpad", ETHERPAD_PORT)
 }

@@ -16,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -313,6 +314,55 @@ func create_job(ns string, name string, container apiv1.Container) batchv1.Job {
 				},
 			},
 		}}
+}
+
+func create_ingress_rule(host string, service string, port int) netv1.IngressRule {
+	pt := netv1.PathTypePrefix
+	return netv1.IngressRule{
+		Host: host,
+		IngressRuleValue: netv1.IngressRuleValue{
+			HTTP: &netv1.HTTPIngressRuleValue{
+				Paths: []netv1.HTTPIngressPath{
+					{
+						PathType: &pt,
+						Path:     "/",
+						Backend: netv1.IngressBackend{
+							Service: &netv1.IngressServiceBackend{
+								Name: service,
+								Port: netv1.ServiceBackendPort{
+									Number: int32(port),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func (r *SFController) SetupIngress(keycloakEnabled bool) {
+	var ingress netv1.Ingress
+	found := r.GetM(r.cr.Name, &ingress)
+	ingress = netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.cr.Name,
+			Namespace: r.ns,
+		},
+	}
+	if r.cr.Spec.Etherpad {
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressEtherpad())
+	}
+	if keycloakEnabled {
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressKeycloak()...)
+	}
+	if !found {
+		r.CreateR(&ingress)
+	} else {
+		if err := r.Update(r.ctx, &ingress); err != nil {
+			panic(err.Error())
+		}
+	}
 }
 
 func int32Ptr(i int32) *int32 { return &i }

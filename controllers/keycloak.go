@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	netv1 "k8s.io/api/networking/v1"
 )
 
 const KC_PORT = 8080
@@ -117,6 +118,14 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 		return true
 	}
 }
+
+func (r *SFController) IngressKeycloak() []netv1.IngressRule {
+	return []netv1.IngressRule{
+		create_ingress_rule("keycloak." + r.cr.Spec.FQDN, "keycloak", KC_PORT),
+		// TODO: add admin service
+	}
+}
+
 
 const KC_CONFIG = `<?xml version='1.0' encoding='UTF-8'?>
 
