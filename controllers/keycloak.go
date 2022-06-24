@@ -61,7 +61,9 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 		_, db_ready := r.EnsureDB("keycloak")
 		if db_ready {
 			r.log.V(1).Info("Keycloak DB is ready")
-			r.EnsureConfigMap("keycloak", "standalone.xml", KC_CONFIG)
+			cm_data := make(map[string]string)
+			cm_data["standalone.xml"] = KC_CONFIG
+			r.EnsureConfigMap("keycloak", cm_data)
 			dep = create_deployment(r.ns, "keycloak", "quay.io/software-factory/keycloak:15.0.2")
 			dep.Spec.Template.Spec.Containers[0].Command = []string{
 				// It seems like the entrypoint takes care of creating the initial admin user,

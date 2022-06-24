@@ -52,7 +52,9 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		r.log.V(1).Info("Deploying " + IDENT)
 
 		// Set entrypoint.sh in a config map
-		r.EnsureConfigMap("gerrit-ep", "entrypoint.sh", GERRIT_ENTRYPOINT)
+		cm_data := make(map[string]string)
+		cm_data["entrypoint.sh"] = GERRIT_ENTRYPOINT
+		r.EnsureConfigMap("gerrit-ep", cm_data)
 
 		// Create the deployment
 		dep = create_statefulset(r.ns, IDENT, IMAGE)

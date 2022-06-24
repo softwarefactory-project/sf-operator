@@ -140,7 +140,9 @@ func (r *SFController) DeployEtherpad(enabled bool) bool {
 		db_password, db_ready := r.EnsureDB("etherpad")
 		admin_password := r.EnsureSecret("etherpad-admin-password")
 		settings := makeEtherpatSettings(db_password.Data[db_key_name], admin_password.Data["etherpad-admin-password"])
-		r.EnsureConfigMap("etherpad", "settings.json", settings)
+		cm_data := make(map[string]string)
+		cm_data["settings.json"] = settings
+		r.EnsureConfigMap("etherpad", cm_data)
 		if db_ready {
 			r.log.V(1).Info("Etherpad DB is ready, deploying the service now!")
 			dep = create_deployment(r.ns, "etherpad", "quay.io/software-factory/sf-etherpad:1.8.17-1")

@@ -266,7 +266,7 @@ func (r *SFController) EnsureSecret(name string) apiv1.Secret {
 }
 
 // ensure a config map exists.
-func (r *SFController) EnsureConfigMap(base_name string, path string, data string) apiv1.ConfigMap {
+func (r *SFController) EnsureConfigMap(base_name string, data map[string]string) apiv1.ConfigMap {
 	name := base_name + "-config-map"
 	var cm apiv1.ConfigMap
 	err := r.Get(r.ctx, client.ObjectKey{
@@ -277,9 +277,7 @@ func (r *SFController) EnsureConfigMap(base_name string, path string, data strin
 		r.log.V(1).Info("Creating config", "name", name)
 		cm = apiv1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns},
-			Data: map[string]string{
-				path: data,
-			},
+			Data:       data,
 		}
 		controllerutil.SetControllerReference(r.cr, &cm, r.Scheme)
 		err = r.Create(r.ctx, &cm)
