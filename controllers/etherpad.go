@@ -159,7 +159,7 @@ func (r *SFController) DeployEtherpad(enabled bool) bool {
 				create_volume_cm("config-volume", "etherpad-config-map"),
 			}
 			r.CreateR(&dep)
-			srv := create_service(r.ns, "etherpad", ETHERPAD_PORT, ETHERPAD_PORT_NAME)
+			srv := create_service(r.ns, "etherpad", "etherpad", ETHERPAD_PORT, ETHERPAD_PORT_NAME)
 			r.CreateR(&srv)
 		}
 	} else if found {
@@ -179,11 +179,10 @@ func (r *SFController) DeployEtherpad(enabled bool) bool {
 	}
 }
 
-
 func makeEtherpatSettings(db_password []byte, admin_password []byte) string {
 	return fmt.Sprintf(etherpadSettingsTemplate, db_password, admin_password)
 }
 
 func (r *SFController) IngressEtherpad() netv1.IngressRule {
-	return create_ingress_rule("etherpad." + r.cr.Spec.FQDN, "etherpad", ETHERPAD_PORT)
+	return create_ingress_rule("etherpad."+r.cr.Spec.FQDN, "etherpad", ETHERPAD_PORT)
 }

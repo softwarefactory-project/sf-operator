@@ -180,7 +180,7 @@ func create_deployment(ns string, name string, image string) appsv1.Deployment {
 }
 
 // create a default service.
-func create_service(ns string, name string, port int32, port_name string) apiv1.Service {
+func create_service(ns string, name string, selector string, port int32, port_name string) apiv1.Service {
 	return apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -196,7 +196,7 @@ func create_service(ns string, name string, port int32, port_name string) apiv1.
 			},
 			Selector: map[string]string{
 				"app": "sf",
-				"run": name,
+				"run": selector,
 			},
 		}}
 }
@@ -349,6 +349,9 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 	}
 	if keycloakEnabled {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressKeycloak()...)
+	}
+	if r.cr.Spec.Gerrit {
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGerrit()...)
 	}
 	if !found {
 		r.CreateR(&ingress)

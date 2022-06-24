@@ -11,7 +11,6 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-
 // The official image seems to consume all the available memory, and it gets OOMed.
 // const DBImage = "quay.io/software-factory/mariadb:10.3.10-1"
 const DBImage = "docker.io/linuxserver/mariadb"
@@ -46,7 +45,7 @@ done
 `},
 			Env: []apiv1.EnvVar{
 				create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password"),
-				create_secret_env("USER_PASSWORD", name + "-db-password"),
+				create_secret_env("USER_PASSWORD", name+"-db-password"),
 			},
 		}
 		// https://pkg.go.dev/k8s.io/api/batch/v1#Job
@@ -59,7 +58,6 @@ done
 	r.log.V(1).Info("Job result for ensure db", "name", name, "status", job.Status)
 	return db_password, job.Status.Succeeded >= 1
 }
-
 
 func (r *SFController) DeployMariadb(enabled bool) bool {
 	var dep appsv1.StatefulSet
@@ -83,7 +81,7 @@ func (r *SFController) DeployMariadb(enabled bool) bool {
 		}
 		// TODO: add ready probe
 		r.CreateR(&dep)
-		srv := create_service(r.ns, "mariadb", MYSQL_PORT, MYSQL_PORT_NAME)
+		srv := create_service(r.ns, "mariadb", "mariadb", MYSQL_PORT, MYSQL_PORT_NAME)
 		r.CreateR(&srv)
 
 	} else if found {

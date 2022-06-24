@@ -9,8 +9,8 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 )
 
@@ -94,7 +94,7 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 			}
 			dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_http_probe("/health/ready", 9990)
 			r.CreateR(&dep)
-			srv := create_service(r.ns, "keycloak", KC_PORT, KC_PORT_NAME)
+			srv := create_service(r.ns, "keycloak", "keycloak", KC_PORT, KC_PORT_NAME)
 			r.CreateR(&srv)
 		}
 	} else if found {
@@ -106,12 +106,12 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 		}
 	}
 	if enabled {
-		if (dep.Status.ReadyReplicas > 0) {
+		if dep.Status.ReadyReplicas > 0 {
 			r.log.V(1).Info("Waiting for initiale keycloak configuration...")
 			return r.KCAdminJob("create-default-realm", "create realms --set realm=SF --set enabled=true")
 		} else {
 			r.log.V(1).Info("Waiting for keycloak to be ready...")
-			return false;
+			return false
 		}
 	} else {
 		// The service is not enabled, so it is always ready.
@@ -121,11 +121,10 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 
 func (r *SFController) IngressKeycloak() []netv1.IngressRule {
 	return []netv1.IngressRule{
-		create_ingress_rule("keycloak." + r.cr.Spec.FQDN, "keycloak", KC_PORT),
+		create_ingress_rule("keycloak."+r.cr.Spec.FQDN, "keycloak", KC_PORT),
 		// TODO: add admin service
 	}
 }
-
 
 const KC_CONFIG = `<?xml version='1.0' encoding='UTF-8'?>
 
