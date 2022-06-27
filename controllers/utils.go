@@ -8,6 +8,11 @@ package controllers
 import (
 	"github.com/google/uuid"
 
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +26,26 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 )
+
+func create_ssh_key() []byte {
+	// Private Key generation
+	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if err := privateKey.Validate(); err != nil {
+		panic(err.Error())
+	}
+
+	privDER := x509.MarshalPKCS1PrivateKey(privateKey)
+	privBlock := pem.Block{
+		Type:    "RSA PRIVATE KEY",
+		Headers: nil,
+		Bytes:   privDER,
+	}
+	return pem.EncodeToMemory(&privBlock)
+}
 
 func create_secret_env(env string, secret string) apiv1.EnvVar {
 	return apiv1.EnvVar{
@@ -241,11 +266,7 @@ func (r *SFController) CreateR(obj client.Object) {
 // generate a secret if needed using a uuid4 value.
 func (r *SFController) EnsureSecret(name string) apiv1.Secret {
 	var secret apiv1.Secret
-	err := r.Get(r.ctx, client.ObjectKey{
-		Name:      name,
-		Namespace: r.ns,
-	}, &secret)
-	if errors.IsNotFound(err) {
+	if !r.GetM(name, &secret) {
 		r.log.V(1).Info("Creating secret", "name", name)
 		secret = apiv1.Secret{
 			Data: map[string][]byte{
@@ -254,15 +275,24 @@ func (r *SFController) EnsureSecret(name string) apiv1.Secret {
 				name: []byte(uuid.New().String()),
 			},
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns}}
-		controllerutil.SetControllerReference(r.cr, &secret, r.Scheme)
-		err = r.Create(r.ctx, &secret)
-		if err != nil {
-			panic(err.Error())
-		}
-	} else if err != nil && !errors.IsAlreadyExists(err) {
-		panic(err.Error())
+		r.CreateR(&secret)
 	}
 	return secret
+}
+
+func (r *SFController) EnsureSSHKey(name string) {
+	var secret apiv1.Secret
+	if !r.GetM(name, &secret) {
+		r.log.V(1).Info("Creating ssh key", "name", name)
+		secret = apiv1.Secret{
+			Data: map[string][]byte{
+				// The data key is the same as the secret name.
+				// This means that a Secret object presently only contains a single value.
+				"sshkey": create_ssh_key(),
+			},
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns}}
+		r.CreateR(&secret)
+	}
 }
 
 // ensure a config map exists.

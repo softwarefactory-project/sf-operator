@@ -46,6 +46,9 @@ spec:
               lodgeit:
                 description: Deploy the lodgeit service
                 type: boolean
+              zuul:
+                description: Deploy the zuul service
+                type: boolean
             required:
             - fqdn
             type: object

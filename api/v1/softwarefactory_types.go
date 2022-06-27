@@ -19,6 +19,9 @@ type SoftwareFactorySpec struct {
 	// Deploy the gerrit service
 	Gerrit bool `json:"gerrit,omitempty"`
 
+	// Deploy the zuul service
+	Zuul bool `json:"zuul,omitempty"`
+
 	// Deploy the etherpad service.
 	Etherpad bool `json:"etherpad,omitempty"`
 

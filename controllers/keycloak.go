@@ -47,9 +47,12 @@ set -xe
 		r.log.V(1).Info("Creating job to ensure db", "name", name)
 		r.CreateR(&job)
 		return false
+	} else if (job.Status.Succeeded >= 1) {
+		return true
+	} else {
+		r.log.V(1).Info("Waiting for kcadmin result")
+		return false
 	}
-	r.log.V(1).Info("Job result for kcadmin", "name", name, "status", job.Status)
-	return job.Status.Succeeded >= 1
 }
 
 func (r *SFController) DeployKeycloak(enabled bool) bool {
@@ -109,7 +112,6 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 	}
 	if enabled {
 		if dep.Status.ReadyReplicas > 0 {
-			r.log.V(1).Info("Waiting for initiale keycloak configuration...")
 			return r.KCAdminJob("create-default-realm", "create realms --set realm=SF --set enabled=true")
 		} else {
 			r.log.V(1).Info("Waiting for keycloak to be ready...")
