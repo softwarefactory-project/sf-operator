@@ -8,6 +8,10 @@ package controllers
 import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/ssh"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	"crypto/rand"
 	"crypto/rsa"
@@ -309,6 +313,31 @@ func (r *SFController) CreateR(obj client.Object) {
 	controllerutil.SetControllerReference(r.cr, obj, r.Scheme)
 	if err := r.Create(r.ctx, obj); err != nil {
 		panic(err.Error())
+	}
+}
+
+func (r *SFController) DeleteR(obj client.Object) {
+	if err := r.Delete(r.ctx, obj); err != nil {
+		panic(err.Error())
+	}
+}
+
+// Create resource from YAML description
+func (r *SFController) CreateYAML(y string) {
+	var obj unstructured.Unstructured
+	if err := yaml.Unmarshal([]byte(y), &obj); err != nil {
+		panic(err.Error())
+	}
+	obj.SetNamespace(r.ns)
+	controllerutil.SetControllerReference(r.cr, &obj, r.Scheme)
+	if err := r.Create(r.ctx, &obj); err != nil {
+		panic(err.Error())
+	}
+}
+
+func (r *SFController) CreateYAMLs(ys string) {
+	for _, y := range strings.Split(ys, "\n---\n") {
+		r.CreateYAML(y)
 	}
 }
 
