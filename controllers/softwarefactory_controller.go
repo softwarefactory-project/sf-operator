@@ -62,8 +62,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Keycloak is enabled if gerrit is enabled
-	// keycloakEnabled := sf.Spec.Gerrit
-	keycloakEnabled := false
+	keycloakEnabled := sf.Spec.Gerrit
 
 	// Mariadb is enabled if etherpad or lodgeit is enabled.
 	mariadbEnabled := sf.Spec.Etherpad || sf.Spec.Lodgeit || keycloakEnabled
@@ -77,9 +76,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		etherpadStatus = sfc.DeployEtherpad(sf.Spec.Etherpad)
 		// lodgeitStatus = sfc.DeployLodgeit(sf.Spec.Lodgit)
 		// zuulStatus = sfc.DeployZuul(sf.Spec.Zuul)
-
 		keycloakStatus = sfc.DeployKeycloak(keycloakEnabled)
-
 	}
 
 	gerritStatus := true
