@@ -44,8 +44,8 @@ while ! mysql --host=mariadb --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `
 done
 `},
 			Env: []apiv1.EnvVar{
-				create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password"),
-				create_secret_env("USER_PASSWORD", name+"-db-password"),
+				create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
+				create_secret_env("USER_PASSWORD", name+"-db-password", name+"-db-password"),
 			},
 		}
 		// https://pkg.go.dev/k8s.io/api/batch/v1#Job
@@ -74,7 +74,7 @@ func (r *SFController) DeployMariadb(enabled bool) bool {
 			},
 		}
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
-			create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password"),
+			create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
 		}
 		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 			create_container_port(MYSQL_PORT, MYSQL_PORT_NAME),

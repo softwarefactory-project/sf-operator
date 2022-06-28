@@ -7,6 +7,7 @@ package controllers
 
 import (
 	"github.com/google/uuid"
+	"golang.org/x/crypto/ssh"
 
 	"crypto/rand"
 	"crypto/rsa"
@@ -27,27 +28,75 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func create_ssh_key() []byte {
-	// Private Key generation
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+type SSHKey struct {
+	Pub  []byte
+	Priv []byte
+}
+
+func create_ssh_key() SSHKey {
+	bitSize := 4096
+
+	generatePrivateKey := func(bitSize int) (*rsa.PrivateKey, error) {
+		// Private Key generation
+		privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
+		if err != nil {
+			return nil, err
+		}
+		// Validate Private Key
+		err = privateKey.Validate()
+		if err != nil {
+			return nil, err
+		}
+		return privateKey, nil
+	}
+
+	generatePublicKey := func(privatekey *rsa.PublicKey) ([]byte, error) {
+		publicRsaKey, err := ssh.NewPublicKey(privatekey)
+		if err != nil {
+			return nil, err
+		}
+
+		pubKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
+
+		return pubKeyBytes, nil
+	}
+
+	encodePrivateKeyToPEM := func(privateKey *rsa.PrivateKey) []byte {
+		// Get ASN.1 DER format
+		privDER := x509.MarshalPKCS1PrivateKey(privateKey)
+
+		// pem.Block
+		privBlock := pem.Block{
+			Type:    "RSA PRIVATE KEY",
+			Headers: nil,
+			Bytes:   privDER,
+		}
+
+		// Private key in PEM format
+		privatePEM := pem.EncodeToMemory(&privBlock)
+
+		return privatePEM
+	}
+
+	privateKey, err := generatePrivateKey(bitSize)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	if err := privateKey.Validate(); err != nil {
+	publicKeyBytes, err := generatePublicKey(&privateKey.PublicKey)
+	if err != nil {
 		panic(err.Error())
 	}
 
-	privDER := x509.MarshalPKCS1PrivateKey(privateKey)
-	privBlock := pem.Block{
-		Type:    "RSA PRIVATE KEY",
-		Headers: nil,
-		Bytes:   privDER,
+	privateKeyBytes := encodePrivateKeyToPEM(privateKey)
+
+	return SSHKey{
+		Pub:  publicKeyBytes,
+		Priv: privateKeyBytes,
 	}
-	return pem.EncodeToMemory(&privBlock)
 }
 
-func create_secret_env(env string, secret string) apiv1.EnvVar {
+func create_secret_env(env string, secret string, key string) apiv1.EnvVar {
 	return apiv1.EnvVar{
 		Name: env,
 		ValueFrom: &apiv1.EnvVarSource{
@@ -55,7 +104,7 @@ func create_secret_env(env string, secret string) apiv1.EnvVar {
 				LocalObjectReference: apiv1.LocalObjectReference{
 					Name: secret,
 				},
-				Key: secret,
+				Key: key,
 			},
 		},
 	}
@@ -284,11 +333,11 @@ func (r *SFController) EnsureSSHKey(name string) {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
 		r.log.V(1).Info("Creating ssh key", "name", name)
+		sshkey := create_ssh_key()
 		secret = apiv1.Secret{
 			Data: map[string][]byte{
-				// The data key is the same as the secret name.
-				// This means that a Secret object presently only contains a single value.
-				"sshkey": create_ssh_key(),
+				"priv": sshkey.Priv,
+				"pub":  sshkey.Pub,
 			},
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns}}
 		r.CreateR(&secret)

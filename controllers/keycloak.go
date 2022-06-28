@@ -39,7 +39,7 @@ set -xe
 %s
 `, kcadm, kcadm)},
 			Env: []apiv1.EnvVar{
-				create_secret_env("KC_ADMIN_PASS", "keycloak-admin-password"),
+				create_secret_env("KC_ADMIN_PASS", "keycloak-admin-password", "keycloak-admin-password"),
 			},
 		}
 		job := create_job(r.ns, job_name, container)
@@ -47,7 +47,7 @@ set -xe
 		r.log.V(1).Info("Creating job to ensure db", "name", name)
 		r.CreateR(&job)
 		return false
-	} else if (job.Status.Succeeded >= 1) {
+	} else if job.Status.Succeeded >= 1 {
 		return true
 	} else {
 		r.log.V(1).Info("Waiting for kcadmin result")
@@ -93,9 +93,9 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 				create_env("DB_VENDOR", "mysql"),
 				create_env("DB_ADDR", "mariadb"),
 				create_env("DB_USER", "keycloak"),
-				create_secret_env("DB_PASSWORD", "keycloak-db-password"),
+				create_secret_env("DB_PASSWORD", "keycloak-db-password", "keycloak-db-password"),
 				create_env("KEYCLOAK_USER", "admin"),
-				create_secret_env("KEYCLOAK_PASSWORD", "keycloak-admin-password"),
+				create_secret_env("KEYCLOAK_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
 			}
 			dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_http_probe("/health/ready", 9990)
 			r.CreateR(&dep)

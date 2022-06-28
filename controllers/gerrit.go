@@ -17,7 +17,7 @@ const GERRIT_HTTPD_PORT = 8080
 const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
-const IMAGE = "quay.io/software-factory/gerrit:3.4.3-0"
+const IMAGE = "quay.io/software-factory/gerrit:3.4.5-1"
 const JAVA_OPTIONS = "-Djava.security.egd=file:/dev/./urandom"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_GIT_MOUNT_PATH = "/var/gerrit/git"
@@ -63,6 +63,9 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		cm_config_data["SSHD_MAX_CONNECTIONS_PER_USER"] = "20"
 		r.EnsureConfigMap("gerrit-config", cm_config_data)
 
+		// Ensure Gerrit Admin user ssh key
+		r.EnsureSSHKey("gerrit-admin-ssh-key")
+
 		// Create the deployment
 		dep = create_statefulset(r.ns, IDENT, IMAGE)
 		dep.Spec.Template.Spec.Containers[0].Command = []string{"/bin/bash", "/entry/entrypoint.sh"}
@@ -96,6 +99,12 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 			create_container_port(GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME),
 			create_container_port(GERRIT_SSHD_PORT, GERRIT_SSHD_PORT_NAME),
+		}
+
+		// Expose env vars
+		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
+			create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
+			create_secret_env("GERRIT_ADMIN_SSH_PUB", "gerrit-admin-ssh-key", "pub"),
 		}
 
 		// Expose env vars from a config map

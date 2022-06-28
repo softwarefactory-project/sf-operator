@@ -6,16 +6,15 @@ package controllers
 import (
 	"fmt"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (r *SFController) DeployZuul(enabled bool) bool {
 	var dep appsv1.Deployment
 	found := r.GetM("zuul", &dep)
 	if !found && enabled {
-		r.EnsureSSHKey("gerrit-ssh-key")
 		db_password, db_ready := r.EnsureDB("zuul")
 		if db_ready {
 			r.log.V(1).Info("zuul DB is ready, deploying the service now!")
@@ -27,12 +26,12 @@ func (r *SFController) DeployZuul(enabled bool) bool {
 				ObjectMeta: metav1.ObjectMeta{Name: "zuul-db-uri", Namespace: r.ns},
 			}
 			r.CreateR(&secret)
-			return true;
+			return true
 		}
 	}
 	if enabled {
-		return false;
+		return false
 	} else {
-		return true;
+		return true
 	}
 }
