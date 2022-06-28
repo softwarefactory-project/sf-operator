@@ -9,6 +9,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const IDENT = "gerrit"
@@ -94,6 +95,7 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		// will be available to the network.
 		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 			create_container_port(GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME),
+			create_container_port(GERRIT_SSHD_PORT, GERRIT_SSHD_PORT_NAME),
 		}
 
 		// Expose env vars from a config map
@@ -113,13 +115,28 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		r.CreateR(&dep)
 
 		// Create services exposed by Gerrit
-		services := []apiv1.Service{
-			create_service(r.ns, GERRIT_HTTPD_PORT_NAME, IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME),
-			create_service(r.ns, GERRIT_SSHD_PORT_NAME, IDENT, GERRIT_SSHD_PORT, GERRIT_SSHD_PORT_NAME),
-		}
-		for _, s := range services {
-			r.CreateR(&s)
-		}
+		httpd_service := create_service(r.ns, GERRIT_HTTPD_PORT_NAME, IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME)
+		sshd_service := apiv1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      GERRIT_SSHD_PORT_NAME,
+				Namespace: r.ns,
+			},
+			Spec: apiv1.ServiceSpec{
+				Ports: []apiv1.ServicePort{
+					{
+						Name:     GERRIT_SSHD_PORT_NAME,
+						Protocol: apiv1.ProtocolTCP,
+						Port:     GERRIT_SSHD_PORT,
+					},
+				},
+				Type: apiv1.ServiceTypeNodePort,
+				Selector: map[string]string{
+					"app": "sf",
+					"run": IDENT,
+				},
+			}}
+		r.CreateR(&httpd_service)
+		r.CreateR(&sshd_service)
 	}
 	if !enabled && found {
 		r.log.V(1).Info("Destroying " + IDENT)
