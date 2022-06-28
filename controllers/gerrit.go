@@ -52,9 +52,15 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		r.log.V(1).Info("Deploying " + IDENT)
 
 		// Set entrypoint.sh in a config map
-		cm_data := make(map[string]string)
-		cm_data["entrypoint.sh"] = GERRIT_ENTRYPOINT
-		r.EnsureConfigMap("gerrit-ep", cm_data)
+		cm_ep_data := make(map[string]string)
+		cm_ep_data["entrypoint.sh"] = GERRIT_ENTRYPOINT
+		r.EnsureConfigMap("gerrit-ep", cm_ep_data)
+
+		// Set Gerrit env vars in a config map
+		cm_config_data := make(map[string]string)
+		// Those variables should be populated via the SoftwareFactory CRD Spec
+		cm_config_data["SSHD_MAX_CONNECTIONS_PER_USER"] = "20"
+		r.EnsureConfigMap("gerrit-config", cm_config_data)
 
 		// Create the deployment
 		dep = create_statefulset(r.ns, IDENT, IMAGE)
@@ -88,6 +94,17 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		// will be available to the network.
 		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 			create_container_port(GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME),
+		}
+
+		// Expose env vars from a config map
+		dep.Spec.Template.Spec.Containers[0].EnvFrom = []apiv1.EnvFromSource{
+			{
+				ConfigMapRef: &apiv1.ConfigMapEnvSource{
+					LocalObjectReference: apiv1.LocalObjectReference{
+						Name: "gerrit-config-config-map",
+					},
+				},
+			},
 		}
 
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
