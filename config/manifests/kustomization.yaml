@@ -1,0 +1,3 @@
+resources:
+- bases/sf-operator.clusterserviceversion.yaml
+- ../default

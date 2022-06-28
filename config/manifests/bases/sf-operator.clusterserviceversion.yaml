@@ -1,0 +1,45 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: sf-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: SoftwareFactory is the Schema for the softwarefactories API
+      displayName: Software Factory
+      kind: SoftwareFactory
+      name: softwarefactories.sf.softwarefactory-project.io
+      version: v1
+  description: The Software Factory operator.
+  displayName: sf-operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - Developer Tools
+  links:
+  - name: Sf Operator
+    url: https://www.softwarefactory-project.io
+  maturity: alpha
+  provider:
+    name: Red Hat
+    url: https://redhat.com/
+  version: 0.0.0

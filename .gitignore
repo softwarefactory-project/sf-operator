@@ -23,3 +23,8 @@ testbin/*
 *.swp
 *.swo
 *~
+
+#Operator SDK generated files
+/bundle/
+bundle.Dockerfile
+config/manager/kustomization.yaml
