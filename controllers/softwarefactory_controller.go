@@ -64,7 +64,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Keycloak is enabled if gerrit is enabled
 	keycloakEnabled := sf.Spec.Gerrit
 
-	zkStatus := sfc.DeployZK(sf.Spec.Zuul)
+	// zkStatus := sfc.DeployZK(sf.Spec.Zuul)
 
 	// Mariadb is enabled if etherpad or lodgeit is enabled.
 	mariadbEnabled := sf.Spec.Etherpad || sf.Spec.Lodgeit || sf.Spec.Zuul || keycloakEnabled
@@ -80,7 +80,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		keycloakStatus = sfc.DeployKeycloak(keycloakEnabled)
 	}
 
-	if mariadbStatus && zkStatus {
+	if mariadbStatus {
 		zuulStatus = sfc.DeployZuul(sf.Spec.Zuul)
 	}
 
@@ -91,14 +91,13 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	log.V(1).Info("Service status:",
 		"mariadbStatus", mariadbStatus,
-		"zkStatus", zkStatus,
 		"etherpadStatus", etherpadStatus,
 		"zuulStatus", zuulStatus,
 		"gerritStatus", gerritStatus,
 		"lodgeitStatus", lodgeitStatus,
 		"keycloakStatus", keycloakStatus)
 
-	sf.Status.Ready = mariadbStatus && zkStatus && etherpadStatus && zuulStatus && gerritStatus && lodgeitStatus && keycloakStatus
+	sf.Status.Ready = mariadbStatus && etherpadStatus && zuulStatus && gerritStatus && lodgeitStatus && keycloakStatus
 	if err := r.Status().Update(ctx, &sf); err != nil {
 		log.Error(err, "unable to update Software Factory status")
 		return ctrl.Result{}, err

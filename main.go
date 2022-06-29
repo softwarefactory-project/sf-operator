@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+	zuul "github.com/softwarefactory-project/sf-operator/api/zuul"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
@@ -33,6 +34,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(sfv1.AddToScheme(scheme))
+	utilruntime.Must(zuul.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

@@ -1,39 +1,78 @@
 // Copyright (C) 2022 Red Hat
 // SPDX-License-Identifier: Apache-2.0
 
+// TODO: manage zuul-operator installation.
+// In the meantime, run in another terminal:
+// git clone https://github.com/softwarefactory-project/zuul-operator/
+// tox -evenv
+// WATCH_NAMESPACE=tristanc PYTHONPATH=$(pwd) ./.tox/venv/bin/kopf run zuul_operator/operator.py
+
 package controllers
 
 import (
 	"fmt"
 
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/softwarefactory-project/sf-operator/api/zuul"
 )
 
 func (r *SFController) EnsureZuulDBSecret(db_password *apiv1.Secret) {
-	var secret apiv1.Secret
-	found := r.GetM("zuul-db-uri", &secret)
-	if !found {
-		secret := apiv1.Secret{
-			Data: map[string][]byte{
-				"zuul-db-uri": []byte(fmt.Sprintf("mysql+pymysql:://zuul:%s@mariadb/zuul", db_password.Data["zuul-db-password"])),
-			},
-			ObjectMeta: metav1.ObjectMeta{Name: "zuul-db-uri", Namespace: r.ns},
-		}
-		r.CreateR(&secret)
+	secret := apiv1.Secret{
+		Data: map[string][]byte{
+			"dburi": []byte(fmt.Sprintf("mysql+pymysql://zuul:%s@mariadb/zuul", db_password.Data["zuul-db-password"])),
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "zuul-db-uri", Namespace: r.ns},
 	}
+	r.Apply(&secret)
+
+	// Initial config
+	r.Apply(&apiv1.Secret{
+		Data: map[string][]byte{
+			"main.yaml": []byte("[]"),
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "zuul-tenant-yaml", Namespace: r.ns},
+	})
+	r.Apply(&apiv1.Secret{
+		Data: map[string][]byte{
+			"nodepool.yaml": []byte(`
+labels: []
+providers: []
+`),
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "zuul-launcher-yaml", Namespace: r.ns},
+	})
 }
 
 func (r *SFController) DeployZuul(enabled bool) bool {
-	var dep appsv1.StatefulSet
-	found := r.GetM("zuul-scheduler", &dep)
-	if !found && enabled {
+	var dep zuul.Zuul
+	found := r.GetM("zuul", &dep)
+	expected := zuul.Zuul{
+		ObjectMeta: metav1.ObjectMeta{Name: "zuul", Namespace: r.ns},
+		Spec: zuul.ZuulSpec{
+			Database: zuul.DatabaseSpec{
+				SecretName: "zuul-db-uri",
+			},
+			Scheduler: zuul.SchedulerSpec{
+				Config: zuul.SecretConfig{
+					SecretName: "zuul-tenant-yaml",
+				},
+			},
+			Launcher: zuul.LauncherSpec{
+				Config: zuul.SecretConfig{
+					SecretName: "zuul-launcher-yaml",
+				},
+			},
+			Connections: map[string]zuul.ConnectionSpec{},
+		},
+	}
+	if enabled {
 		db_password, db_ready := r.EnsureDB("zuul")
 		if db_ready {
 			r.log.V(1).Info("zuul DB is ready, deploying the service now!")
 			r.EnsureZuulDBSecret(&db_password)
-			r.CreateYAMLs(ZUUL_OBJS)
+			r.Apply(&expected)
 			return false
 		}
 	} else if found {
@@ -44,70 +83,11 @@ func (r *SFController) DeployZuul(enabled bool) bool {
 	}
 	if enabled {
 		// Wait for the service to be ready.
-		return (dep.Status.ReadyReplicas > 0)
+		if !dep.Status.Ready {
+			r.log.V(1).Info("Waiting for zuul deployment...")
+		}
+		return (dep.Status.Ready)
 	} else {
 		return true
 	}
 }
-
-const ZUUL_OBJS = `
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: zookeeper-client
-spec:
-  keyEncoding: pkcs8
-  secretName: zookeeper-client-tls
-  commonName: client
-  usages:
-    - digital signature
-    - key encipherment
-    - server auth
-    - client auth
-  issuerRef:
-    name: ca-issuer
-    kind: Issuer
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: zuul-scheduler
-spec:
-  replicas: 1
-  serviceName: zuul-scheduler
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: zuul
-      app.kubernetes.io/part-of: zuul
-      app.kubernetes.io/component: zuul-scheduler
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: zuul
-        app.kubernetes.io/part-of: zuul
-        app.kubernetes.io/component: zuul-scheduler
-    spec:
-      containers:
-      - name: scheduler
-        image: docker.io/zuul/zuul-scheduler:latest
-        args: ["/usr/local/bin/zuul-scheduler", "-f", "-d"]
-        volumeMounts:
-        - name: zuul-scheduler
-          mountPath: /var/lib/zuul
-        - name: zookeeper-client-tls
-          mountPath: /tls/client
-          readOnly: true
-      volumes:
-      - name: zookeeper-client-tls
-        secret:
-          secretName: zookeeper-client-tls
-  volumeClaimTemplates:
-  - metadata:
-      name: zuul-scheduler
-    spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: 8Gi
-`

@@ -322,6 +322,27 @@ func (r *SFController) DeleteR(obj client.Object) {
 	}
 }
 
+func (r *SFController) UpdateR(obj client.Object) {
+	if err := r.Update(r.ctx, obj); err != nil {
+		panic(err.Error())
+	}
+}
+
+func (r *SFController) PatchR(obj client.Object, patch client.Patch) {
+	if err := r.Patch(r.ctx, obj, patch); err != nil {
+		panic(err.Error())
+	}
+}
+
+func (r *SFController) CreateOrUpdate(obj client.Object) {
+	if r.GetM(obj.GetName(), obj) {
+		// TODO: fix update, it does not work (the obj is overriden with the current value)
+		r.UpdateR(obj)
+	} else {
+		r.CreateR(obj)
+	}
+}
+
 // Create resource from YAML description
 func (r *SFController) CreateYAML(y string) {
 	var obj unstructured.Unstructured
