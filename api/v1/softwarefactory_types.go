@@ -37,6 +37,8 @@ type SoftwareFactoryStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Ready",type=boolean,JSONPath=`.status.ready`
+//+kubebuilder:resource:shortName="sf"
 
 // SoftwareFactory is the Schema for the softwarefactories API
 type SoftwareFactory struct {

@@ -12,10 +12,16 @@ spec:
     kind: SoftwareFactory
     listKind: SoftwareFactoryList
     plural: softwarefactories
+    shortNames:
+    - sf
     singular: softwarefactory
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .status.ready
+      name: Ready
+      type: boolean
+    name: v1
     schema:
       openAPIV3Schema:
         description: SoftwareFactory is the Schema for the softwarefactories API
