@@ -52,6 +52,9 @@ spec:
               lodgeit:
                 description: Deploy the lodgeit service
                 type: boolean
+              opensearch:
+                description: Deploy the opensearch service.
+                type: boolean
               zuul:
                 description: Deploy the zuul service
                 type: boolean

@@ -6,4 +6,5 @@ spec:
   fqdn: "sftests.com"
   etherpad: false
   lodgeit: false
-  gerrit: true
+  gerrit: false
+  opensearch: true

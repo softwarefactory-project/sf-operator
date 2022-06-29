@@ -70,6 +70,10 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Keycloak is enabled if gerrit is enabled
 	keycloakEnabled := sf.Spec.Gerrit
 
+	if sf.Spec.Zuul || sf.Spec.Opensearch {
+		sfc.EnsureCA()
+	}
+
 	zkStatus := sfc.DeployZK(sf.Spec.Zuul)
 	// The git server service is needed to store system jobs (config-check and config-update)
 	gitServerStatus := sfc.DeployGitServer(sf.Spec.Zuul)
@@ -83,7 +87,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	zuulStatus := true
 	nodepoolStatus := true
 	keycloakStatus := true
-
+	opensearchStatus := true
 	if mariadbStatus {
 		etherpadStatus = sfc.DeployEtherpad(sf.Spec.Etherpad)
 		// lodgeitStatus = sfc.DeployLodgeit(sf.Spec.Lodgit)
@@ -99,6 +103,10 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	gerritStatus := sfc.DeployGerrit(sf.Spec.Gerrit)
 
+	if opensearchStatus {
+		opensearchStatus = sfc.DeployOpensearch(sf.Spec.Opensearch)
+	}
+
 	log.V(1).Info("Service status:",
 		"mariadbStatus", mariadbStatus,
 		"zkStatus", zkStatus,
@@ -107,9 +115,10 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		"zuulStatus", zuulStatus,
 		"gerritStatus", gerritStatus,
 		"lodgeitStatus", lodgeitStatus,
+		"opensearchStatus", opensearchStatus,
 		"keycloakStatus", keycloakStatus)
 
-	sf.Status.Ready = mariadbStatus && etherpadStatus && zuulStatus && gerritStatus && lodgeitStatus && keycloakStatus && zkStatus && nodepoolStatus
+	sf.Status.Ready = mariadbStatus && etherpadStatus && zuulStatus && gerritStatus && lodgeitStatus && keycloakStatus && zkStatus && nodepoolStatus && opensearchStatus
 	if err := r.Status().Update(ctx, &sf); err != nil {
 		log.Error(err, "unable to update Software Factory status")
 		return ctrl.Result{}, err

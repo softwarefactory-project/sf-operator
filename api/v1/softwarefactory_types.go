@@ -27,6 +27,9 @@ type SoftwareFactorySpec struct {
 
 	// Deploy the lodgeit service
 	Lodgeit bool `json:"lodgeit,omitempty"`
+
+	// Deploy the opensearch service.
+	Opensearch bool `json:"opensearch,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

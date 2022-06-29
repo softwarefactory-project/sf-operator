@@ -6,6 +6,7 @@
 package controllers
 
 import (
+	_ "embed"
 	"crypto/sha256"
 	"fmt"
 	"os"
@@ -38,6 +39,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 )
 
 func checksum(data []byte) string {
@@ -508,6 +512,14 @@ func (r *SFController) EnsureConfigMap(base_name string, data map[string]string)
 	return cm
 }
 
+
+//go:embed static/certificate-authority/certs.yaml
+var ca_objs string
+
+func (r *SFController) EnsureCA() {
+	r.CreateYAMLs(ca_objs)
+}
+
 func create_job(ns string, name string, container apiv1.Container) batchv1.Job {
 	return batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -572,6 +584,9 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 	if r.cr.Spec.Zuul {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressZuul())
 	}
+	if r.cr.Spec.Opensearch {
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearch())
+	}
 	if !found {
 		r.CreateR(&ingress)
 	} else {
@@ -610,6 +625,32 @@ func (r *SFController) PodExec(pod string, container string, command []string) {
 	})
 	if err != nil {
 		panic(err.Error())
+	}
+}
+
+func (r *SFController) create_client_certificate(ns string, name string, issuer string, secret string) certv1.Certificate {
+	return certv1.Certificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		Spec: certv1.CertificateSpec{
+			CommonName: "client",
+			SecretName: secret,
+			PrivateKey: &certv1.CertificatePrivateKey{
+				Encoding: certv1.PKCS8,
+			},
+			IssuerRef: certmetav1.ObjectReference{
+				Name: issuer,
+				Kind: "Issuer",
+			},
+			Usages: []certv1.KeyUsage{
+				certv1.UsageDigitalSignature,
+				certv1.UsageKeyEncipherment,
+				certv1.UsageServerAuth,
+				certv1.UsageClientAuth,
+			},
+		},
 	}
 }
 
