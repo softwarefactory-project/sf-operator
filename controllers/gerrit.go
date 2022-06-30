@@ -6,6 +6,9 @@
 package controllers
 
 import (
+	"fmt"
+
+	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +20,6 @@ const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
 const IMAGE = "quay.io/software-factory/gerrit:3.4.5-2"
-const JAVA_OPTIONS = "-Djava.security.egd=file:/dev/./urandom"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_GIT_MOUNT_PATH = "/var/gerrit/git"
 const GERRIT_INDEX_MOUNT_PATH = "/var/gerrit/index"
@@ -55,7 +57,7 @@ echo "Creating admin account if needed"
 cat << EOF > /var/gerrit/.gitconfig
 [user]
     name = SF initial configurator
-    email = admin]${FQDN}
+    email = admin@${FQDN}
 [gitreview]
     username = admin
 [push]
@@ -92,6 +94,141 @@ git config -f /var/gerrit/etc/gerrit.config --replace-all sshd.maxConnectionsPer
 echo "Running Gerrit ..."
 exec java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war daemon -d /var/gerrit
 `
+
+func (r *SFController) GerritPostInitJob(name string) bool {
+	var job batchv1.Job
+	job_name := IDENT + "-" + name
+	found := r.GetM(job_name, &job)
+
+	postInitScript := `
+	#!/bin/bash
+
+	set -ex
+
+	env
+
+	mkdir /var/gerrit/.ssh
+	chmod 0700 /var/gerrit/.ssh
+
+	echo "${GERRIT_ADMIN_SSH}" > /var/gerrit/.ssh/gerrit_admin
+	chmod 0400 /var/gerrit/.ssh/gerrit_admin
+
+	cat << EOF > /var/gerrit/.ssh/config
+Host gerrit
+User admin
+Hostname ${GERRIT_SSHD_PORT_29418_TCP_ADDR}
+Port ${GERRIT_SSHD_SERVICE_PORT_GERRIT_SSHD}
+IdentityFile /var/gerrit/.ssh/gerrit_admin
+StrictHostKeyChecking no
+EOF
+
+	echo "Ensure we can connect to Gerrit ssh port"
+	ssh gerrit gerrit version
+
+  cat << EOF > /var/gerrit/.gitconfig
+[user]
+    name = SF initial configurator
+    email = admin@${FQDN}
+[gitreview]
+    username = admin
+[push]
+    default = simple
+EOF
+
+	echo ""
+	mkdir /tmp/All-projects && cd /tmp/All-projects
+	git init .
+	git remote add origin ssh://gerrit/All-Projects
+	git fetch origin refs/meta/config:refs/remotes/origin/meta/config
+	git checkout meta/config
+	git reset --hard origin/meta/config
+	gitConfig="git config -f project.config --replace-all "
+	${gitConfig} capability.accessDatabase "group Administrators"
+	${gitConfig} access.refs/*.push "group Administrators" ".*group Administrators"
+	${gitConfig} access.refs/for/*.addPatchSet "group Administrators" "group Administrator"
+	${gitConfig} access.refs/for/*.addPatchSet "group Project Owners" "group Project Owners"
+	${gitConfig} access.refs/heads/*.push "+force group Administrators" ".*group Administrators"
+	${gitConfig} access.refs/heads/*.push "+force group Project Owners" ".*group Project Owners"
+	${gitConfig} access.refs/heads/*.label-Verified "-2..+2 group Service Users" ".*group Service Users"
+	${gitConfig} access.refs/heads/*.label-Verified "-2..+2 group Administrators" ".*group Administrators"
+	${gitConfig} access.refs/heads/*.label-Verified "-2..+2 group Project Owners" ".*group Project Owners"
+	${gitConfig} access.refs/heads/*.label-Workflow "-1..+1 group Administrators" ".*group Administrators"
+	${gitConfig} access.refs/heads/*.label-Workflow "-1..+1 group Project Owners" ".*group Project Owners"
+	${gitConfig} access.refs/heads/*.submit "group Service Users" "group Service Users"
+	${gitConfig} access.refs/heads/*.rebase "group Administrators" "group Administrators"
+	${gitConfig} access.refs/heads/*.rebase "group Project Owners" "group Project Owners"
+	${gitConfig} access.refs/heads/*.rebase "group Service Users" "group Service Users"
+	${gitConfig} access.refs/heads/*.abandon "group Administrators" "group Administrators"
+	${gitConfig} access.refs/heads/*.abandon "group Project Owners" "group Project Owners"
+	${gitConfig} access.refs/meta/config.read "group Registered Users" "group Registered Users"
+	${gitConfig} access.refs/meta/config.read "group Anonymous Users" "group Anonymous Users"
+	${gitConfig} access.refs/meta/config.rebase "group Administrators" "group Administrators"
+	${gitConfig} access.refs/meta/config.rebase "group Project Owners" "group Project Owners"
+	${gitConfig} access.refs/meta/config.abandon "group Administrators" "group Administrators"
+	${gitConfig} access.refs/meta/config.abandon "group Project Owners" "group Project Owners"
+	${gitConfig} access.refs/meta/config.label-Verified "-2..+2 group Administrators" ".*group Administrators"
+	${gitConfig} access.refs/meta/config.label-Verified "-2..+2 group Project Owners" ".*group Project Owners"
+	${gitConfig} access.refs/meta/config.label-Workflow "-1..+1 group Administrators" ".*group Administrators"
+	${gitConfig} access.refs/meta/config.label-Workflow "-1..+1 group Project Owners" ".*group Project Owners"
+	${gitConfig} access.refs/tags/*.pushTag "+force group Administrators" ".*group Administrators"
+	${gitConfig} access.refs/tags/*.pushTag "+force group Project Owners" ".*group Project Owners"
+	${gitConfig} access.refs/tags/*.pushAnnotatedTag "group Administrators" "group Administrators"
+	${gitConfig} access.refs/tags/*.pushAnnotatedTag "group Project Owners" "group Project Owners"
+	${gitConfig} access.refs/tags/*.pushSignedTag "group Administrators" "group Administrators"
+	${gitConfig} access.refs/tags/*.pushSignedTag "group Project Owners" "group Project Owners"
+	${gitConfig} access.refs/tags/*.forgeAuthor "group Administrators" "group Administrators"
+	${gitConfig} access.refs/tags/*.forgeAuthor "group Project Owners" "group Project Owners"
+	${gitConfig} access.refs/tags/*.forgeCommitter "group Administrators" "group Administrators"
+	${gitConfig} access.refs/tags/*.forgeCommitter "group Project Owners" "group Project Owners"
+	${gitConfig} access.refs/tags/*.push "group Administrators" "group Administrators"
+	${gitConfig} access.refs/tags/*.push "group Project Owners" "group Project Owners"
+	${gitConfig} label.Code-Review.copyAllScoresIfNoCodeChange "true"
+	${gitConfig} label.Code-Review.value "-2 Do not submit" "-2.*"
+	${gitConfig} label.Code-Review.value "-1 I would prefer that you didn't submit this" "-1.*"
+	${gitConfig} label.Code-Review.value "+2 Looks good to me (core reviewer)" "\+2.*"
+	${gitConfig} label.Verified.value "-2 Fails" "-2.*"
+	${gitConfig} label.Verified.value "-1 Doesn't seem to work" "-1.*"
+	${gitConfig} label.Verified.value "0 No score" "0.*"
+	${gitConfig} label.Verified.value "+1 Works for me" "\+1.*"
+	${gitConfig} label.Verified.value "+2 Verified" "\+2.*"
+	${gitConfig} label.Workflow.value "-1 Work in progress" "-1.*"
+	${gitConfig} label.Workflow.value "0 Ready for reviews" "0.*"
+	${gitConfig} label.Workflow.value "+1 Approved" "\+1.*"
+	${gitConfig} plugin.reviewers-by-blame.maxReviewers "5" ".*"
+	${gitConfig} plugin.reviewers-by-blame.ignoreDrafts "true" ".*"
+	${gitConfig} plugin.reviewers-by-blame.ignoreSubjectRegEx "'(WIP|DNM)(.*)'" ".*"
+
+	git add project.config
+	git commit -m"Set SF default Gerrit ACLs" && git push origin meta/config:meta/config || true
+	`
+
+	containerCommand := []string{
+		"/bin/sh",
+		"-c",
+		"echo \"${GERRIT_INIT_SCRIPT}\" > /tmp/init.sh && bash /tmp/init.sh"}
+
+	if !found {
+		container := apiv1.Container{
+			Name:    fmt.Sprintf("%s-container", job_name),
+			Image:   IMAGE,
+			Command: containerCommand,
+			Env: []apiv1.EnvVar{
+				create_env("GERRIT_INIT_SCRIPT", postInitScript),
+				create_env("FQDN", r.cr.Spec.FQDN),
+				create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
+			},
+		}
+		job := create_job(r.ns, job_name, container)
+		r.log.V(1).Info("Creating Gerrit post init job", "name", name)
+		r.CreateR(&job)
+		return false
+	} else if job.Status.Succeeded >= 1 {
+		return true
+	} else {
+		r.log.V(1).Info("Waiting for Gerrit post init job result")
+		return false
+	}
+}
 
 func (r *SFController) DeployGerrit(enabled bool) bool {
 	if enabled {
@@ -206,7 +343,12 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 
 		// Wait for the service to be ready.
 		r.GetM(IDENT, &dep)
-		return (dep.Status.ReadyReplicas > 0)
+		if dep.Status.ReadyReplicas > 0 {
+			return r.GerritPostInitJob("post-init")
+		} else {
+			r.log.V(1).Info("Waiting for Gerrit to be ready...")
+			return false
+		}
 	} else {
 		r.DeleteStatefulSet(IDENT)
 		r.DeleteService(GERRIT_HTTPD_PORT_NAME)
@@ -218,7 +360,5 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 func (r *SFController) IngressGerrit() []netv1.IngressRule {
 	return []netv1.IngressRule{
 		create_ingress_rule(IDENT+"."+r.cr.Spec.FQDN, GERRIT_HTTPD_PORT_NAME, GERRIT_HTTPD_PORT),
-		// How to expose no HTTP traffic ?
-		// create_ingress_rule(GERRIT_SSHD_PORT_NAME+r.cr.Spec.FQDN, GERRIT_SSHD_PORT_NAME, GERRIT_SSHD_PORT),
 	}
 }

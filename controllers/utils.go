@@ -6,9 +6,10 @@
 package controllers
 
 import (
+	"strings"
+
 	"github.com/google/uuid"
 	"golang.org/x/crypto/ssh"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
