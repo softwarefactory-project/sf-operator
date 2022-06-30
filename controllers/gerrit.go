@@ -23,18 +23,60 @@ const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_GIT_MOUNT_PATH = "/var/gerrit/git"
 const GERRIT_INDEX_MOUNT_PATH = "/var/gerrit/index"
 const GERRIT_ETC_MOUNT_PATH = "/var/gerrit/etc"
+const GERRIT_SSH_MOUNT_PATH = "/var/gerrit/.ssh"
+const GERRIT_LOGS_MOUNT_PATH = "/var/gerrit/logs"
 
 // TODO: Attach a config-map for all Gerrit option (like sshd.maxConnectionsPerUser) then
 // make entrypoint.sh uses ENV vars exposed by the configMap
 const GERRIT_ENTRYPOINT = `
 #!/bin/bash
 
+set -ex
+
 # The /dev/./urandom is not a typo. https://stackoverflow.com/questions/58991966/what-java-security-egd-option-is-for
 JAVA_OPTIONS="-Djava.security.egd=file:/dev/./urandom"
+
+# Un-comment to clear Gerrit data (we use a statefulset so PVs are kept and re-attached when statefulset is re-created)
+# rm -Rf /var/gerrit/git/*
+# rm -Rf /var/gerrit/etc/*
+# rm -Rf /var/gerrit/etc/.admin_user_created
+# rm -Rf /var/gerrit/.ssh/*
 
 echo "Initializing Gerrit site ..."
 java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war init -d /var/gerrit --batch --no-auto-start --skip-plugins
 java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war reindex -d /var/gerrit
+
+echo "Creating admin account if needed"
+cat << EOF > /var/gerrit/.gitconfig
+[user]
+    name = SF initial configurator
+    email = admin]${FQDN}
+[gitreview]
+    username = admin
+[push]
+    default = simple
+EOF
+if [ ! -f /var/gerrit/etc/.admin_user_created ]; then
+	pynotedb create-admin-user --email "admin@${FQDN}" --pubkey "${GERRIT_ADMIN_SSH_PUB}" \
+	  --all-users "/var/gerrit/git/All-Users.git" --scheme gerrit
+
+	echo "Copy Gerrit Admin SSH keys on filesystem"
+	echo "${GERRIT_ADMIN_SSH_PUB}" > /var/gerrit/.ssh/gerrit_admin.pub
+	chmod 0444 /var/gerrit/.ssh/gerrit_admin.pub
+  echo "${GERRIT_ADMIN_SSH}" > /var/gerrit/.ssh/gerrit_admin
+	chmod 0400 /var/gerrit/.ssh/gerrit_admin
+
+	cat << EOF > /var/gerrit/.ssh/config
+Host gerrit
+User admin
+Hostname ${HOSTNAME}
+Port 29418
+IdentityFile /var/gerrit/.ssh/gerrit_admin
+EOF
+touch /var/gerrit/etc/.admin_user_created
+else
+	echo "Admin user already initialized"
+fi
 
 echo "Setting Gerrit config file ..."
 git config -f /var/gerrit/etc/gerrit.config --replace-all auth.type "DEVELOPMENT_BECOME_ANY_ACCOUNT"
@@ -61,6 +103,7 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		cm_config_data := make(map[string]string)
 		// Those variables should be populated via the SoftwareFactory CRD Spec
 		cm_config_data["SSHD_MAX_CONNECTIONS_PER_USER"] = "20"
+		cm_config_data["FQDN"] = r.cr.Spec.FQDN
 		r.EnsureConfigMap("gerrit-config", cm_config_data)
 
 		// Ensure Gerrit Admin user ssh key
@@ -86,13 +129,24 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 				Name:      IDENT + "-config",
 				MountPath: GERRIT_ETC_MOUNT_PATH,
 			},
+			{
+				Name:      IDENT + "-ssh",
+				MountPath: GERRIT_SSH_MOUNT_PATH,
+			},
+			{
+				Name:      IDENT + "-logs",
+				MountPath: GERRIT_LOGS_MOUNT_PATH,
+			},
 		}
 
 		dep.Spec.VolumeClaimTemplates = append(
 			dep.Spec.VolumeClaimTemplates,
 			create_pvc(r.ns, IDENT+"-git"),
 			create_pvc(r.ns, IDENT+"-index"),
-			create_pvc(r.ns, IDENT+"-config"))
+			create_pvc(r.ns, IDENT+"-config"),
+			create_pvc(r.ns, IDENT+"-ssh"),
+			create_pvc(r.ns, IDENT+"-logs"),
+		)
 
 		// This port definition is informational all ports exposed by the container
 		// will be available to the network.
