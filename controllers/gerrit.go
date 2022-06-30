@@ -6,7 +6,6 @@
 package controllers
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,10 +88,8 @@ exec java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war daemon -d /var/gerrit
 `
 
 func (r *SFController) DeployGerrit(enabled bool) bool {
-	var dep appsv1.StatefulSet
-	found := r.GetM(IDENT, &dep)
-	if enabled && !found {
-		r.log.V(1).Info("Deploying " + IDENT)
+	if enabled {
+		// r.log.V(1).Info("Deploying " + IDENT)
 
 		// Set entrypoint.sh in a config map
 		cm_ep_data := make(map[string]string)
@@ -110,7 +107,7 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		r.EnsureSSHKey("gerrit-admin-ssh-key")
 
 		// Create the deployment
-		dep = create_statefulset(r.ns, IDENT, IMAGE)
+		dep := create_statefulset(r.ns, IDENT, IMAGE)
 		dep.Spec.Template.Spec.Containers[0].Command = []string{"/bin/bash", "/entry/entrypoint.sh"}
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 			{
@@ -175,7 +172,7 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 			create_volume_cm(IDENT+"-ep", IDENT+"-ep-config-map"),
 		}
-		r.CreateR(&dep)
+		r.Apply(&dep)
 
 		// Create services exposed by Gerrit
 		httpd_service := create_service(r.ns, GERRIT_HTTPD_PORT_NAME, IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME)
@@ -198,20 +195,18 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 					"run": IDENT,
 				},
 			}}
-		r.CreateR(&httpd_service)
-		r.CreateR(&sshd_service)
-	}
-	if !enabled && found {
-		r.log.V(1).Info("Destroying " + IDENT)
-		if err := r.Delete(r.ctx, &dep); err != nil {
-			panic(err.Error())
-		}
-	}
-	if enabled && found {
+		r.Apply(&httpd_service)
+		r.Apply(&sshd_service)
+
 		// Wait for the service to be ready.
+		r.GetM(IDENT, &dep)
 		return (dep.Status.ReadyReplicas > 0)
+	} else {
+		r.DeleteStatefulSet(IDENT)
+		r.DeleteService(GERRIT_HTTPD_PORT_NAME)
+		r.DeleteService(GERRIT_SSHD_PORT_NAME)
+		return true
 	}
-	return true
 }
 
 func (r *SFController) IngressGerrit() []netv1.IngressRule {

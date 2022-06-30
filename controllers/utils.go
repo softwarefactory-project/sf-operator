@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -322,6 +323,27 @@ func (r *SFController) DeleteR(obj client.Object) {
 	}
 }
 
+func (r *SFController) DeleteDeployment(name string) {
+	var dep appsv1.Deployment
+	if r.GetM(name, &dep) {
+		r.DeleteR(&dep)
+	}
+}
+
+func (r *SFController) DeleteStatefulSet(name string) {
+	var dep appsv1.StatefulSet
+	if r.GetM(name, &dep) {
+		r.DeleteR(&dep)
+	}
+}
+
+func (r *SFController) DeleteService(name string) {
+	var srv apiv1.Service
+	if r.GetM(name, &srv) {
+		r.DeleteR(&srv)
+	}
+}
+
 func (r *SFController) UpdateR(obj client.Object) {
 	if err := r.Update(r.ctx, obj); err != nil {
 		panic(err.Error())
@@ -334,12 +356,22 @@ func (r *SFController) PatchR(obj client.Object, patch client.Patch) {
 	}
 }
 
-func (r *SFController) CreateOrUpdate(obj client.Object) {
-	if r.GetM(obj.GetName(), obj) {
-		// TODO: fix update, it does not work (the obj is overriden with the current value)
-		r.UpdateR(obj)
+func (r *SFController) Apply(desired client.Object) {
+	var obj unstructured.Unstructured
+
+	// get gvk
+	gvk, err := apiutil.GVKForObject(desired, r.Scheme)
+	if err != nil {
+		panic(err.Error())
+	}
+	obj.SetGroupVersionKind(gvk)
+
+	if r.GetM(desired.GetName(), &obj) {
+		r.log.V(1).Info("Updating object")
+		r.UpdateR(desired)
 	} else {
-		r.CreateR(obj)
+		r.log.V(1).Info("Creating object")
+		r.CreateR(desired)
 	}
 }
 
@@ -374,7 +406,10 @@ func (r *SFController) EnsureSecret(name string) apiv1.Secret {
 				name: []byte(uuid.New().String()),
 			},
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns}}
-		r.CreateR(&secret)
+		// We don't use CreateR to not own the resource, and keep it after deletion
+		if err := r.Create(r.ctx, &secret); err != nil {
+			panic(err.Error())
+		}
 	}
 	return secret
 }
@@ -390,7 +425,10 @@ func (r *SFController) EnsureSSHKey(name string) {
 				"pub":  sshkey.Pub,
 			},
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns}}
-		r.CreateR(&secret)
+		// We don't use CreateR to not own the resource, and keep it after deletion
+		if err := r.Create(r.ctx, &secret); err != nil {
+			panic(err.Error())
+		}
 	}
 }
 
@@ -398,23 +436,17 @@ func (r *SFController) EnsureSSHKey(name string) {
 func (r *SFController) EnsureConfigMap(base_name string, data map[string]string) apiv1.ConfigMap {
 	name := base_name + "-config-map"
 	var cm apiv1.ConfigMap
-	err := r.Get(r.ctx, client.ObjectKey{
-		Name:      name,
-		Namespace: r.ns,
-	}, &cm)
-	if errors.IsNotFound(err) {
+	if !r.GetM(name, &cm) {
 		r.log.V(1).Info("Creating config", "name", name)
 		cm = apiv1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns},
 			Data:       data,
 		}
-		controllerutil.SetControllerReference(r.cr, &cm, r.Scheme)
-		err = r.Create(r.ctx, &cm)
-		if err != nil {
-			panic(err.Error())
-		}
-	} else if err != nil && !errors.IsAlreadyExists(err) {
-		panic(err.Error())
+		r.CreateR(&cm)
+	} else {
+		r.log.V(1).Info("Updating config", "name", name)
+		cm.Data = data
+		r.UpdateR(&cm)
 	}
 	return cm
 }

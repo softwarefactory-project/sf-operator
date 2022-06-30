@@ -7,7 +7,6 @@ package controllers
 import (
 	"fmt"
 
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 )
@@ -132,10 +131,7 @@ const ETHERPAD_PORT = 8080
 const ETHERPAD_PORT_NAME = "etherpad-port"
 
 func (r *SFController) DeployEtherpad(enabled bool) bool {
-	var dep appsv1.Deployment
-	found := r.GetM("etherpad", &dep)
-	if !found && enabled {
-		r.log.V(1).Info("Etherpad deploy not found")
+	if enabled {
 		db_key_name := "etherpad-db-password"
 		db_password, db_ready := r.EnsureDB("etherpad")
 		admin_password := r.EnsureSecret("etherpad-admin-password")
@@ -145,7 +141,7 @@ func (r *SFController) DeployEtherpad(enabled bool) bool {
 		r.EnsureConfigMap("etherpad", cm_data)
 		if db_ready {
 			r.log.V(1).Info("Etherpad DB is ready, deploying the service now!")
-			dep = create_deployment(r.ns, "etherpad", "quay.io/software-factory/sf-etherpad:1.8.17-1")
+			dep := create_deployment(r.ns, "etherpad", "quay.io/software-factory/sf-etherpad:1.8.17-1")
 			dep.Spec.Template.Spec.Containers[0].Command = []string{
 				"node", "./src/node/server.js", "--settings", "/etc/etherpad/settings.json"}
 			dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
@@ -160,23 +156,19 @@ func (r *SFController) DeployEtherpad(enabled bool) bool {
 			dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 				create_volume_cm("config-volume", "etherpad-config-map"),
 			}
-			r.CreateR(&dep)
+			dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_http_probe("/health/ready", 9990)
+			r.log.V(1).Info("Updating with readiness")
+			r.Apply(&dep)
 			srv := create_service(r.ns, "etherpad", "etherpad", ETHERPAD_PORT, ETHERPAD_PORT_NAME)
-			r.CreateR(&srv)
+			r.Apply(&srv)
+
+			r.GetM("etherpad", &dep)
+			return (dep.Status.ReadyReplicas > 0)
 		}
-	} else if found {
-		if !enabled {
-			r.log.V(1).Info("Etherpad deployment found, but it's not enabled, deleting it now")
-			if err := r.Delete(r.ctx, &dep); err != nil {
-				panic(err.Error())
-			}
-		}
-	}
-	if enabled {
-		// Wait for the service to be ready.
-		return (dep.Status.ReadyReplicas > 0)
+		return false
 	} else {
-		// The service is not enabled, so it is always ready.
+		r.DeleteDeployment("etherpad")
+		r.DeleteService("etherpad")
 		return true
 	}
 }
