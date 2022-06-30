@@ -16,7 +16,7 @@ const GERRIT_HTTPD_PORT = 8080
 const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
-const IMAGE = "quay.io/software-factory/gerrit:3.4.5-1"
+const IMAGE = "quay.io/software-factory/gerrit:3.4.5-2"
 const JAVA_OPTIONS = "-Djava.security.egd=file:/dev/./urandom"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_GIT_MOUNT_PATH = "/var/gerrit/git"
@@ -44,6 +44,12 @@ JAVA_OPTIONS="-Djava.security.egd=file:/dev/./urandom"
 echo "Initializing Gerrit site ..."
 java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war init -d /var/gerrit --batch --no-auto-start --skip-plugins
 java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war reindex -d /var/gerrit
+
+echo "Installing plugins ..."
+unzip -jo /var/gerrit/bin/gerrit.war WEB-INF/plugins/* -d /var/gerrit/plugins
+for plugin in /var/gerrit-plugins/*; do
+		cp -uv $plugin /var/gerrit/plugins/
+done
 
 echo "Creating admin account if needed"
 cat << EOF > /var/gerrit/.gitconfig
