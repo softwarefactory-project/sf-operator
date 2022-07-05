@@ -6,6 +6,7 @@
 package controllers
 
 import (
+	_ "embed"
 	"fmt"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -27,180 +28,16 @@ const GERRIT_ETC_MOUNT_PATH = "/var/gerrit/etc"
 const GERRIT_SSH_MOUNT_PATH = "/var/gerrit/.ssh"
 const GERRIT_LOGS_MOUNT_PATH = "/var/gerrit/logs"
 
-// TODO: Attach a config-map for all Gerrit option (like sshd.maxConnectionsPerUser) then
-// make entrypoint.sh uses ENV vars exposed by the configMap
-const GERRIT_ENTRYPOINT = `
-#!/bin/bash
+//go:embed static/gerrit/post-init.sh
+var postInitScript string
 
-set -ex
-
-# The /dev/./urandom is not a typo. https://stackoverflow.com/questions/58991966/what-java-security-egd-option-is-for
-JAVA_OPTIONS="-Djava.security.egd=file:/dev/./urandom"
-
-# Un-comment to clear Gerrit data (we use a statefulset so PVs are kept and re-attached when statefulset is re-created)
-# rm -Rf /var/gerrit/git/*
-# rm -Rf /var/gerrit/etc/*
-# rm -Rf /var/gerrit/etc/.admin_user_created
-# rm -Rf /var/gerrit/.ssh/*
-
-echo "Initializing Gerrit site ..."
-java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war init -d /var/gerrit --batch --no-auto-start --skip-plugins
-java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war reindex -d /var/gerrit
-
-echo "Installing plugins ..."
-unzip -jo /var/gerrit/bin/gerrit.war WEB-INF/plugins/* -d /var/gerrit/plugins
-for plugin in /var/gerrit-plugins/*; do
-		cp -uv $plugin /var/gerrit/plugins/
-done
-
-echo "Creating admin account if needed"
-cat << EOF > /var/gerrit/.gitconfig
-[user]
-    name = SF initial configurator
-    email = admin@${FQDN}
-[gitreview]
-    username = admin
-[push]
-    default = simple
-EOF
-if [ ! -f /var/gerrit/etc/.admin_user_created ]; then
-	pynotedb create-admin-user --email "admin@${FQDN}" --pubkey "${GERRIT_ADMIN_SSH_PUB}" \
-	  --all-users "/var/gerrit/git/All-Users.git" --scheme gerrit
-
-	echo "Copy Gerrit Admin SSH keys on filesystem"
-	echo "${GERRIT_ADMIN_SSH_PUB}" > /var/gerrit/.ssh/gerrit_admin.pub
-	chmod 0444 /var/gerrit/.ssh/gerrit_admin.pub
-  echo "${GERRIT_ADMIN_SSH}" > /var/gerrit/.ssh/gerrit_admin
-	chmod 0400 /var/gerrit/.ssh/gerrit_admin
-
-	cat << EOF > /var/gerrit/.ssh/config
-Host gerrit
-User admin
-Hostname ${HOSTNAME}
-Port 29418
-IdentityFile /var/gerrit/.ssh/gerrit_admin
-EOF
-touch /var/gerrit/etc/.admin_user_created
-else
-	echo "Admin user already initialized"
-fi
-
-echo "Setting Gerrit config file ..."
-git config -f /var/gerrit/etc/gerrit.config --replace-all auth.type "DEVELOPMENT_BECOME_ANY_ACCOUNT"
-git config -f /var/gerrit/etc/gerrit.config --replace-all sshd.listenaddress "*:29418"
-git config -f /var/gerrit/etc/gerrit.config --replace-all sshd.idleTimeout "2d"
-git config -f /var/gerrit/etc/gerrit.config --replace-all sshd.maxConnectionsPerUser "${SSHD_MAX_CONNECTIONS_PER_USER:-10}"
-
-echo "Running Gerrit ..."
-exec java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war daemon -d /var/gerrit
-`
+//go:embed static/gerrit/entrypoint.sh
+var entrypoint string
 
 func (r *SFController) GerritPostInitJob(name string) bool {
 	var job batchv1.Job
 	job_name := IDENT + "-" + name
 	found := r.GetM(job_name, &job)
-
-	postInitScript := `
-	#!/bin/bash
-
-	set -ex
-
-	env
-
-	mkdir /var/gerrit/.ssh
-	chmod 0700 /var/gerrit/.ssh
-
-	echo "${GERRIT_ADMIN_SSH}" > /var/gerrit/.ssh/gerrit_admin
-	chmod 0400 /var/gerrit/.ssh/gerrit_admin
-
-	cat << EOF > /var/gerrit/.ssh/config
-Host gerrit
-User admin
-Hostname ${GERRIT_SSHD_PORT_29418_TCP_ADDR}
-Port ${GERRIT_SSHD_SERVICE_PORT_GERRIT_SSHD}
-IdentityFile /var/gerrit/.ssh/gerrit_admin
-StrictHostKeyChecking no
-EOF
-
-	echo "Ensure we can connect to Gerrit ssh port"
-	ssh gerrit gerrit version
-
-  cat << EOF > /var/gerrit/.gitconfig
-[user]
-    name = SF initial configurator
-    email = admin@${FQDN}
-[gitreview]
-    username = admin
-[push]
-    default = simple
-EOF
-
-	echo ""
-	mkdir /tmp/All-projects && cd /tmp/All-projects
-	git init .
-	git remote add origin ssh://gerrit/All-Projects
-	git fetch origin refs/meta/config:refs/remotes/origin/meta/config
-	git checkout meta/config
-	git reset --hard origin/meta/config
-	gitConfig="git config -f project.config --replace-all "
-	${gitConfig} capability.accessDatabase "group Administrators"
-	${gitConfig} access.refs/*.push "group Administrators" ".*group Administrators"
-	${gitConfig} access.refs/for/*.addPatchSet "group Administrators" "group Administrator"
-	${gitConfig} access.refs/for/*.addPatchSet "group Project Owners" "group Project Owners"
-	${gitConfig} access.refs/heads/*.push "+force group Administrators" ".*group Administrators"
-	${gitConfig} access.refs/heads/*.push "+force group Project Owners" ".*group Project Owners"
-	${gitConfig} access.refs/heads/*.label-Verified "-2..+2 group Service Users" ".*group Service Users"
-	${gitConfig} access.refs/heads/*.label-Verified "-2..+2 group Administrators" ".*group Administrators"
-	${gitConfig} access.refs/heads/*.label-Verified "-2..+2 group Project Owners" ".*group Project Owners"
-	${gitConfig} access.refs/heads/*.label-Workflow "-1..+1 group Administrators" ".*group Administrators"
-	${gitConfig} access.refs/heads/*.label-Workflow "-1..+1 group Project Owners" ".*group Project Owners"
-	${gitConfig} access.refs/heads/*.submit "group Service Users" "group Service Users"
-	${gitConfig} access.refs/heads/*.rebase "group Administrators" "group Administrators"
-	${gitConfig} access.refs/heads/*.rebase "group Project Owners" "group Project Owners"
-	${gitConfig} access.refs/heads/*.rebase "group Service Users" "group Service Users"
-	${gitConfig} access.refs/heads/*.abandon "group Administrators" "group Administrators"
-	${gitConfig} access.refs/heads/*.abandon "group Project Owners" "group Project Owners"
-	${gitConfig} access.refs/meta/config.read "group Registered Users" "group Registered Users"
-	${gitConfig} access.refs/meta/config.read "group Anonymous Users" "group Anonymous Users"
-	${gitConfig} access.refs/meta/config.rebase "group Administrators" "group Administrators"
-	${gitConfig} access.refs/meta/config.rebase "group Project Owners" "group Project Owners"
-	${gitConfig} access.refs/meta/config.abandon "group Administrators" "group Administrators"
-	${gitConfig} access.refs/meta/config.abandon "group Project Owners" "group Project Owners"
-	${gitConfig} access.refs/meta/config.label-Verified "-2..+2 group Administrators" ".*group Administrators"
-	${gitConfig} access.refs/meta/config.label-Verified "-2..+2 group Project Owners" ".*group Project Owners"
-	${gitConfig} access.refs/meta/config.label-Workflow "-1..+1 group Administrators" ".*group Administrators"
-	${gitConfig} access.refs/meta/config.label-Workflow "-1..+1 group Project Owners" ".*group Project Owners"
-	${gitConfig} access.refs/tags/*.pushTag "+force group Administrators" ".*group Administrators"
-	${gitConfig} access.refs/tags/*.pushTag "+force group Project Owners" ".*group Project Owners"
-	${gitConfig} access.refs/tags/*.pushAnnotatedTag "group Administrators" "group Administrators"
-	${gitConfig} access.refs/tags/*.pushAnnotatedTag "group Project Owners" "group Project Owners"
-	${gitConfig} access.refs/tags/*.pushSignedTag "group Administrators" "group Administrators"
-	${gitConfig} access.refs/tags/*.pushSignedTag "group Project Owners" "group Project Owners"
-	${gitConfig} access.refs/tags/*.forgeAuthor "group Administrators" "group Administrators"
-	${gitConfig} access.refs/tags/*.forgeAuthor "group Project Owners" "group Project Owners"
-	${gitConfig} access.refs/tags/*.forgeCommitter "group Administrators" "group Administrators"
-	${gitConfig} access.refs/tags/*.forgeCommitter "group Project Owners" "group Project Owners"
-	${gitConfig} access.refs/tags/*.push "group Administrators" "group Administrators"
-	${gitConfig} access.refs/tags/*.push "group Project Owners" "group Project Owners"
-	${gitConfig} label.Code-Review.copyAllScoresIfNoCodeChange "true"
-	${gitConfig} label.Code-Review.value "-2 Do not submit" "-2.*"
-	${gitConfig} label.Code-Review.value "-1 I would prefer that you didn't submit this" "-1.*"
-	${gitConfig} label.Code-Review.value "+2 Looks good to me (core reviewer)" "\+2.*"
-	${gitConfig} label.Verified.value "-2 Fails" "-2.*"
-	${gitConfig} label.Verified.value "-1 Doesn't seem to work" "-1.*"
-	${gitConfig} label.Verified.value "0 No score" "0.*"
-	${gitConfig} label.Verified.value "+1 Works for me" "\+1.*"
-	${gitConfig} label.Verified.value "+2 Verified" "\+2.*"
-	${gitConfig} label.Workflow.value "-1 Work in progress" "-1.*"
-	${gitConfig} label.Workflow.value "0 Ready for reviews" "0.*"
-	${gitConfig} label.Workflow.value "+1 Approved" "\+1.*"
-	${gitConfig} plugin.reviewers-by-blame.maxReviewers "5" ".*"
-	${gitConfig} plugin.reviewers-by-blame.ignoreDrafts "true" ".*"
-	${gitConfig} plugin.reviewers-by-blame.ignoreSubjectRegEx "'(WIP|DNM)(.*)'" ".*"
-
-	git add project.config
-	git commit -m"Set SF default Gerrit ACLs" && git push origin meta/config:meta/config || true
-	`
 
 	containerCommand := []string{
 		"/bin/sh",
@@ -232,11 +69,10 @@ EOF
 
 func (r *SFController) DeployGerrit(enabled bool) bool {
 	if enabled {
-		// r.log.V(1).Info("Deploying " + IDENT)
 
 		// Set entrypoint.sh in a config map
 		cm_ep_data := make(map[string]string)
-		cm_ep_data["entrypoint.sh"] = GERRIT_ENTRYPOINT
+		cm_ep_data["entrypoint.sh"] = entrypoint
 		r.EnsureConfigMap("gerrit-ep", cm_ep_data)
 
 		// Set Gerrit env vars in a config map
