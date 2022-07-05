@@ -345,6 +345,7 @@ func (r *SFController) DeleteService(name string) {
 }
 
 func (r *SFController) UpdateR(obj client.Object) {
+	controllerutil.SetControllerReference(r.cr, obj, r.Scheme)
 	if err := r.Update(r.ctx, obj); err != nil {
 		panic(err.Error())
 	}
