@@ -39,23 +39,31 @@ func (r *SFController) GerritPostInitJob(name string) bool {
 	job_name := IDENT + "-" + name
 	found := r.GetM(job_name, &job)
 
-	containerCommand := []string{
-		"/bin/sh",
-		"-c",
-		"echo \"${GERRIT_INIT_SCRIPT}\" > /tmp/init.sh && bash /tmp/init.sh"}
-
 	if !found {
+		// Set post-init.sh in a config map
+		cm_data := make(map[string]string)
+		cm_data["post-init.sh"] = postInitScript
+		r.EnsureConfigMap("gerrit-pi", cm_data)
+
 		container := apiv1.Container{
 			Name:    fmt.Sprintf("%s-container", job_name),
 			Image:   IMAGE,
-			Command: containerCommand,
+			Command: []string{"/bin/bash", "/entry/post-init.sh"},
 			Env: []apiv1.EnvVar{
-				create_env("GERRIT_INIT_SCRIPT", postInitScript),
 				create_env("FQDN", r.cr.Spec.FQDN),
 				create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
 			},
+			VolumeMounts: []apiv1.VolumeMount{
+				{
+					Name:      IDENT + "-pi",
+					MountPath: "/entry",
+				},
+			},
 		}
 		job := create_job(r.ns, job_name, container)
+		job.Spec.Template.Spec.Volumes = []apiv1.Volume{
+			create_volume_cm(IDENT+"-pi", IDENT+"-pi-config-map"),
+		}
 		r.log.V(1).Info("Creating Gerrit post init job", "name", name)
 		r.CreateR(&job)
 		return false
