@@ -74,6 +74,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	lodgeitStatus := true
 	zuulStatus := true
 	keycloakStatus := true
+
 	if mariadbStatus {
 		etherpadStatus = sfc.DeployEtherpad(sf.Spec.Etherpad)
 		// lodgeitStatus = sfc.DeployLodgeit(sf.Spec.Lodgit)
@@ -84,10 +85,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		zuulStatus = sfc.DeployZuul(sf.Spec.Zuul)
 	}
 
-	gerritStatus := true
-	if keycloakStatus {
-		gerritStatus = sfc.DeployGerrit(sf.Spec.Gerrit)
-	}
+	gerritStatus := sfc.DeployGerrit(sf.Spec.Gerrit)
 
 	log.V(1).Info("Service status:",
 		"mariadbStatus", mariadbStatus,
