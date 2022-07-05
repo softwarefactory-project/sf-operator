@@ -46,48 +46,40 @@ providers: []
 }
 
 func (r *SFController) DeployZuul(enabled bool) bool {
-	var dep zuul.Zuul
-	found := r.GetM("zuul", &dep)
-	expected := zuul.Zuul{
-		ObjectMeta: metav1.ObjectMeta{Name: "zuul", Namespace: r.ns},
-		Spec: zuul.ZuulSpec{
-			Database: zuul.DatabaseSpec{
-				SecretName: "zuul-db-uri",
-			},
-			Scheduler: zuul.SchedulerSpec{
-				Config: zuul.SecretConfig{
-					SecretName: "zuul-tenant-yaml",
-				},
-			},
-			Launcher: zuul.LauncherSpec{
-				Config: zuul.SecretConfig{
-					SecretName: "zuul-launcher-yaml",
-				},
-			},
-			Connections: map[string]zuul.ConnectionSpec{},
-		},
-	}
 	if enabled {
+		zuul := zuul.Zuul{
+			ObjectMeta: metav1.ObjectMeta{Name: "zuul", Namespace: r.ns},
+			Spec: zuul.ZuulSpec{
+				Database: zuul.DatabaseSpec{
+					SecretName: "zuul-db-uri",
+				},
+				Scheduler: zuul.SchedulerSpec{
+					Config: zuul.SecretConfig{
+						SecretName: "zuul-tenant-yaml",
+					},
+				},
+				Launcher: zuul.LauncherSpec{
+					Config: zuul.SecretConfig{
+						SecretName: "zuul-launcher-yaml",
+					},
+				},
+				Connections: map[string]zuul.ConnectionSpec{},
+			},
+		}
 		db_password, db_ready := r.EnsureDB("zuul")
 		if db_ready {
 			r.log.V(1).Info("zuul DB is ready, deploying the service now!")
 			r.EnsureZuulDBSecret(&db_password)
-			r.Apply(&expected)
+			r.Apply(&zuul)
 			return false
 		}
-	} else if found {
-		if !enabled {
-			r.log.V(1).Info("Zuul deployment found, but it's not enabled, deleting it now")
-			r.DeleteR(&dep)
-		}
-	}
-	if enabled {
-		// Wait for the service to be ready.
-		if !dep.Status.Ready {
+		r.GetM("zuul", &zuul)
+		if !zuul.Status.Ready {
 			r.log.V(1).Info("Waiting for zuul deployment...")
 		}
-		return (dep.Status.Ready)
+		return (zuul.Status.Ready)
 	} else {
+		// TODO: remove any left-over zuul
 		return true
 	}
 }
