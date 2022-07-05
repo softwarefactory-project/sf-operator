@@ -1,7 +1,15 @@
+- job:
+    name: sf-operator-functional-minimal
+    run: playbooks/test.yaml
+    nodeset:
+      nodes:
+        name: controller
+        label: cloud-fedora-36
+
 - project:
     check:
       jobs:
-        - noop
+        - sf-operator-functional-minimal
     gate:
       jobs:
         - noop

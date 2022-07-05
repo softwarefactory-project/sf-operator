@@ -1,0 +1,19 @@
+- name: Install packages
+  package:
+    name:
+      - golang
+      - make
+  become: true
+
+- name: Configure default namespace
+  command: kubectl config set-context --current --namespace=default
+
+- name: Build the operator
+  command: make build
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Install the CRDS
+  command: make install
+  args:
+    chdir: "{{ zuul.project.src_dir }}"

@@ -7,6 +7,7 @@ package controllers
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -22,7 +23,8 @@ import (
 // SoftwareFactoryReconciler reconciles a SoftwareFactory object
 type SoftwareFactoryReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme  *runtime.Scheme
+	Oneshot bool
 }
 
 //+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=softwarefactories,verbs=get;list;watch;create;update;patch;delete
@@ -109,6 +111,9 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	} else {
 		sfc.SetupIngress(keycloakEnabled)
 		log.V(1).Info("Reconcile completed!", "sf", sf)
+		if r.Oneshot {
+			os.Exit(0)
+		}
 		return ctrl.Result{}, nil
 	}
 }
