@@ -97,7 +97,7 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 				create_env("KEYCLOAK_USER", "admin"),
 				create_secret_env("KEYCLOAK_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
 			}
-			dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_http_probe("/health/ready", 9990)
+			dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9990)
 			r.CreateR(&dep)
 			srv := create_service(r.ns, "keycloak", "keycloak", KC_PORT, KC_PORT_NAME)
 			r.CreateR(&srv)

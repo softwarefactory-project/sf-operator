@@ -281,18 +281,33 @@ func create_service(ns string, name string, selector string, port int32, port_na
 		}}
 }
 
-func create_http_probe(path string, port int) *apiv1.Probe {
+// --- readiness probes (validate a pod is ready to serve) ---
+func create_readiness_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
 	return &apiv1.Probe{
-		ProbeHandler: apiv1.ProbeHandler{
-			HTTPGet: &apiv1.HTTPGetAction{
-				Path: path,
-				Port: intstr.FromInt(port),
-			},
-		},
+		ProbeHandler:     handler,
 		TimeoutSeconds:   3,
 		PeriodSeconds:    5,
 		FailureThreshold: 20,
 	}
+
+}
+
+func create_readiness_http_probe(path string, port int) *apiv1.Probe {
+	handler := apiv1.ProbeHandler{
+		HTTPGet: &apiv1.HTTPGetAction{
+			Path: path,
+			Port: intstr.FromInt(port),
+		}}
+	return create_readiness_probe(handler)
+}
+
+func create_readiness_tcp_probe(port int) *apiv1.Probe {
+	handler :=
+		apiv1.ProbeHandler{
+			TCPSocket: &apiv1.TCPSocketAction{
+				Port: intstr.FromInt(port),
+			}}
+	return create_readiness_probe(handler)
 }
 
 // Get a resources, returning if it was found

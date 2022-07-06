@@ -159,6 +159,11 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 			create_volume_cm(IDENT+"-ep", IDENT+"-ep-config-map"),
 		}
+
+		// Create readiness probes
+		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
+		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
+
 		r.Apply(&dep)
 
 		// Create services exposed by Gerrit

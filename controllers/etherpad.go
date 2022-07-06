@@ -45,7 +45,7 @@ func (r *SFController) DeployEtherpad(enabled bool) bool {
 			dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 				create_volume_cm("config-volume", "etherpad-config-map"),
 			}
-			dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_http_probe("/api", 8080)
+			dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/api", 8080)
 			r.log.V(1).Info("Updating with readiness")
 			r.Apply(&dep)
 			srv := create_service(r.ns, "etherpad", "etherpad", ETHERPAD_PORT, ETHERPAD_PORT_NAME)
