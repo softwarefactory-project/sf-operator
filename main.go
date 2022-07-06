@@ -43,6 +43,7 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var ns string
+	var oneshot bool
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -50,6 +51,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	// Since we are developing sf-operator on a shared host, we required a dedicated namespace
 	flag.StringVar(&ns, "namespace", "", "The namespace to listen to.")
+	flag.BoolVar(&oneshot, "oneshot", false, "Stop once resources is ready.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -80,6 +82,7 @@ func main() {
 	if err = (&controllers.SoftwareFactoryReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Oneshot: oneshot,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SoftwareFactory")
 		os.Exit(1)

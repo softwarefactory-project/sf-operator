@@ -1,0 +1,12 @@
+- name: Install test CR
+  command: kubectl apply -f playbooks/files/minimal.yaml
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Run the operator one shot
+  command: timeout 900 go run ./main.go --namespace default --oneshot
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Get logs
+  command: kubectl get all
