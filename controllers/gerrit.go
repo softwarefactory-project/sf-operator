@@ -190,12 +190,10 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		r.Apply(&httpd_service)
 		r.Apply(&sshd_service)
 
-		// Wait for the service to be ready.
-		r.GetM(IDENT, &dep)
-		if dep.Status.ReadyReplicas > 0 {
+		ready := r.IsStatefulSetReady(IDENT)
+		if ready {
 			return r.GerritPostInitJob("post-init")
 		} else {
-			r.log.V(1).Info("Waiting for Gerrit to be ready...")
 			return false
 		}
 	} else {

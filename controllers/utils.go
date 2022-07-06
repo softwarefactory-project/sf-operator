@@ -6,6 +6,7 @@
 package controllers
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/google/uuid"
@@ -339,6 +340,28 @@ func (r *SFController) DeleteR(obj client.Object) {
 	}
 }
 
+func (r *SFController) IsStatefulSetReady(name string) bool {
+	var dep appsv1.StatefulSet
+	if r.GetM(name, &dep) {
+		if dep.Status.ReadyReplicas > 0 {
+			return true
+		}
+		r.log.V(1).Info("Waiting for statefulset", "name", name)
+	}
+	return false
+}
+
+func (r *SFController) IsDeploymentReady(name string) bool {
+	var dep appsv1.Deployment
+	if r.GetM(name, &dep) {
+		if dep.Status.ReadyReplicas > 0 {
+			return true
+		}
+		r.log.V(1).Info("Waiting for deployment", "name", name)
+	}
+	return false
+}
+
 func (r *SFController) DeleteDeployment(name string) {
 	var dep appsv1.Deployment
 	if r.GetM(name, &dep) {
@@ -382,12 +405,13 @@ func (r *SFController) Apply(desired client.Object) {
 		panic(err.Error())
 	}
 	obj.SetGroupVersionKind(gvk)
+	name := desired.GetName()
 
-	if r.GetM(desired.GetName(), &obj) {
-		r.log.V(1).Info("Updating object")
+	if r.GetM(name, &obj) {
+		// r.log.V(1).Info("Updating object")
 		r.UpdateR(desired)
 	} else {
-		r.log.V(1).Info("Creating object")
+		r.log.V(1).Info("Creating object", "name", name, "gkv", gvk)
 		r.CreateR(desired)
 	}
 }
@@ -461,9 +485,11 @@ func (r *SFController) EnsureConfigMap(base_name string, data map[string]string)
 		}
 		r.CreateR(&cm)
 	} else {
-		r.log.V(1).Info("Updating config", "name", name)
-		cm.Data = data
-		r.UpdateR(&cm)
+		if !reflect.DeepEqual(cm.Data, data) {
+			r.log.V(1).Info("Updating config", "name", name)
+			cm.Data = data
+			r.UpdateR(&cm)
+		}
 	}
 	return cm
 }

@@ -25,7 +25,6 @@ func (r *SFController) DeployEtherpad(enabled bool) bool {
 		cm_data["settings.json"] = etherpadSettings
 		r.EnsureConfigMap("etherpad", cm_data)
 		if db_ready {
-			r.log.V(1).Info("Etherpad DB is ready, deploying the service now!")
 			dep := create_deployment(r.ns, "etherpad", "quay.io/software-factory/sf-etherpad:1.8.17-1")
 			dep.Spec.Template.Spec.Containers[0].Command = []string{
 				"node", "./src/node/server.js", "--settings", "/etc/etherpad/settings.json"}
@@ -46,13 +45,11 @@ func (r *SFController) DeployEtherpad(enabled bool) bool {
 				create_volume_cm("config-volume", "etherpad-config-map"),
 			}
 			dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/api", 8080)
-			r.log.V(1).Info("Updating with readiness")
 			r.Apply(&dep)
 			srv := create_service(r.ns, "etherpad", "etherpad", ETHERPAD_PORT, ETHERPAD_PORT_NAME)
 			r.Apply(&srv)
 
-			r.GetM("etherpad", &dep)
-			return (dep.Status.ReadyReplicas > 0)
+			return r.IsDeploymentReady("etherpad")
 		}
 		return false
 	} else {

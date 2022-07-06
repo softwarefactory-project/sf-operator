@@ -9,7 +9,6 @@ import (
 	_ "embed"
 	"fmt"
 
-	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -60,10 +59,7 @@ set -xe
 }
 
 func (r *SFController) DeployKeycloak(enabled bool) bool {
-	var dep appsv1.Deployment
-	found := r.GetM("keycloak", &dep)
-	if !found && enabled {
-		r.log.V(1).Info("Deploying keycloak")
+	if enabled {
 		r.EnsureSecret("keycloak-admin-password")
 		_, db_ready := r.EnsureDB("keycloak")
 		if db_ready {
@@ -71,7 +67,7 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 			cm_data := make(map[string]string)
 			cm_data["standalone.xml"] = kc_config
 			r.EnsureConfigMap("keycloak", cm_data)
-			dep = create_deployment(r.ns, "keycloak", "quay.io/software-factory/keycloak:15.0.2")
+			dep := create_deployment(r.ns, "keycloak", "quay.io/software-factory/keycloak:15.0.2")
 			dep.Spec.Template.Spec.Containers[0].Command = []string{
 				// It seems like the entrypoint takes care of creating the initial admin user,
 				// but it may be doing too much. Instead we should run the standalone.sh script,
@@ -102,27 +98,19 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 				create_secret_env("KEYCLOAK_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
 			}
 			dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9990)
-			r.CreateR(&dep)
+			r.Apply(&dep)
 			srv := create_service(r.ns, "keycloak", "keycloak", KC_PORT, KC_PORT_NAME)
-			r.CreateR(&srv)
-		}
-	} else if found {
-		if !enabled {
-			r.log.V(1).Info("Destroying keycloak")
-			if err := r.Delete(r.ctx, &dep); err != nil {
-				panic(err.Error())
+			r.Apply(&srv)
+
+			ready := r.IsDeploymentReady("keycloak")
+			if ready {
+				return r.KCAdminJob("create-default-realm", "create realms --set realm=SF --set enabled=true")
 			}
 		}
-	}
-	if enabled {
-		if dep.Status.ReadyReplicas > 0 {
-			return r.KCAdminJob("create-default-realm", "create realms --set realm=SF --set enabled=true")
-		} else {
-			r.log.V(1).Info("Waiting for keycloak to be ready...")
-			return false
-		}
+		return false
 	} else {
-		// The service is not enabled, so it is always ready.
+		r.DeleteDeployment("keycloak")
+		r.DeleteService("keycloak")
 		return true
 	}
 }

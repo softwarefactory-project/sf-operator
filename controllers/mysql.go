@@ -6,7 +6,6 @@
 package controllers
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -55,18 +54,17 @@ done
 		r.CreateR(&job)
 		return db_password, false
 	}
-	r.log.V(1).Info("Job result for ensure db", "name", name, "status", job.Status)
+	if (job.Status.Succeeded < 1) {
+		r.log.V(1).Info("Waiting for ensure db job", "name", name, "status", job.Status)
+	}
 	return db_password, job.Status.Succeeded >= 1
 }
 
 func (r *SFController) DeployMariadb(enabled bool) bool {
-	var dep appsv1.StatefulSet
-	found := r.GetM("mariadb", &dep)
-	if !found && enabled {
-		r.log.V(1).Info("MariaDB deploy not found")
+	if enabled {
 		pass_name := "mariadb-root-password"
 		r.EnsureSecret(pass_name)
-		dep = create_statefulset(r.ns, "mariadb", DBImage)
+		dep := create_statefulset(r.ns, "mariadb", DBImage)
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 			{
 				Name:      "mariadb",
@@ -80,23 +78,14 @@ func (r *SFController) DeployMariadb(enabled bool) bool {
 			create_container_port(MYSQL_PORT, MYSQL_PORT_NAME),
 		}
 		// TODO: add ready probe
-		r.CreateR(&dep)
+		r.Apply(&dep)
 		srv := create_service(r.ns, "mariadb", "mariadb", MYSQL_PORT, MYSQL_PORT_NAME)
-		r.CreateR(&srv)
+		r.Apply(&srv)
 
-	} else if found {
-		if !enabled {
-			r.log.V(1).Info("MariaDB deployment found, but it's not enabled, deleting it now")
-			if err := r.Delete(r.ctx, &dep); err != nil {
-				panic(err.Error())
-			}
-		}
-	}
-	if enabled {
-		// Wait for the service to be ready.
-		return (dep.Status.ReadyReplicas > 0)
+		return r.IsStatefulSetReady("mariadb")
 	} else {
-		// The service is not enabled, so it is always ready.
+		r.DeleteStatefulSet("mariadb")
+		r.DeleteService("mariadb")
 		return true
 	}
 }
