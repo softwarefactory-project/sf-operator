@@ -408,8 +408,11 @@ func (r *SFController) Apply(desired client.Object) {
 	name := desired.GetName()
 
 	if r.GetM(name, &obj) {
-		// r.log.V(1).Info("Updating object")
-		r.UpdateR(desired)
+		// desired.SetResourceVersion(obj.GetResourceVersion())
+		if gvk.Kind != "Issuer" && gvk.Kind != "Certificate" {
+			r.log.V(1).Info("Updating object", "name", name, "gvk", gvk)
+			r.UpdateR(desired)
+		}
 	} else {
 		r.log.V(1).Info("Creating object", "name", name, "gkv", gvk)
 		r.CreateR(desired)
@@ -424,9 +427,7 @@ func (r *SFController) CreateYAML(y string) {
 	}
 	obj.SetNamespace(r.ns)
 	controllerutil.SetControllerReference(r.cr, &obj, r.Scheme)
-	if err := r.Create(r.ctx, &obj); err != nil {
-		panic(err.Error())
-	}
+	r.Apply(&obj)
 }
 
 func (r *SFController) CreateYAMLs(ys string) {

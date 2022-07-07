@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodepool-launcher
+  labels:
+    app.kubernetes.io/name: nodepool
+    app.kubernetes.io/part-of: zuul
+    app.kubernetes.io/component: nodepool-launcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nodepool
+      app.kubernetes.io/part-of: zuul
+      app.kubernetes.io/component: nodepool-launcher
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nodepool
+        app.kubernetes.io/part-of: zuul
+        app.kubernetes.io/component: nodepool-launcher
+    spec:
+      containers:
+      - name: launcher
+        image: quay.io/software-factory/nodepool-launcher-ubi:5.0.0-8
+        volumeMounts:
+        - name: nodepool-config
+          mountPath: /etc/nodepool
+          readOnly: true
+        - name: zookeeper-client-tls
+          mountPath: /tls/client
+          readOnly: true
+      volumes:
+      - name: nodepool-config
+        secret:
+          secretName: nodepool-yaml
+      - name: zookeeper-client-tls
+        secret:
+          secretName: zookeeper-client-tls
