@@ -107,3 +107,72 @@ for CI_USER_ENV in $(env | grep CI_USER_ | cut -d "=" -f1); do
   name=$(echo ${CI_USER_ENV} | sed 's/CI_USER_//')
   /bin/bash /entry/set-ci-user.sh $name "${!CI_USER_ENV}" "${name}@${FQDN}"
 done
+
+echo "Setup managesf config file"
+mkdir -p /etc/managesf
+cat << EOF > /etc/managesf/config.py
+gerrit = {
+    'url': 'http://${GERRIT_HTTPD_SERVICE_HOST}:${GERRIT_HTTPD_SERVICE_PORT_GERRIT_HTTPD}/a/',
+    'password': '${GERRIT_ADMIN_API_KEY}',
+    'host': '${GERRIT_SSHD_SERVICE_HOST}',
+    'top_domain': '${FQDN}',
+    'ssh_port': 29418,
+    'sshkey_priv_path': '/root/.ssh/gerrit_admin',
+}
+
+resources = {
+    'subdir': 'resources',
+}
+
+admin = {
+    'name': 'admin',
+    'email': 'admin@${FQDN}',
+}
+EOF
+
+echo "Setup resources"
+cat << EOF > prev.yaml
+resources: {}
+EOF
+
+cat << EOF > new.yaml
+resources:
+  repos:
+    config:
+      description: Config repository
+      acl: config-acl
+
+  acls:
+    config-acl:
+      file: |
+        [access "refs/*"]
+          owner = group config-ptl
+        [access "refs/heads/*"]
+          label-Code-Review = -2..+2 group config-ptl
+          label-Verified = -2..+2 group config-ptl
+          label-Workflow = -1..+1 group config-ptl
+          label-Workflow = -1..+0 group Registered Users
+          submit = group config-ptl
+          read = group Registered Users
+        [access "refs/meta/config"]
+          read = group Registered Users
+        [receive]
+          requireChangeId = true
+        [submit]
+          mergeContent = false
+          action = fast forward only
+        [plugin "reviewers-by-blame"]
+          maxReviewers = 5
+          ignoreDrafts = true
+          ignoreSubjectRegEx = (WIP|DNM)(.*)
+      groups:
+        - config-ptl
+
+  groups:
+    config-ptl:
+      description: Team lead for the config repo
+      members:
+        - admin@${FQDN}
+EOF
+
+managesf-resources direct-apply --new-yaml new.yaml --prev-yaml prev.yaml | true

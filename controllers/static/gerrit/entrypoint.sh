@@ -47,6 +47,7 @@ EOF
 
 echo "Setting Gerrit config file ..."
 git config -f /var/gerrit/etc/gerrit.config --replace-all auth.type "DEVELOPMENT_BECOME_ANY_ACCOUNT"
+# git config -f /var/gerrit/etc/gerrit.config --replace-all auth.type "HTTP"
 git config -f /var/gerrit/etc/gerrit.config --replace-all sshd.listenaddress "*:29418"
 git config -f /var/gerrit/etc/gerrit.config --replace-all sshd.idleTimeout "2d"
 git config -f /var/gerrit/etc/gerrit.config --replace-all sshd.maxConnectionsPerUser "${SSHD_MAX_CONNECTIONS_PER_USER:-10}"
