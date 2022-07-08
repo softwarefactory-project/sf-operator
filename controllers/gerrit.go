@@ -21,6 +21,7 @@ const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
 const IMAGE = "quay.io/software-factory/gerrit:3.4.5-2"
+const POST_INIT_IMAGE = "quay.io/software-factory/sf-op-busybox:1.0-1"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_GIT_MOUNT_PATH = "/var/gerrit/git"
 const GERRIT_INDEX_MOUNT_PATH = "/var/gerrit/index"
@@ -60,7 +61,7 @@ func (r *SFController) GerritPostInitJob(name string) bool {
 
 		container := apiv1.Container{
 			Name:    fmt.Sprintf("%s-container", job_name),
-			Image:   IMAGE,
+			Image:   POST_INIT_IMAGE,
 			Command: []string{"/bin/bash", "/entry/post-init.sh"},
 			Env:     append(env, ci_users...),
 			VolumeMounts: []apiv1.VolumeMount{

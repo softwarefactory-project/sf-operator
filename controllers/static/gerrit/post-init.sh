@@ -3,26 +3,27 @@
 set -ex
 
 env
+cd ${HOME}
 
-mkdir /var/gerrit/.ssh
-chmod 0700 /var/gerrit/.ssh
+mkdir .ssh
+chmod 0700 .ssh
 
-echo "${GERRIT_ADMIN_SSH}" > /var/gerrit/.ssh/gerrit_admin
-chmod 0400 /var/gerrit/.ssh/gerrit_admin
+echo "${GERRIT_ADMIN_SSH}" > .ssh/gerrit_admin
+chmod 0400 .ssh/gerrit_admin
 
-cat << EOF > /var/gerrit/.ssh/config
+cat << EOF > .ssh/config
 Host gerrit
 User admin
 Hostname ${GERRIT_SSHD_PORT_29418_TCP_ADDR}
 Port ${GERRIT_SSHD_SERVICE_PORT_GERRIT_SSHD}
-IdentityFile /var/gerrit/.ssh/gerrit_admin
+IdentityFile /root/.ssh/gerrit_admin
 StrictHostKeyChecking no
 EOF
 
 echo "Ensure we can connect to Gerrit ssh port"
 ssh gerrit gerrit version
 
-cat << EOF > /var/gerrit/.gitconfig
+cat << EOF > .gitconfig
 [user]
     name = SF initial configurator
     email = admin@${FQDN}
@@ -33,7 +34,7 @@ cat << EOF > /var/gerrit/.gitconfig
 EOF
 
 echo "Apply ACLs to All-projects"
-mkdir /tmp/All-projects && cd /tmp/All-projects
+mkdir All-projects && cd All-projects
 git init .
 git remote add origin ssh://gerrit/All-Projects
 git fetch origin refs/meta/config:refs/remotes/origin/meta/config
@@ -94,9 +95,9 @@ ${gitConfig} label.Workflow.value "+1 Approved" "\+1.*"
 ${gitConfig} plugin.reviewers-by-blame.maxReviewers "5" ".*"
 ${gitConfig} plugin.reviewers-by-blame.ignoreDrafts "true" ".*"
 ${gitConfig} plugin.reviewers-by-blame.ignoreSubjectRegEx "'(WIP|DNM)(.*)'" ".*"
-
 git add project.config
 git commit -m"Set SF default Gerrit ACLs" && git push origin meta/config:meta/config || true
+cd -
 
 echo "Ensure CI user accounts added into Gerrit"
 for CI_USER_ENV in $(env | grep CI_USER_ | cut -d "=" -f1); do
