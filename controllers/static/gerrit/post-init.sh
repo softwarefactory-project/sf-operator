@@ -33,6 +33,9 @@ cat << EOF > .gitconfig
     default = simple
 EOF
 
+echo "Set admin account API key (HTTP password)"
+ssh gerrit gerrit set-account admin --http-password "${GERRIT_ADMIN_API_KEY}"
+
 echo "Apply ACLs to All-projects"
 mkdir All-projects && cd All-projects
 git init .
