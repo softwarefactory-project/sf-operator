@@ -1,5 +1,5 @@
 - name: Install test CR
-  command: kubectl apply -f playbooks/files/minimal.yaml
+  command: kubectl apply -f playbooks/files/allinone.yaml
   args:
     chdir: "{{ zuul.project.src_dir }}"
 

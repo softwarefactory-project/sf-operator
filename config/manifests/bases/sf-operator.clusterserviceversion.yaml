@@ -15,6 +15,13 @@ spec:
       kind: SoftwareFactory
       name: softwarefactories.sf.softwarefactory-project.io
       version: v1
+    required:
+    - kind: Issuer
+      name: issuers.cert-manager.io
+      version: v1
+    - kind: Certificate
+      name: certificates.cert-manager.io
+      version: v1
   description: The Software Factory operator.
   displayName: sf-operator
   icon:

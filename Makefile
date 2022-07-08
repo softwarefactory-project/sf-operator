@@ -71,13 +71,13 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
-.PHONY: docker-build
-docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+.PHONY: podman-build
+podman-build: test ## Build podman image with the manager.
+	podman build -t ${IMG} .
 
-.PHONY: docker-push
-docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+.PHONY: podman-push
+podman-push: ## Push podman image with the manager.
+	podman push ${IMG}
 
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
@@ -92,7 +92,7 @@ bundle-build: ## Build the bundle image.
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
-	$(MAKE) docker-push IMG=$(BUNDLE_IMG)
+	$(MAKE) podman-push IMG=$(BUNDLE_IMG)
 
 ##@ Deployment
 
@@ -101,8 +101,15 @@ ifndef ignore-not-found
 endif
 
 .PHONY: install
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+install: manifests kustomize install-cert-manager ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+
+.PHONY: install-cert-manager
+install-cert-manager: ## Install the cert-manager operator (TODO: use OLM for that)
+	@bash -c "mkdir -p bundle/; if ! test -f bundle/cert-manager.yaml; then curl -L https://github.com/cert-manager/cert-manager/releases/download/v1.8.2/cert-manager.yaml > bundle/cert-manager.yaml; fi"
+	@bash -c "type -p cmctl || { curl -sSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/download/v1.8.2/cmctl-linux-amd64.tar.gz && tar xzf cmctl.tar.gz && sudo mv cmctl /bin; rm cmctl.tar.gz; }"
+	kubectl apply -f ./bundle/cert-manager.yaml
+	cmctl check api --wait=2m
 
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.

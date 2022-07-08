@@ -1,5 +1,5 @@
 - job:
-    name: sf-operator-functional-minimal
+    name: sf-operator-functional-allinone
     run: playbooks/test.yaml
     nodeset:
       nodes:
@@ -9,7 +9,7 @@
 - project:
     check:
       jobs:
-        - sf-operator-functional-minimal
+        - sf-operator-functional-allinone
     gate:
       jobs:
         - noop
