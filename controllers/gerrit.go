@@ -31,6 +31,9 @@ const GERRIT_LOGS_MOUNT_PATH = "/var/gerrit/logs"
 //go:embed static/gerrit/post-init.sh
 var postInitScript string
 
+//go:embed static/gerrit/set-ci-user.sh
+var setCIUser string
+
 //go:embed static/gerrit/entrypoint.sh
 var entrypoint string
 
@@ -43,16 +46,23 @@ func (r *SFController) GerritPostInitJob(name string) bool {
 		// Set post-init.sh in a config map
 		cm_data := make(map[string]string)
 		cm_data["post-init.sh"] = postInitScript
+		cm_data["set-ci-user.sh"] = setCIUser
 		r.EnsureConfigMap("gerrit-pi", cm_data)
+
+		env := []apiv1.EnvVar{
+			create_env("FQDN", r.cr.Spec.FQDN),
+			create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
+		}
+
+		ci_users := []apiv1.EnvVar{
+			//create_env("CI_USER_zuul", "ssh-rsa xxx"),
+		}
 
 		container := apiv1.Container{
 			Name:    fmt.Sprintf("%s-container", job_name),
 			Image:   IMAGE,
 			Command: []string{"/bin/bash", "/entry/post-init.sh"},
-			Env: []apiv1.EnvVar{
-				create_env("FQDN", r.cr.Spec.FQDN),
-				create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
-			},
+			Env:     append(env, ci_users...),
 			VolumeMounts: []apiv1.VolumeMount{
 				{
 					Name:      IDENT + "-pi",

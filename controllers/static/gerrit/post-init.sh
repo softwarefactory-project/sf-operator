@@ -97,3 +97,9 @@ ${gitConfig} plugin.reviewers-by-blame.ignoreSubjectRegEx "'(WIP|DNM)(.*)'" ".*"
 
 git add project.config
 git commit -m"Set SF default Gerrit ACLs" && git push origin meta/config:meta/config || true
+
+echo "Ensure CI user accounts added into Gerrit"
+for CI_USER_ENV in $(env | grep CI_USER_ | cut -d "=" -f1); do
+  name=$(echo ${CI_USER_ENV} | sed 's/CI_USER_//')
+  /bin/bash /entry/set-ci-user.sh $name "${!CI_USER_ENV}" "${name}@${FQDN}"
+done
