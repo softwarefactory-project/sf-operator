@@ -53,6 +53,7 @@ func (r *SFController) GerritPostInitJob(name string) bool {
 		env := []apiv1.EnvVar{
 			create_env("FQDN", r.cr.Spec.FQDN),
 			create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
+			create_secret_env("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
 		}
 
 		ci_users := []apiv1.EnvVar{
@@ -103,6 +104,8 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 
 		// Ensure Gerrit Admin user ssh key
 		r.EnsureSSHKey("gerrit-admin-ssh-key")
+		// Ensure Gerrit Admin API password
+		r.EnsureSecret("gerrit-admin-api-key")
 
 		// Create the deployment
 		dep := create_statefulset(r.ns, IDENT, IMAGE)
