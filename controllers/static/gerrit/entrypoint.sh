@@ -25,27 +25,25 @@ cat << EOF > /var/gerrit/.gitconfig
 [push]
     default = simple
 EOF
-if [ ! -f /var/gerrit/etc/.admin_user_created ]; then
-	pynotedb create-admin-user --email "admin@${FQDN}" --pubkey "${GERRIT_ADMIN_SSH_PUB}" \
-	  --all-users "/var/gerrit/git/All-Users.git" --scheme gerrit
 
-	echo "Copy Gerrit Admin SSH keys on filesystem"
-	echo "${GERRIT_ADMIN_SSH_PUB}" > /var/gerrit/.ssh/gerrit_admin.pub
-	chmod 0444 /var/gerrit/.ssh/gerrit_admin.pub
-  echo "${GERRIT_ADMIN_SSH}" > /var/gerrit/.ssh/gerrit_admin
-	chmod 0400 /var/gerrit/.ssh/gerrit_admin
+echo "Ensure admin user"
+pynotedb create-admin-user --email "admin@${FQDN}" --pubkey "${GERRIT_ADMIN_SSH_PUB}" \
+  --all-users "/var/gerrit/git/All-Users.git" --scheme gerrit
 
-	cat << EOF > /var/gerrit/.ssh/config
+echo "Copy Gerrit Admin SSH keys on filesystem"
+echo "${GERRIT_ADMIN_SSH_PUB}" > /var/gerrit/.ssh/gerrit_admin.pub
+chmod 0644 /var/gerrit/.ssh/gerrit_admin.pub
+echo "${GERRIT_ADMIN_SSH}" > /var/gerrit/.ssh/gerrit_admin
+chmod 0600 /var/gerrit/.ssh/gerrit_admin
+
+echo "Setup .ssh/config to allow container exec of 'ssh gerrit'"
+cat << EOF > /var/gerrit/.ssh/config
 Host gerrit
 User admin
 Hostname ${HOSTNAME}
 Port 29418
 IdentityFile /var/gerrit/.ssh/gerrit_admin
 EOF
-touch /var/gerrit/etc/.admin_user_created
-else
-	echo "Admin user already initialized"
-fi
 
 echo "Setting Gerrit config file ..."
 git config -f /var/gerrit/etc/gerrit.config --replace-all auth.type "DEVELOPMENT_BECOME_ANY_ACCOUNT"
