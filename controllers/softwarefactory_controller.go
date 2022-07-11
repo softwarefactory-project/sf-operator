@@ -67,6 +67,8 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	keycloakEnabled := sf.Spec.Gerrit
 
 	zkStatus := sfc.DeployZK(sf.Spec.Zuul)
+	// The git server service is needed to store system jobs (config-check and config-update)
+	gitServerStatus := sfc.DeployGitServer(sf.Spec.Zuul)
 
 	// Mariadb is enabled if etherpad or lodgeit is enabled.
 	mariadbEnabled := sf.Spec.Etherpad || sf.Spec.Lodgeit || sf.Spec.Zuul || keycloakEnabled
@@ -84,7 +86,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		keycloakStatus = sfc.DeployKeycloak(keycloakEnabled)
 	}
 
-	if mariadbStatus && zkStatus {
+	if mariadbStatus && zkStatus && gitServerStatus {
 		zuulStatus = sfc.DeployZuul(sf.Spec.Zuul)
 	}
 	if zkStatus {
@@ -96,6 +98,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log.V(1).Info("Service status:",
 		"mariadbStatus", mariadbStatus,
 		"zkStatus", zkStatus,
+		"gitServerStatus", gitServerStatus,
 		"etherpadStatus", etherpadStatus,
 		"zuulStatus", zuulStatus,
 		"gerritStatus", gerritStatus,
