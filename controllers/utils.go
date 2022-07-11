@@ -6,6 +6,7 @@
 package controllers
 
 import (
+	"os"
 	"reflect"
 	"strings"
 
@@ -25,6 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/remotecommand"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -576,6 +580,38 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 		if err := r.Update(r.ctx, &ingress); err != nil {
 			panic(err.Error())
 		}
+	}
+}
+
+func (r *SFController) PodExec(pod string, container string, command []string) {
+	r.log.V(1).Info("Running pod execution", "pod", pod, "command", command)
+	execReq := r.RESTClient.
+		Post().
+		Namespace(r.ns).
+		Resource("pods").
+		Name(pod).
+		SubResource("exec").
+		VersionedParams(&apiv1.PodExecOptions{
+			Container: container,
+			Command:   command,
+			Stdin:     false,
+			Stdout:    true,
+			Stderr:    true,
+		}, runtime.NewParameterCodec(r.Scheme))
+
+	exec, err := remotecommand.NewSPDYExecutor(r.RESTConfig, "POST", execReq.URL())
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// r.log.V(1).Info("Streaming start")
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+		Tty:    false,
+	})
+	if err != nil {
+		panic(err.Error())
 	}
 }
 

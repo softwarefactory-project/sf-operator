@@ -12,6 +12,10 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -81,10 +85,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	gvk := schema.GroupVersionKind{
+		Group:   "",
+		Version: "v1",
+		Kind:    "Pod",
+	}
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()))
+	if err != nil {
+		setupLog.Error(err, "unable to create REST client")
+	}
+
 	if err = (&controllers.SoftwareFactoryReconciler{
-		Client:  mgr.GetClient(),
-		Scheme:  mgr.GetScheme(),
-		Oneshot: oneshot,
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		RESTClient: restClient,
+		RESTConfig: mgr.GetConfig(),
+		Oneshot:    oneshot,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SoftwareFactory")
 		os.Exit(1)

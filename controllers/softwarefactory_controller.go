@@ -12,6 +12,8 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"k8s.io/client-go/rest"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,8 +25,10 @@ import (
 // SoftwareFactoryReconciler reconciles a SoftwareFactory object
 type SoftwareFactoryReconciler struct {
 	client.Client
-	Scheme  *runtime.Scheme
-	Oneshot bool
+	Scheme     *runtime.Scheme
+	RESTClient rest.Interface
+	RESTConfig *rest.Config
+	Oneshot    bool
 }
 
 //+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=softwarefactories,verbs=get;list;watch;create;update;patch;delete
