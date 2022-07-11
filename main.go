@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	zuul "github.com/softwarefactory-project/sf-operator/api/zuul"
 	"github.com/softwarefactory-project/sf-operator/controllers"
@@ -35,6 +36,7 @@ func init() {
 
 	utilruntime.Must(sfv1.AddToScheme(scheme))
 	utilruntime.Must(zuul.AddToScheme(scheme))
+	utilruntime.Must(certv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
