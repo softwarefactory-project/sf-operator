@@ -6,6 +6,8 @@
 package controllers
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -38,6 +40,10 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 )
+
+func checksum(data []byte) string {
+	return fmt.Sprintf("%x", sha256.Sum256(data))
+}
 
 type SSHKey struct {
 	Pub  []byte
@@ -159,6 +165,15 @@ func create_volume_secret(name string) apiv1.Volume {
 			Secret: &apiv1.SecretVolumeSource{
 				SecretName: name,
 			},
+		},
+	}
+}
+
+func create_empty_dir(name string) apiv1.Volume {
+	return apiv1.Volume{
+		Name: name,
+		VolumeSource: apiv1.VolumeSource{
+			EmptyDir: &apiv1.EmptyDirVolumeSource{},
 		},
 	}
 }
@@ -573,6 +588,9 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 	}
 	if r.cr.Spec.Gerrit {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGerrit()...)
+	}
+	if r.cr.Spec.Zuul {
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressZuul())
 	}
 	if !found {
 		r.CreateR(&ingress)

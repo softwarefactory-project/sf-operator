@@ -80,7 +80,7 @@ func (r *SFController) DeployGitServer(enabled bool) bool {
 		// Create services exposed
 		git_service := apiv1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      GS_GIT_PORT_NAME,
+				Name:      GS_IDENT,
 				Namespace: r.ns,
 			},
 			Spec: apiv1.ServiceSpec{
