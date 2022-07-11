@@ -47,10 +47,10 @@ type ZuulSpec struct {
 	// The executor spec.
 	Executor ExecutorSpec `json:"executor,omitempty"`
 
-	Merger MergerSpec `json:"merger,omitempty"`
-	Web WebSpec `json:"web,omitempty"`
-	Finger FingerGwSpec `json:"fingergw,omitempty"`
-	Preview PreviewSpec `json:"preview,omitempty"`
+	Merger   MergerSpec   `json:"merger,omitempty"`
+	Web      WebSpec      `json:"web,omitempty"`
+	Finger   FingerGwSpec `json:"fingergw,omitempty"`
+	Preview  PreviewSpec  `json:"preview,omitempty"`
 	Registry RegistrySpec `json:"registry,omitempty"`
 
 	// This is a mapping designed to match the `connections` entries in the main Zuul config file.
@@ -98,9 +98,9 @@ type LauncherSpec struct {
 }
 
 type ExecutorSpec struct {
-	Count int `json:"count,omitempty"`
-	SshKey SecretConfig `json:"sshkey,omitempty"`
-	TerminationGracePeriodSeconds int `json:"terminationGracePeriodSeconds,omitempty"`
+	Count                         int          `json:"count,omitempty"`
+	SshKey                        SecretConfig `json:"sshkey,omitempty"`
+	TerminationGracePeriodSeconds int          `json:"terminationGracePeriodSeconds,omitempty"`
 }
 
 type MergerSpec struct {
@@ -120,17 +120,17 @@ type PreviewSpec struct {
 }
 
 type RegistrySpec struct {
-	Count int `json:"count,omitempty"`
-	VolumeSize string `json:"volumeSize,omitempty"`
-	TLS SecretConfig `json:"tls,omitempty"`
-	Config SecretConfig `json:"config,omitempty"`
+	Count      int          `json:"count,omitempty"`
+	VolumeSize string       `json:"volumeSize,omitempty"`
+	TLS        SecretConfig `json:"tls,omitempty"`
+	Config     SecretConfig `json:"config,omitempty"`
 }
 
 type ConnectionSpec map[string]string
 
 type JobVolumeSpec struct {
 	Context string `json:"context"`
-	Access string `json:"access"`
+	Access  string `json:"access"`
 	// The mount point within the execution context.
 	Path string `json:"path"`
 	// A mapping corresponding to a Kubernetes volume.

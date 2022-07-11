@@ -54,7 +54,7 @@ done
 		r.CreateR(&job)
 		return db_password, false
 	}
-	if (job.Status.Succeeded < 1) {
+	if job.Status.Succeeded < 1 {
 		r.log.V(1).Info("Waiting for ensure db job", "name", name, "status", job.Status)
 	}
 	return db_password, job.Status.Succeeded >= 1
