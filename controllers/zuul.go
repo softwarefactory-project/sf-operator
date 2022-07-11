@@ -63,8 +63,9 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 	}
 }
 
-func (r *SFController) EnsureZuulServices() {
+func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container) {
 	zs := create_statefulset(r.ns, "zuul-scheduler", "")
+	zs.Spec.Template.Spec.InitContainers = init_containers
 	zs.Spec.Template.Spec.Containers = create_zuul_container("zuul-scheduler")
 	zs.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-scheduler")
 	r.Apply(&zs)
@@ -114,13 +115,10 @@ func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret) {
 
 func (r *SFController) DeployZuul(enabled bool) bool {
 	if enabled {
-		db_password, db_ready := r.EnsureDB("zuul")
-		if db_ready {
-			r.EnsureZuulSecrets(&db_password)
-			r.EnsureZuulServices()
-			return r.IsStatefulSetReady("zuul-scheduler") && r.IsDeploymentReady("zuul-web")
-		}
-		return false
+		init_containers, db_password := r.EnsureDBInit("zuul")
+		r.EnsureZuulSecrets(&db_password)
+		r.EnsureZuulServices(init_containers)
+		return r.IsStatefulSetReady("zuul-scheduler") && r.IsDeploymentReady("zuul-web")
 	} else {
 		r.DeleteStatefulSet("zuul-scheduler")
 		r.DeleteDeployment("zuul-web")

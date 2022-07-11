@@ -66,17 +66,6 @@ func (r *SFController) DeployZuulCRD(enabled bool) bool {
 				Connections: map[string]zuul.ConnectionSpec{},
 			},
 		}
-		db_password, db_ready := r.EnsureDB("zuul")
-		if db_ready {
-			r.log.V(1).Info("zuul DB is ready, deploying the service now!")
-			r.EnsureZuulDBSecret(&db_password)
-			r.Apply(&zuul)
-			return false
-		}
-		r.GetM("zuul", &zuul)
-		if !zuul.Status.Ready {
-			r.log.V(1).Info("Waiting for zuul deployment...")
-		}
 		return (zuul.Status.Ready)
 	} else {
 		// TODO: remove any left-over zuul

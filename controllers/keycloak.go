@@ -61,53 +61,54 @@ set -xe
 func (r *SFController) DeployKeycloak(enabled bool) bool {
 	if enabled {
 		r.EnsureSecret("keycloak-admin-password")
-		_, db_ready := r.EnsureDB("keycloak")
-		if db_ready {
-			r.log.V(1).Info("Keycloak DB is ready")
-			cm_data := make(map[string]string)
-			cm_data["standalone.xml"] = kc_config
-			r.EnsureConfigMap("keycloak", cm_data)
-			dep := create_deployment(r.ns, "keycloak", "quay.io/software-factory/keycloak:15.0.2")
-			dep.Spec.Template.Spec.Containers[0].Command = []string{
-				// It seems like the entrypoint takes care of creating the initial admin user,
-				// but it may be doing too much. Instead we should run the standalone.sh script,
-				// and create the admin user manually using
-				//   /opt/jboss/keycloak/bin/add-user-keycloak.sh
-				"/opt/jboss/tools/docker-entrypoint.sh", "--server-config", "../../../../../../../etc/keycloak/standalone.xml"}
-			dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-				create_container_port(KC_PORT, KC_PORT_NAME),
-			}
-			dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
-				{
-					Name:      "config-volume",
-					MountPath: "/etc/keycloak",
-				},
-			}
-			dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-				create_volume_cm("config-volume", "keycloak-config-map"),
-			}
-			dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
-				create_env("KEYCLOAK_FRONTEND_URL", "https://"+r.cr.Spec.FQDN+"/auth"),
-				create_env("PROXY_ADDRESS_FORWARDING", "true"),
-				create_env("KEYCLOAK_HTTP_PORT", fmt.Sprintf("%v", KC_PORT)),
-				create_env("DB_VENDOR", "mysql"),
-				create_env("DB_ADDR", "mariadb"),
-				create_env("DB_USER", "keycloak"),
-				create_secret_env("DB_PASSWORD", "keycloak-db-password", "keycloak-db-password"),
-				create_env("KEYCLOAK_USER", "admin"),
-				create_secret_env("KEYCLOAK_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
-			}
-			dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9990)
-			r.Apply(&dep)
-			srv := create_service(r.ns, "keycloak", "keycloak", KC_PORT, KC_PORT_NAME)
-			r.Apply(&srv)
-
-			ready := r.IsDeploymentReady("keycloak")
-			if ready {
-				return r.KCAdminJob("create-default-realm", "create realms --set realm=SF --set enabled=true")
-			}
+		initContainers, _ := r.EnsureDBInit("keycloak")
+		r.log.V(1).Info("Keycloak DB is ready")
+		cm_data := make(map[string]string)
+		cm_data["standalone.xml"] = kc_config
+		r.EnsureConfigMap("keycloak", cm_data)
+		dep := create_deployment(r.ns, "keycloak", "quay.io/software-factory/keycloak:15.0.2")
+		dep.Spec.Template.Spec.InitContainers = initContainers
+		dep.Spec.Template.Spec.Containers[0].Command = []string{
+			// It seems like the entrypoint takes care of creating the initial admin user,
+			// but it may be doing too much. Instead we should run the standalone.sh script,
+			// and create the admin user manually using
+			//   /opt/jboss/keycloak/bin/add-user-keycloak.sh
+			"/opt/jboss/tools/docker-entrypoint.sh", "--server-config", "../../../../../../../etc/keycloak/standalone.xml"}
+		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+			create_container_port(KC_PORT, KC_PORT_NAME),
 		}
-		return false
+		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
+			{
+				Name:      "config-volume",
+				MountPath: "/etc/keycloak",
+			},
+		}
+		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
+			create_volume_cm("config-volume", "keycloak-config-map"),
+		}
+		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
+			create_env("KEYCLOAK_FRONTEND_URL", "https://"+r.cr.Spec.FQDN+"/auth"),
+			create_env("PROXY_ADDRESS_FORWARDING", "true"),
+			create_env("KEYCLOAK_HTTP_PORT", fmt.Sprintf("%v", KC_PORT)),
+			create_env("DB_VENDOR", "mysql"),
+			create_env("DB_ADDR", "mariadb"),
+			create_env("DB_USER", "keycloak"),
+			create_secret_env("DB_PASSWORD", "keycloak-db-password", "keycloak-db-password"),
+			create_env("KEYCLOAK_USER", "admin"),
+			create_secret_env("KEYCLOAK_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
+		}
+		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9990)
+		r.Apply(&dep)
+		srv := create_service(r.ns, "keycloak", "keycloak", KC_PORT, KC_PORT_NAME)
+		r.Apply(&srv)
+
+		ready := r.IsDeploymentReady("keycloak")
+		if ready {
+			return r.KCAdminJob("create-default-realm", "create realms --set realm=SF --set enabled=true")
+		} else {
+			return false
+		}
+
 	} else {
 		r.DeleteDeployment("keycloak")
 		r.DeleteService("keycloak")
