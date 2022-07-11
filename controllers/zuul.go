@@ -11,11 +11,72 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//go:embed templates/zuul.yaml
-var zuul_objs string
-
 //go:embed templates/zuul.conf
 var zuul_dot_conf string
+
+func create_zuul_container(service string) []apiv1.Container {
+	volumes := []apiv1.VolumeMount{
+		{
+			Name:      "zuul-config",
+			MountPath: "/etc/zuul",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "zookeeper-client-tls",
+			MountPath: "/tls/client",
+			ReadOnly:  true,
+		},
+	}
+	if service == "zuul-scheduler" {
+		volumes = append(volumes, apiv1.VolumeMount{
+			Name:      "zuul-tenant-yaml",
+			MountPath: "/etc/zuul/tenant",
+			ReadOnly:  true,
+		})
+	}
+	if service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger" {
+		volumes = append(volumes,
+			apiv1.VolumeMount{
+				Name:      service,
+				MountPath: "/var/lib/zuul",
+			})
+	}
+	container := apiv1.Container{
+		Name:    service,
+		Image:   "quay.io/software-factory/" + service + "-ubi:5.2.2-3",
+		Command: []string{service, "-f", "-d"},
+		Env: []apiv1.EnvVar{
+			create_secret_env("ZUUL_DB_URI", "zuul-db-uri", "dburi"),
+			create_secret_env("ZUUL_KEYSTORE_PASSWORD", "zuul-keystore-password", ""),
+			create_secret_env("ZUUL_ZK_HOSTS", "zk-hosts", ""),
+		},
+		VolumeMounts: volumes,
+	}
+	return []apiv1.Container{container}
+}
+
+func create_zuul_volumes(service string) []apiv1.Volume {
+	return []apiv1.Volume{
+		create_volume_secret("zuul-config"),
+		create_volume_secret("zuul-tenant-yaml"),
+		create_volume_secret("zookeeper-client-tls"),
+	}
+}
+
+func (r *SFController) EnsureZuulServices() {
+	zs := create_statefulset(r.ns, "zuul-scheduler", "")
+	zs.Spec.Template.Spec.Containers = create_zuul_container("zuul-scheduler")
+	zs.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-scheduler")
+	r.Apply(&zs)
+
+	zw := create_deployment(r.ns, "zuul-web", "")
+	zw.Spec.Template.Spec.Containers = create_zuul_container("zuul-web")
+	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-scheduler")
+	r.Apply(&zw)
+
+	srv := create_service(r.ns, "zuul-web", "zuul-web", 9000, "zuul-web")
+	r.Apply(&srv)
+}
 
 func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret) {
 	secret := apiv1.Secret{
@@ -56,7 +117,7 @@ func (r *SFController) DeployZuul(enabled bool) bool {
 		db_password, db_ready := r.EnsureDB("zuul")
 		if db_ready {
 			r.EnsureZuulSecrets(&db_password)
-			r.CreateYAMLs(zuul_objs)
+			r.EnsureZuulServices()
 			return r.IsStatefulSetReady("zuul-scheduler") && r.IsDeploymentReady("zuul-web")
 		}
 		return false

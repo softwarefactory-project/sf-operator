@@ -104,6 +104,9 @@ func create_ssh_key() SSHKey {
 }
 
 func create_secret_env(env string, secret string, key string) apiv1.EnvVar {
+	if key == "" {
+		key = secret
+	}
 	return apiv1.EnvVar{
 		Name: env,
 		ValueFrom: &apiv1.EnvVarSource{
@@ -140,6 +143,17 @@ func create_volume_cm(name string, config_map_ref string) apiv1.Volume {
 				LocalObjectReference: apiv1.LocalObjectReference{
 					Name: config_map_ref,
 				},
+			},
+		},
+	}
+}
+
+func create_volume_secret(name string) apiv1.Volume {
+	return apiv1.Volume{
+		Name: name,
+		VolumeSource: apiv1.VolumeSource{
+			Secret: &apiv1.SecretVolumeSource{
+				SecretName: name,
 			},
 		},
 	}
@@ -410,7 +424,7 @@ func (r *SFController) Apply(desired client.Object) {
 	if r.GetM(name, &obj) {
 		// desired.SetResourceVersion(obj.GetResourceVersion())
 		if gvk.Kind != "Issuer" && gvk.Kind != "Certificate" {
-			r.log.V(1).Info("Updating object", "name", name, "gvk", gvk)
+			// r.log.V(1).Info("Updating object", "name", name, "gvk", gvk)
 			r.UpdateR(desired)
 		}
 	} else {
