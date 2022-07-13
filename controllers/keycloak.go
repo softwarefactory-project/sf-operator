@@ -98,11 +98,11 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 			create_secret_env("KEYCLOAK_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
 		}
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9990)
-		r.Apply(&dep)
+		r.GetOrCreate(&dep)
 		srv := create_service(r.ns, "keycloak", "keycloak", KC_PORT, KC_PORT_NAME)
-		r.Apply(&srv)
+		r.GetOrCreate(&srv)
 
-		ready := r.IsDeploymentReady("keycloak")
+		ready := r.IsDeploymentReady(&dep)
 		if ready {
 			return r.KCAdminJob("create-default-realm", "create realms --set realm=SF --set enabled=true")
 		} else {

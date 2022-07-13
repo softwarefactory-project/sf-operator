@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -373,25 +372,19 @@ func (r *SFController) DeleteR(obj client.Object) {
 	}
 }
 
-func (r *SFController) IsStatefulSetReady(name string) bool {
-	var dep appsv1.StatefulSet
-	if r.GetM(name, &dep) {
-		if dep.Status.ReadyReplicas > 0 {
-			return true
-		}
-		r.log.V(1).Info("Waiting for statefulset", "name", name)
+func (r *SFController) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
+	if dep.Status.ReadyReplicas > 0 {
+		return true
 	}
+	r.log.V(1).Info("Waiting for statefulset", "name", dep.GetName())
 	return false
 }
 
-func (r *SFController) IsDeploymentReady(name string) bool {
-	var dep appsv1.Deployment
-	if r.GetM(name, &dep) {
-		if dep.Status.ReadyReplicas > 0 {
-			return true
-		}
-		r.log.V(1).Info("Waiting for deployment", "name", name)
+func (r *SFController) IsDeploymentReady(dep *appsv1.Deployment) bool {
+	if dep.Status.ReadyReplicas > 0 {
+		return true
 	}
+	r.log.V(1).Info("Waiting for deployment", "name", dep.GetName())
 	return false
 }
 
@@ -429,26 +422,13 @@ func (r *SFController) PatchR(obj client.Object, patch client.Patch) {
 	}
 }
 
-func (r *SFController) Apply(desired client.Object) {
-	var obj unstructured.Unstructured
+// This does not change an existing object, update needs to be used manually.
+func (r *SFController) GetOrCreate(obj client.Object) {
+	name := obj.GetName()
 
-	// get gvk
-	gvk, err := apiutil.GVKForObject(desired, r.Scheme)
-	if err != nil {
-		panic(err.Error())
-	}
-	obj.SetGroupVersionKind(gvk)
-	name := desired.GetName()
-
-	if r.GetM(name, &obj) {
-		// desired.SetResourceVersion(obj.GetResourceVersion())
-		if gvk.Kind != "Issuer" && gvk.Kind != "Certificate" {
-			// r.log.V(1).Info("Updating object", "name", name, "gvk", gvk)
-			r.UpdateR(desired)
-		}
-	} else {
-		r.log.V(1).Info("Creating object", "name", name, "gkv", gvk)
-		r.CreateR(desired)
+	if !r.GetM(name, obj) {
+		r.log.V(1).Info("Creating object", "name", obj.GetName())
+		r.CreateR(obj)
 	}
 }
 
@@ -460,7 +440,7 @@ func (r *SFController) CreateYAML(y string) {
 	}
 	obj.SetNamespace(r.ns)
 	controllerutil.SetControllerReference(r.cr, &obj, r.Scheme)
-	r.Apply(&obj)
+	r.GetOrCreate(&obj)
 }
 
 func (r *SFController) CreateYAMLs(ys string) {

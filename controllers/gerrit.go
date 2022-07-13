@@ -178,7 +178,7 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
 
-		r.Apply(&dep)
+		r.GetOrCreate(&dep)
 
 		// Create services exposed by Gerrit
 		httpd_service := create_service(r.ns, GERRIT_HTTPD_PORT_NAME, IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME)
@@ -201,10 +201,10 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 					"run": IDENT,
 				},
 			}}
-		r.Apply(&httpd_service)
-		r.Apply(&sshd_service)
+		r.GetOrCreate(&httpd_service)
+		r.GetOrCreate(&sshd_service)
 
-		ready := r.IsStatefulSetReady(IDENT)
+		ready := r.IsStatefulSetReady(&dep)
 		if ready {
 			return r.GerritPostInitJob("post-init")
 		} else {

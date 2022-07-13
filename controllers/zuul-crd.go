@@ -25,16 +25,16 @@ func (r *SFController) EnsureZuulDBSecret(db_password *apiv1.Secret) {
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "zuul-db-uri", Namespace: r.ns},
 	}
-	r.Apply(&secret)
+	r.GetOrCreate(&secret)
 
 	// Initial config
-	r.Apply(&apiv1.Secret{
+	r.GetOrCreate(&apiv1.Secret{
 		Data: map[string][]byte{
 			"main.yaml": []byte("[]"),
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "zuul-tenant-yaml", Namespace: r.ns},
 	})
-	r.Apply(&apiv1.Secret{
+	r.GetOrCreate(&apiv1.Secret{
 		Data: map[string][]byte{
 			"nodepool.yaml": []byte(`
 labels: []

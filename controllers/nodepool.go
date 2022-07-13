@@ -7,6 +7,7 @@ import (
 	_ "embed"
 
 	apiv1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -14,7 +15,7 @@ import (
 var nodepool_objs string
 
 func (r *SFController) EnsureNodepoolSecrets() {
-	r.Apply(&apiv1.Secret{
+	r.GetOrCreate(&apiv1.Secret{
 		Data: map[string][]byte{
 			"nodepool.yaml": []byte(`
 labels: []
@@ -30,7 +31,9 @@ func (r *SFController) DeployNodepool(enabled bool) bool {
 	if enabled {
 		r.EnsureNodepoolSecrets()
 		r.CreateYAMLs(nodepool_objs)
-		return r.IsDeploymentReady("nodepool-launcher")
+		var dep appsv1.Deployment
+		r.GetM("nodepool-launcher", &dep)
+		return r.IsDeploymentReady(&dep)
 	} else {
 		r.DeleteDeployment("nodepool-launcher")
 		return true

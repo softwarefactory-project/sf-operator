@@ -78,7 +78,7 @@ func init_scheduler_config() apiv1.Container {
 	}
 }
 
-func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, config string) {
+func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, config string) bool {
 	annotations := map[string]string{
 		"zuul-config": checksum([]byte(config)),
 	}
@@ -87,39 +87,46 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zs.Spec.Template.Spec.InitContainers = append(init_containers, init_scheduler_config())
 	zs.Spec.Template.Spec.Containers = create_zuul_container("zuul-scheduler")
 	zs.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-scheduler")
-	r.Apply(&zs)
+	r.GetOrCreate(&zs)
+	// Here is an example of how to update an existing resource:
+	// if zs.Spec.Template.Spec.Containers[0].Image != ... {
+	//    zs.Spec.Template.Spec.Containers[0].Image = "new-image"
+	//    r.Update(zs)
+	// }
 
 	ze := create_statefulset(r.ns, "zuul-executor", "")
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.Containers = create_zuul_container("zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")
-	r.Apply(&ze)
+	r.GetOrCreate(&ze)
 
 	zw := create_deployment(r.ns, "zuul-web", "")
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
 	zw.Spec.Template.Spec.Containers = create_zuul_container("zuul-web")
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
-	r.Apply(&zw)
+	r.GetOrCreate(&zw)
 
 	srv := create_service(r.ns, "zuul-web", "zuul-web", 9000, "zuul-web")
-	r.Apply(&srv)
+	r.GetOrCreate(&srv)
+
+	return r.IsStatefulSetReady(&zs) && r.IsStatefulSetReady(&ze) && r.IsDeploymentReady(&zw)
 }
 
 func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret, config string) {
-	r.Apply(&apiv1.Secret{
+	r.GetOrCreate(&apiv1.Secret{
 		Data: map[string][]byte{
 			"dburi": []byte(fmt.Sprintf("mysql+pymysql://zuul:%s@mariadb/zuul", db_password.Data["zuul-db-password"])),
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "zuul-db-uri", Namespace: r.ns},
 	})
 	r.EnsureSecret("zuul-keystore-password")
-	r.Apply(&apiv1.Secret{
+	r.GetOrCreate(&apiv1.Secret{
 		Data: map[string][]byte{
 			"zuul.conf": []byte(config),
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "zuul-config", Namespace: r.ns},
 	})
-	r.Apply(&apiv1.Secret{
+	r.GetOrCreate(&apiv1.Secret{
 		Data: map[string][]byte{
 			"zk-hosts": []byte(`zookeeper.` + r.ns + `:2281`),
 		},
@@ -133,8 +140,7 @@ func (r *SFController) DeployZuul(enabled bool) bool {
 		config := zuul_dot_conf
 		// TODO: add user defined connections
 		r.EnsureZuulSecrets(&db_password, config)
-		r.EnsureZuulServices(init_containers, config)
-		return r.IsStatefulSetReady("zuul-scheduler") && r.IsStatefulSetReady("zuul-executor") && r.IsDeploymentReady("zuul-web")
+		return r.EnsureZuulServices(init_containers, config)
 	} else {
 		r.DeleteStatefulSet("zuul-scheduler")
 		r.DeleteDeployment("zuul-web")

@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"strings"
 
+	appsv1 "k8s.io/api/apps/v1"
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,8 +46,10 @@ func (r *SFController) DeployZK(enabled bool) bool {
 	if enabled {
 		r.CreateYAMLs(strings.ReplaceAll(zk_objs, "{{ NS }}", r.ns))
 		cert := create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls")
-		r.Apply(&cert)
-		return r.IsStatefulSetReady("zookeeper")
+		r.GetOrCreate(&cert)
+		var dep appsv1.StatefulSet
+		r.GetM("zookeeper", &dep)
+		return r.IsStatefulSetReady(&dep)
 	} else {
 		r.DeleteStatefulSet("zookeeper")
 		r.DeleteService("zookeeper")

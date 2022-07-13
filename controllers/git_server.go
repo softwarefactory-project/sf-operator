@@ -75,7 +75,7 @@ func (r *SFController) DeployGitServer(enabled bool) bool {
 		// Create readiness probes
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GS_GIT_PORT)
 
-		r.Apply(&dep)
+		r.GetOrCreate(&dep)
 
 		// Create services exposed
 		git_service := apiv1.Service{
@@ -97,9 +97,9 @@ func (r *SFController) DeployGitServer(enabled bool) bool {
 					"run": GS_IDENT,
 				},
 			}}
-		r.Apply(&git_service)
+		r.GetOrCreate(&git_service)
 
-		return r.IsStatefulSetReady(GS_IDENT)
+		return r.IsStatefulSetReady(&dep)
 	} else {
 		r.DeleteStatefulSet(GS_IDENT)
 		r.DeleteService(GS_GIT_PORT_NAME)

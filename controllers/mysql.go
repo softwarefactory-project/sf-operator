@@ -61,11 +61,11 @@ func (r *SFController) DeployMariadb(enabled bool) bool {
 			create_container_port(MYSQL_PORT, MYSQL_PORT_NAME),
 		}
 		// TODO: add ready probe
-		r.Apply(&dep)
+		r.GetOrCreate(&dep)
 		srv := create_service(r.ns, "mariadb", "mariadb", MYSQL_PORT, MYSQL_PORT_NAME)
-		r.Apply(&srv)
+		r.GetOrCreate(&srv)
 
-		return r.IsStatefulSetReady("mariadb")
+		return r.IsStatefulSetReady(&dep)
 	} else {
 		r.DeleteStatefulSet("mariadb")
 		r.DeleteService("mariadb")
