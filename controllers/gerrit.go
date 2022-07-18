@@ -28,6 +28,7 @@ const GERRIT_INDEX_MOUNT_PATH = "/var/gerrit/index"
 const GERRIT_ETC_MOUNT_PATH = "/var/gerrit/etc"
 const GERRIT_SSH_MOUNT_PATH = "/var/gerrit/.ssh"
 const GERRIT_LOGS_MOUNT_PATH = "/var/gerrit/logs"
+const GERRIT_CERT_MOUNT_PATH = "/var/gerrit/cert"
 
 //go:embed static/gerrit/post-init.sh
 var postInitScript string
@@ -49,6 +50,9 @@ func (r *SFController) GerritPostInitJob(name string) bool {
 		cm_data["post-init.sh"] = postInitScript
 		cm_data["set-ci-user.sh"] = setCIUser
 		r.EnsureConfigMap("gerrit-pi", cm_data)
+
+		// Ensure Gerrit Admin API password
+		r.EnsureSecret("gerrit-admin-api-key")
 
 		env := []apiv1.EnvVar{
 			create_env("FQDN", r.cr.Spec.FQDN),
@@ -104,8 +108,12 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 
 		// Ensure Gerrit Admin user ssh key
 		r.EnsureSSHKey("gerrit-admin-ssh-key")
-		// Ensure Gerrit Admin API password
-		r.EnsureSecret("gerrit-admin-api-key")
+		// Ensure Gerrit Keystore password
+		r.EnsureSecret("gerrit-keystore-password")
+
+		// Create a certificate for Gerrit
+		cert := r.create_client_certificate(r.ns, IDENT+"-client", "ca-issuer", IDENT+"-client-tls")
+		r.GetOrCreate(&cert)
 
 		// Create the deployment
 		dep := create_statefulset(r.ns, IDENT, IMAGE)
@@ -135,6 +143,11 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 				Name:      IDENT + "-logs",
 				MountPath: GERRIT_LOGS_MOUNT_PATH,
 			},
+			{
+				Name:      IDENT + "-client-tls",
+				MountPath: GERRIT_CERT_MOUNT_PATH,
+				ReadOnly:  true,
+			},
 		}
 
 		dep.Spec.VolumeClaimTemplates = append(
@@ -157,6 +170,7 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 			create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
 			create_secret_env("GERRIT_ADMIN_SSH_PUB", "gerrit-admin-ssh-key", "pub"),
+			create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
 		}
 
 		// Expose env vars from a config map
@@ -172,6 +186,7 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 			create_volume_cm(IDENT+"-ep", IDENT+"-ep-config-map"),
+			create_volume_secret(IDENT + "-client-tls"),
 		}
 
 		// Create readiness probes
