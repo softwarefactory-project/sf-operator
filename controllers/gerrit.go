@@ -52,7 +52,7 @@ func (r *SFController) GerritPostInitJob(name string) bool {
 		r.EnsureConfigMap("gerrit-pi", cm_data)
 
 		// Ensure Gerrit Admin API password
-		r.EnsureSecret("gerrit-admin-api-key")
+		r.GenerateSecretUUID("gerrit-admin-api-key")
 
 		env := []apiv1.EnvVar{
 			create_env("FQDN", r.cr.Spec.FQDN),
@@ -109,7 +109,7 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 		// Ensure Gerrit Admin user ssh key
 		r.EnsureSSHKey("gerrit-admin-ssh-key")
 		// Ensure Gerrit Keystore password
-		r.EnsureSecret("gerrit-keystore-password")
+		r.GenerateSecretUUID("gerrit-keystore-password")
 
 		// Create a certificate for Gerrit
 		cert := r.create_client_certificate(r.ns, IDENT+"-client", "ca-issuer", IDENT+"-client-tls")

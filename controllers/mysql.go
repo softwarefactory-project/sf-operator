@@ -17,7 +17,7 @@ const MYSQL_PORT = 3306
 const MYSQL_PORT_NAME = "mariadb-port"
 
 func (r *SFController) EnsureDBInit(name string) ([]apiv1.Container, apiv1.Secret) {
-	db_password := r.EnsureSecret(name + "-db-password")
+	db_password := r.GenerateSecretUUID(name + "-db-password")
 	c := "CREATE DATABASE IF NOT EXISTS " + name + " CHARACTER SET utf8 COLLATE utf8_general_ci; "
 	g := "GRANT ALL PRIVILEGES ON " + name + ".* TO '" + name + "'@'%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
 	container := apiv1.Container{
@@ -46,7 +46,7 @@ done
 func (r *SFController) DeployMariadb(enabled bool) bool {
 	if enabled {
 		pass_name := "mariadb-root-password"
-		r.EnsureSecret(pass_name)
+		r.GenerateSecretUUID(pass_name)
 		dep := create_statefulset(r.ns, "mariadb", DBImage)
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 			{

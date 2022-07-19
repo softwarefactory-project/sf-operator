@@ -88,23 +88,43 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zs.Spec.Template.Spec.Containers = create_zuul_container("zuul-scheduler")
 	zs.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-scheduler")
 	r.GetOrCreate(&zs)
-	// Here is an example of how to update an existing resource:
-	// if zs.Spec.Template.Spec.Containers[0].Image != ... {
-	//    zs.Spec.Template.Spec.Containers[0].Image = "new-image"
-	//    r.Update(zs)
-	// }
+	zs_dirty := false
+	if !map_equals(&zs.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		zs.Spec.Template.ObjectMeta.Annotations = annotations
+		zs_dirty = true
+		r.log.V(1).Info("Zuul configuration changed, restarting the services...")
+	}
+	if zs_dirty {
+		r.UpdateR(&zs)
+	}
 
 	ze := create_statefulset(r.ns, "zuul-executor", "")
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.Containers = create_zuul_container("zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")
 	r.GetOrCreate(&ze)
+	ze_dirty := false
+	if !map_equals(&ze.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		ze.Spec.Template.ObjectMeta.Annotations = annotations
+		ze_dirty = true
+	}
+	if !zs_dirty && ze_dirty {
+		r.UpdateR(&ze)
+	}
 
 	zw := create_deployment(r.ns, "zuul-web", "")
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
 	zw.Spec.Template.Spec.Containers = create_zuul_container("zuul-web")
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	r.GetOrCreate(&zw)
+	zw_dirty := false
+	if !map_equals(&zw.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		zw.Spec.Template.ObjectMeta.Annotations = annotations
+		zw_dirty = true
+	}
+	if !zs_dirty && zw_dirty {
+		r.UpdateR(&zw)
+	}
 
 	srv := create_service(r.ns, "zuul-web", "zuul-web", 9000, "zuul-web")
 	r.GetOrCreate(&srv)
@@ -113,20 +133,20 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 }
 
 func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret, config string) {
-	r.GetOrCreate(&apiv1.Secret{
+	r.EnsureSecret(&apiv1.Secret{
 		Data: map[string][]byte{
 			"dburi": []byte(fmt.Sprintf("mysql+pymysql://zuul:%s@mariadb/zuul", db_password.Data["zuul-db-password"])),
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "zuul-db-uri", Namespace: r.ns},
 	})
-	r.EnsureSecret("zuul-keystore-password")
-	r.GetOrCreate(&apiv1.Secret{
+	r.GenerateSecretUUID("zuul-keystore-password")
+	r.EnsureSecret(&apiv1.Secret{
 		Data: map[string][]byte{
 			"zuul.conf": []byte(config),
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "zuul-config", Namespace: r.ns},
 	})
-	r.GetOrCreate(&apiv1.Secret{
+	r.EnsureSecret(&apiv1.Secret{
 		Data: map[string][]byte{
 			"zk-hosts": []byte(`zookeeper.` + r.ns + `:2281`),
 		},

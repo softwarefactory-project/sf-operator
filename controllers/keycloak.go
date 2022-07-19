@@ -60,9 +60,8 @@ set -xe
 
 func (r *SFController) DeployKeycloak(enabled bool) bool {
 	if enabled {
-		r.EnsureSecret("keycloak-admin-password")
+		r.GenerateSecretUUID("keycloak-admin-password")
 		initContainers, _ := r.EnsureDBInit("keycloak")
-		r.log.V(1).Info("Keycloak DB is ready")
 		cm_data := make(map[string]string)
 		cm_data["standalone.xml"] = kc_config
 		r.EnsureConfigMap("keycloak", cm_data)

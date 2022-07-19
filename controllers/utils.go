@@ -6,8 +6,8 @@
 package controllers
 
 import (
-	_ "embed"
 	"crypto/sha256"
+	_ "embed"
 	"fmt"
 	"os"
 	"reflect"
@@ -415,6 +415,7 @@ func (r *SFController) DeleteService(name string) {
 
 func (r *SFController) UpdateR(obj client.Object) {
 	controllerutil.SetControllerReference(r.cr, obj, r.Scheme)
+	r.log.V(1).Info("Updating object", "name", obj.GetName())
 	if err := r.Update(r.ctx, obj); err != nil {
 		panic(err.Error())
 	}
@@ -454,7 +455,7 @@ func (r *SFController) CreateYAMLs(ys string) {
 }
 
 // generate a secret if needed using a uuid4 value.
-func (r *SFController) EnsureSecret(name string) apiv1.Secret {
+func (r *SFController) GenerateSecretUUID(name string) apiv1.Secret {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
 		r.log.V(1).Info("Creating secret", "name", name)
@@ -512,6 +513,24 @@ func (r *SFController) EnsureConfigMap(base_name string, data map[string]string)
 	return cm
 }
 
+func (r *SFController) EnsureSecret(secret *apiv1.Secret) {
+	var current apiv1.Secret
+	name := secret.GetName()
+	if !r.GetM(name, &current) {
+		r.log.V(1).Info("Creating secret", "name", name)
+		r.CreateR(secret)
+	} else {
+		if !reflect.DeepEqual(current.Data, secret.Data) {
+			r.log.V(1).Info("Updating secret", "name", name)
+			current.Data = secret.Data
+			r.UpdateR(&current)
+		}
+	}
+}
+
+func map_equals(m1 *map[string]string, m2 *map[string]string) bool {
+	return reflect.DeepEqual(m1, m2)
+}
 
 //go:embed static/certificate-authority/certs.yaml
 var ca_objs string
