@@ -1,6 +1,7 @@
 - job:
     name: sf-operator-functional-allinone
     run: playbooks/test.yaml
+    post-run: playbooks/post.yaml
     nodeset:
       nodes:
         name: controller

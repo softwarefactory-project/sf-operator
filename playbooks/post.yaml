@@ -1,0 +1,26 @@
+- hosts: all
+  tasks:
+    - name: Get logs
+      command: kubectl get all
+
+    - name: Describe resources
+      shell: |
+        for item in $(kubectl get {{ item }} -o name); do
+          mkdir -p ~/zuul-output/logs/$(dirname $item)
+          kubectl describe $item > ~/zuul-output/logs/${item}.txt
+        done
+      ignore_errors: yes
+      loop:
+        - pods
+        - deployments
+        - statefulsets
+        - services
+        - secrets
+        - configmaps
+
+    - name: Collect logs
+      shell: |
+        for pod in $(kubectl get pods -o name); do
+          mkdir -p ~/zuul-output/logs/$(dirname $item)
+          kubectl logs $pod > ~/zuul-output/logs/${pod}-logs.txt
+        done
