@@ -107,6 +107,11 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		opensearchStatus = sfc.DeployOpensearch(sf.Spec.Opensearch)
 	}
 
+	configStatus := true
+	if mariadbStatus && zkStatus && zuulStatus && gitServerStatus {
+		configStatus = sfc.SetupConfigJob()
+	}
+
 	log.V(1).Info("Service status:",
 		"mariadbStatus", mariadbStatus,
 		"zkStatus", zkStatus,
@@ -116,9 +121,11 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		"gerritStatus", gerritStatus,
 		"lodgeitStatus", lodgeitStatus,
 		"opensearchStatus", opensearchStatus,
-		"keycloakStatus", keycloakStatus)
+		"keycloakStatus", keycloakStatus,
+		"configStatus", configStatus,
+	)
 
-	sf.Status.Ready = mariadbStatus && etherpadStatus && zuulStatus && gerritStatus && lodgeitStatus && keycloakStatus && zkStatus && nodepoolStatus && opensearchStatus
+	sf.Status.Ready = mariadbStatus && etherpadStatus && zuulStatus && gerritStatus && lodgeitStatus && keycloakStatus && zkStatus && nodepoolStatus && opensearchStatus && configStatus
 	if err := r.Status().Update(ctx, &sf); err != nil {
 		log.Error(err, "unable to update Software Factory status")
 		return ctrl.Result{}, err
