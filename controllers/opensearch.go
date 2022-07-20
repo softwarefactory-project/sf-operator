@@ -6,6 +6,7 @@ package controllers
 
 import (
 	_ "embed"
+	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -13,6 +14,9 @@ import (
 
 //go:embed templates/opensearch/opensearch.yml
 var os_opensearch_objs string
+
+//go:embed templates/opensearch/internal_users.yml
+var os_opensearch_users_objs string
 
 const OPENSEARCH_PORT = 9200
 const OPENSEARCH_TRANSPORT_PORT = 9300
@@ -26,6 +30,21 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 		server_cert := r.create_client_certificate(r.ns, "opensearch-server", "ca-issuer", "opensearch-server-tls")
 		r.GetOrCreate(&server_cert)
 
+		// generate password
+		users := []string{"admin", "kibanaserver", "kibanaro", "logstash", "readall"}
+		for _, user := range users {
+			current_user := "opensearch-" + user + "-password"
+			gen_secret := r.GenerateSecretUUID(current_user)
+			secret := string(gen_secret.Data[current_user])
+			bcrpt_pass := gen_bcrypt_pass(secret)
+			os_opensearch_users_objs = strings.ReplaceAll(os_opensearch_users_objs, (strings.ToUpper(user) + "_BCRYPT_PASS"), bcrpt_pass)
+		}
+
+		plugin_data := make(map[string]string)
+		plugin_data["internal_users.yml"] = os_opensearch_users_objs
+		r.EnsureConfigMap("opensearch-internal-users", plugin_data)
+
+		// config maps
 		cm_data := make(map[string]string)
 		cm_data["opensearch.yml"] = os_opensearch_objs
 		r.EnsureConfigMap("opensearch", cm_data)
@@ -64,6 +83,13 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 				MountPath: "/usr/share/opensearch/config/certs",
 				ReadOnly:  true,
 			},
+			{
+				// mount just internal_users.yml file
+				Name:      "os-plugin",
+				MountPath: "/usr/share/opensearch/plugins/opensearch-security/securityconfig/internal_users.yml",
+				SubPath:   "internal_users.yml",
+				ReadOnly:  true,
+			},
 		}
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 			create_volume_cm("os-config", "opensearch-config-map"),
@@ -78,6 +104,7 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 					},
 				},
 			},
+			create_volume_cm("os-plugin", "opensearch-internal-users-config-map"),
 		}
 
 		dep.Spec.VolumeClaimTemplates = append(
@@ -89,7 +116,7 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 			create_env("node.name", "opensearch-master"),
 			create_env("cluster.initial_master_nodes", "opensearch-master"),
-			create_env("discovery.seed_hosts", "opensearch-master-headless"),
+			create_env("discovery.seed_hosts", `opensearch.` + r.ns + `:9200`),
 			create_env("cluster.name", "opensearch-cluster"),
 			create_env("network.host", "0.0.0.0"),
 			create_env("OPENSEARCH_JAVA_OPTS", "-Xmx512M -Xms512M"),

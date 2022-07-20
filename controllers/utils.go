@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/ssh"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -596,6 +597,15 @@ func create_ingress_rule(host string, service string, port int) netv1.IngressRul
 			},
 		},
 	}
+}
+
+func gen_bcrypt_pass(pass string) string {
+	password := []byte(pass)
+	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	return string(hashedPassword)
 }
 
 func (r *SFController) SetupIngress(keycloakEnabled bool) {
