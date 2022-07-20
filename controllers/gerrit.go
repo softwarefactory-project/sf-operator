@@ -39,7 +39,7 @@ var setCIUser string
 //go:embed static/gerrit/entrypoint.sh
 var entrypoint string
 
-func (r *SFController) GerritPostInitJob(name string) bool {
+func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
 	var job batchv1.Job
 	job_name := IDENT + "-" + name
 	found := r.GetM(job_name, &job)
@@ -59,9 +59,12 @@ func (r *SFController) GerritPostInitJob(name string) bool {
 			create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
 			create_secret_env("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
 		}
+		ci_users := []apiv1.EnvVar{}
 
-		ci_users := []apiv1.EnvVar{
-			//create_env("CI_USER_zuul", "ssh-rsa xxx"),
+		if zuul_enabled {
+			r.EnsureSSHKey("gerrit-zuul-ssh-key")
+			ci_users = append(
+				ci_users, create_secret_env("CI_USER_zuul", "gerrit-zuul-ssh-key", "pub"))
 		}
 
 		container := apiv1.Container{
@@ -91,7 +94,7 @@ func (r *SFController) GerritPostInitJob(name string) bool {
 	}
 }
 
-func (r *SFController) DeployGerrit(enabled bool) bool {
+func (r *SFController) DeployGerrit(enabled bool, zuul_enabled bool) bool {
 	if enabled {
 
 		// Set entrypoint.sh in a config map
@@ -221,7 +224,7 @@ func (r *SFController) DeployGerrit(enabled bool) bool {
 
 		ready := r.IsStatefulSetReady(&dep)
 		if ready {
-			return r.GerritPostInitJob("post-init")
+			return r.GerritPostInitJob("post-init", zuul_enabled)
 		} else {
 			return false
 		}

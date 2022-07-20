@@ -101,7 +101,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		nodepoolStatus = sfc.DeployNodepool(sf.Spec.Zuul)
 	}
 
-	gerritStatus := sfc.DeployGerrit(sf.Spec.Gerrit)
+	gerritStatus := sfc.DeployGerrit(sf.Spec.Gerrit, sf.Spec.Zuul)
 
 	if opensearchStatus {
 		opensearchStatus = sfc.DeployOpensearch(sf.Spec.Opensearch)
