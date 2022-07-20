@@ -10,7 +10,7 @@ JAVA_OPTIONS="${JAVA_OPTIONS} -Djavax.net.ssl.trustStore=/var/gerrit/etc/trustst
 JAVA_OPTIONS="${JAVA_OPTIONS} -Djavax.net.ssl.trustStorePassword=changeit"
 
 echo "Initializing the truststore ..."
-rm -f /var/gerrit/etc/trustore
+rm -f /var/gerrit/etc/truststore
 rm -f /var/gerrit/etc/keystore
 cat /var/gerrit/cert/ca.crt /var/gerrit/cert/tls.crt > /tmp/cert-chain.txt
 openssl pkcs12 -export \
