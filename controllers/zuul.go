@@ -87,6 +87,8 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zs.Spec.Template.Spec.InitContainers = append(init_containers, init_scheduler_config())
 	zs.Spec.Template.Spec.Containers = create_zuul_container("zuul-scheduler")
 	zs.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-scheduler")
+	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
+	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
 	r.GetOrCreate(&zs)
 	zs_dirty := false
 	if !map_equals(&zs.Spec.Template.ObjectMeta.Annotations, &annotations) {
@@ -102,6 +104,8 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.Containers = create_zuul_container("zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")
+	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
+	ze.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
 	r.GetOrCreate(&ze)
 	ze_dirty := false
 	if !map_equals(&ze.Spec.Template.ObjectMeta.Annotations, &annotations) {
@@ -116,6 +120,8 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
 	zw.Spec.Template.Spec.Containers = create_zuul_container("zuul-web")
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
+	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
+	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
 	r.GetOrCreate(&zw)
 	zw_dirty := false
 	if !map_equals(&zw.Spec.Template.ObjectMeta.Annotations, &annotations) {
