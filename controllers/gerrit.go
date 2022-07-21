@@ -62,12 +62,10 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
 		ci_users := []apiv1.EnvVar{}
 
 		if zuul_enabled {
-			r.EnsureSSHKey("gerrit-zuul-ssh-key")
-			r.GenerateSecretUUID("gerrit-zuul-api-key")
 			ci_users = append(
 				ci_users,
-				create_secret_env("CI_USER_SSH_zuul", "gerrit-zuul-ssh-key", "pub"),
-				create_secret_env("CI_USER_API_zuul", "gerrit-zuul-api-key", "gerrit-zuul-api-key"))
+				create_secret_env("CI_USER_SSH_zuul", "zuul-ssh-key", "pub"),
+				create_secret_env("CI_USER_API_zuul", "zuul-gerrit-api-key", "zuul-gerrit-api-key"))
 		}
 
 		container := apiv1.Container{

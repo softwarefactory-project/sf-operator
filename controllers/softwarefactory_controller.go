@@ -95,7 +95,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if mariadbStatus && zkStatus && gitServerStatus {
-		zuulStatus = sfc.DeployZuul(sf.Spec.Zuul)
+		zuulStatus = sfc.DeployZuul(sf.Spec.Zuul, sf.Spec.Gerrit)
 	}
 	if zkStatus {
 		nodepoolStatus = sfc.DeployNodepool(sf.Spec.Zuul)

@@ -9,6 +9,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
 	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
+	gopkg.in/ini.v1 v1.66.2
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v0.23.5

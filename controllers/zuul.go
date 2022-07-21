@@ -4,9 +4,11 @@
 package controllers
 
 import (
+	"bytes"
 	_ "embed"
 	"fmt"
 
+	ini "gopkg.in/ini.v1"
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +40,11 @@ func create_zuul_container(service string) []apiv1.Container {
 			Name:      service,
 			MountPath: "/var/lib/zuul",
 		},
+		{
+			Name:      "zuul-ssh-key",
+			MountPath: "/var/lib/zuul-ssh",
+			ReadOnly:  true,
+		},
 	}
 	container := apiv1.Container{
 		Name:    service,
@@ -54,10 +61,20 @@ func create_zuul_container(service string) []apiv1.Container {
 }
 
 func create_zuul_volumes(service string) []apiv1.Volume {
+	var mod int32 = 256 // decimal for 0400 octal
 	volumes := []apiv1.Volume{
 		create_volume_secret("zuul-config"),
 		create_volume_secret("zuul-tenant-yaml"),
 		create_volume_secret("zookeeper-client-tls"),
+		{
+			Name: "zuul-ssh-key",
+			VolumeSource: apiv1.VolumeSource{
+				Secret: &apiv1.SecretVolumeSource{
+					SecretName:  "zuul-ssh-key",
+					DefaultMode: &mod,
+				},
+			},
+		},
 	}
 	if !is_statefulset(service) {
 		// statefulset already has a PV for the service-name,
@@ -160,11 +177,83 @@ func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret, config strin
 	})
 }
 
-func (r *SFController) DeployZuul(enabled bool) bool {
+type zuulConnections struct {
+	gerrit_conns []gerritConnection
+}
+
+type gerritConnection struct {
+	name               string
+	port               string
+	server             string
+	baseurl            string
+	user               string
+	sshkey             string
+	password           string
+	canonical_hostname string
+}
+
+func (r *SFController) AddGerritConnection(cfg *ini.File, conn gerritConnection) {
+	section := "connection " + conn.name
+	cfg.NewSection(section)
+	cfg.Section(section).NewKey("driver", "gerrit")
+	cfg.Section(section).NewKey("port", conn.port)
+	cfg.Section(section).NewKey("server", conn.server)
+	cfg.Section(section).NewKey("baseurl", conn.baseurl)
+	cfg.Section(section).NewKey("user", conn.user)
+	cfg.Section(section).NewKey("sshkey", conn.sshkey)
+	cfg.Section(section).NewKey("password", conn.password)
+	cfg.Section(section).NewKey("canonical_hostname", conn.canonical_hostname)
+}
+
+func (r *SFController) LoadConfigINI(zuul_conf string) *ini.File {
+	cfg, err := ini.Load([]byte(zuul_conf))
+	if err != nil {
+		panic(err.Error())
+	}
+	return cfg
+}
+
+func (r *SFController) DumpConfigINI(cfg *ini.File) string {
+	writer := bytes.NewBufferString("")
+	cfg.WriteTo(writer)
+	return writer.String()
+}
+
+func (r *SFController) DeployZuul(enabled bool, gerrit_enabled bool) bool {
 	if enabled {
 		init_containers, db_password := r.EnsureDBInit("zuul")
-		config := zuul_dot_conf
-		// TODO: add user defined connections
+		r.EnsureSSHKey("zuul-ssh-key")
+
+		// Define the zuul connection struct - will be passed later as a Spec
+		zuul_conns := zuulConnections{
+			gerrit_conns: []gerritConnection{},
+		}
+
+		// Add local gerrit connection if needed
+		if gerrit_enabled {
+			api_key := r.GenerateSecretUUID("zuul-gerrit-api-key")
+			gerrit_conn := gerritConnection{
+				"gerrit",
+				"29418",
+				GERRIT_SSHD_PORT_NAME,
+				"http://" + GERRIT_HTTPD_PORT_NAME,
+				"zuul",
+				"/var/lib/zuul-ssh/..data/priv",
+				string(api_key.Data["zuul-gerrit-api-key"]),
+				"gerrit." + r.cr.Spec.FQDN,
+			}
+			zuul_conns.gerrit_conns = append(zuul_conns.gerrit_conns, gerrit_conn)
+		}
+
+		// Update base config to add connections
+		base_config := zuul_dot_conf
+
+		cfg_ini := r.LoadConfigINI(base_config)
+		for _, conn := range zuul_conns.gerrit_conns {
+			r.AddGerritConnection(cfg_ini, conn)
+		}
+		config := r.DumpConfigINI(cfg_ini)
+
 		r.EnsureZuulSecrets(&db_password, config)
 		return r.EnsureZuulServices(init_containers, config)
 	} else {
