@@ -20,7 +20,7 @@ const ETHERPAD_PORT_NAME = "etherpad-port"
 func (r *SFController) DeployEtherpad(enabled bool) bool {
 	if enabled {
 		initContainers, _ := r.EnsureDBInit("etherpad")
-		r.EnsureSecret("etherpad-admin-password")
+		r.GenerateSecretUUID("etherpad-admin-password")
 		cm_data := make(map[string]string)
 		cm_data["settings.json"] = etherpadSettings
 		r.EnsureConfigMap("etherpad", cm_data)
