@@ -10,6 +10,21 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type GerritConnection struct {
+	Name              string `json:"name,omitempty"`
+	Hostname          string `json:"hostname,omitempty"`
+	Port              string `json:"port,omitempty"`
+	Puburl            string `json:"puburl,omitempty"`
+	Username          string `json:"username,omitempty"`
+	Canonicalhostname string `json:"canonicalhostname,omitempty"`
+	Password          string `json:"password,omitempty"` // API Password secret name
+}
+
+type ZuulSpec struct {
+	Enabled     bool               `json:"enabled,omitempty"`
+	GerritConns []GerritConnection `json:"gerritconns,omitempty"`
+}
+
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
@@ -20,7 +35,7 @@ type SoftwareFactorySpec struct {
 	Gerrit bool `json:"gerrit,omitempty"`
 
 	// Deploy the zuul service
-	Zuul bool `json:"zuul,omitempty"`
+	Zuul ZuulSpec `json:"zuul,omitempty"`
 
 	// Deploy the etherpad service.
 	Etherpad bool `json:"etherpad,omitempty"`

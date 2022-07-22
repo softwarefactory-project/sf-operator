@@ -12,6 +12,8 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
 //go:embed static/zuul/zuul.conf
@@ -177,32 +179,27 @@ func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret, config strin
 	})
 }
 
-type zuulConnections struct {
-	gerrit_conns []gerritConnection
+func (r *SFController) read_secret_content(name string) string {
+	var secret apiv1.Secret
+	if !r.GetM(name, &secret) {
+		// Loosely return empty string when not found
+		return ""
+	}
+	return string(secret.Data[name])
 }
 
-type gerritConnection struct {
-	name               string
-	port               string
-	server             string
-	baseurl            string
-	user               string
-	sshkey             string
-	password           string
-	canonical_hostname string
-}
-
-func (r *SFController) AddGerritConnection(cfg *ini.File, conn gerritConnection) {
-	section := "connection " + conn.name
+func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnection) {
+	password := r.read_secret_content(conn.Password)
+	section := "connection " + conn.Name
 	cfg.NewSection(section)
 	cfg.Section(section).NewKey("driver", "gerrit")
-	cfg.Section(section).NewKey("port", conn.port)
-	cfg.Section(section).NewKey("server", conn.server)
-	cfg.Section(section).NewKey("baseurl", conn.baseurl)
-	cfg.Section(section).NewKey("user", conn.user)
-	cfg.Section(section).NewKey("sshkey", conn.sshkey)
-	cfg.Section(section).NewKey("password", conn.password)
-	cfg.Section(section).NewKey("canonical_hostname", conn.canonical_hostname)
+	cfg.Section(section).NewKey("port", conn.Port)
+	cfg.Section(section).NewKey("server", conn.Hostname)
+	cfg.Section(section).NewKey("baseurl", conn.Puburl)
+	cfg.Section(section).NewKey("user", conn.Username)
+	cfg.Section(section).NewKey("sshkey", "/var/lib/zuul-ssh/..data/priv")
+	cfg.Section(section).NewKey("password", password)
+	cfg.Section(section).NewKey("canonical_hostname", conn.Canonicalhostname)
 }
 
 func (r *SFController) LoadConfigINI(zuul_conf string) *ini.File {
@@ -219,37 +216,32 @@ func (r *SFController) DumpConfigINI(cfg *ini.File) string {
 	return writer.String()
 }
 
-func (r *SFController) DeployZuul(enabled bool, gerrit_enabled bool) bool {
-	if enabled {
+func (r *SFController) DeployZuul(spec sfv1.ZuulSpec, gerrit_enabled bool) bool {
+	if spec.Enabled {
 		init_containers, db_password := r.EnsureDBInit("zuul")
 		r.EnsureSSHKey("zuul-ssh-key")
-
-		// Define the zuul connection struct - will be passed later as a Spec
-		zuul_conns := zuulConnections{
-			gerrit_conns: []gerritConnection{},
-		}
+		gerrit_conns := spec.GerritConns
 
 		// Add local gerrit connection if needed
 		if gerrit_enabled {
-			api_key := r.GenerateSecretUUID("zuul-gerrit-api-key")
-			gerrit_conn := gerritConnection{
-				"gerrit",
-				"29418",
-				GERRIT_SSHD_PORT_NAME,
-				"http://" + GERRIT_HTTPD_PORT_NAME,
-				"zuul",
-				"/var/lib/zuul-ssh/..data/priv",
-				string(api_key.Data["zuul-gerrit-api-key"]),
-				"gerrit." + r.cr.Spec.FQDN,
+			r.GenerateSecretUUID("zuul-gerrit-api-key")
+			gerrit_conn := sfv1.GerritConnection{
+				Name:              "gerrit",
+				Hostname:          GERRIT_SSHD_PORT_NAME,
+				Port:              "29418",
+				Puburl:            "http://" + GERRIT_HTTPD_PORT_NAME,
+				Username:          "zuul",
+				Canonicalhostname: "gerrit." + r.cr.Spec.FQDN,
+				Password:          "zuul-gerrit-api-key",
 			}
-			zuul_conns.gerrit_conns = append(zuul_conns.gerrit_conns, gerrit_conn)
+			gerrit_conns = append(gerrit_conns, gerrit_conn)
 		}
 
 		// Update base config to add connections
 		base_config := zuul_dot_conf
 
 		cfg_ini := r.LoadConfigINI(base_config)
-		for _, conn := range zuul_conns.gerrit_conns {
+		for _, conn := range gerrit_conns {
 			r.AddGerritConnection(cfg_ini, conn)
 		}
 		config := r.DumpConfigINI(cfg_ini)

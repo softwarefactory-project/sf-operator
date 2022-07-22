@@ -57,7 +57,29 @@ spec:
                 type: boolean
               zuul:
                 description: Deploy the zuul service
-                type: boolean
+                properties:
+                  enabled:
+                    type: boolean
+                  gerritconns:
+                    items:
+                      properties:
+                        canonicalhostname:
+                          type: string
+                        hostname:
+                          type: string
+                        name:
+                          type: string
+                        password:
+                          type: string
+                        port:
+                          type: string
+                        puburl:
+                          type: string
+                        username:
+                          type: string
+                      type: object
+                    type: array
+                type: object
             required:
             - fqdn
             type: object

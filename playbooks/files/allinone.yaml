@@ -7,4 +7,6 @@ spec:
   etherpad: true
   lodgeit: false
   gerrit: true
-  zuul: true
+  zuul:
+    enabled: true
+    gerritconns: []

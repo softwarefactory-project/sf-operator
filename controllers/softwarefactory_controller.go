@@ -70,16 +70,16 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Keycloak is enabled if gerrit is enabled
 	keycloakEnabled := sf.Spec.Gerrit
 
-	if sf.Spec.Zuul || sf.Spec.Opensearch {
+	if sf.Spec.Zuul.Enabled || sf.Spec.Opensearch {
 		sfc.EnsureCA()
 	}
 
-	zkStatus := sfc.DeployZK(sf.Spec.Zuul)
+	zkStatus := sfc.DeployZK(sf.Spec.Zuul.Enabled)
 	// The git server service is needed to store system jobs (config-check and config-update)
-	gitServerStatus := sfc.DeployGitServer(sf.Spec.Zuul)
+	gitServerStatus := sfc.DeployGitServer(sf.Spec.Zuul.Enabled)
 
 	// Mariadb is enabled if etherpad or lodgeit is enabled.
-	mariadbEnabled := sf.Spec.Etherpad || sf.Spec.Lodgeit || sf.Spec.Zuul || keycloakEnabled
+	mariadbEnabled := sf.Spec.Etherpad || sf.Spec.Lodgeit || sf.Spec.Zuul.Enabled || keycloakEnabled
 	mariadbStatus := sfc.DeployMariadb(mariadbEnabled)
 
 	etherpadStatus := true
@@ -98,10 +98,10 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		zuulStatus = sfc.DeployZuul(sf.Spec.Zuul, sf.Spec.Gerrit)
 	}
 	if zkStatus {
-		nodepoolStatus = sfc.DeployNodepool(sf.Spec.Zuul)
+		nodepoolStatus = sfc.DeployNodepool(sf.Spec.Zuul.Enabled)
 	}
 
-	gerritStatus := sfc.DeployGerrit(sf.Spec.Gerrit, sf.Spec.Zuul)
+	gerritStatus := sfc.DeployGerrit(sf.Spec.Gerrit, sf.Spec.Zuul.Enabled)
 
 	if opensearchStatus {
 		opensearchStatus = sfc.DeployOpensearch(sf.Spec.Opensearch)

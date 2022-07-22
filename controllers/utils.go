@@ -600,7 +600,7 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 	if r.cr.Spec.Gerrit {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGerrit()...)
 	}
-	if r.cr.Spec.Zuul {
+	if r.cr.Spec.Zuul.Enabled {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressZuul())
 	}
 	if r.cr.Spec.Opensearch {
