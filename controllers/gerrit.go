@@ -15,12 +15,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const IDENT = "gerrit"
+const GERRIT_IDENT = "gerrit"
 const GERRIT_HTTPD_PORT = 8080
 const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
-const IMAGE = "quay.io/software-factory/gerrit:3.4.5-2"
+const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.4.5-2"
 const POST_INIT_IMAGE = "quay.io/software-factory/sf-op-busybox:1.0-1"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_GIT_MOUNT_PATH = "/var/gerrit/git"
@@ -39,9 +39,34 @@ var setCIUser string
 //go:embed static/gerrit/entrypoint.sh
 var entrypoint string
 
+//go:embed static/gerrit/init.sh
+var gerritInitScript string
+
+func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount) []apiv1.Container {
+	extraVolume := apiv1.VolumeMount{
+		Name:      GERRIT_IDENT + "-client-tls",
+		MountPath: GERRIT_CERT_MOUNT_PATH,
+		ReadOnly:  true,
+	}
+	container := apiv1.Container{
+		Name:    "gerrit-init",
+		Image:   GERRIT_IMAGE,
+		Command: []string{"sh", "-c", gerritInitScript},
+		Env: []apiv1.EnvVar{
+			create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
+			create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
+			create_secret_env("GERRIT_ADMIN_SSH_PUB", "gerrit-admin-ssh-key", "pub"),
+			create_env("SSHD_MAX_CONNECTIONS_PER_USER", "20"),
+			create_env("FQDN", r.cr.Spec.FQDN),
+		},
+		VolumeMounts: append(volumeMounts, extraVolume),
+	}
+	return []apiv1.Container{container}
+}
+
 func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
 	var job batchv1.Job
-	job_name := IDENT + "-" + name
+	job_name := GERRIT_IDENT + "-" + name
 	found := r.GetM(job_name, &job)
 
 	if !found {
@@ -75,14 +100,14 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
 			Env:     append(env, ci_users...),
 			VolumeMounts: []apiv1.VolumeMount{
 				{
-					Name:      IDENT + "-pi",
+					Name:      GERRIT_IDENT + "-pi",
 					MountPath: "/entry",
 				},
 			},
 		}
 		job := create_job(r.ns, job_name, container)
 		job.Spec.Template.Spec.Volumes = []apiv1.Volume{
-			create_volume_cm(IDENT+"-pi", IDENT+"-pi-config-map"),
+			create_volume_cm(GERRIT_IDENT+"-pi", GERRIT_IDENT+"-pi-config-map"),
 		}
 		r.log.V(1).Info("Creating Gerrit post init job", "name", name)
 		r.CreateR(&job)
@@ -98,69 +123,50 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
 func (r *SFController) DeployGerrit(enabled bool, zuul_enabled bool) bool {
 	if enabled {
 
-		// Set entrypoint.sh in a config map
-		cm_ep_data := make(map[string]string)
-		cm_ep_data["entrypoint.sh"] = entrypoint
-		r.EnsureConfigMap("gerrit-ep", cm_ep_data)
-
-		// Set Gerrit env vars in a config map
-		cm_config_data := make(map[string]string)
-		// Those variables should be populated via the SoftwareFactory CRD Spec
-		cm_config_data["SSHD_MAX_CONNECTIONS_PER_USER"] = "20"
-		cm_config_data["FQDN"] = r.cr.Spec.FQDN
-		r.EnsureConfigMap("gerrit-config", cm_config_data)
-
 		// Ensure Gerrit Admin user ssh key
 		r.EnsureSSHKey("gerrit-admin-ssh-key")
 		// Ensure Gerrit Keystore password
 		r.GenerateSecretUUID("gerrit-keystore-password")
-
 		// Create a certificate for Gerrit
-		cert := r.create_client_certificate(r.ns, IDENT+"-client", "ca-issuer", IDENT+"-client-tls")
+		cert := r.create_client_certificate(r.ns, GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls")
 		r.GetOrCreate(&cert)
 
-		// Create the deployment
-		dep := create_statefulset(r.ns, IDENT, IMAGE)
-		dep.Spec.Template.Spec.Containers[0].Command = []string{"/bin/bash", "/entry/entrypoint.sh"}
-		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
+		volumeMounts := []apiv1.VolumeMount{
 			{
-				Name:      IDENT + "-ep",
-				MountPath: GERRIT_EP_MOUNT_PATH,
-			},
-			{
-				Name:      IDENT + "-git",
+				Name:      GERRIT_IDENT + "-git",
 				MountPath: GERRIT_GIT_MOUNT_PATH,
 			},
 			{
-				Name:      IDENT + "-index",
+				Name:      GERRIT_IDENT + "-index",
 				MountPath: GERRIT_INDEX_MOUNT_PATH,
 			},
 			{
-				Name:      IDENT + "-config",
+				Name:      GERRIT_IDENT + "-config",
 				MountPath: GERRIT_ETC_MOUNT_PATH,
 			},
 			{
-				Name:      IDENT + "-ssh",
+				Name:      GERRIT_IDENT + "-ssh",
 				MountPath: GERRIT_SSH_MOUNT_PATH,
 			},
 			{
-				Name:      IDENT + "-logs",
+				Name:      GERRIT_IDENT + "-logs",
 				MountPath: GERRIT_LOGS_MOUNT_PATH,
-			},
-			{
-				Name:      IDENT + "-client-tls",
-				MountPath: GERRIT_CERT_MOUNT_PATH,
-				ReadOnly:  true,
 			},
 		}
 
+		// Create the deployment
+		dep := create_statefulset(r.ns, GERRIT_IDENT, GERRIT_IMAGE)
+		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts)
+		dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
+		dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
+
 		dep.Spec.VolumeClaimTemplates = append(
 			dep.Spec.VolumeClaimTemplates,
-			create_pvc(r.ns, IDENT+"-git"),
-			create_pvc(r.ns, IDENT+"-index"),
-			create_pvc(r.ns, IDENT+"-config"),
-			create_pvc(r.ns, IDENT+"-ssh"),
-			create_pvc(r.ns, IDENT+"-logs"),
+			create_pvc(r.ns, GERRIT_IDENT+"-git"),
+			create_pvc(r.ns, GERRIT_IDENT+"-index"),
+			create_pvc(r.ns, GERRIT_IDENT+"-config"),
+			create_pvc(r.ns, GERRIT_IDENT+"-ssh"),
+			create_pvc(r.ns, GERRIT_IDENT+"-logs"),
 		)
 
 		// This port definition is informational all ports exposed by the container
@@ -172,25 +178,12 @@ func (r *SFController) DeployGerrit(enabled bool, zuul_enabled bool) bool {
 
 		// Expose env vars
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
-			create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
-			create_secret_env("GERRIT_ADMIN_SSH_PUB", "gerrit-admin-ssh-key", "pub"),
 			create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
 		}
 
-		// Expose env vars from a config map
-		dep.Spec.Template.Spec.Containers[0].EnvFrom = []apiv1.EnvFromSource{
-			{
-				ConfigMapRef: &apiv1.ConfigMapEnvSource{
-					LocalObjectReference: apiv1.LocalObjectReference{
-						Name: "gerrit-config-config-map",
-					},
-				},
-			},
-		}
-
+		// Expose a volume that contain certmanager certs for Gerrit
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-			create_volume_cm(IDENT+"-ep", IDENT+"-ep-config-map"),
-			create_volume_secret(IDENT + "-client-tls"),
+			create_volume_secret(GERRIT_IDENT + "-client-tls"),
 		}
 
 		// Create readiness probes
@@ -200,7 +193,7 @@ func (r *SFController) DeployGerrit(enabled bool, zuul_enabled bool) bool {
 		r.GetOrCreate(&dep)
 
 		// Create services exposed by Gerrit
-		httpd_service := create_service(r.ns, GERRIT_HTTPD_PORT_NAME, IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME)
+		httpd_service := create_service(r.ns, GERRIT_HTTPD_PORT_NAME, GERRIT_IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME)
 		sshd_service := apiv1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      GERRIT_SSHD_PORT_NAME,
@@ -217,7 +210,7 @@ func (r *SFController) DeployGerrit(enabled bool, zuul_enabled bool) bool {
 				Type: apiv1.ServiceTypeNodePort,
 				Selector: map[string]string{
 					"app": "sf",
-					"run": IDENT,
+					"run": GERRIT_IDENT,
 				},
 			}}
 		r.GetOrCreate(&httpd_service)
@@ -230,7 +223,7 @@ func (r *SFController) DeployGerrit(enabled bool, zuul_enabled bool) bool {
 			return false
 		}
 	} else {
-		r.DeleteStatefulSet(IDENT)
+		r.DeleteStatefulSet(GERRIT_IDENT)
 		r.DeleteService(GERRIT_HTTPD_PORT_NAME)
 		r.DeleteService(GERRIT_SSHD_PORT_NAME)
 		return true
@@ -239,6 +232,6 @@ func (r *SFController) DeployGerrit(enabled bool, zuul_enabled bool) bool {
 
 func (r *SFController) IngressGerrit() []netv1.IngressRule {
 	return []netv1.IngressRule{
-		create_ingress_rule(IDENT+"."+r.cr.Spec.FQDN, GERRIT_HTTPD_PORT_NAME, GERRIT_HTTPD_PORT),
+		create_ingress_rule(GERRIT_IDENT+"."+r.cr.Spec.FQDN, GERRIT_HTTPD_PORT_NAME, GERRIT_HTTPD_PORT),
 	}
 }
