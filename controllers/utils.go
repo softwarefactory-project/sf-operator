@@ -408,6 +408,20 @@ func (r *SFController) DeleteStatefulSet(name string) {
 	}
 }
 
+func (r *SFController) DeleteConfigMap(name string) {
+	var dep apiv1.ConfigMap
+	if r.GetM(name, &dep) {
+		r.DeleteR(&dep)
+	}
+}
+
+func (r *SFController) DeleteSecret(name string) {
+	var dep apiv1.Secret
+	if r.GetM(name, &dep) {
+		r.DeleteR(&dep)
+	}
+}
+
 func (r *SFController) DeleteService(name string) {
 	var srv apiv1.Service
 	if r.GetM(name, &srv) {
@@ -608,6 +622,10 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 	if r.cr.Spec.Opensearch {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearch())
 	}
+	if r.cr.Spec.Lodgeit {
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressLodgeit())
+	}
+
 	if !found {
 		r.CreateR(&ingress)
 	} else {

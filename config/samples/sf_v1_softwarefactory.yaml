@@ -5,7 +5,7 @@ metadata:
 spec:
   fqdn: "sftests.com"
   etherpad: false
-  lodgeit: false
+  lodgeit: true
   gerrit:
     enabled: true
     sshd_max_connections_per_user: "64"

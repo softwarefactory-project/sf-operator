@@ -90,7 +90,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	opensearchStatus := true
 	if mariadbStatus {
 		etherpadStatus = sfc.DeployEtherpad(sf.Spec.Etherpad)
-		// lodgeitStatus = sfc.DeployLodgeit(sf.Spec.Lodgit)
+		lodgeitStatus = sfc.DeployLodgeit(sf.Spec.Lodgeit)
 		keycloakStatus = sfc.DeployKeycloak(keycloakEnabled)
 	}
 
