@@ -13,6 +13,8 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
 const GERRIT_IDENT = "gerrit"
@@ -41,7 +43,13 @@ var entrypoint string
 //go:embed static/gerrit/init.sh
 var gerritInitScript string
 
-func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount) []apiv1.Container {
+func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, spec sfv1.GerritSpec) []apiv1.Container {
+	var sshd_max_conns_per_user string
+	if spec.SshdMaxConnectionsPerUser == "" {
+		sshd_max_conns_per_user = "64"
+	} else {
+		sshd_max_conns_per_user = spec.SshdMaxConnectionsPerUser
+	}
 	certVolume := apiv1.VolumeMount{
 		Name:      GERRIT_IDENT + "-client-tls",
 		MountPath: GERRIT_CERT_MOUNT_PATH,
@@ -55,7 +63,7 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount) []
 			create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
 			create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
 			create_secret_env("GERRIT_ADMIN_SSH_PUB", "gerrit-admin-ssh-key", "pub"),
-			create_env("SSHD_MAX_CONNECTIONS_PER_USER", "20"),
+			create_env("SSHD_MAX_CONNECTIONS_PER_USER", sshd_max_conns_per_user),
 			create_env("FQDN", r.cr.Spec.FQDN),
 		},
 		VolumeMounts: append(volumeMounts, certVolume),
@@ -117,9 +125,8 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
 	}
 }
 
-func (r *SFController) DeployGerrit(enabled bool, zuul_enabled bool) bool {
-	if enabled {
-
+func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool) bool {
+	if spec.Enabled {
 		// Ensure Gerrit Admin user ssh key
 		r.EnsureSSHKey("gerrit-admin-ssh-key")
 		// Ensure Gerrit Keystore password
@@ -153,7 +160,7 @@ func (r *SFController) DeployGerrit(enabled bool, zuul_enabled bool) bool {
 
 		// Create the deployment
 		dep := create_statefulset(r.ns, GERRIT_IDENT, GERRIT_IMAGE)
-		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts)
+		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
 		dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 

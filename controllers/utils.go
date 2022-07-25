@@ -599,7 +599,7 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 	if keycloakEnabled {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressKeycloak()...)
 	}
-	if r.cr.Spec.Gerrit {
+	if r.cr.Spec.Gerrit.Enabled {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGerrit()...)
 	}
 	if r.cr.Spec.Zuul.Enabled {

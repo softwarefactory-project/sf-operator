@@ -6,7 +6,9 @@ spec:
   fqdn: "sftests.com"
   etherpad: false
   lodgeit: false
-  gerrit: false
+  gerrit:
+    enabled: true
+    sshd_max_connections_per_user: "64"
   opensearch: true
   zuul:
     enabled: true

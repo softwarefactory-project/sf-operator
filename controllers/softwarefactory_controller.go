@@ -68,7 +68,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Keycloak is enabled if gerrit is enabled
-	keycloakEnabled := sf.Spec.Gerrit
+	keycloakEnabled := sf.Spec.Gerrit.Enabled
 
 	if sf.Spec.Zuul.Enabled || sf.Spec.Opensearch {
 		sfc.EnsureCA()
@@ -95,7 +95,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if mariadbStatus && zkStatus && gitServerStatus {
-		zuulStatus = sfc.DeployZuul(sf.Spec.Zuul, sf.Spec.Gerrit)
+		zuulStatus = sfc.DeployZuul(sf.Spec.Zuul, sf.Spec.Gerrit.Enabled)
 	}
 	if zkStatus {
 		nodepoolStatus = sfc.DeployNodepool(sf.Spec.Zuul.Enabled)

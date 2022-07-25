@@ -26,16 +26,21 @@ type ZuulSpec struct {
 	GerritConns []GerritConnection `json:"gerritconns,omitempty"`
 }
 
+type GerritSpec struct {
+	Enabled                   bool   `json:"enabled,omitempty"`
+	SshdMaxConnectionsPerUser string `json:"sshd_max_connections_per_user,omitempty"`
+}
+
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
 
 	FQDN string `json:"fqdn"`
 
-	// Deploy the gerrit service
-	Gerrit bool `json:"gerrit,omitempty"`
+	// Gerrit service spec
+	Gerrit GerritSpec `json:"gerrit,omitempty"`
 
-	// Deploy the zuul service
+	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`
 
 	// Deploy the etherpad service.

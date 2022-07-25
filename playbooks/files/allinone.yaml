@@ -6,7 +6,8 @@ spec:
   fqdn: "sftests.com"
   etherpad: true
   lodgeit: false
-  gerrit: true
+  gerrit:
+    enabled: true
   zuul:
     enabled: true
     gerritconns: []
