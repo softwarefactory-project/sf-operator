@@ -89,7 +89,7 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 func init_scheduler_config() apiv1.Container {
 	return apiv1.Container{
 		Name:    "init-scheduler-config",
-		Image:   POST_INIT_IMAGE,
+		Image:   BUSYBOX_IMAGE,
 		Command: []string{"sh", "-c", zuul_init_tenant_config},
 		VolumeMounts: []apiv1.VolumeMount{
 			{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},

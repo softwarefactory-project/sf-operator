@@ -21,7 +21,6 @@ const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
 const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.4.5-2"
-const POST_INIT_IMAGE = "quay.io/software-factory/sf-op-busybox:1.0-1"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_GIT_MOUNT_PATH = "/var/gerrit/git"
 const GERRIT_INDEX_MOUNT_PATH = "/var/gerrit/index"
@@ -43,7 +42,7 @@ var entrypoint string
 var gerritInitScript string
 
 func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount) []apiv1.Container {
-	extraVolume := apiv1.VolumeMount{
+	certVolume := apiv1.VolumeMount{
 		Name:      GERRIT_IDENT + "-client-tls",
 		MountPath: GERRIT_CERT_MOUNT_PATH,
 		ReadOnly:  true,
@@ -59,7 +58,7 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount) []
 			create_env("SSHD_MAX_CONNECTIONS_PER_USER", "20"),
 			create_env("FQDN", r.cr.Spec.FQDN),
 		},
-		VolumeMounts: append(volumeMounts, extraVolume),
+		VolumeMounts: append(volumeMounts, certVolume),
 	}
 	return []apiv1.Container{container}
 }
@@ -70,9 +69,7 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
 	found := r.GetM(job_name, &job)
 
 	if !found {
-		// Set post-init.sh in a config map
 		cm_data := make(map[string]string)
-		cm_data["post-init.sh"] = postInitScript
 		cm_data["set-ci-user.sh"] = setCIUser
 		r.EnsureConfigMap("gerrit-pi", cm_data)
 
@@ -95,8 +92,8 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
 
 		container := apiv1.Container{
 			Name:    fmt.Sprintf("%s-container", job_name),
-			Image:   POST_INIT_IMAGE,
-			Command: []string{"/bin/bash", "/entry/post-init.sh"},
+			Image:   BUSYBOX_IMAGE,
+			Command: []string{"sh", "-c", postInitScript},
 			Env:     append(env, ci_users...),
 			VolumeMounts: []apiv1.VolumeMount{
 				{

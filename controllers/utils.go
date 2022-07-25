@@ -44,6 +44,8 @@ import (
 	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 )
 
+const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.0-1"
+
 func checksum(data []byte) string {
 	return fmt.Sprintf("%x", sha256.Sum256(data))
 }

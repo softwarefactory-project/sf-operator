@@ -40,7 +40,7 @@ func (r *SFController) RunCommand(name string, args []string) *batchv1.Job {
 		r.ns, name,
 		apiv1.Container{
 			Name:    "sf-operator",
-			Image:   POST_INIT_IMAGE,
+			Image:   BUSYBOX_IMAGE,
 			Command: append([]string{"python3", "/sf_operator/main.py"}, args...),
 			Env: []apiv1.EnvVar{
 				create_env("PYTHONPATH", "/"),
