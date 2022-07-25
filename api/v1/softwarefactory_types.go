@@ -11,13 +11,14 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type GerritConnection struct {
-	Name              string `json:"name,omitempty"`
-	Hostname          string `json:"hostname,omitempty"`
+	Name              string `json:"name"`
+	Hostname          string `json:"hostname"`
 	Port              string `json:"port,omitempty"`
 	Puburl            string `json:"puburl,omitempty"`
-	Username          string `json:"username,omitempty"`
+	Username          string `json:"username"`
 	Canonicalhostname string `json:"canonicalhostname,omitempty"`
 	Password          string `json:"password,omitempty"` // API Password secret name
+	VerifySSL         string `json:"verifyssl,omitempty"`
 }
 
 type ZuulSpec struct {

@@ -189,17 +189,30 @@ func (r *SFController) read_secret_content(name string) string {
 }
 
 func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnection) {
-	password := r.read_secret_content(conn.Password)
 	section := "connection " + conn.Name
 	cfg.NewSection(section)
 	cfg.Section(section).NewKey("driver", "gerrit")
-	cfg.Section(section).NewKey("port", conn.Port)
 	cfg.Section(section).NewKey("server", conn.Hostname)
-	cfg.Section(section).NewKey("baseurl", conn.Puburl)
-	cfg.Section(section).NewKey("user", conn.Username)
 	cfg.Section(section).NewKey("sshkey", "/var/lib/zuul-ssh/..data/priv")
-	cfg.Section(section).NewKey("password", password)
-	cfg.Section(section).NewKey("canonical_hostname", conn.Canonicalhostname)
+	cfg.Section(section).NewKey("user", conn.Username)
+	cfg.Section(section).NewKey("gitweb_url_template", "{baseurl}/plugins/gitiles/{project.name}/+/{sha}^!/")
+	// Optional fields (set as omitempty in GerritConnection struct defintion)
+	if conn.Port != "" {
+		cfg.Section(section).NewKey("port", conn.Port)
+	}
+	if conn.Puburl != "" {
+		cfg.Section(section).NewKey("baseurl", conn.Puburl)
+	}
+	if conn.Password != "" {
+		password := r.read_secret_content(conn.Password)
+		cfg.Section(section).NewKey("password", password)
+	}
+	if conn.Canonicalhostname != "" {
+		cfg.Section(section).NewKey("canonical_hostname", conn.Canonicalhostname)
+	}
+	if conn.VerifySSL != "" {
+		cfg.Section(section).NewKey("verify_ssl", conn.VerifySSL)
+	}
 }
 
 func (r *SFController) LoadConfigINI(zuul_conf string) *ini.File {

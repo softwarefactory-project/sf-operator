@@ -77,6 +77,12 @@ spec:
                           type: string
                         username:
                           type: string
+                        verifyssl:
+                          type: string
+                      required:
+                      - hostname
+                      - name
+                      - username
                       type: object
                     type: array
                 type: object
