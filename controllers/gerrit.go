@@ -7,6 +7,7 @@ package controllers
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -194,7 +195,23 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool) boo
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
 
+		// Create annotations based on Gerrit parameters
+		jsonSpec, _ := json.Marshal(spec)
+		annotations := map[string]string{
+			"fqdn": r.cr.Spec.FQDN,
+			"spec": string(jsonSpec),
+		}
+		dep.Spec.Template.ObjectMeta.Annotations = annotations
 		r.GetOrCreate(&dep)
+		if !map_equals(&dep.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			// Update the annotation - this force the statefulset controler to respawn the container
+			dep.Spec.Template.ObjectMeta.Annotations = annotations
+			// ReInit initContainers to ensure new spec is used
+			dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
+			r.log.V(1).Info("Gerrit configuration changed, restarting ...")
+			// Update the deployment resource
+			r.UpdateR(&dep)
+		}
 
 		// Create services exposed by Gerrit
 		httpd_service := create_service(r.ns, GERRIT_HTTPD_PORT_NAME, GERRIT_IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME)
