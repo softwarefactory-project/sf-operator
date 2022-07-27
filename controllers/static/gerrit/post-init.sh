@@ -136,12 +136,13 @@ admin = {
 }
 EOF
 
-echo "Setup resources"
-cat << EOF > prev.yaml
+if ! $(ssh gerrit gerrit ls-projects | grep -q "^config$"); then
+  echo "Initialize config repository and related groups"
+  cat << EOF > prev.yaml
 resources: {}
 EOF
 
-cat << EOF > new.yaml
+  cat << EOF > new.yaml
 resources:
   repos:
     config:
@@ -180,5 +181,7 @@ resources:
       members:
         - admin@${FQDN}
 EOF
-
-managesf-resources direct-apply --new-yaml new.yaml --prev-yaml prev.yaml | true
+  managesf-resources direct-apply --new-yaml new.yaml --prev-yaml prev.yaml
+else
+  echo "config repository already initialized"
+fi
