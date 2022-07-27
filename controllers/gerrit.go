@@ -38,6 +38,9 @@ var postInitScript string
 //go:embed static/gerrit/set-ci-user.sh
 var setCIUser string
 
+//go:embed static/gerrit/resources.dhall
+var resourcesDhall string
+
 //go:embed static/gerrit/entrypoint.sh
 var entrypoint string
 
@@ -80,6 +83,7 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
 	if !found {
 		cm_data := make(map[string]string)
 		cm_data["set-ci-user.sh"] = setCIUser
+		cm_data["resources.dhall"] = resourcesDhall
 		r.EnsureConfigMap("gerrit-pi", cm_data)
 
 		// Ensure Gerrit Admin API password

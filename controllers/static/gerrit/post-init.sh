@@ -141,46 +141,8 @@ if ! $(ssh gerrit gerrit ls-projects | grep -q "^config$"); then
   cat << EOF > prev.yaml
 resources: {}
 EOF
-
-  cat << EOF > new.yaml
-resources:
-  repos:
-    config:
-      description: Config repository
-      acl: config-acl
-
-  acls:
-    config-acl:
-      file: |
-        [access "refs/*"]
-          owner = group config-ptl
-        [access "refs/heads/*"]
-          label-Code-Review = -2..+2 group config-ptl
-          label-Verified = -2..+2 group config-ptl
-          label-Workflow = -1..+1 group config-ptl
-          label-Workflow = -1..+0 group Registered Users
-          submit = group config-ptl
-          read = group Registered Users
-        [access "refs/meta/config"]
-          read = group Registered Users
-        [receive]
-          requireChangeId = true
-        [submit]
-          mergeContent = false
-          action = fast forward only
-        [plugin "reviewers-by-blame"]
-          maxReviewers = 5
-          ignoreDrafts = true
-          ignoreSubjectRegEx = (WIP|DNM)(.*)
-      groups:
-        - config-ptl
-
-  groups:
-    config-ptl:
-      description: Team lead for the config repo
-      members:
-        - admin@${FQDN}
-EOF
+  dhall-to-yaml-ng --output \
+    new.yaml <<< "(/entry/resources.dhall).renderInitialResources \"${FQDN}\""
   managesf-resources direct-apply --new-yaml new.yaml --prev-yaml prev.yaml
 else
   echo "config repository already initialized"
