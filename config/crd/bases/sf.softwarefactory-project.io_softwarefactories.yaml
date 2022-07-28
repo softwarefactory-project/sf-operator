@@ -41,6 +41,14 @@ spec:
           spec:
             description: SoftwareFactorySpec defines the desired state of SoftwareFactory
             properties:
+              config-locations:
+                description: Config repositories spec
+                properties:
+                  config-repo:
+                    type: string
+                  user:
+                    type: string
+                type: object
               etherpad:
                 description: Deploy the etherpad service.
                 type: boolean

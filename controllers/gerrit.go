@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -38,9 +39,6 @@ var postInitScript string
 //go:embed static/gerrit/set-ci-user.sh
 var setCIUser string
 
-//go:embed static/gerrit/resources.dhall
-var resourcesDhall string
-
 //go:embed static/gerrit/entrypoint.sh
 var entrypoint string
 
@@ -65,8 +63,8 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, sp
 		Command: []string{"sh", "-c", gerritInitScript},
 		Env: []apiv1.EnvVar{
 			create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
-			create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
-			create_secret_env("GERRIT_ADMIN_SSH_PUB", "gerrit-admin-ssh-key", "pub"),
+			create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
+			create_secret_env("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
 			create_env("SSHD_MAX_CONNECTIONS_PER_USER", sshd_max_conns_per_user),
 			create_env("FQDN", r.cr.Spec.FQDN),
 		},
@@ -75,7 +73,7 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, sp
 	return []apiv1.Container{container}
 }
 
-func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
+func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool, has_config_repo bool) bool {
 	var job batchv1.Job
 	job_name := GERRIT_IDENT + "-" + name
 	found := r.GetM(job_name, &job)
@@ -91,7 +89,8 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
 
 		env := []apiv1.EnvVar{
 			create_env("FQDN", r.cr.Spec.FQDN),
-			create_secret_env("GERRIT_ADMIN_SSH", "gerrit-admin-ssh-key", "priv"),
+			create_env("HAS_CONFIG_REPOSITORY", strconv.FormatBool(has_config_repo)),
+			create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
 			create_secret_env("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
 		}
 		ci_users := []apiv1.EnvVar{}
@@ -130,10 +129,8 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool) bool {
 	}
 }
 
-func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool) bool {
+func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has_config_repo bool) bool {
 	if spec.Enabled {
-		// Ensure Gerrit Admin user ssh key
-		r.EnsureSSHKey("gerrit-admin-ssh-key")
 		// Ensure Gerrit Keystore password
 		r.GenerateSecretUUID("gerrit-keystore-password")
 		// Create a certificate for Gerrit
@@ -243,7 +240,7 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool) boo
 
 		ready := r.IsStatefulSetReady(&dep)
 		if ready {
-			return r.GerritPostInitJob("post-init", zuul_enabled)
+			return r.GerritPostInitJob("post-init", zuul_enabled, has_config_repo)
 		} else {
 			return false
 		}
