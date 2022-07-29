@@ -8,6 +8,7 @@ package controllers
 import (
 	_ "embed"
 	"fmt"
+	"strconv"
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -22,32 +23,26 @@ const KC_DIR = "/opt/jboss/keycloak"
 //go:embed static/keycloak/standalone.xml
 var kc_config string
 
-func (r *SFController) KCAdminJob(name string, command string) bool {
-	var job batchv1.Job
-	job_name := "kcadm-" + name
-	found := r.GetM(job_name, &job)
+//go:embed static/keycloak/post-init.sh
+var kcPostInit string
 
-	kcadm := fmt.Sprintf(
-		"%s/bin/kcadm.sh %s --no-config --password $KC_ADMIN_PASS --realm master --server http://keycloak:%d/auth --user admin",
-		KC_DIR, command, KC_PORT,
-	)
+func (r *SFController) KCPostInit() bool {
+	var job batchv1.Job
+	job_name := "kcadm-post-init"
+	found := r.GetM(job_name, &job)
 
 	if !found {
 		container := apiv1.Container{
-			Name:  "kcadm-client",
-			Image: KC_IMAGE,
-			Command: []string{"sh", "-c", fmt.Sprintf(`
-echo 'Running: %s'
-set -xe
-%s
-`, kcadm, kcadm)},
+			Name:    "kcadm-client",
+			Image:   KC_IMAGE,
+			Command: []string{"sh", "-c", kcPostInit},
 			Env: []apiv1.EnvVar{
+				create_env("KC_PORT", strconv.Itoa(KC_PORT)),
 				create_secret_env("KC_ADMIN_PASS", "keycloak-admin-password", "keycloak-admin-password"),
 			},
 		}
 		job := create_job(r.ns, job_name, container)
 
-		r.log.V(1).Info("Creating job to ensure db", "name", name)
 		r.CreateR(&job)
 		return false
 	} else if job.Status.Succeeded >= 1 {
@@ -68,10 +63,6 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 		dep := create_deployment(r.ns, "keycloak", "quay.io/software-factory/keycloak:15.0.2")
 		dep.Spec.Template.Spec.InitContainers = initContainers
 		dep.Spec.Template.Spec.Containers[0].Command = []string{
-			// It seems like the entrypoint takes care of creating the initial admin user,
-			// but it may be doing too much. Instead we should run the standalone.sh script,
-			// and create the admin user manually using
-			//   /opt/jboss/keycloak/bin/add-user-keycloak.sh
 			"/opt/jboss/tools/docker-entrypoint.sh", "--server-config", "../../../../../../../etc/keycloak/standalone.xml"}
 		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 			create_container_port(KC_PORT, KC_PORT_NAME),
@@ -86,7 +77,7 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 			create_volume_cm("config-volume", "keycloak-config-map"),
 		}
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
-			create_env("KEYCLOAK_FRONTEND_URL", "https://"+r.cr.Spec.FQDN+"/auth"),
+			create_env("KEYCLOAK_FRONTEND_URL", "http://keycloak."+r.cr.Spec.FQDN+"/auth"),
 			create_env("PROXY_ADDRESS_FORWARDING", "true"),
 			create_env("KEYCLOAK_HTTP_PORT", fmt.Sprintf("%v", KC_PORT)),
 			create_env("DB_VENDOR", "mysql"),
@@ -103,7 +94,7 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 
 		ready := r.IsDeploymentReady(&dep)
 		if ready {
-			return r.KCAdminJob("create-default-realm", "create realms --set realm=SF --set enabled=true")
+			return r.KCPostInit()
 		} else {
 			return false
 		}
