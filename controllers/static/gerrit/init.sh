@@ -33,10 +33,7 @@ java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war init -d ${GERRIT_SITE} --ba
 java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war reindex -d ${GERRIT_SITE}
 
 echo "Installing plugins ..."
-unzip -jo /var/gerrit/bin/gerrit.war WEB-INF/plugins/* -d ${GERRIT_SITE}/plugins
-for plugin in /var/gerrit-plugins/*; do
-		cp -uv $plugin ${GERRIT_SITE}/plugins/
-done
+cp -u /var/gerrit-plugins/* ${GERRIT_SITE}/plugins
 
 echo "Creating admin account if needed"
 cat << EOF > ${HOME}/.gitconfig
