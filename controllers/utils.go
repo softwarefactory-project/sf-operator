@@ -632,6 +632,9 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 	if r.cr.Spec.Opensearch {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearch())
 	}
+	if r.cr.Spec.OpensearchDashboards {
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearchDashboards())
+	}
 	if r.cr.Spec.Lodgeit {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressLodgeit())
 	}

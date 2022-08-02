@@ -1,0 +1,40 @@
+---
+# Copyright OpenSearch Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+# Description:
+# Default configuration for OpenSearch Dashboards
+
+# FIXME: MOVE TO THE ENV VARS
+opensearch.hosts: ["https://opensearch.{{ NS }}.svc.cluster.local:9200"]
+
+# server.basePath: "/analytics"
+server.host: '0.0.0.0'
+server.ssl.enabled: true
+server.ssl.certificate: /usr/share/opensearch-dashboards/config/certs/tls.crt
+server.ssl.key: /usr/share/opensearch-dashboards/config/certs/tls.key
+
+# FIXME: Change to full, when cert generator is including alternative names.
+# Current error with enabled verificationMode Full:
+# {message":"[ConnectionError]: Hostname/IP does not match certificate's altnames: Host: opensearch.default.svc.cluster.local. is not cert's CN: client"}
+opensearch.ssl.verificationMode: certificate
+# MOVE TO THE ENV VARS
+#opensearch.username: kibanaserver
+#opensearch.password: KIBANASERVER_PASSWORD
+opensearch.ssl.certificateAuthorities: ["/usr/share/opensearch-dashboards/config/ca-certs/ca.crt"]
+
+opensearch_security.multitenancy.tenants.enable_private: false
+opensearch_security.multitenancy.enabled: false
+opensearch_security.multitenancy.tenants.preferred: [ "Global" ]
+opensearch_security.multitenancy.enable_filter: false
+opensearch_security.multitenancy.tenants.enable_global: true
+opensearch_security.basicauth.login.title: "The Software Factory Elasticsearch"
+# FIXME: add information about KIBANAUSER_PASSWORD
+opensearch_security.basicauth.login.subtitle: "Readonly user: kibana password: kibana"
+
+# additional settings that were not listened in configure-kibana,
+# but are required.
+opensearch.requestHeadersWhitelist: ["securitytenant","Authorization"]
+opensearch_security.readonly_mode.roles: ["kibana_read_only"]
+opensearch_security.cookie.secure: false
+map.includeElasticMapsService: false

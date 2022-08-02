@@ -36,4 +36,8 @@ kubectl exec -it $(getPodName "keycloak") sh
 
 # Reset deployment
 kubectl delete softwarefactory my-sf && kubectl apply -f config/samples && go run ./main.go --namespace $MY_NS
+
+# Delete all pods, services etc.
+kubectl -n dpawlik delete all  --all --now
+for resource in certificates ClusterIssuers issuers certificaterequests secrets pvc configmaps deployments pods services; do kubectl delete $resource --all;done
 ```
