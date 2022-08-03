@@ -329,7 +329,14 @@ func create_readiness_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
 		PeriodSeconds:    5,
 		FailureThreshold: 20,
 	}
+}
 
+func create_readiness_cmd_probe(cmd []string) *apiv1.Probe {
+	handler := apiv1.ProbeHandler{
+		Exec: &apiv1.ExecAction{
+			Command: cmd,
+		}}
+	return create_readiness_probe(handler)
 }
 
 func create_readiness_http_probe(path string, port int) *apiv1.Probe {
@@ -644,6 +651,9 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 	if r.cr.Spec.Lodgeit {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressLodgeit())
 	}
+	if r.cr.Spec.Murmur.Enabled {
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressMurmur())
+	}
 
 	if !found {
 		r.CreateR(&ingress)
@@ -710,6 +720,14 @@ func (r *SFController) create_client_certificate(ns string, name string, issuer 
 			},
 		},
 	}
+}
+
+func (r *SFController) GetSecretbyNameRef(name string) (apiv1.Secret, error) {
+	var dep apiv1.Secret
+	if r.GetM(name, &dep) {
+		return dep, nil
+	}
+	return apiv1.Secret{}, fmt.Errorf("secret name with ref %s not found", name)
 }
 
 func int32Ptr(i int32) *int32 { return &i }
