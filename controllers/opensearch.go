@@ -165,7 +165,7 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 			create_env("node.name", "opensearch-master"),
 			create_env("cluster.initial_master_nodes", "opensearch-master"),
-			create_env("discovery.seed_hosts", `opensearch.` + r.ns + `:9200`),
+			create_env("discovery.seed_hosts", `opensearch.`+r.ns+`:9200`),
 			create_env("cluster.name", "opensearch-cluster"),
 			create_env("network.host", "0.0.0.0"),
 			create_env("OPENSEARCH_JAVA_OPTS", "-Xmx512M -Xms512M"),

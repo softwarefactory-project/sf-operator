@@ -28,14 +28,14 @@ func (r *SFController) DeployLodgeit(enabled bool) bool {
 		// Generating Lodgeit Passwords
 		r.GenerateSecretUUID("lodgeit-session-key")
 
-		dep := create_deployment(r.ns, LODGEIT_IDENT, LODGEIT_IMAGE )
+		dep := create_deployment(r.ns, LODGEIT_IDENT, LODGEIT_IMAGE)
 		dep.Spec.Template.Spec.InitContainers = initContainers
 		dep.Spec.Template.Spec.Containers[0].Command = []string{
 			"sh", "-c", lodgeitEntrypointScript}
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 			create_secret_env("LODGEIT_MYSQL_PASSWORD", "lodgeit-db-password", "lodgeit-db-password"),
 			create_secret_env("LODGEIT_SESSION_KEY", "lodgeit-session-key",
-			"lodgeit-session-key"),
+				"lodgeit-session-key"),
 		}
 
 		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
@@ -44,13 +44,13 @@ func (r *SFController) DeployLodgeit(enabled bool) bool {
 
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 			{
-				Name:      LODGEIT_IDENT+"-config-vol",
+				Name:      LODGEIT_IDENT + "-config-vol",
 				MountPath: "/etc/lodgeit",
 			},
 		}
 
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-			create_empty_dir(LODGEIT_IDENT+"-config-vol"),
+			create_empty_dir(LODGEIT_IDENT + "-config-vol"),
 		}
 
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", LODGEIT_PORT)
@@ -71,6 +71,6 @@ func (r *SFController) DeployLodgeit(enabled bool) bool {
 }
 
 func (r *SFController) IngressLodgeit() netv1.IngressRule {
-	fmt.Println(LODGEIT_IDENT+"."+r.cr.Spec.FQDN)
-	return	create_ingress_rule(LODGEIT_IDENT+"."+r.cr.Spec.FQDN, LODGEIT_PORT_NAME, LODGEIT_PORT)
+	fmt.Println(LODGEIT_IDENT + "." + r.cr.Spec.FQDN)
+	return create_ingress_rule(LODGEIT_IDENT+"."+r.cr.Spec.FQDN, LODGEIT_PORT_NAME, LODGEIT_PORT)
 }

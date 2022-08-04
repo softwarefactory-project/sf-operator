@@ -23,6 +23,16 @@
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
+- name: Ensure the project is clean
+  shell: |
+    if [ ! -z "$(git status --porcelain)" ]; then
+      git status
+      echo "Add the above files modified by 'make build' to your commit and re-submit"
+      exit 1
+    fi
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
 - name: Install the CRDS
   command: make install
   args:

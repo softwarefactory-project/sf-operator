@@ -471,12 +471,12 @@ func (r *SFController) CreateYAMLs(ys string) {
 	}
 }
 
-func (r *SFController) GenerateSecret(name string, getData func () string) apiv1.Secret {
+func (r *SFController) GenerateSecret(name string, getData func() string) apiv1.Secret {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
 		r.log.V(1).Info("Creating secret", "name", name)
 		secret = apiv1.Secret{
-			Data: map[string][]byte{name: []byte(getData())},
+			Data:       map[string][]byte{name: []byte(getData())},
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns},
 		}
 		// We don't use CreateR to not own the resource, and keep it after deletion
@@ -494,7 +494,7 @@ func (r *SFController) GenerateSecretUUID(name string) apiv1.Secret {
 
 // generate a secret if needed using a bcrypt value.
 func (r *SFController) GenerateBCRYPTPassword(name string) apiv1.Secret {
-	return r.GenerateSecret(name, func () string { return gen_bcrypt_pass(uuid.New().String()) })
+	return r.GenerateSecret(name, func() string { return gen_bcrypt_pass(uuid.New().String()) })
 }
 
 func (r *SFController) EnsureSSHKey(name string) {
