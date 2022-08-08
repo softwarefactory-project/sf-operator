@@ -26,12 +26,8 @@ const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
 const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.4.5-2"
 const GERRIT_EP_MOUNT_PATH = "/entry"
-const GERRIT_GIT_MOUNT_PATH = "/var/gerrit/git"
-const GERRIT_INDEX_MOUNT_PATH = "/var/gerrit/index"
-const GERRIT_ETC_MOUNT_PATH = "/var/gerrit/etc"
-const GERRIT_SSH_MOUNT_PATH = "/var/gerrit/.ssh"
-const GERRIT_LOGS_MOUNT_PATH = "/var/gerrit/logs"
-const GERRIT_CERT_MOUNT_PATH = "/var/gerrit/cert"
+const GERRIT_SITE_MOUNT_PATH = "/gerrit"
+const GERRIT_CERT_MOUNT_PATH = "/gerrit-cert"
 
 //go:embed static/gerrit/post-init.sh
 var postInitScript string
@@ -139,24 +135,8 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 
 		volumeMounts := []apiv1.VolumeMount{
 			{
-				Name:      GERRIT_IDENT + "-git",
-				MountPath: GERRIT_GIT_MOUNT_PATH,
-			},
-			{
-				Name:      GERRIT_IDENT + "-index",
-				MountPath: GERRIT_INDEX_MOUNT_PATH,
-			},
-			{
-				Name:      GERRIT_IDENT + "-config",
-				MountPath: GERRIT_ETC_MOUNT_PATH,
-			},
-			{
-				Name:      GERRIT_IDENT + "-ssh",
-				MountPath: GERRIT_SSH_MOUNT_PATH,
-			},
-			{
-				Name:      GERRIT_IDENT + "-logs",
-				MountPath: GERRIT_LOGS_MOUNT_PATH,
+				Name:      GERRIT_IDENT + "-data",
+				MountPath: GERRIT_SITE_MOUNT_PATH,
 			},
 		}
 
@@ -168,11 +148,7 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 
 		dep.Spec.VolumeClaimTemplates = append(
 			dep.Spec.VolumeClaimTemplates,
-			create_pvc(r.ns, GERRIT_IDENT+"-git"),
-			create_pvc(r.ns, GERRIT_IDENT+"-index"),
-			create_pvc(r.ns, GERRIT_IDENT+"-config"),
-			create_pvc(r.ns, GERRIT_IDENT+"-ssh"),
-			create_pvc(r.ns, GERRIT_IDENT+"-logs"),
+			create_pvc(r.ns, GERRIT_IDENT+"-data"),
 		)
 
 		// This port definition is informational all ports exposed by the container
