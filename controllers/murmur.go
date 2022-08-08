@@ -24,6 +24,26 @@ var murmurCmdProbe string
 const MURMUR_PORT = 64738
 const MURMUR_PORT_NAME = "murmur"
 
+func murmur_channel_config(r *SFController, channel sfv1.MurmurChannelSpec) string {
+
+	channelFormatted := fmt.Sprintf("\n% 25s{\n", " ")
+	channelFormatted = channelFormatted + fmt.Sprintf("% 26sname = \"%s\";\n", " ", channel.Name)
+	channelFormatted = channelFormatted + fmt.Sprintf("% 26sdescription = \"%s\";\n", " ", channel.Description)
+
+	if (channel.Password != sfv1.SecretRef{}) {
+		channelsecret, err := getValueFromSecret(r, channel.Password)
+		if err != nil {
+			r.log.V(1).Info("Murmur Channel Password will be set to default")
+		} else {
+			channelFormatted = channelFormatted + fmt.Sprintf("% 26spassword = \"%s\";\n", " ", string(channelsecret))
+		}
+	}
+
+	channelFormatted = channelFormatted + fmt.Sprintf("% 25s}", " ")
+
+	return channelFormatted
+}
+
 func getValueFromKeySecret(secret apiv1.Secret, keyname string) ([]byte, error) {
 	keyvalue := secret.Data[keyname]
 	if len(keyvalue) == 0 {
@@ -85,13 +105,8 @@ func GenerateConfigFile(r *SFController, spec sfv1.MurmurSpec) string {
 			 parent = "Root";
 			 description = "Silent channel";
 			 silent = true; # Optional. Default is false
-			 }
-	`
+			 }`
 
-	MURMUR_CONF_FOOTER := `
-	);
-      default_channel = "Lobby";
-	`
 	configText := ""
 
 	welcometext := "Welcome to SF Murmur"
@@ -109,8 +124,6 @@ func GenerateConfigFile(r *SFController, spec sfv1.MurmurSpec) string {
 		} else {
 			password = string(secretvalue)
 		}
-	} else {
-		r.log.V(1).Info("Wrong Definition of Server Password. Murmur Server Password will be set to default")
 	}
 	configText = strings.Replace(configText, "{{ murmur_password }}", password, 1)
 
@@ -120,34 +133,17 @@ func GenerateConfigFile(r *SFController, spec sfv1.MurmurSpec) string {
 	}
 	configText = strings.Replace(configText, "{{ murmur_max_users }}", strconv.FormatInt(int64(maxusers), 10), 1)
 
-	if spec.Channels != nil && 0 < len(spec.Channels) {
+	if spec.Channels != nil {
 		for _, channel := range spec.Channels {
-			channelStr := `
-			,{
-			 name = "` + channel.Name + `";`
-			channelStr = channelStr + `
-			 description = "` + channel.Description + `";`
-
-			if (channel.Password != sfv1.SecretRef{}) {
-				channelsecret, err := getValueFromSecret(r, channel.Password)
-				if err != nil {
-					r.log.V(1).Info("Murmur Channel Password will be set to default")
-				} else {
-					channelStr = channelStr + `
-			 password = "` + string(channelsecret) + `";`
-				}
-			} else {
-				r.log.V(1).Info("Wrong Definition of Channel Password. Murmur Server Password will be set to default")
-			}
-
-			channelStr = channelStr + `
-			}
-			`
-			configText = configText + channelStr
+			configText = configText + " , " + murmur_channel_config(r, channel)
 		}
 	}
 
-	configText = configText + MURMUR_CONF_FOOTER
+	configText = configText + `
+	);
+
+      default_channel = "Lobby";
+	`
 
 	return configText
 }
