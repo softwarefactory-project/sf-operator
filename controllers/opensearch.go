@@ -34,9 +34,8 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 		users := []string{"admin", "kibanaserver", "kibanaro", "logstash", "readall"}
 		for _, user := range users {
 			current_user := "opensearch-" + user + "-password"
-			gen_secret := r.GenerateSecretUUID(current_user)
-			secret := string(gen_secret.Data[current_user])
-			bcrpt_pass := gen_bcrypt_pass(secret)
+			bcrpt_pass := string(r.GenerateBCRYPTPassword(current_user).Data[current_user])
+			r.log.V(1).Info("Replacing hash for pattern ", strings.ToUpper(user)+"_BCRYPT_PASS", bcrpt_pass)
 			os_opensearch_users_objs = strings.ReplaceAll(os_opensearch_users_objs, (strings.ToUpper(user) + "_BCRYPT_PASS"), bcrpt_pass)
 		}
 
