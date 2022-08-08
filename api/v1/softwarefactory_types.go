@@ -10,6 +10,11 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type ConfigLocationsSpec struct {
+	ConfigRepo string `json:"config-repo,omitempty"`
+	User       string `json:"user,omitempty"`
+}
+
 type GerritConnection struct {
 	Name              string `json:"name"`
 	Hostname          string `json:"hostname"`
@@ -36,6 +41,9 @@ type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
 
 	FQDN string `json:"fqdn"`
+
+	// Config repositories spec
+	ConfigLocations ConfigLocationsSpec `json:"config-locations,omitempty"`
 
 	// Gerrit service spec
 	Gerrit GerritSpec `json:"gerrit,omitempty"`

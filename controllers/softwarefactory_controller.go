@@ -74,6 +74,9 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		sfc.EnsureCA()
 	}
 
+	// Ensure SF Admin ssh key pair
+	sfc.EnsureSSHKey("admin-ssh-key")
+
 	zkStatus := sfc.DeployZK(sf.Spec.Zuul.Enabled)
 	// The git server service is needed to store system jobs (config-check and config-update)
 	gitServerStatus := sfc.DeployGitServer(sf.Spec.Zuul.Enabled)
@@ -101,7 +104,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		nodepoolStatus = sfc.DeployNodepool(sf.Spec.Zuul.Enabled)
 	}
 
-	gerritStatus := sfc.DeployGerrit(sf.Spec.Gerrit, sf.Spec.Zuul.Enabled)
+	gerritStatus := sfc.DeployGerrit(sf.Spec.Gerrit, sf.Spec.Zuul.Enabled, sf.Spec.ConfigLocations.ConfigRepo == "")
 
 	if opensearchStatus {
 		opensearchStatus = sfc.DeployOpensearch(sf.Spec.Opensearch)
@@ -110,6 +113,31 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	configStatus := true
 	if mariadbStatus && zkStatus && zuulStatus && gitServerStatus {
 		configStatus = sfc.SetupConfigJob()
+	}
+
+	// Handle populate of the config repository
+	var config_repo_url string
+	var config_repo_user string
+	if sf.Spec.ConfigLocations.ConfigRepo == "" && sf.Spec.Gerrit.Enabled {
+		config_repo_url = "gerrit-sshd:29418/config"
+		config_repo_user = "admin"
+	} else if sf.Spec.ConfigLocations.ConfigRepo != "" {
+		var user string
+		if sf.Spec.ConfigLocations.User != "" {
+			user = sf.Spec.ConfigLocations.User
+		} else {
+			user = "git"
+		}
+		config_repo_url = sf.Spec.ConfigLocations.ConfigRepo
+		config_repo_user = user
+	} else {
+		panic("ConfigRepo settings not supported !")
+	}
+
+	configRepoStatus := false
+	if gerritStatus {
+		configRepoStatus = sfc.SetupConfigRepo(
+			config_repo_url, config_repo_user, sf.Spec.Gerrit.Enabled)
 	}
 
 	log.V(1).Info("Service status:",
@@ -123,9 +151,13 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		"opensearchStatus", opensearchStatus,
 		"keycloakStatus", keycloakStatus,
 		"configStatus", configStatus,
+		"configRepoStatus", configRepoStatus,
 	)
 
-	sf.Status.Ready = mariadbStatus && etherpadStatus && zuulStatus && gerritStatus && lodgeitStatus && keycloakStatus && zkStatus && nodepoolStatus && opensearchStatus && configStatus
+	sf.Status.Ready = (mariadbStatus && etherpadStatus && zuulStatus &&
+		gerritStatus && lodgeitStatus && keycloakStatus &&
+		zkStatus && nodepoolStatus && opensearchStatus &&
+		configStatus && configRepoStatus)
 	if err := r.Status().Update(ctx, &sf); err != nil {
 		log.Error(err, "unable to update Software Factory status")
 		return ctrl.Result{}, err

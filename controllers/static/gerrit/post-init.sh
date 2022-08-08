@@ -114,9 +114,10 @@ for CI_USER_ENV in $(env | grep CI_USER_API_ | cut -d "=" -f1); do
   ssh gerrit gerrit set-account ${name} --http-password "${!CI_USER_ENV}"
 done
 
-echo "Setup managesf config file"
-mkdir -p /etc/managesf
-cat << EOF > /etc/managesf/config.py
+if [ "${HAS_CONFIG_REPOSITORY}" == "true" ]; then
+  echo "Setup managesf config file"
+  mkdir -p /etc/managesf
+  cat << EOF > /etc/managesf/config.py
 gerrit = {
     'url': 'http://${GERRIT_HTTPD_SERVICE_HOST}:${GERRIT_HTTPD_SERVICE_PORT_GERRIT_HTTPD}/a/',
     'password': '${GERRIT_ADMIN_API_KEY}',
@@ -136,14 +137,17 @@ admin = {
 }
 EOF
 
-if ! $(ssh gerrit gerrit ls-projects | grep -q "^config$"); then
-  echo "Initialize config repository and related groups"
-  cat << EOF > prev.yaml
+  if ! $(ssh gerrit gerrit ls-projects | grep -q "^config$"); then
+    echo "Create config repository and related groups"
+    cat << EOF > prev.yaml
 resources: {}
 EOF
-  dhall-to-yaml-ng --output \
-    new.yaml <<< "(/entry/resources.dhall).renderInitialResources \"${FQDN}\""
-  managesf-resources direct-apply --new-yaml new.yaml --prev-yaml prev.yaml
+    dhall-to-yaml-ng --output \
+      new.yaml <<< "(/entry/resources.dhall).renderInitialResources \"${FQDN}\""
+    managesf-resources direct-apply --new-yaml new.yaml --prev-yaml prev.yaml
+  else
+    echo "config repository already exists"
+  fi
 else
-  echo "config repository already initialized"
+  echo "config repository not hosted on Gerrit"
 fi
