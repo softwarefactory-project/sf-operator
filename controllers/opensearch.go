@@ -6,22 +6,31 @@ package controllers
 
 import (
 	_ "embed"
-	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	"sigs.k8s.io/yaml"
 )
 
 //go:embed templates/opensearch/opensearch.yml
 var os_opensearch_objs string
 
-//go:embed templates/opensearch/internal_users.yml
-var os_opensearch_users_objs string
-
 const OPENSEARCH_PORT = 9200
 const OPENSEARCH_TRANSPORT_PORT = 9300
 const OPENSEARCH_PORT_NAME = "os"
 const OPENSEARCH_TRANSPORT_PORT_NAME = "os-transport"
+
+type OSHeader struct {
+	Type    string `json:"type"`
+	Version int    `json:"config_version"`
+}
+
+type OSUser struct {
+	Hash         string   `json:"hash"`
+	Reserved     bool     `json:"reserved"`
+	BackendRoles []string `json:"backend_roles,omitempty"`
+	Description  string   `json:"description"`
+}
 
 func (r *SFController) DeployOpensearch(enabled bool) bool {
 	if enabled {
@@ -32,15 +41,56 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 
 		// generate password
 		users := []string{"admin", "kibanaserver", "kibanaro", "logstash", "readall"}
+		users_hash := make(map[string]string)
 		for _, user := range users {
 			current_user := "opensearch-" + user + "-password"
 			bcrpt_pass := string(r.GenerateBCRYPTPassword(current_user).Data[current_user])
-			r.log.V(1).Info("Replacing hash for pattern ", strings.ToUpper(user)+"_BCRYPT_PASS", bcrpt_pass)
-			os_opensearch_users_objs = strings.ReplaceAll(os_opensearch_users_objs, (strings.ToUpper(user) + "_BCRYPT_PASS"), bcrpt_pass)
+			users_hash[user] = bcrpt_pass
+		}
+
+		// create internal_users.yml file
+		es_users := map[string]interface{}{
+			"_meta": OSHeader{
+				Type:    "internalusers",
+				Version: 2,
+			},
+			"admin": OSUser{
+				Hash:        users_hash["admin"],
+				Reserved:    true,
+				Description: "OpenSearch Admin user",
+			},
+			"kibanaserver": OSUser{
+				Hash:        users_hash["kibanaserver"],
+				Reserved:    true,
+				Description: "OpenSearch Dashboards user",
+			},
+			"kibanaro": OSUser{
+				Hash:         users_hash["kibanaro"],
+				Reserved:     false,
+				Description:  "OpenSearch Dashboards read only user",
+				BackendRoles: []string{"kibanauser", "readall"},
+			},
+			"logstash": OSUser{
+				Hash:         users_hash["logstash"],
+				Reserved:     false,
+				Description:  "OpenSearch Dashboards Logstash user",
+				BackendRoles: []string{"logstash"},
+			},
+			"readall": OSUser{
+				Hash:         users_hash["readall"],
+				Reserved:     false,
+				Description:  "OpenSearch Dashboards readall user",
+				BackendRoles: []string{"readall"},
+			},
+		}
+
+		data, err := yaml.Marshal(es_users)
+		if err != nil {
+			panic(err)
 		}
 
 		plugin_data := make(map[string]string)
-		plugin_data["internal_users.yml"] = os_opensearch_users_objs
+		plugin_data["internal_users.yml"] = string(data)
 		r.EnsureConfigMap("opensearch-internal-users", plugin_data)
 
 		// config maps
