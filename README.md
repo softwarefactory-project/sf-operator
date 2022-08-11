@@ -24,6 +24,21 @@ MY_NS=$(kubectl config view | awk '/namespace/ { print $2 }')
 go run ./main.go --namespace $MY_NS
 ```
 
+## Configure deployment DNS
+
+You can validate the ingress is working using cURL:
+
+```sh
+curl http://${K8S_EXTERNAL_IP}/ -H "HOST: ${FQDN}"
+```
+
+If the FQDN is not already configured to point at your kubernetes cluster inbound,
+then you need to setup a local entry in /etc/hosts:
+
+```sh
+echo "${K8S_EXTERNAL_IP} ${FQDN} zuul.${FQDN} gerrit.${FQDN} opensearch.${FQDN}" | sudo tee -a /etc/hosts
+```
+
 ## Cheat Sheet
 
 ```
