@@ -70,7 +70,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Keycloak is enabled if gerrit is enabled
 	keycloakEnabled := sf.Spec.Gerrit.Enabled
 
-	if sf.Spec.Zuul.Enabled || sf.Spec.Opensearch {
+	if sf.Spec.Zuul.Enabled || sf.Spec.Opensearch || sf.Spec.OpensearchDashboards {
 		sfc.EnsureCA()
 	}
 
@@ -91,6 +91,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	nodepoolStatus := true
 	keycloakStatus := true
 	opensearchStatus := true
+	opensearchdashboardsStatus := true
 	if mariadbStatus {
 		etherpadStatus = sfc.DeployEtherpad(sf.Spec.Etherpad)
 		lodgeitStatus = sfc.DeployLodgeit(sf.Spec.Lodgeit)
@@ -108,6 +109,10 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	if opensearchStatus {
 		opensearchStatus = sfc.DeployOpensearch(sf.Spec.Opensearch)
+	}
+
+	if opensearchdashboardsStatus {
+		opensearchdashboardsStatus = sfc.DeployOpensearchDashboards(sf.Spec.OpensearchDashboards)
 	}
 
 	configStatus := true
@@ -149,6 +154,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		"gerritStatus", gerritStatus,
 		"lodgeitStatus", lodgeitStatus,
 		"opensearchStatus", opensearchStatus,
+		"opensearchdashboardsStatus", opensearchdashboardsStatus,
 		"keycloakStatus", keycloakStatus,
 		"configStatus", configStatus,
 		"configRepoStatus", configRepoStatus,
@@ -157,7 +163,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	sf.Status.Ready = (mariadbStatus && etherpadStatus && zuulStatus &&
 		gerritStatus && lodgeitStatus && keycloakStatus &&
 		zkStatus && nodepoolStatus && opensearchStatus &&
-		configStatus && configRepoStatus)
+		opensearchdashboardsStatus && configStatus && configRepoStatus)
 	if err := r.Status().Update(ctx, &sf); err != nil {
 		log.Error(err, "unable to update Software Factory status")
 		return ctrl.Result{}, err

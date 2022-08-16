@@ -9,6 +9,7 @@ spec:
   gerrit:
     enabled: true
   opensearch: true
+  opensearchdashboards: true
   zuul:
     enabled: true
     gerritconns: []

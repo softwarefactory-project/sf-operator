@@ -59,6 +59,9 @@ type SoftwareFactorySpec struct {
 
 	// Deploy the opensearch service.
 	Opensearch bool `json:"opensearch,omitempty"`
+
+	// Deploy the opensearch dashboards service.
+	OpensearchDashboards bool `json:"opensearchdashboards,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

@@ -68,6 +68,9 @@ spec:
               opensearch:
                 description: Deploy the opensearch service.
                 type: boolean
+              opensearchdashboards:
+                description: Deploy the opensearch dashboards service.
+                type: boolean
               zuul:
                 description: Zuul service spec
                 properties:
