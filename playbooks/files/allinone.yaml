@@ -8,6 +8,7 @@ spec:
   lodgeit: false
   gerrit:
     enabled: true
+  opensearch: true
   zuul:
     enabled: true
     gerritconns: []
