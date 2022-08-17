@@ -6,6 +6,10 @@
       nodes:
         name: controller
         label: cloud-fedora-36
+    vars:
+      logclassify_logserver_dir: ./
+      logclassify_debug: false
+      logclassify_report: true
 
 - project:
     check:
