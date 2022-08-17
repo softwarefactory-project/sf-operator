@@ -11,17 +11,18 @@ The sf-operator deploys the Software Factory services.
 make install
 ```
 
-2. Install the demo Custom Resource:
+2. Edit the demo Custom Resource to your liking:
 
 ```sh
-kubectl apply -f config/samples/
+cp ./config/samples/sf_v1_softwarefactory.yaml sf.yaml
+$EDITOR sf.yaml
 ```
 
-3. Starts the operator:
+3. Deploy the Custom Resource:
 
 ```sh
 MY_NS=$(kubectl config view | awk '/namespace/ { print $2 }')
-go run ./main.go --namespace $MY_NS
+go run ./main.go --namespace $MY_NS --cr ./sf.yaml
 ```
 
 ## Cheat Sheet

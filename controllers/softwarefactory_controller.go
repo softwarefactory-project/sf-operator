@@ -7,6 +7,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -43,6 +44,151 @@ type SFController struct {
 	ctx context.Context
 }
 
+func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
+	sf := r.cr
+
+	// Keycloak is enabled if gerrit is enabled
+	keycloakEnabled := sf.Spec.Gerrit.Enabled
+
+	if sf.Spec.Zuul.Enabled || sf.Spec.Opensearch || sf.Spec.OpensearchDashboards {
+		r.EnsureCA()
+	}
+
+	// Ensure SF Admin ssh key pair
+	r.EnsureSSHKey("admin-ssh-key")
+
+	zkStatus := r.DeployZK(sf.Spec.Zuul.Enabled)
+	// The git server service is needed to store system jobs (config-check and config-update)
+	gitServerStatus := r.DeployGitServer(sf.Spec.Zuul.Enabled)
+
+	// Mariadb is enabled if etherpad or lodgeit is enabled.
+	mariadbEnabled := sf.Spec.Etherpad || sf.Spec.Lodgeit || sf.Spec.Zuul.Enabled || keycloakEnabled
+	mariadbStatus := r.DeployMariadb(mariadbEnabled)
+
+	etherpadStatus := true
+	lodgeitStatus := true
+	zuulStatus := true
+	nodepoolStatus := true
+	keycloakStatus := true
+	opensearchStatus := true
+	opensearchdashboardsStatus := true
+	if mariadbStatus {
+		etherpadStatus = r.DeployEtherpad(sf.Spec.Etherpad)
+		lodgeitStatus = r.DeployLodgeit(sf.Spec.Lodgeit)
+		keycloakStatus = r.DeployKeycloak(keycloakEnabled)
+	}
+
+	if mariadbStatus && zkStatus && gitServerStatus {
+		zuulStatus = r.DeployZuul(sf.Spec.Zuul, sf.Spec.Gerrit.Enabled)
+	}
+	if zkStatus {
+		nodepoolStatus = r.DeployNodepool(sf.Spec.Zuul.Enabled)
+	}
+
+	gerritStatus := r.DeployGerrit(sf.Spec.Gerrit, sf.Spec.Zuul.Enabled, sf.Spec.ConfigLocations.ConfigRepo == "")
+
+	if opensearchStatus {
+		opensearchStatus = r.DeployOpensearch(sf.Spec.Opensearch)
+	}
+
+	if opensearchdashboardsStatus {
+		opensearchdashboardsStatus = r.DeployOpensearchDashboards(sf.Spec.OpensearchDashboards)
+	}
+
+	configStatus := true
+	if mariadbStatus && zkStatus && zuulStatus && gitServerStatus && sf.Spec.Zuul.Enabled {
+		configStatus = r.SetupConfigJob()
+	}
+
+	// Handle populate of the config repository
+	var config_repo_url string
+	var config_repo_user string
+	if sf.Spec.ConfigLocations.ConfigRepo == "" && sf.Spec.Gerrit.Enabled {
+		config_repo_url = "gerrit-sshd:29418/config"
+		config_repo_user = "admin"
+	} else if sf.Spec.ConfigLocations.ConfigRepo != "" {
+		var user string
+		if sf.Spec.ConfigLocations.User != "" {
+			user = sf.Spec.ConfigLocations.User
+		} else {
+			user = "git"
+		}
+		config_repo_url = sf.Spec.ConfigLocations.ConfigRepo
+		config_repo_user = user
+	} else {
+		panic("ConfigRepo settings not supported !")
+	}
+
+	configRepoStatus := false
+	if gerritStatus {
+		configRepoStatus = r.SetupConfigRepo(
+			config_repo_url, config_repo_user, sf.Spec.Gerrit.Enabled)
+	}
+
+	r.log.V(1).Info("Service status:",
+		"mariadbStatus", mariadbStatus,
+		"zkStatus", zkStatus,
+		"gitServerStatus", gitServerStatus,
+		"etherpadStatus", etherpadStatus,
+		"zuulStatus", zuulStatus,
+		"gerritStatus", gerritStatus,
+		"lodgeitStatus", lodgeitStatus,
+		"opensearchStatus", opensearchStatus,
+		"opensearchdashboardsStatus", opensearchdashboardsStatus,
+		"keycloakStatus", keycloakStatus,
+		"configStatus", configStatus,
+		"configRepoStatus", configRepoStatus,
+	)
+
+	ready := (mariadbStatus && etherpadStatus && zuulStatus &&
+		gerritStatus && lodgeitStatus && keycloakStatus &&
+		zkStatus && nodepoolStatus && opensearchStatus &&
+		opensearchdashboardsStatus && configStatus && configRepoStatus)
+
+	if ready {
+		r.SetupIngress(keycloakEnabled)
+	}
+
+	return sfv1.SoftwareFactoryStatus{
+		Ready: ready,
+	}
+}
+
+// Run reconcille loop manually
+func (r *SoftwareFactoryReconciler) Standalone(ctx context.Context, ns string, sf sfv1.SoftwareFactory) {
+	log := log.FromContext(ctx)
+	// Ensure the CR name is created
+	sf.SetNamespace(ns)
+	r.Create(ctx, &sf)
+	// Then get's its metadata
+	var current_sf sfv1.SoftwareFactory
+	if err := r.Get(ctx, client.ObjectKey{
+		Name:      sf.GetName(),
+		Namespace: ns,
+	}, &current_sf); err != nil {
+		panic(err.Error())
+	}
+	// And update the provided metadata so that the reference works out
+	sf.ObjectMeta = current_sf.ObjectMeta
+	sfc := &SFController{
+		SoftwareFactoryReconciler: r,
+		cr:                        &sf,
+		ns:                        ns,
+		log:                       log,
+		ctx:                       ctx,
+	}
+	// Manually loop until the step function produces a ready status
+	for !sf.Status.Ready {
+		sf.Status = sfc.Step()
+		fmt.Printf("Step result: %#v\n", sf.Status)
+		if sf.Status.Ready {
+			break
+		}
+		time.Sleep(5 * time.Second)
+	}
+	os.Exit(0)
+}
+
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 //
@@ -67,103 +213,8 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		ctx:                       ctx,
 	}
 
-	// Keycloak is enabled if gerrit is enabled
-	keycloakEnabled := sf.Spec.Gerrit.Enabled
+	sf.Status = sfc.Step()
 
-	if sf.Spec.Zuul.Enabled || sf.Spec.Opensearch || sf.Spec.OpensearchDashboards {
-		sfc.EnsureCA()
-	}
-
-	// Ensure SF Admin ssh key pair
-	sfc.EnsureSSHKey("admin-ssh-key")
-
-	zkStatus := sfc.DeployZK(sf.Spec.Zuul.Enabled)
-	// The git server service is needed to store system jobs (config-check and config-update)
-	gitServerStatus := sfc.DeployGitServer(sf.Spec.Zuul.Enabled)
-
-	// Mariadb is enabled if etherpad or lodgeit is enabled.
-	mariadbEnabled := sf.Spec.Etherpad || sf.Spec.Lodgeit || sf.Spec.Zuul.Enabled || keycloakEnabled
-	mariadbStatus := sfc.DeployMariadb(mariadbEnabled)
-
-	etherpadStatus := true
-	lodgeitStatus := true
-	zuulStatus := true
-	nodepoolStatus := true
-	keycloakStatus := true
-	opensearchStatus := true
-	opensearchdashboardsStatus := true
-	if mariadbStatus {
-		etherpadStatus = sfc.DeployEtherpad(sf.Spec.Etherpad)
-		lodgeitStatus = sfc.DeployLodgeit(sf.Spec.Lodgeit)
-		keycloakStatus = sfc.DeployKeycloak(keycloakEnabled)
-	}
-
-	if mariadbStatus && zkStatus && gitServerStatus {
-		zuulStatus = sfc.DeployZuul(sf.Spec.Zuul, sf.Spec.Gerrit.Enabled)
-	}
-	if zkStatus {
-		nodepoolStatus = sfc.DeployNodepool(sf.Spec.Zuul.Enabled)
-	}
-
-	gerritStatus := sfc.DeployGerrit(sf.Spec.Gerrit, sf.Spec.Zuul.Enabled, sf.Spec.ConfigLocations.ConfigRepo == "")
-
-	if opensearchStatus {
-		opensearchStatus = sfc.DeployOpensearch(sf.Spec.Opensearch)
-	}
-
-	if opensearchdashboardsStatus {
-		opensearchdashboardsStatus = sfc.DeployOpensearchDashboards(sf.Spec.OpensearchDashboards)
-	}
-
-	configStatus := true
-	if mariadbStatus && zkStatus && zuulStatus && gitServerStatus {
-		configStatus = sfc.SetupConfigJob()
-	}
-
-	// Handle populate of the config repository
-	var config_repo_url string
-	var config_repo_user string
-	if sf.Spec.ConfigLocations.ConfigRepo == "" && sf.Spec.Gerrit.Enabled {
-		config_repo_url = "gerrit-sshd:29418/config"
-		config_repo_user = "admin"
-	} else if sf.Spec.ConfigLocations.ConfigRepo != "" {
-		var user string
-		if sf.Spec.ConfigLocations.User != "" {
-			user = sf.Spec.ConfigLocations.User
-		} else {
-			user = "git"
-		}
-		config_repo_url = sf.Spec.ConfigLocations.ConfigRepo
-		config_repo_user = user
-	} else {
-		panic("ConfigRepo settings not supported !")
-	}
-
-	configRepoStatus := false
-	if gerritStatus {
-		configRepoStatus = sfc.SetupConfigRepo(
-			config_repo_url, config_repo_user, sf.Spec.Gerrit.Enabled)
-	}
-
-	log.V(1).Info("Service status:",
-		"mariadbStatus", mariadbStatus,
-		"zkStatus", zkStatus,
-		"gitServerStatus", gitServerStatus,
-		"etherpadStatus", etherpadStatus,
-		"zuulStatus", zuulStatus,
-		"gerritStatus", gerritStatus,
-		"lodgeitStatus", lodgeitStatus,
-		"opensearchStatus", opensearchStatus,
-		"opensearchdashboardsStatus", opensearchdashboardsStatus,
-		"keycloakStatus", keycloakStatus,
-		"configStatus", configStatus,
-		"configRepoStatus", configRepoStatus,
-	)
-
-	sf.Status.Ready = (mariadbStatus && etherpadStatus && zuulStatus &&
-		gerritStatus && lodgeitStatus && keycloakStatus &&
-		zkStatus && nodepoolStatus && opensearchStatus &&
-		opensearchdashboardsStatus && configStatus && configRepoStatus)
 	if err := r.Status().Update(ctx, &sf); err != nil {
 		log.Error(err, "unable to update Software Factory status")
 		return ctrl.Result{}, err
@@ -173,7 +224,6 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		delay, _ := time.ParseDuration("5s")
 		return ctrl.Result{RequeueAfter: delay}, nil
 	} else {
-		sfc.SetupIngress(keycloakEnabled)
 		log.V(1).Info("Reconcile completed!", "sf", sf)
 		if r.Oneshot {
 			os.Exit(0)
