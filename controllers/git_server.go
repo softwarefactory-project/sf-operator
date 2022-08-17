@@ -33,13 +33,9 @@ func (r *SFController) DeployGitServer(enabled bool) bool {
 		dep := create_statefulset(r.ns, GS_IDENT, GS_IMAGE)
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 			{
-				Name:      GS_IDENT + "-git",
+				Name:      GS_IDENT,
 				MountPath: GS_GIT_MOUNT_PATH,
 			},
-		}
-
-		dep.Spec.VolumeClaimTemplates = []apiv1.PersistentVolumeClaim{
-			create_pvc(r.ns, GS_IDENT+"-git"),
 		}
 
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
@@ -61,7 +57,7 @@ func (r *SFController) DeployGitServer(enabled bool) bool {
 				},
 				VolumeMounts: []apiv1.VolumeMount{
 					{
-						Name:      GS_IDENT + "-git",
+						Name:      GS_IDENT,
 						MountPath: GS_GIT_MOUNT_PATH,
 					},
 					{
