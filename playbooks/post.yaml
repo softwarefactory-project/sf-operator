@@ -3,6 +3,10 @@
     - name: Get logs
       command: kubectl get all
 
+    - name: Get events
+      shell: |
+        kubectl get events > ~/zuul-output/logs/events.txt
+
     - name: Describe resources
       shell: |
         for item in $(kubectl get {{ item }} -o name); do
@@ -21,6 +25,6 @@
     - name: Collect logs
       shell: |
         for pod in $(kubectl get pods -o name); do
-          mkdir -p ~/zuul-output/logs/$(dirname $item)
+          mkdir -p ~/zuul-output/logs/$(dirname $pod)
           kubectl logs $pod > ~/zuul-output/logs/${pod}-logs.txt
         done
