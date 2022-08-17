@@ -14,3 +14,13 @@ spec:
   zuul:
     enabled: true
     gerritconns: []
+  murmur:
+    enabled: false
+    maxusers:  42
+    channels:
+      - name: Dev
+        description: Developper loundge
+      - name: Meeting
+        description: Meeting room
+      - name: Meeting-Alt
+        description: Second meeting room

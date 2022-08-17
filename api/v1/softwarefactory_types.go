@@ -36,6 +36,47 @@ type GerritSpec struct {
 	SshdMaxConnectionsPerUser string `json:"sshd_max_connections_per_user,omitempty"`
 }
 
+type Secret struct {
+	// Name of the referent.
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+	Name string `json:"name"`
+	// The key of the secret to select from. Must be a valid secret key.
+	Key string `json:"key"`
+}
+
+type SecretRef struct {
+	//Selects a key of a secret in the pod's namespace
+	SecretKeyRef Secret `json:"secretKeyRef"`
+}
+
+type MurmurChannelSpec struct {
+	// Channel name
+	Name string `json:"name"`
+	// Brief Channel Description
+	Description string `json:"description"`
+	// Channel Password ( default empty )
+	// +optional
+	Password SecretRef `json:"password,omitempty"`
+}
+
+type MurmurSpec struct {
+	// Boolean to Enable Murmur Service
+	Enabled bool `json:"enabled"`
+	// Max Number of Users Per Server ( default 42 )
+	// +optional
+	Maxusers int `json:"maxusers,omitempty"`
+	// Server Password ( default empty ). This field is defined as Kubernetes Secret.
+	// +optional
+	Password SecretRef `json:"password,omitempty"`
+	// Server Message at Connection
+	// +optional
+	WelcomeText string `json:"welcometext,omitempty"`
+	// Murmur Channels. A Channel is defined with the following properties: name (required),
+	// description ( required ) and password ( optional )
+	// +optional
+	Channels []MurmurChannelSpec `json:"channels,omitempty"`
+}
+
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
@@ -62,6 +103,12 @@ type SoftwareFactorySpec struct {
 
 	// Deploy the opensearch dashboards service.
 	OpensearchDashboards bool `json:"opensearchdashboards,omitempty"`
+
+	// Deployment of Murmur service.
+	// Mumble is an open source, low-latency, high quality voice
+	// chat software primarily intended for use while gaming.
+	// More info: https://wiki.mumble.info/wiki/Main_Page
+	Murmur MurmurSpec `json:"murmur,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

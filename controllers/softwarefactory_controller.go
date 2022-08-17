@@ -95,6 +95,8 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		opensearchdashboardsStatus = r.DeployOpensearchDashboards(sf.Spec.OpensearchDashboards)
 	}
 
+	murmurStatus := r.DeployMurmur(sf.Spec.Murmur)
+
 	configStatus := true
 	if mariadbStatus && zkStatus && zuulStatus && gitServerStatus && sf.Spec.Zuul.Enabled {
 		configStatus = r.SetupConfigJob()
@@ -136,6 +138,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		"opensearchStatus", opensearchStatus,
 		"opensearchdashboardsStatus", opensearchdashboardsStatus,
 		"keycloakStatus", keycloakStatus,
+		"murmurStatus", murmurStatus,
 		"configStatus", configStatus,
 		"configRepoStatus", configRepoStatus,
 	)
@@ -143,7 +146,8 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	ready := (mariadbStatus && etherpadStatus && zuulStatus &&
 		gerritStatus && lodgeitStatus && keycloakStatus &&
 		zkStatus && nodepoolStatus && opensearchStatus &&
-		opensearchdashboardsStatus && configStatus && configRepoStatus)
+		opensearchdashboardsStatus && configStatus && configRepoStatus &&
+		murmurStatus)
 
 	if ready {
 		r.SetupIngress(keycloakEnabled)
