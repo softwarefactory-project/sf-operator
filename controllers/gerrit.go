@@ -135,7 +135,7 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 
 		volumeMounts := []apiv1.VolumeMount{
 			{
-				Name:      GERRIT_IDENT + "-data",
+				Name:      GERRIT_IDENT,
 				MountPath: GERRIT_SITE_MOUNT_PATH,
 			},
 		}
@@ -145,11 +145,6 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
 		dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
-
-		dep.Spec.VolumeClaimTemplates = append(
-			dep.Spec.VolumeClaimTemplates,
-			create_pvc(r.ns, GERRIT_IDENT+"-data"),
-		)
 
 		// This port definition is informational all ports exposed by the container
 		// will be available to the network.
