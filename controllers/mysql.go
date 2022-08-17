@@ -51,7 +51,7 @@ func (r *SFController) DeployMariadb(enabled bool) bool {
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 			{
 				Name:      "mariadb",
-				MountPath: "/var/lib/mysql",
+				MountPath: "/config/databases",
 			},
 		}
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
