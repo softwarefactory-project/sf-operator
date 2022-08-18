@@ -36,7 +36,7 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 	if enabled {
 		r.log.V(1).Info("Opensearch deploy not found")
 
-		server_cert := r.create_client_certificate(r.ns, "opensearch-server", "ca-issuer", "opensearch-server-tls")
+		server_cert := r.create_client_certificate(r.ns, "opensearch-server", "ca-issuer", "opensearch-server-tls", "opensearch")
 		r.GetOrCreate(&server_cert)
 
 		// generate password

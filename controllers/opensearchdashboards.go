@@ -21,7 +21,7 @@ func (r *SFController) DeployOpensearchDashboards(enabled bool) bool {
 	if enabled {
 		r.log.V(1).Info("Opensearch Dashboards deploy not found")
 		// create cert
-		server_cert := r.create_client_certificate(r.ns, "opensearch-dashboards", "ca-issuer", "opensearch-dashboards-tls")
+		server_cert := r.create_client_certificate(r.ns, "opensearch-dashboards", "ca-issuer", "opensearch-dashboards-tls", "opensearchdashboards")
 		r.GetOrCreate(&server_cert)
 
 		// replace some string in the config file

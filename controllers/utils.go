@@ -646,7 +646,7 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearch())
 		ingress.Spec.TLS = []netv1.IngressTLS{
 			{
-				Hosts:      []string{"opensearch." + r.ns},
+				Hosts:      []string{"opensearch." + r.cr.Spec.FQDN},
 				SecretName: "opensearch-server-tls",
 			},
 		}
@@ -702,7 +702,7 @@ func (r *SFController) PodExec(pod string, container string, command []string) {
 	}
 }
 
-func (r *SFController) create_client_certificate(ns string, name string, issuer string, secret string) certv1.Certificate {
+func (r *SFController) create_client_certificate(ns string, name string, issuer string, secret string, servicename string) certv1.Certificate {
 	return certv1.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -723,6 +723,13 @@ func (r *SFController) create_client_certificate(ns string, name string, issuer 
 				certv1.UsageKeyEncipherment,
 				certv1.UsageServerAuth,
 				certv1.UsageClientAuth,
+			},
+			// Example DNSNames: opensearch, opensearch.my-sf, opensearch.sftests.com, my-sf
+			DNSNames: []string{
+				servicename,
+				fmt.Sprintf("%s.%s", servicename, r.cr.Name),
+				fmt.Sprintf("%s.%s", servicename, r.cr.Spec.FQDN),
+				r.cr.Name,
 			},
 		},
 	}

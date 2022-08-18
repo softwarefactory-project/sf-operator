@@ -130,7 +130,7 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 		// Ensure Gerrit Keystore password
 		r.GenerateSecretUUID("gerrit-keystore-password")
 		// Create a certificate for Gerrit
-		cert := r.create_client_certificate(r.ns, GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls")
+		cert := r.create_client_certificate(r.ns, GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit")
 		r.GetOrCreate(&cert)
 
 		volumeMounts := []apiv1.VolumeMount{
