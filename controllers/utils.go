@@ -644,6 +644,12 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 	}
 	if r.cr.Spec.Opensearch {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearch())
+		ingress.Spec.TLS = []netv1.IngressTLS{
+			{
+				Hosts:      []string{"opensearch." + r.ns},
+				SecretName: "opensearch-server-tls",
+			},
+		}
 	}
 	if r.cr.Spec.OpensearchDashboards {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearchDashboards())
