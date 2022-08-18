@@ -48,7 +48,7 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 			{
-				Name:      "os-data",
+				Name:      "opensearch",
 				MountPath: "/usr/share/opensearch/data",
 			},
 			{
@@ -79,11 +79,6 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 				},
 			},
 		}
-
-		dep.Spec.VolumeClaimTemplates = append(
-			dep.Spec.VolumeClaimTemplates,
-			create_pvc(r.ns, "os-data"),
-		)
 
 		// Expose env vars
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
