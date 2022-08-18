@@ -7,6 +7,10 @@
       shell: |
         kubectl get events > ~/zuul-output/logs/events.txt
 
+    - name: Get ingress logs
+      shell: |
+        kubectl -n ingress-nginx logs -l app.kubernetes.io/name=ingress-nginx > ~/zuul-output/logs/ingress.txt
+
     - name: Describe resources
       shell: |
         for item in $(kubectl get {{ item }} -o name); do
