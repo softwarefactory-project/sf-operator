@@ -620,29 +620,83 @@ func gen_bcrypt_pass(pass string) string {
 	}
 	return string(hashedPassword)
 }
+func (r *SFController) ensure_ingress(ingress netv1.Ingress, name string) {
+	found := r.GetM(name, &ingress)
+	if !found {
+		r.CreateR(&ingress)
+	} else {
+		if err := r.Update(r.ctx, &ingress); err != nil {
+			panic(err.Error())
+		}
+	}
+}
 
 func (r *SFController) SetupIngress(keycloakEnabled bool) {
-	var ingress netv1.Ingress
-	found := r.GetM(r.cr.Name, &ingress)
-	ingress = netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.cr.Name,
-			Namespace: r.ns,
-		},
-	}
 	if r.cr.Spec.Etherpad {
+		var ingress netv1.Ingress
+		name := r.cr.Name + "-etherpad"
+		ingress = netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			},
+		}
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressEtherpad())
+		r.ensure_ingress(ingress, name)
 	}
 	if keycloakEnabled {
+		var ingress netv1.Ingress
+		name := r.cr.Name + "-keycloak"
+		ingress = netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			},
+		}
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressKeycloak()...)
+		r.ensure_ingress(ingress, name)
 	}
 	if r.cr.Spec.Gerrit.Enabled {
+		var ingress netv1.Ingress
+		name := r.cr.Name + "-gerrit"
+		ingress = netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			},
+		}
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGerrit()...)
+		r.ensure_ingress(ingress, name)
 	}
 	if r.cr.Spec.Zuul.Enabled {
+		var ingress netv1.Ingress
+		name := r.cr.Name + "-zuul"
+		ingress = netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			},
+		}
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressZuul())
+		r.ensure_ingress(ingress, name)
 	}
 	if r.cr.Spec.Opensearch {
+		var ingress netv1.Ingress
+		name := r.cr.Name + "-opensearch"
+		// NOTE(dpawlik): The Opensearch service requires special annotations
+		// that will redirect query properly.
+		ingress = netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+				Annotations: map[string]string{
+					"nginx.ingress.kubernetes.io/enable-access-log": "true",
+					"nginx.ingress.kubernetes.io/rewrite-target":    "/",
+					"nginx.ingress.kubernetes.io/backend-protocol":  "HTTPS",
+					"nginx.ingress.kubernetes.io/ssl-redirect":      "true",
+				},
+			},
+		}
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearch())
 		ingress.Spec.TLS = []netv1.IngressTLS{
 			{
@@ -650,23 +704,43 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 				SecretName: "opensearch-server-tls",
 			},
 		}
+		r.ensure_ingress(ingress, name)
 	}
 	if r.cr.Spec.OpensearchDashboards {
+		var ingress netv1.Ingress
+		name := r.cr.Name + "-opensearchdashboards"
+		ingress = netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			},
+		}
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearchDashboards())
+		r.ensure_ingress(ingress, name)
 	}
 	if r.cr.Spec.Lodgeit {
+		var ingress netv1.Ingress
+		name := r.cr.Name + "-lodgeit"
+		ingress = netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			},
+		}
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressLodgeit())
+		r.ensure_ingress(ingress, name)
 	}
 	if r.cr.Spec.Murmur.Enabled {
-		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressMurmur())
-	}
-
-	if !found {
-		r.CreateR(&ingress)
-	} else {
-		if err := r.Update(r.ctx, &ingress); err != nil {
-			panic(err.Error())
+		var ingress netv1.Ingress
+		name := r.cr.Name + "-murmur"
+		ingress = netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			},
 		}
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressMurmur())
+		r.ensure_ingress(ingress, name)
 	}
 }
 
