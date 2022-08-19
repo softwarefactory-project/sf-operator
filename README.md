@@ -55,5 +55,5 @@ kubectl delete softwarefactory my-sf && kubectl apply -f config/samples && go ru
 
 # Delete all pods, services etc.
 kubectl -n dpawlik delete all  --all --now
-for resource in certificates ClusterIssuers issuers certificaterequests secrets pvc configmaps deployments pods services; do kubectl delete $resource --all;done
+for resource in certificates ClusterIssuers issuers certificaterequests secrets pvc configmaps deployments pods services; do kubectl delete $resource --all ingress;done
 ```

@@ -16,7 +16,7 @@ var zk_objs string
 func (r *SFController) DeployZK(enabled bool) bool {
 	if enabled {
 		r.CreateYAMLs(strings.ReplaceAll(zk_objs, "{{ NS }}", r.ns))
-		cert := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls")
+		cert := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper")
 		r.GetOrCreate(&cert)
 		var dep appsv1.StatefulSet
 		r.GetM("zookeeper", &dep)
