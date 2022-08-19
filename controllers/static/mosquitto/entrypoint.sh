@@ -16,8 +16,7 @@ cat << EOF > /etc/mosquitto/mosquitto.conf
 log_dest stdout
 listener 1883
 listener 1884
-#Check if it is really necessary to have a websocket port open
-#protocol websockets
+protocol websockets
 http_dir /home/mosquitto
 acl_file /etc/mosquitto/acl.conf
 password_file /etc/mosquitto/passwords
@@ -26,6 +25,8 @@ allow_anonymous true
 EOF
 
 touch /etc/mosquitto/passwords
+
+ulimit -n 1024
 
 mosquitto_passwd -b /etc/mosquitto/passwords SF_SERVICE_USER sfserviceuserpass
 
