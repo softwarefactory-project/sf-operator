@@ -102,6 +102,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		configStatus = r.SetupConfigJob()
 	}
 
+	mosquittoStatus := r.DeployMosquitto(sf.Spec.Mosquitto)
 	// Handle populate of the config repository
 	var config_repo_url string
 	var config_repo_user string
@@ -139,6 +140,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		"opensearchdashboardsStatus", opensearchdashboardsStatus,
 		"keycloakStatus", keycloakStatus,
 		"murmurStatus", murmurStatus,
+		"mosquittoStatus", mosquittoStatus,
 		"configStatus", configStatus,
 		"configRepoStatus", configRepoStatus,
 	)
@@ -147,7 +149,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		gerritStatus && lodgeitStatus && keycloakStatus &&
 		zkStatus && nodepoolStatus && opensearchStatus &&
 		opensearchdashboardsStatus && configStatus && configRepoStatus &&
-		murmurStatus)
+		murmurStatus && mosquittoStatus)
 
 	if ready {
 		r.SetupIngress(keycloakEnabled)

@@ -4,15 +4,17 @@ metadata:
   name: my-sf
 spec:
   fqdn: "sftests.com"
+  mosquitto:
+    enabled: true
   etherpad: false
-  lodgeit: true
+  lodgeit: false
   gerrit:
     enabled: true
     sshd_max_connections_per_user: "64"
-  opensearch: true
-  opensearchdashboards: true
+  opensearch: false
+  opensearchdashboards: false
   zuul:
-    enabled: true
+    enabled: false
     gerritconns: []
   murmur:
     enabled: false
