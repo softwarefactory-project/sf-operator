@@ -45,7 +45,7 @@ import (
 	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 )
 
-const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.1-1"
+const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.2-1"
 
 func checksum(data []byte) string {
 	return fmt.Sprintf("%x", sha256.Sum256(data))
@@ -344,6 +344,16 @@ func create_readiness_http_probe(path string, port int) *apiv1.Probe {
 		HTTPGet: &apiv1.HTTPGetAction{
 			Path: path,
 			Port: intstr.FromInt(port),
+		}}
+	return create_readiness_probe(handler)
+}
+
+func create_readiness_https_probe(path string, port int) *apiv1.Probe {
+	handler := apiv1.ProbeHandler{
+		HTTPGet: &apiv1.HTTPGetAction{
+			Path:   path,
+			Port:   intstr.FromInt(port),
+			Scheme: apiv1.URISchemeHTTPS,
 		}}
 	return create_readiness_probe(handler)
 }
