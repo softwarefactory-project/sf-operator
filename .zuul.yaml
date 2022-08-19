@@ -17,4 +17,4 @@
         - sf-operator-functional-allinone
     gate:
       jobs:
-        - noop
+        - sf-operator-functional-allinone
