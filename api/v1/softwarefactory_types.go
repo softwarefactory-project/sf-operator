@@ -77,6 +77,11 @@ type MurmurSpec struct {
 	Channels []MurmurChannelSpec `json:"channels,omitempty"`
 }
 
+type MosquittoSpec struct {
+	// Enables Mosquitto Service.
+	Enabled bool `json:"enabled"`
+}
+
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
@@ -109,6 +114,11 @@ type SoftwareFactorySpec struct {
 	// chat software primarily intended for use while gaming.
 	// More info: https://wiki.mumble.info/wiki/Main_Page
 	Murmur MurmurSpec `json:"murmur,omitempty"`
+
+	// Deploy the Mosquitto service
+	// Mosquitto is an open source implementation of a server of the MQTT protocol.
+	// It also includes a C and C++ client library, and the mosquitto_pub and mosquitto_sub utilities for publishing and subscribing.
+	Mosquitto MosquittoSpec `json:"mosquitto,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory
