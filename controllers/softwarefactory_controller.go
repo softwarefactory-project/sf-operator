@@ -57,6 +57,9 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	r.EnsureCA()
 
+	storage_class := create_storageclass("standard")
+	r.GetOrCreate(&storage_class)
+
 	// Ensure SF Admin ssh key pair
 	r.EnsureSSHKey("admin-ssh-key")
 

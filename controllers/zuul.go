@@ -109,6 +109,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		"zuul-config": checksum([]byte(config)),
 	}
 	fqdn := r.cr.Spec.FQDN
+
 	zs := create_statefulset(r.ns, "zuul-scheduler", "")
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = append(init_containers, init_scheduler_config())
