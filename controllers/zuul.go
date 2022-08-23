@@ -269,6 +269,59 @@ func (r *SFController) DeployZuul(spec sfv1.ZuulSpec, gerrit_enabled bool) bool 
 	}
 }
 
-func (r *SFController) IngressZuul() netv1.IngressRule {
-	return create_ingress_rule("zuul."+r.cr.Spec.FQDN, "zuul-web", 9000)
+// Zuul ingress is special because the zuul-web container expect the
+// the files to be served at `/zuul/`, but it is listening on `/`.
+// Thus this ingress remove the `/zuul/` so that the javascript loads as
+// expected
+func (r *SFController) IngressZuul(name string) netv1.Ingress {
+	pt := netv1.PathTypePrefix
+	host := "zuul." + r.cr.Spec.FQDN
+	service := "zuul-web"
+	port := 9000
+	rule := netv1.IngressRule{
+		Host: host,
+		IngressRuleValue: netv1.IngressRuleValue{
+			HTTP: &netv1.HTTPIngressRuleValue{
+				Paths: []netv1.HTTPIngressPath{
+					{
+						PathType: &pt,
+						Path:     "/zuul/(.*)",
+						Backend: netv1.IngressBackend{
+							Service: &netv1.IngressServiceBackend{
+								Name: service,
+								Port: netv1.ServiceBackendPort{
+									Number: int32(port),
+								},
+							},
+						},
+					},
+					{
+						PathType: &pt,
+						Path:     "/(.*)",
+						Backend: netv1.IngressBackend{
+							Service: &netv1.IngressServiceBackend{
+								Name: service,
+								Port: netv1.ServiceBackendPort{
+									Number: int32(port),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	return netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: r.ns,
+			Annotations: map[string]string{
+				"kubernetes.io/ingress.class":                "nginx",
+				"nginx.ingress.kubernetes.io/rewrite-target": "/$1",
+			},
+		},
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{rule},
+		},
+	}
 }

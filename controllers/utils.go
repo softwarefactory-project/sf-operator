@@ -679,16 +679,8 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 		r.ensure_ingress(ingress, name)
 	}
 	if r.cr.Spec.Zuul.Enabled {
-		var ingress netv1.Ingress
 		name := r.cr.Name + "-zuul"
-		ingress = netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-			},
-		}
-		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressZuul())
-		r.ensure_ingress(ingress, name)
+		r.ensure_ingress(r.IngressZuul(name), name)
 	}
 	if r.cr.Spec.Opensearch {
 		var ingress netv1.Ingress
