@@ -80,4 +80,8 @@ cat << EOF > playbooks/config/update.yaml
 EOF
 
 git add zuul.d playbooks
-git commit -m"Set system config base jobs" && git push origin master || true
+
+if [ ! -z "$(git status --porcelain)" ]; then
+  git commit -m"Set system config base jobs"
+  git push origin master
+fi

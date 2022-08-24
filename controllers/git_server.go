@@ -19,18 +19,22 @@ const GS_IMAGE = "quay.io/software-factory/git-deamon:1.0-1"
 const GS_GIT_MOUNT_PATH = "/git"
 const GS_PI_MOUNT_PATH = "/entry"
 
-//go:embed static/git-server/init-system-config.sh
+//go:embed static/git-server/update-system-config.sh
 var preInitScript string
 
 func (r *SFController) DeployGitServer(enabled bool) bool {
 	if enabled {
-
 		cm_data := make(map[string]string)
 		cm_data["pre-init.sh"] = preInitScript
 		r.EnsureConfigMap(GS_IDENT+"-pi", cm_data)
 
+		annotations := map[string]string{
+			"system-config": checksum([]byte(preInitScript)),
+		}
+
 		// Create the deployment
 		dep := create_statefulset(r.ns, GS_IDENT, GS_IMAGE)
+		dep.Spec.Template.ObjectMeta.Annotations = annotations
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 			{
 				Name:      GS_IDENT,
@@ -69,9 +73,16 @@ func (r *SFController) DeployGitServer(enabled bool) bool {
 		}
 
 		// Create readiness probes
-		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GS_GIT_PORT)
+		// Note: The probe is causing error message to be logged by the service
+		// dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GS_GIT_PORT)
 
 		r.GetOrCreate(&dep)
+
+		if map_ensure(&dep.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("System configuration needs to be updated, restarting git-server...")
+			r.UpdateR(&dep)
+			return false
+		}
 
 		// Create services exposed
 		git_service := apiv1.Service{

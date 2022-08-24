@@ -572,6 +572,18 @@ func map_equals(m1 *map[string]string, m2 *map[string]string) bool {
 	return reflect.DeepEqual(m1, m2)
 }
 
+// Merge m2 values into m1, return true if the map is updated.
+func map_ensure(m1 *map[string]string, m2 *map[string]string) bool {
+	dirty := false
+	for k, v := range *m2 {
+		if (*m1)[k] != v {
+			dirty = true
+			(*m1)[k] = v
+		}
+	}
+	return dirty
+}
+
 //go:embed static/certificate-authority/certs.yaml
 var ca_objs string
 
