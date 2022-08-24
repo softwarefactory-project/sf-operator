@@ -55,9 +55,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	// Keycloak is enabled if gerrit is enabled
 	keycloakEnabled := sf.Spec.Gerrit.Enabled
 
-	if sf.Spec.Zuul.Enabled || sf.Spec.Opensearch || sf.Spec.OpensearchDashboards {
-		r.EnsureCA()
-	}
+	r.EnsureCA()
 
 	// Ensure SF Admin ssh key pair
 	r.EnsureSSHKey("admin-ssh-key")
