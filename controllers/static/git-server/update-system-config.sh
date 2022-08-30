@@ -35,6 +35,10 @@ cat << EOF > zuul.d/jobs-base.yaml
     timeout: 1800
     attempts: 3
 
+- job:
+    name: sleeper
+    run: playbooks/sleeper.yaml
+
 - semaphore:
     name: semaphore-config-update
     max: 1
@@ -57,11 +61,43 @@ cat << EOF > zuul.d/jobs-base.yaml
     semaphore: semaphore-config-update
     nodeset:
       nodes: []
+
+- pipeline:
+    name: post
+    post-review: true
+    description: This pipeline runs jobs that operate after each change is merged.
+    manager: supercedent
+    precedence: low
+    trigger:
+      git-server:
+        event:
+          - ref-updated
+
+- project:
+    post:
+      jobs:
+        - sleeper
+EOF
+
+
+cat << EOF > playbooks/sleeper.yaml
+- hosts: localhost
+  tasks:
+    - debug:
+        msg: "Hello zuul, i'm taking a nap"
+
+    - command: sleep 600
 EOF
 
 cat << EOF > playbooks/base/pre.yaml
 - hosts: localhost
-  tasks: []
+  tasks:
+    - debug:
+        var: zuul
+
+- hosts: all
+  tasks:
+    - zuul_console:
 EOF
 
 cat << EOF > playbooks/base/post.yaml

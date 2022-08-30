@@ -26,7 +26,7 @@ func is_statefulset(service string) bool {
 	return service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger"
 }
 
-func create_zuul_container(service string) []apiv1.Container {
+func create_zuul_container(fqdn string, service string) []apiv1.Container {
 	volumes := []apiv1.VolumeMount{
 		{
 			Name:      "zuul-config",
@@ -50,14 +50,21 @@ func create_zuul_container(service string) []apiv1.Container {
 	}
 	container := apiv1.Container{
 		Name:    service,
-		Image:   "quay.io/software-factory/" + service + "-ubi:5.2.2-3",
+		Image:   "quay.io/software-factory/" + service + "-ubi:6.2.0-3",
 		Command: []string{service, "-f", "-d"},
 		Env: []apiv1.EnvVar{
 			create_secret_env("ZUUL_DB_URI", "zuul-db-uri", "dburi"),
 			create_secret_env("ZUUL_KEYSTORE_PASSWORD", "zuul-keystore-password", ""),
 			create_secret_env("ZUUL_ZK_HOSTS", "zk-hosts", ""),
+			create_secret_env("ZUUL_AUTH_SECRET", "zuul-auth-secret", ""),
+			create_env("ZUUL_FQDN", fqdn),
 		},
 		VolumeMounts: volumes,
+	}
+	if service == "zuul-executor" {
+		container.SecurityContext = &apiv1.SecurityContext{
+			Privileged: boolPtr(true),
+		}
 	}
 	return []apiv1.Container{container}
 }
@@ -101,10 +108,11 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	annotations := map[string]string{
 		"zuul-config": checksum([]byte(config)),
 	}
+	fqdn := r.cr.Spec.FQDN
 	zs := create_statefulset(r.ns, "zuul-scheduler", "")
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = append(init_containers, init_scheduler_config())
-	zs.Spec.Template.Spec.Containers = create_zuul_container("zuul-scheduler")
+	zs.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-scheduler")
 	zs.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-scheduler")
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
@@ -121,7 +129,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 
 	ze := create_statefulset(r.ns, "zuul-executor", "")
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
-	ze.Spec.Template.Spec.Containers = create_zuul_container("zuul-executor")
+	ze.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	ze.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
@@ -137,7 +145,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 
 	zw := create_deployment(r.ns, "zuul-web", "")
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
-	zw.Spec.Template.Spec.Containers = create_zuul_container("zuul-web")
+	zw.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-web")
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
@@ -165,6 +173,7 @@ func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret, config strin
 		ObjectMeta: metav1.ObjectMeta{Name: "zuul-db-uri", Namespace: r.ns},
 	})
 	r.GenerateSecretUUID("zuul-keystore-password")
+	r.GenerateSecretUUID("zuul-auth-secret")
 	r.EnsureSecret(&apiv1.Secret{
 		Data: map[string][]byte{
 			"zuul.conf": []byte(config),

@@ -119,11 +119,12 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		config_repo_url = sf.Spec.ConfigLocations.ConfigRepo
 		config_repo_user = user
 	} else {
-		panic("ConfigRepo settings not supported !")
+		// TODO: uncomment the panic once the config repo is actually working
+		// panic("ConfigRepo settings not supported !")
 	}
 
-	configRepoStatus := false
-	if gerritStatus {
+	configRepoStatus := true
+	if sf.Spec.Gerrit.Enabled && gerritStatus {
 		configRepoStatus = r.SetupConfigRepo(
 			config_repo_url, config_repo_user, sf.Spec.Gerrit.Enabled)
 	}
