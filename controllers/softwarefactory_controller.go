@@ -47,6 +47,11 @@ type SFController struct {
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	sf := r.cr
 
+	jaegerStatus := true
+	if sf.Spec.Telemetry.Enabled {
+		jaegerStatus = r.DeployJaeger(sf.Spec.Telemetry.Enabled)
+	}
+
 	// Keycloak is enabled if gerrit is enabled
 	keycloakEnabled := sf.Spec.Gerrit.Enabled
 
@@ -150,7 +155,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		gerritStatus && lodgeitStatus && keycloakStatus &&
 		zkStatus && nodepoolStatus && opensearchStatus &&
 		opensearchdashboardsStatus && configStatus && configRepoStatus &&
-		murmurStatus && mosquittoStatus)
+		murmurStatus && mosquittoStatus && jaegerStatus)
 
 	if ready {
 		r.SetupIngress(keycloakEnabled)

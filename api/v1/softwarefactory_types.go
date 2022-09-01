@@ -82,6 +82,11 @@ type MosquittoSpec struct {
 	Enabled bool `json:"enabled"`
 }
 
+type TelemetrySpec struct {
+	// Enables Telemetry Service.
+	Enabled bool `json:"enabled"`
+}
+
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
@@ -119,6 +124,9 @@ type SoftwareFactorySpec struct {
 	// Mosquitto is an open source implementation of a server of the MQTT protocol.
 	// It also includes a C and C++ client library, and the mosquitto_pub and mosquitto_sub utilities for publishing and subscribing.
 	Mosquitto MosquittoSpec `json:"mosquitto,omitempty"`
+
+	// Telemetry service provided by jaeger
+	Telemetry TelemetrySpec `json:"telemetry,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

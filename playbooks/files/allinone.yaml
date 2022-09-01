@@ -12,6 +12,8 @@ spec:
     enabled: true
   opensearch: true
   opensearchdashboards: true
+  telemetry:
+    enabled: true
   zuul:
     enabled: true
     gerritconns: []
