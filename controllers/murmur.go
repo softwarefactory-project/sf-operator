@@ -44,15 +44,6 @@ func murmur_channel_config(r *SFController, channel sfv1.MurmurChannelSpec) stri
 	return channelFormatted
 }
 
-func getValueFromKeySecret(secret apiv1.Secret, keyname string) ([]byte, error) {
-	keyvalue := secret.Data[keyname]
-	if len(keyvalue) == 0 {
-		return []byte{}, fmt.Errorf("key named %s not found in Secret %s at namespace %s", keyname, secret.Name, secret.Namespace)
-	}
-
-	return keyvalue, nil
-}
-
 func getSecret(r *SFController, secret sfv1.SecretRef) (apiv1.Secret, error) {
 	if (secret.SecretKeyRef == sfv1.Secret{}) {
 		return apiv1.Secret{}, fmt.Errorf("secretKeyRef must be defined")
@@ -62,7 +53,7 @@ func getSecret(r *SFController, secret sfv1.SecretRef) (apiv1.Secret, error) {
 		return apiv1.Secret{}, fmt.Errorf("secretKeyRef.name or secretKeyRef.key must be defined")
 	}
 
-	return r.GetSecretbyNameRef(secret.SecretKeyRef.Name)
+	return r.getSecretbyNameRef(secret.SecretKeyRef.Name)
 }
 
 func getValueFromSecret(r *SFController, secretref sfv1.SecretRef) ([]byte, error) {
@@ -71,7 +62,7 @@ func getValueFromSecret(r *SFController, secretref sfv1.SecretRef) ([]byte, erro
 		r.log.V(1).Error(err, "Secret not found")
 		return []byte{}, err
 	}
-	secretvalue, err := getValueFromKeySecret(secret, secretref.SecretKeyRef.Key)
+	secretvalue, err := r.getValueFromKeySecret(secret, secretref.SecretKeyRef.Key)
 	if err != nil {
 		r.log.V(1).Error(err, "Key not found")
 		return []byte{}, err

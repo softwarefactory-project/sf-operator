@@ -7,7 +7,7 @@ spec:
   mosquitto:
     enabled: true
   etherpad: true
-  lodgeit: false
+  lodgeit: true
   gerrit:
     enabled: true
   opensearch: true

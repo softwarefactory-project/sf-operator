@@ -835,12 +835,23 @@ func (r *SFController) create_client_certificate(ns string, name string, issuer 
 	}
 }
 
-func (r *SFController) GetSecretbyNameRef(name string) (apiv1.Secret, error) {
+// Gets Secret by Name Reference
+func (r *SFController) getSecretbyNameRef(name string) (apiv1.Secret, error) {
 	var dep apiv1.Secret
 	if r.GetM(name, &dep) {
 		return dep, nil
 	}
 	return apiv1.Secret{}, fmt.Errorf("secret name with ref %s not found", name)
+}
+
+// Gets the Value of the Keyname from a Secret
+func (r *SFController) getValueFromKeySecret(secret apiv1.Secret, keyname string) ([]byte, error) {
+	keyvalue := secret.Data[keyname]
+	if len(keyvalue) == 0 {
+		return []byte{}, fmt.Errorf("key named %s not found in Secret %s at namespace %s", keyname, secret.Name, secret.Namespace)
+	}
+
+	return keyvalue, nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }
