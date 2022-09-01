@@ -6,22 +6,26 @@ spec:
   fqdn: "sftests.com"
   mosquitto:
     enabled: true
-  etherpad: false
-  lodgeit: true
+  etherpad:
+    enabled: true
+  lodgeit:
+    enabled: true
   gerrit:
     enabled: true
     sshd_max_connections_per_user: "64"
-  opensearch: false
-  opensearchdashboards: false
+  opensearch:
+    enabled: true
+  opensearchdashboards:
+    enabled: true
   zuul:
-    enabled: false
+    enabled: true
     gerritconns: []
   murmur:
-    enabled: false
+    enabled: true
     maxusers:  42
     channels:
       - name: Dev
-        description: Developper loundge
+        description: Developers lounge
       - name: Meeting
         description: Meeting room
       - name: Meeting-Alt

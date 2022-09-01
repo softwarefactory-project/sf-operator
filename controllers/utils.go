@@ -654,7 +654,7 @@ func (r *SFController) ensure_ingress(ingress netv1.Ingress, name string) {
 }
 
 func (r *SFController) SetupIngress(keycloakEnabled bool) {
-	if r.cr.Spec.Etherpad {
+	if r.cr.Spec.Etherpad.Enabled {
 		var ingress netv1.Ingress
 		name := r.cr.Name + "-etherpad"
 		ingress = netv1.Ingress{
@@ -694,7 +694,7 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 		name := r.cr.Name + "-zuul"
 		r.ensure_ingress(r.IngressZuul(name), name)
 	}
-	if r.cr.Spec.Opensearch {
+	if r.cr.Spec.Opensearch.Enabled {
 		var ingress netv1.Ingress
 		name := r.cr.Name + "-opensearch"
 		// NOTE(dpawlik): The Opensearch service requires special annotations
@@ -720,7 +720,7 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 		}
 		r.ensure_ingress(ingress, name)
 	}
-	if r.cr.Spec.OpensearchDashboards {
+	if r.cr.Spec.OpensearchDashboards.Enabled {
 		var ingress netv1.Ingress
 		name := r.cr.Name + "-opensearchdashboards"
 		ingress = netv1.Ingress{
@@ -732,7 +732,7 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearchDashboards())
 		r.ensure_ingress(ingress, name)
 	}
-	if r.cr.Spec.Lodgeit {
+	if r.cr.Spec.Lodgeit.Enabled {
 		var ingress netv1.Ingress
 		name := r.cr.Name + "-lodgeit"
 		ingress = netv1.Ingress{

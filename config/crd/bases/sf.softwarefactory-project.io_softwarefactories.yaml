@@ -51,7 +51,13 @@ spec:
                 type: object
               etherpad:
                 description: Deploy the etherpad service.
-                type: boolean
+                properties:
+                  enabled:
+                    description: Enables Service.
+                    type: boolean
+                required:
+                - enabled
+                type: object
               fqdn:
                 type: string
               gerrit:
@@ -64,7 +70,13 @@ spec:
                 type: object
               lodgeit:
                 description: Deploy the lodgeit service
-                type: boolean
+                properties:
+                  enabled:
+                    description: Enables Service.
+                    type: boolean
+                required:
+                - enabled
+                type: object
               mosquitto:
                 description: Deploy the Mosquitto service Mosquitto is an open source
                   implementation of a server of the MQTT protocol. It also includes
@@ -72,7 +84,7 @@ spec:
                   utilities for publishing and subscribing.
                 properties:
                   enabled:
-                    description: Enables Mosquitto Service.
+                    description: Enables Service.
                     type: boolean
                 required:
                 - enabled
@@ -155,15 +167,27 @@ spec:
                 type: object
               opensearch:
                 description: Deploy the opensearch service.
-                type: boolean
+                properties:
+                  enabled:
+                    description: Enables Service.
+                    type: boolean
+                required:
+                - enabled
+                type: object
               opensearchdashboards:
                 description: Deploy the opensearch dashboards service.
-                type: boolean
+                properties:
+                  enabled:
+                    description: Enables Service.
+                    type: boolean
+                required:
+                - enabled
+                type: object
               telemetry:
                 description: Telemetry service provided by jaeger
                 properties:
                   enabled:
-                    description: Enables Telemetry Service.
+                    description: Enables Service.
                     type: boolean
                 required:
                 - enabled

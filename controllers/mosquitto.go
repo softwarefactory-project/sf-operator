@@ -26,7 +26,7 @@ const MOSQUITTO_PORT_NAME_LISTENER_1 = "mosquittoport1"
 const MOSQUITTO_PORT_LISTENER_2 = 1884
 const MOSQUITTO_PORT_NAME_LISTENER_2 = "mosquittoport2"
 
-func (r *SFController) DeployMosquitto(spec sfv1.MosquittoSpec) bool {
+func (r *SFController) DeployMosquitto(spec sfv1.BaseSpec) bool {
 
 	if spec.Enabled {
 

@@ -65,7 +65,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	gitServerStatus := r.DeployGitServer(sf.Spec.Zuul.Enabled)
 
 	// Mariadb is enabled if etherpad or lodgeit is enabled.
-	mariadbEnabled := sf.Spec.Etherpad || sf.Spec.Lodgeit || sf.Spec.Zuul.Enabled || keycloakEnabled
+	mariadbEnabled := sf.Spec.Etherpad.Enabled || sf.Spec.Lodgeit.Enabled || sf.Spec.Zuul.Enabled || keycloakEnabled
 	mariadbStatus := r.DeployMariadb(mariadbEnabled)
 
 	etherpadStatus := true
@@ -76,8 +76,8 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	opensearchStatus := true
 	opensearchdashboardsStatus := true
 	if mariadbStatus {
-		etherpadStatus = r.DeployEtherpad(sf.Spec.Etherpad)
-		lodgeitStatus = r.DeployLodgeit(sf.Spec.Lodgeit)
+		etherpadStatus = r.DeployEtherpad(sf.Spec.Etherpad.Enabled)
+		lodgeitStatus = r.DeployLodgeit(sf.Spec.Lodgeit.Enabled)
 		keycloakStatus = r.DeployKeycloak(keycloakEnabled)
 	}
 
@@ -91,11 +91,11 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	gerritStatus := r.DeployGerrit(sf.Spec.Gerrit, sf.Spec.Zuul.Enabled, sf.Spec.ConfigLocations.ConfigRepo == "")
 
 	if opensearchStatus {
-		opensearchStatus = r.DeployOpensearch(sf.Spec.Opensearch)
+		opensearchStatus = r.DeployOpensearch(sf.Spec.Opensearch.Enabled)
 	}
 
 	if opensearchdashboardsStatus {
-		opensearchdashboardsStatus = r.DeployOpensearchDashboards(sf.Spec.OpensearchDashboards)
+		opensearchdashboardsStatus = r.DeployOpensearchDashboards(sf.Spec.OpensearchDashboards.Enabled)
 	}
 
 	murmurStatus := r.DeployMurmur(sf.Spec.Murmur)

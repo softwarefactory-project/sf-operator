@@ -10,6 +10,11 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type BaseSpec struct {
+	// Enables Service.
+	Enabled bool `json:"enabled"`
+}
+
 type ConfigLocationsSpec struct {
 	ConfigRepo string `json:"config-repo,omitempty"`
 	User       string `json:"user,omitempty"`
@@ -77,16 +82,6 @@ type MurmurSpec struct {
 	Channels []MurmurChannelSpec `json:"channels,omitempty"`
 }
 
-type MosquittoSpec struct {
-	// Enables Mosquitto Service.
-	Enabled bool `json:"enabled"`
-}
-
-type TelemetrySpec struct {
-	// Enables Telemetry Service.
-	Enabled bool `json:"enabled"`
-}
-
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
@@ -103,16 +98,16 @@ type SoftwareFactorySpec struct {
 	Zuul ZuulSpec `json:"zuul,omitempty"`
 
 	// Deploy the etherpad service.
-	Etherpad bool `json:"etherpad,omitempty"`
+	Etherpad BaseSpec `json:"etherpad,omitempty"`
 
 	// Deploy the lodgeit service
-	Lodgeit bool `json:"lodgeit,omitempty"`
+	Lodgeit BaseSpec `json:"lodgeit,omitempty"`
 
 	// Deploy the opensearch service.
-	Opensearch bool `json:"opensearch,omitempty"`
+	Opensearch BaseSpec `json:"opensearch,omitempty"`
 
 	// Deploy the opensearch dashboards service.
-	OpensearchDashboards bool `json:"opensearchdashboards,omitempty"`
+	OpensearchDashboards BaseSpec `json:"opensearchdashboards,omitempty"`
 
 	// Deployment of Murmur service.
 	// Mumble is an open source, low-latency, high quality voice
@@ -123,10 +118,10 @@ type SoftwareFactorySpec struct {
 	// Deploy the Mosquitto service
 	// Mosquitto is an open source implementation of a server of the MQTT protocol.
 	// It also includes a C and C++ client library, and the mosquitto_pub and mosquitto_sub utilities for publishing and subscribing.
-	Mosquitto MosquittoSpec `json:"mosquitto,omitempty"`
+	Mosquitto BaseSpec `json:"mosquitto,omitempty"`
 
 	// Telemetry service provided by jaeger
-	Telemetry TelemetrySpec `json:"telemetry,omitempty"`
+	Telemetry BaseSpec `json:"telemetry,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

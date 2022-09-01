@@ -6,12 +6,16 @@ spec:
   fqdn: "sftests.com"
   mosquitto:
     enabled: true
-  etherpad: true
-  lodgeit: true
+  etherpad:
+    enabled: true
+  lodgeit:
+    enabled: true
   gerrit:
     enabled: true
-  opensearch: true
-  opensearchdashboards: true
+  opensearch:
+    enabled: true
+  opensearchdashboards:
+    enabled: true
   telemetry:
     enabled: true
   zuul:
