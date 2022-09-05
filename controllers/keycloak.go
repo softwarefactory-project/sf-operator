@@ -56,7 +56,7 @@ func (r *SFController) KCInitContainer() apiv1.Container {
 
 func (r *SFController) KCPostInit() bool {
 	var job batchv1.Job
-	job_name := "kcadm-post-init"
+	job_name := "kc-post-init"
 	found := r.GetM(job_name, &job)
 
 	if !found {
@@ -67,7 +67,10 @@ func (r *SFController) KCPostInit() bool {
 			Env: []apiv1.EnvVar{
 				create_env("KC_PORT", strconv.Itoa(KC_PORT)),
 				create_env("KEYCLOAK_ADMIN", "admin"),
+				create_env("FQDN", r.cr.Spec.FQDN),
 				create_secret_env("KEYCLOAK_ADMIN_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
+				create_secret_env("KEYCLOAK_SF_ADMIN_PASSWORD", "keycloak-sf-admin-password", "keycloak-sf-admin-password"),
+				create_secret_env("KEYCLOAK_SF_SERVICE_PASSWORD", "keycloak-sf-service-password", "keycloak-sf-service-password"),
 			},
 			VolumeMounts: []apiv1.VolumeMount{
 				{
@@ -99,7 +102,12 @@ func (r *SFController) KCPostInit() bool {
 
 func (r *SFController) DeployKeycloak(enabled bool) bool {
 	if enabled {
+		// Admin master realm password
 		r.GenerateSecretUUID("keycloak-admin-password")
+		// Admin SF realm password
+		r.GenerateSecretUUID("keycloak-sf-admin-password")
+		// SF_SERVICE_USER SF realm password
+		r.GenerateSecretUUID("keycloak-sf-service-password")
 		// Create a certificate for Keycloak to feed the Keystore
 		cert := r.create_client_certificate(
 			r.ns, "keycloak-client", "ca-issuer", "keycloak-client-tls", "keycloak")
