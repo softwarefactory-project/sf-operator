@@ -159,6 +159,15 @@ spec:
               opensearchdashboards:
                 description: Deploy the opensearch dashboards service.
                 type: boolean
+              telemetry:
+                description: Telemetry service provided by jaeger
+                properties:
+                  enabled:
+                    description: Enables Telemetry Service.
+                    type: boolean
+                required:
+                - enabled
+                type: object
               zuul:
                 description: Zuul service spec
                 properties:
