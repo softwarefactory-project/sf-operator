@@ -461,6 +461,20 @@ func (r *SFController) PatchR(obj client.Object, patch client.Patch) {
 	}
 }
 
+func (r *SFController) DebugStatefulSet(name string) {
+	var dep appsv1.StatefulSet
+	if !r.GetM(name, &dep) {
+		panic("Can't find the statefulset")
+	}
+	// Disable probes
+	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
+	dep.Spec.Template.Spec.Containers[0].LivenessProbe = nil
+	// Set sleep command
+	dep.Spec.Template.Spec.Containers[0].Command = []string{"sleep", "infinity"}
+	r.UpdateR(&dep)
+	r.log.V(1).Info("Debugging service", "name", name)
+}
+
 // This does not change an existing object, update needs to be used manually.
 func (r *SFController) GetOrCreate(obj client.Object) {
 	name := obj.GetName()

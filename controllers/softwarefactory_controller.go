@@ -164,8 +164,17 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	}
 }
 
+func (r *SFController) DebugService(debugService string) {
+	fmt.Printf("Debugging service: %#v\n", debugService)
+	if debugService == "zuul-executor" {
+		r.DebugStatefulSet(debugService)
+	} else {
+		panic("Unknown service")
+	}
+}
+
 // Run reconcille loop manually
-func (r *SoftwareFactoryReconciler) Standalone(ctx context.Context, ns string, sf sfv1.SoftwareFactory) {
+func (r *SoftwareFactoryReconciler) Standalone(ctx context.Context, ns string, sf sfv1.SoftwareFactory, debugService string) {
 	log := log.FromContext(ctx)
 	// Ensure the CR name is created
 	sf.SetNamespace(ns)
@@ -187,6 +196,12 @@ func (r *SoftwareFactoryReconciler) Standalone(ctx context.Context, ns string, s
 		log:                       log,
 		ctx:                       ctx,
 	}
+
+	if debugService != "" {
+		sfc.DebugService(debugService)
+		os.Exit(0)
+	}
+
 	// Manually loop until the step function produces a ready status
 	for !sf.Status.Ready {
 		sf.Status = sfc.Step()

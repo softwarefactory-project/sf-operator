@@ -55,6 +55,7 @@ func main() {
 	var ns string
 	var oneshot bool
 	var crPath string
+	var debugService string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -64,6 +65,7 @@ func main() {
 	flag.StringVar(&ns, "namespace", "", "The namespace to listen to.")
 	flag.BoolVar(&oneshot, "oneshot", false, "Stop once resources is ready.")
 	flag.StringVar(&crPath, "cr", "", "The custom resource (CR) to deploy.")
+	flag.StringVar(&debugService, "debug-service", "", "The service to be restarted in debug mode.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -124,7 +126,7 @@ func main() {
 		}
 		fmt.Printf("Deploying standalone %#v\n", sf)
 		err = mgr.Add(manager.RunnableFunc(func(context.Context) error {
-			sfr.Standalone(ctx, ns, sf)
+			sfr.Standalone(ctx, ns, sf, debugService)
 			return nil
 		}))
 		if err != nil {
