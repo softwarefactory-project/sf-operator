@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# TODO:
+# - Change database field type for SSH keys
+# - Setup the SF theme - perhaps add the theme directory three in the container image
+# - Get Postfix enabled in the sf-operator and ensure this pod get the POSTFIX_SERVICE_HOST env var
+# - Perhaps do not manage the github provider config but instead document how to setup it in keycloak
+
 set -ex
 
 export PATH=$PATH:~/bin
@@ -129,3 +135,21 @@ set_role "admin" "Admin access" "false"
 
 # Assign the admin role to the admin user
 assign_role_to_user "admin" "admin"
+
+### Set password registration to in ###
+#######################################
+
+kcadm update realms/SF \
+  --set "registrationAllowed=true" \
+  --set "resetPasswordAllowed=true"
+
+### Set the SMTP config ###
+###########################
+
+kcadm update realms/SF \
+  --set "smtpServer.host=${POSTFIX_SERVICE_HOST}" \
+  --set "smtpServer.port=25" \
+  --set "smtpServer.from=keycloak@${FQDN}" \
+  --set "smtpServer.replyTo=admin@${FQDN}" \
+  --set 'smtpServer.fromDisplayName="Software Factory IAM"'
+  
