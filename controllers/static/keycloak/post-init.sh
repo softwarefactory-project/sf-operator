@@ -22,7 +22,7 @@ function set_user () {
   local is_admin=$5
 
   local uid=$(get_user_id $username)
-  echo "Found $username uid: $uid"
+  echo "Found $username id: $uid"
 
   if [ "$uid" == "null" ]; then
     # Create SF realm's user
@@ -56,6 +56,36 @@ function set_user () {
   fi
 }
 
+function set_role () {
+  local role_name=$1
+  local role_desc=$2
+  # If default is "true" all user in the REALM get assigned to that role
+  local default=$3
+
+  kcadm get roles/$role_name --fields id -r SF > /dev/null || \
+    kcadm create roles --target-realm SF \
+      --set "name=$role_name" \
+      --set "description=$role_desc"
+
+  if [ "$default" == "true" ]; then
+    kcadm add-roles --target-realm SF \
+      --rname default-roles-sf \
+      --rolename $role_name
+  fi
+}
+
+function assign_role_to_user () {
+  local role_name=$1
+  local username=$2
+
+  kcadm add-roles --target-realm SF \
+    --uusername `echo $username | tr '[:upper:]' '[:lower:]'` \
+    --rolename $role_name
+}
+
+### Config kcadm client to communicate with the Keycloak API ###
+################################################################
+
 # Set credentials for the next commands
 kcadm config credentials \
   --password ${KEYCLOAK_ADMIN_PASSWORD} \
@@ -68,11 +98,34 @@ kcadm config credentials \
 # Setup truststore config for next commands
 kcadm config truststore /keycloak-data/keystore/truststore --trustpass changeit
 
+### Create the SF REALM ###
+###########################
+
 # Create SF realm
 kcadm get realms/SF > /dev/null || kcadm create realms --set realm=SF --set enabled=true
 
-# Setup SF realm's admin user
+### Setup default REALM users ###
+#################################
+
+# Setup SF realm's admin user (administrator)
 set_user "admin" "Admin" "Software Factory" ${KEYCLOAK_SF_ADMIN_PASSWORD} "true"
 
-# Setup SF realm's SF_SERVICE_USER user
+# Setup SF realm's SF_SERVICE_USER user (administrator)
 set_user "SF_SERVICE_USER" "Service User" "Software Factory" ${KEYCLOAK_SF_SERVICE_PASSWORD} "true"
+
+# Setup SF realm's demo user (regular user)
+set_user "demo" "Demo" "User" "demo" "false"
+
+### Define some REALM roles ###
+###############################
+
+# Only set those roles when opensearch is deployed
+env | grep OPENSEARCH && {
+  set_role "kibana_viewer" "Default kibana viewer role" "true"
+}
+
+# Set an admin role
+set_role "admin" "Admin access" "false"
+
+# Assign the admin role to the admin user
+assign_role_to_user "admin" "admin"

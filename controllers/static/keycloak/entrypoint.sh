@@ -2,6 +2,26 @@
 
 set -ex
 
+# Install a script to ease using kcadm
+cat << EOF > ~/bin/set-kcadm.sh
+#!/bin/bash
+
+# Set credentials for the next commands
+/opt/keycloak/bin/kcadm.sh config credentials \
+  --password \${KEYCLOAK_ADMIN_PASSWORD} \
+  --realm master \
+  --server https://keycloak:${KC_PORT} \
+  --user ${KEYCLOAK_ADMIN} \
+  --truststore /keycloak-data/keystore/truststore \
+  --trustpass changeit
+
+# Setup truststore config for next commands
+/opt/keycloak/bin/kcadm.sh config truststore /keycloak-data/keystore/truststore --trustpass changeit
+
+echo "run: alias kcadm=/opt/keycloak/bin/kcadm.sh"
+EOF
+chmod +x ~/bin/set-kcadm.sh
+
 exec /opt/keycloak/bin/kc.sh start-dev \
   --db mariadb \
 	--db-url-database keycloak \

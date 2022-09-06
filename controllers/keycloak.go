@@ -134,8 +134,9 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 			create_env("INGRESS_HOSTNAME", "keycloak."+r.cr.Spec.FQDN),
 			create_secret_env("DB_PASSWORD", "keycloak-db-password", "keycloak-db-password"),
-			create_env("KEYCLOAK_ADMIN", "admin"),
 			create_secret_env("KEYCLOAK_ADMIN_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
+			create_env("KEYCLOAK_ADMIN", "admin"),
+			create_env("KC_PORT", strconv.Itoa(KC_PORT)),
 			create_secret_env("KC_KEYSTORE_PASSWORD", "kc-keystore-password", "kc-keystore-password"),
 		}
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_https_probe("/health/ready", KC_PORT)
