@@ -130,6 +130,8 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 	if spec.Enabled {
 		// Ensure Gerrit Keystore password
 		r.GenerateSecretUUID("gerrit-keystore-password")
+		// Ensure Gerrit Keycloak client password
+		r.GenerateSecretUUID("gerrit-kc-client-password")
 		// Create a certificate for Gerrit
 		cert := r.create_client_certificate(r.ns, GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit")
 		r.GetOrCreate(&cert)

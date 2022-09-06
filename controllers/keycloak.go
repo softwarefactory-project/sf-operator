@@ -54,24 +54,30 @@ func (r *SFController) KCInitContainer() apiv1.Container {
 	}
 }
 
-func (r *SFController) KCPostInit() bool {
+func (r *SFController) KCPostInit(gerrit_enabled bool) bool {
 	var job batchv1.Job
 	job_name := "kc-post-init"
 	found := r.GetM(job_name, &job)
 
 	if !found {
+		vars := []apiv1.EnvVar{
+			create_env("KC_PORT", strconv.Itoa(KC_PORT)),
+			create_env("KEYCLOAK_ADMIN", "admin"),
+			create_env("FQDN", r.cr.Spec.FQDN),
+			create_secret_env("KEYCLOAK_ADMIN_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
+			create_secret_env("KEYCLOAK_SF_ADMIN_PASSWORD", "keycloak-sf-admin-password", "keycloak-sf-admin-password"),
+			create_secret_env("KEYCLOAK_SF_SERVICE_PASSWORD", "keycloak-sf-service-password", "keycloak-sf-service-password"),
+		}
+		if gerrit_enabled {
+			vars = append(vars,
+				create_secret_env("KEYCLOAK_GERRIT_CLIENT_SECRET", "gerrit-kc-client-password", "gerrit-kc-client-password"),
+			)
+		}
 		container := apiv1.Container{
 			Name:    "kcadm-client",
 			Image:   KC_IMAGE,
 			Command: []string{"sh", "-c", kcPostInit},
-			Env: []apiv1.EnvVar{
-				create_env("KC_PORT", strconv.Itoa(KC_PORT)),
-				create_env("KEYCLOAK_ADMIN", "admin"),
-				create_env("FQDN", r.cr.Spec.FQDN),
-				create_secret_env("KEYCLOAK_ADMIN_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
-				create_secret_env("KEYCLOAK_SF_ADMIN_PASSWORD", "keycloak-sf-admin-password", "keycloak-sf-admin-password"),
-				create_secret_env("KEYCLOAK_SF_SERVICE_PASSWORD", "keycloak-sf-service-password", "keycloak-sf-service-password"),
-			},
+			Env:     vars,
 			VolumeMounts: []apiv1.VolumeMount{
 				{
 					Name:      "keycloak",
@@ -100,7 +106,7 @@ func (r *SFController) KCPostInit() bool {
 	}
 }
 
-func (r *SFController) DeployKeycloak(enabled bool) bool {
+func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool) bool {
 	if enabled {
 		// Admin master realm password
 		r.GenerateSecretUUID("keycloak-admin-password")
@@ -148,7 +154,7 @@ func (r *SFController) DeployKeycloak(enabled bool) bool {
 
 		ready := r.IsStatefulSetReady(&dep)
 		if ready {
-			return r.KCPostInit()
+			return r.KCPostInit(gerrit_enabled)
 		} else {
 			return false
 		}

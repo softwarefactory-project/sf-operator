@@ -20,6 +20,11 @@ function get_user_id () {
   kcadm get users --query "username=$username" --fields id -r SF | jq -r '.[0].id'
 }
 
+function get_client_id () {
+  local clientid=$1
+  kcadm get clients --query "clientId=$clientid" --fields id -r SF | jq -r '.[0].id'
+}
+
 function set_user () {
   local username=$1
   local firstname=$2
@@ -89,6 +94,41 @@ function assign_role_to_user () {
     --rolename $role_name
 }
 
+function create_oidc_client () {
+  # clientid should by the service client name
+  local clientid=$1
+
+  local cid=$(get_client_id $clientid)
+  echo "Found $clientid id: $cid"
+
+  if [ "$cid" == "null" ]; then
+    kcadm create clients --target-realm SF \
+      --set clientId=$clientid \
+      --set enabled=true \
+      --set clientAuthenticatorType=client-secret
+  fi
+}
+
+function set_oidc_client_origin () {
+  local clientid=$1
+
+  local cid=$(get_client_id $clientid)
+
+  kcadm update clients/$cid --target-realm SF \
+    --set "redirectUris=[\"https://${FQDN}/*\",\"https://$clientid.${FQDN}/*\"]" \
+    --set "webOrigins=[\"https://${FQDN}\",\"https://$clientid.$FQDN\"]"
+}
+
+function set_oidc_client_secret () {
+  local clientid=$1
+  local secret=$2
+
+  local cid=$(get_client_id $clientid)
+
+  kcadm update clients/$cid --target-realm SF \
+     --set secret=$secret
+}
+
 ### Config kcadm client to communicate with the Keycloak API ###
 ################################################################
 
@@ -152,4 +192,13 @@ kcadm update realms/SF \
   --set "smtpServer.from=keycloak@${FQDN}" \
   --set "smtpServer.replyTo=admin@${FQDN}" \
   --set 'smtpServer.fromDisplayName="Software Factory IAM"'
-  
+
+### Create OIDC Client config ###
+#################################
+
+# Setup Gerrit client when a client secret is available in the env vars
+if [ -n "${KEYCLOAK_GERRIT_CLIENT_SECRET}" ]; then
+  create_oidc_client "gerrit"
+  set_oidc_client_origin "gerrit"
+  set_oidc_client_secret "gerrit" "${KEYCLOAK_GERRIT_CLIENT_SECRET}"
+fi
