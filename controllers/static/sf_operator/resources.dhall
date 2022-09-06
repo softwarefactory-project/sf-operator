@@ -1,6 +1,6 @@
 let SoftwareFactory =
-        ../../../../dhall-software-factory
-      ? https://raw.githubusercontent.com/softwarefactory-project/dhall-software-factory/master/package.dhall
+        ./sf.dhall
+      ? https://softwarefactory-project.io/cgit/software-factory/dhall-software-factory/plain/package.dhall?id=79b425de5b860d0d083c0ccaeff39a3481147690
           sha256:e754991a477e70b7c0e736a0efbe90ab9f4f39535469a0f008b51cbbd1289c8d
 
 let renderResources =

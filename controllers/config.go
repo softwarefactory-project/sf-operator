@@ -25,6 +25,9 @@ var config_repo string
 //go:embed static/sf_operator/resources.dhall
 var resourcesDhall string
 
+//go:embed static/sf_operator/sf.dhall
+var sfDhall string
+
 func (r *SFController) SetupBaseSecret() bool {
 	var job batchv1.Job
 	job_name := "config-base-secret"
@@ -69,6 +72,7 @@ func (r *SFController) InstallTooling() {
 		"main.py":         pymod_main,
 		"config-repo.sh":  config_repo,
 		"resources.dhall": resourcesDhall,
+		"sf.dhall":        sfDhall,
 	})
 }
 
