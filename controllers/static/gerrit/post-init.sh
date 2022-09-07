@@ -119,7 +119,7 @@ if [ "${HAS_CONFIG_REPOSITORY}" == "true" ]; then
   mkdir -p /etc/managesf
   cat << EOF > /etc/managesf/config.py
 gerrit = {
-    'url': 'http://${GERRIT_HTTPD_SERVICE_HOST}:${GERRIT_HTTPD_SERVICE_PORT_GERRIT_HTTPD}/a/',
+    'url': 'http://gerrit-httpd:${GERRIT_HTTPD_SERVICE_PORT}/a/',
     'password': '${GERRIT_ADMIN_API_KEY}',
     'host': '${GERRIT_SSHD_SERVICE_HOST}',
     'top_domain': '${FQDN}',
@@ -136,6 +136,10 @@ admin = {
     'email': 'admin@${FQDN}',
 }
 EOF
+  cat /etc/managesf/config.py
+
+  # Ensure HTTP access via basic auth for further provisioning
+  curl --fail -i -u admin:${GERRIT_ADMIN_API_KEY} http://gerrit-httpd:${GERRIT_HTTPD_SERVICE_PORT}/a/accounts/admin
 
   if ! $(ssh gerrit gerrit ls-projects | grep -q "^config$"); then
     echo "Create config repository and related groups"

@@ -22,9 +22,10 @@ import (
 const GERRIT_IDENT = "gerrit"
 const GERRIT_HTTPD_PORT = 8080
 const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
+
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
-const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.4.5-3"
+const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.4.5-4"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_SITE_MOUNT_PATH = "/gerrit"
 const GERRIT_CERT_MOUNT_PATH = "/gerrit-cert"
@@ -63,6 +64,7 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, sp
 			create_secret_env("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
 			create_env("SSHD_MAX_CONNECTIONS_PER_USER", sshd_max_conns_per_user),
 			create_env("FQDN", r.cr.Spec.FQDN),
+			create_secret_env("KEYCLOAK_GERRIT_CLIENT_SECRET", "gerrit-kc-client-password", "gerrit-kc-client-password"),
 		},
 		VolumeMounts: append(volumeMounts, certVolume),
 	}
@@ -136,6 +138,11 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 		cert := r.create_client_certificate(r.ns, GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit")
 		r.GetOrCreate(&cert)
 
+		kc_ip := r.get_service_ip("keycloak")
+		if kc_ip == "" {
+			return false
+		}
+
 		volumeMounts := []apiv1.VolumeMount{
 			{
 				Name:      GERRIT_IDENT,
@@ -148,6 +155,10 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
 		dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
+		dep.Spec.Template.Spec.HostAliases = []apiv1.HostAlias{{
+			IP:        kc_ip,
+			Hostnames: []string{"keycloak." + r.cr.Spec.FQDN},
+		}}
 
 		// This port definition is informational all ports exposed by the container
 		// will be available to the network.
@@ -189,7 +200,8 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 		}
 
 		// Create services exposed by Gerrit
-		httpd_service := create_service(r.ns, GERRIT_HTTPD_PORT_NAME, GERRIT_IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME)
+		httpd_service := create_service(
+			r.ns, GERRIT_HTTPD_PORT_NAME, GERRIT_IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME)
 		sshd_service := apiv1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      GERRIT_SSHD_PORT_NAME,

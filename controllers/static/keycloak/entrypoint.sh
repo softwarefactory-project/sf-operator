@@ -10,7 +10,7 @@ cat << EOF > ~/bin/set-kcadm.sh
 /opt/keycloak/bin/kcadm.sh config credentials \
   --password \${KEYCLOAK_ADMIN_PASSWORD} \
   --realm master \
-  --server https://keycloak:${KC_PORT} \
+  --server https://keycloak \
   --user ${KEYCLOAK_ADMIN} \
   --truststore /keycloak-data/keystore/truststore \
   --trustpass changeit
@@ -23,6 +23,7 @@ EOF
 chmod +x ~/bin/set-kcadm.sh
 
 exec /opt/keycloak/bin/kc.sh start-dev \
+  --log-level info \
   --db mariadb \
 	--db-url-database keycloak \
 	--db-url-host mariadb \
@@ -31,7 +32,7 @@ exec /opt/keycloak/bin/kc.sh start-dev \
   --health-enabled true \
   --metrics-enabled true \
   --hostname ${INGRESS_HOSTNAME} \
-  --proxy passthrough \
+  --proxy edge \
   --https-key-store-file /keycloak-data/keystore/keystore \
   --https-key-store-password ${KC_KEYSTORE_PASSWORD} \
   --https-trust-store-file /keycloak-data/keystore/truststore \

@@ -136,7 +136,7 @@ function set_oidc_client_secret () {
 kcadm config credentials \
   --password ${KEYCLOAK_ADMIN_PASSWORD} \
   --realm master \
-  --server https://keycloak:${KC_PORT} \
+  --server https://keycloak \
   --user ${KEYCLOAK_ADMIN} \
   --truststore /keycloak-data/keystore/truststore \
   --trustpass changeit

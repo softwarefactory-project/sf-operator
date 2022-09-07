@@ -648,6 +648,16 @@ func create_ingress_rule(host string, service string, port int) netv1.IngressRul
 	}
 }
 
+// Get the service clusterIP. Return an empty string if service not found.
+func (r *SFController) get_service_ip(service string) string {
+	var obj apiv1.Service
+	found := r.GetM(service, &obj)
+	if !found {
+		return ""
+	}
+	return obj.Spec.ClusterIP
+}
+
 func gen_bcrypt_pass(pass string) string {
 	password := []byte(pass)
 	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
@@ -689,7 +699,7 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 				Namespace: r.ns,
 			},
 		}
-		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressKeycloak()...)
+		ingress.Spec.Rules = r.IngressKeycloak()
 		r.ensure_ingress(ingress, name)
 	}
 	if r.cr.Spec.Gerrit.Enabled {

@@ -7,11 +7,12 @@ package controllers
 
 import (
 	_ "embed"
-	"strconv"
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const KC_PORT = 8443
@@ -61,7 +62,6 @@ func (r *SFController) KCPostInit(gerrit_enabled bool) bool {
 
 	if !found {
 		vars := []apiv1.EnvVar{
-			create_env("KC_PORT", strconv.Itoa(KC_PORT)),
 			create_env("KEYCLOAK_ADMIN", "admin"),
 			create_env("FQDN", r.cr.Spec.FQDN),
 			create_secret_env("KEYCLOAK_ADMIN_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
@@ -142,13 +142,34 @@ func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool) bool {
 			create_secret_env("DB_PASSWORD", "keycloak-db-password", "keycloak-db-password"),
 			create_secret_env("KEYCLOAK_ADMIN_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
 			create_env("KEYCLOAK_ADMIN", "admin"),
-			create_env("KC_PORT", strconv.Itoa(KC_PORT)),
 			create_secret_env("KC_KEYSTORE_PASSWORD", "kc-keystore-password", "kc-keystore-password"),
 		}
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_https_probe("/health/ready", KC_PORT)
 		r.GetOrCreate(&dep)
-		srv := create_service(r.ns, "keycloak", "keycloak", KC_PORT, KC_PORT_NAME)
+
+		// Expose HTTPS port of keycloak
+		srv := apiv1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "keycloak",
+				Namespace: r.ns,
+			},
+			Spec: apiv1.ServiceSpec{
+				Ports: []apiv1.ServicePort{
+					{
+						Name:       KC_PORT_NAME,
+						Protocol:   apiv1.ProtocolTCP,
+						Port:       443,
+						TargetPort: intstr.FromInt(KC_PORT),
+					},
+				},
+				Selector: map[string]string{
+					"app": "sf",
+					"run": "keycloak",
+				},
+			}}
 		r.GetOrCreate(&srv)
+
+		// Export HTTP port of keycloak
 		srvhttp := create_service(r.ns, "keycloak-http", "keycloak", KC_HTTP_PORT, KC_HTTP_PORT_NAME)
 		r.GetOrCreate(&srvhttp)
 
@@ -169,6 +190,5 @@ func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool) bool {
 func (r *SFController) IngressKeycloak() []netv1.IngressRule {
 	return []netv1.IngressRule{
 		create_ingress_rule("keycloak."+r.cr.Spec.FQDN, "keycloak-http", KC_HTTP_PORT),
-		// TODO: add admin service
 	}
 }
