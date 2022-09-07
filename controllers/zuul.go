@@ -139,7 +139,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		ze.Spec.Template.ObjectMeta.Annotations = annotations
 		ze_dirty = true
 	}
-	if !zs_dirty && ze_dirty {
+	if ze_dirty {
 		r.UpdateR(&ze)
 	}
 
@@ -155,7 +155,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		zw.Spec.Template.ObjectMeta.Annotations = annotations
 		zw_dirty = true
 	}
-	if !zs_dirty && zw_dirty {
+	if zw_dirty {
 		r.UpdateR(&zw)
 	}
 
