@@ -36,9 +36,9 @@ func (r *SFController) DeployJaeger(enabled bool) bool {
 		r.GetOrCreate(&dep)
 		srv := create_service(r.ns, "jaeger", "jaeger", JAEGER_PORT, JAEGER_PORT_NAME)
 		r.GetOrCreate(&srv)
-		grpc := create_service(r.ns, "oltp-grpc", "oltp-grpc", 4317, "oltp-grpc")
+		grpc := create_service(r.ns, "oltp-grpc", "jaeger", 4317, "oltp-grpc")
 		r.GetOrCreate(&grpc)
-		http := create_service(r.ns, "oltp-http", "oltp-http", 4318, "oltp-http")
+		http := create_service(r.ns, "oltp-http", "jaeger", 4318, "oltp-http")
 		r.GetOrCreate(&http)
 		return r.IsDeploymentReady(&dep)
 	} else {

@@ -82,7 +82,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	}
 
 	if mariadbStatus && zkStatus && gitServerStatus {
-		zuulStatus = r.DeployZuul(sf.Spec.Zuul, sf.Spec.Gerrit.Enabled)
+		zuulStatus = r.DeployZuul(sf.Spec.Zuul, sf.Spec.Gerrit.Enabled, sf.Spec.Telemetry.Enabled)
 	}
 	if zkStatus {
 		nodepoolStatus = r.DeployNodepool(sf.Spec.Zuul.Enabled)

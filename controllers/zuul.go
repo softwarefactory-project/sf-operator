@@ -224,6 +224,14 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	}
 }
 
+func addTracingConfig(cfg *ini.File) {
+	section := "tracing"
+	cfg.NewSection(section)
+	cfg.Section(section).NewKey("enabled", "true")
+	cfg.Section(section).NewKey("endpoint", "oltp-grpc:4317")
+	cfg.Section(section).NewKey("insecure", "true")
+}
+
 func (r *SFController) LoadConfigINI(zuul_conf string) *ini.File {
 	cfg, err := ini.Load([]byte(zuul_conf))
 	if err != nil {
@@ -238,7 +246,7 @@ func (r *SFController) DumpConfigINI(cfg *ini.File) string {
 	return writer.String()
 }
 
-func (r *SFController) DeployZuul(spec sfv1.ZuulSpec, gerrit_enabled bool) bool {
+func (r *SFController) DeployZuul(spec sfv1.ZuulSpec, gerrit_enabled bool, tracing_enabled bool) bool {
 	if spec.Enabled {
 		init_containers, db_password := r.EnsureDBInit("zuul")
 		r.EnsureSSHKey("zuul-ssh-key")
@@ -265,6 +273,9 @@ func (r *SFController) DeployZuul(spec sfv1.ZuulSpec, gerrit_enabled bool) bool 
 		cfg_ini := r.LoadConfigINI(base_config)
 		for _, conn := range gerrit_conns {
 			r.AddGerritConnection(cfg_ini, conn)
+		}
+		if tracing_enabled {
+			addTracingConfig(cfg_ini)
 		}
 		config := r.DumpConfigINI(cfg_ini)
 
