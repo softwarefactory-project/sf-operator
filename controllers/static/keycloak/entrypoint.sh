@@ -22,7 +22,7 @@ echo "run: alias kcadm=/opt/keycloak/bin/kcadm.sh"
 EOF
 chmod +x ~/bin/set-kcadm.sh
 
-exec /opt/keycloak/bin/kc.sh start-dev \
+exec /opt/keycloak/bin/kc.sh start \
   --log-level info \
   --db mariadb \
 	--db-url-database keycloak \
