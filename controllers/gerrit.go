@@ -77,6 +77,7 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool, has_con
 	if !found {
 		cm_data := make(map[string]string)
 		cm_data["set-ci-user.sh"] = setCIUser
+		cm_data["sf.dhall"] = sfDhall
 		cm_data["resources.dhall"] = resourcesDhall
 		r.EnsureConfigMap("gerrit-pi", cm_data)
 
