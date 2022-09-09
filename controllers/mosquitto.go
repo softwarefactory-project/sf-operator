@@ -15,9 +15,6 @@ import (
 const MOSQUITTO_IDENT string = "mosquitto"
 const MOSQUITTO_IMAGE string = "quay.io/software-factory/mosquitto:2.0.14-1"
 
-// //go:embed static/mosquitto/cmdProbe.sh
-// var mosquittoCmdProbe string
-
 //go:embed static/mosquitto/entrypoint.sh
 var mosquittoEntrypointScript string
 
@@ -29,6 +26,7 @@ const MOSQUITTO_PORT_NAME_LISTENER_2 = "mosquittoport2"
 func (r *SFController) DeployMosquitto(spec sfv1.BaseSpec) bool {
 
 	if spec.Enabled {
+		r.GenerateSecretUUID("mosquitto-sf-service-password")
 
 		dep := create_deployment(r.ns, MOSQUITTO_IDENT, MOSQUITTO_IMAGE)
 		dep.Spec.Template.Spec.Containers[0].Command = []string{
@@ -37,6 +35,10 @@ func (r *SFController) DeployMosquitto(spec sfv1.BaseSpec) bool {
 		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 			create_container_port(MOSQUITTO_PORT_LISTENER_1, MOSQUITTO_PORT_NAME_LISTENER_1),
 			create_container_port(MOSQUITTO_PORT_LISTENER_2, MOSQUITTO_PORT_NAME_LISTENER_2),
+		}
+
+		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
+			create_secret_env("SF_SERVICE_PASSWORD", "mosquitto-sf-service-password", "mosquitto-sf-service-password"),
 		}
 
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{

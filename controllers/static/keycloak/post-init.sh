@@ -193,6 +193,14 @@ kcadm update realms/SF \
   --set "smtpServer.replyTo=admin@${FQDN}" \
   --set 'smtpServer.fromDisplayName="Software Factory IAM"'
 
+### Setup MQTT Events listener ###
+##################################
+
+kcadm update events/config --target-realm SF \
+  --set 'eventsListeners=["jboss-logging","mqtt"]' \
+  --set eventsEnabled=true \
+  --set enabledEventTypes=[]
+
 ### Create OIDC Client config ###
 #################################
 

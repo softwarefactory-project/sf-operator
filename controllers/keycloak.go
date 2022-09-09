@@ -19,7 +19,7 @@ const KC_PORT = 8443
 const KC_PORT_NAME = "kc-port"
 const KC_HTTP_PORT = 8080
 const KC_HTTP_PORT_NAME = "kc-http-port"
-const KC_IMAGE = "quay.io/keycloak/keycloak:19.0.1"
+const KC_IMAGE = "quay.io/software-factory/keycloak:19.0.1-1"
 const KC_CERT_MOUNT_PATH = "/keycloak-cert"
 const KC_DATA_MOUNT_PATH = "/keycloak-data"
 
@@ -143,6 +143,7 @@ func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool) bool {
 			create_secret_env("KEYCLOAK_ADMIN_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
 			create_env("KEYCLOAK_ADMIN", "admin"),
 			create_secret_env("KC_KEYSTORE_PASSWORD", "kc-keystore-password", "kc-keystore-password"),
+			create_secret_env("MOSQUITTO_SERVICE_USER_PASSWORD", "mosquitto-sf-service-password", "mosquitto-sf-service-password"),
 		}
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_https_probe("/health/ready", KC_PORT)
 		r.GetOrCreate(&dep)

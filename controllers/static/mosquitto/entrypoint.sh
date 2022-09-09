@@ -28,6 +28,6 @@ touch /etc/mosquitto/passwords
 
 ulimit -n 1024
 
-mosquitto_passwd -b /etc/mosquitto/passwords SF_SERVICE_USER sfserviceuserpass
+mosquitto_passwd -b /etc/mosquitto/passwords SF_SERVICE_USER ${SF_SERVICE_PASSWORD}
 
 mosquitto -v -c /etc/mosquitto/mosquitto.conf

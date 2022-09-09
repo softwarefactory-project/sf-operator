@@ -36,4 +36,8 @@ exec /opt/keycloak/bin/kc.sh start \
   --https-key-store-file /keycloak-data/keystore/keystore \
   --https-key-store-password ${KC_KEYSTORE_PASSWORD} \
   --https-trust-store-file /keycloak-data/keystore/truststore \
-  --https-trust-store-password changeit
+  --https-trust-store-password changeit \
+  --spi-events-listener-mqtt-server-uri "tcp://mosquitto:1883" \
+  --spi-events-listener-mqtt-username SF_SERVICE_USER \
+  --spi-events-listener-mqtt-password ${MOSQUITTO_SERVICE_USER_PASSWORD} \
+  --spi-events-listener-mqtt-topic keycloak
