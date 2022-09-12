@@ -19,7 +19,7 @@ const KC_PORT = 8443
 const KC_PORT_NAME = "kc-port"
 const KC_HTTP_PORT = 8080
 const KC_HTTP_PORT_NAME = "kc-http-port"
-const KC_IMAGE = "quay.io/software-factory/keycloak:19.0.1-1"
+const KC_IMAGE = "quay.io/software-factory/keycloak:19.0.1-2"
 const KC_CERT_MOUNT_PATH = "/keycloak-cert"
 const KC_DATA_MOUNT_PATH = "/keycloak-data"
 
