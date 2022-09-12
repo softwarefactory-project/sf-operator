@@ -26,6 +26,9 @@ const KC_DATA_MOUNT_PATH = "/keycloak-data"
 //go:embed static/keycloak/post-init.sh
 var kcPostInit string
 
+//go:embed static/keycloak/post-init-db.sh
+var kcPostInitDB string
+
 //go:embed static/keycloak/entrypoint.sh
 var kc_entrypoint string
 
@@ -55,6 +58,31 @@ func (r *SFController) KCInitContainer() apiv1.Container {
 	}
 }
 
+func (r *SFController) KCPostInitDB() bool {
+	var job batchv1.Job
+	job_name := "kc-post-init-db"
+	found := r.GetM(job_name, &job)
+
+	if !found {
+		container := apiv1.Container{
+			Name:    job_name + "-container",
+			Image:   DBImage,
+			Command: []string{"sh", "-c", kcPostInitDB},
+			Env: []apiv1.EnvVar{
+				create_secret_env("DB_PASSWORD", "keycloak-db-password", "keycloak-db-password"),
+			},
+		}
+		job := create_job(r.ns, job_name, container)
+		r.CreateR(&job)
+		return false
+	} else if job.Status.Succeeded >= 1 {
+		return true
+	} else {
+		r.log.V(1).Info("Waiting for Keycloak post job " + job_name)
+		return false
+	}
+}
+
 func (r *SFController) KCPostInit(gerrit_enabled bool) bool {
 	var job batchv1.Job
 	job_name := "kc-post-init"
@@ -74,7 +102,7 @@ func (r *SFController) KCPostInit(gerrit_enabled bool) bool {
 			)
 		}
 		container := apiv1.Container{
-			Name:    "kcadm-client",
+			Name:    job_name + "-container",
 			Image:   KC_IMAGE,
 			Command: []string{"sh", "-c", kcPostInit},
 			Env:     vars,
@@ -101,7 +129,7 @@ func (r *SFController) KCPostInit(gerrit_enabled bool) bool {
 	} else if job.Status.Succeeded >= 1 {
 		return true
 	} else {
-		r.log.V(1).Info("Waiting for Keycloak PostInit result")
+		r.log.V(1).Info("Waiting for Keycloak post job " + job_name)
 		return false
 	}
 }
@@ -176,7 +204,7 @@ func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool) bool {
 
 		ready := r.IsStatefulSetReady(&dep)
 		if ready {
-			return r.KCPostInit(gerrit_enabled)
+			return r.KCPostInitDB() && r.KCPostInit(gerrit_enabled)
 		} else {
 			return false
 		}
