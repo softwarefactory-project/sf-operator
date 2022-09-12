@@ -115,11 +115,6 @@ type SoftwareFactorySpec struct {
 	// More info: https://wiki.mumble.info/wiki/Main_Page
 	Murmur MurmurSpec `json:"murmur,omitempty"`
 
-	// Deploy the Mosquitto service
-	// Mosquitto is an open source implementation of a server of the MQTT protocol.
-	// It also includes a C and C++ client library, and the mosquitto_pub and mosquitto_sub utilities for publishing and subscribing.
-	Mosquitto BaseSpec `json:"mosquitto,omitempty"`
-
 	// Telemetry service provided by jaeger
 	Telemetry BaseSpec `json:"telemetry,omitempty"`
 }

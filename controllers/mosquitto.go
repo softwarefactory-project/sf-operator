@@ -7,7 +7,6 @@ package controllers
 import (
 	_ "embed"
 
-	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 )
@@ -23,9 +22,9 @@ const MOSQUITTO_PORT_NAME_LISTENER_1 = "mosquittoport1"
 const MOSQUITTO_PORT_LISTENER_2 = 1884
 const MOSQUITTO_PORT_NAME_LISTENER_2 = "mosquittoport2"
 
-func (r *SFController) DeployMosquitto(spec sfv1.BaseSpec) bool {
+func (r *SFController) DeployMosquitto(enabled bool) bool {
 
-	if spec.Enabled {
+	if enabled {
 		r.GenerateSecretUUID("mosquitto-sf-service-password")
 
 		dep := create_deployment(r.ns, MOSQUITTO_IDENT, MOSQUITTO_IMAGE)

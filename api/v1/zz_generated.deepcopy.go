@@ -210,7 +210,6 @@ func (in *SoftwareFactorySpec) DeepCopyInto(out *SoftwareFactorySpec) {
 	out.Opensearch = in.Opensearch
 	out.OpensearchDashboards = in.OpensearchDashboards
 	in.Murmur.DeepCopyInto(&out.Murmur)
-	out.Mosquitto = in.Mosquitto
 	out.Telemetry = in.Telemetry
 }
 

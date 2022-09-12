@@ -4,8 +4,6 @@ metadata:
   name: my-sf
 spec:
   fqdn: "sftests.com"
-  mosquitto:
-    enabled: true
   etherpad:
     enabled: true
   lodgeit:
@@ -22,7 +20,7 @@ spec:
     gerritconns: []
   murmur:
     enabled: true
-    maxusers:  42
+    maxusers: 42
     channels:
       - name: Dev
         description: Developers lounge
