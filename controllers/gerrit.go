@@ -26,6 +26,7 @@ const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
 const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.4.5-4"
+const GSKU_IMAGE = "quay.io/software-factory/github-ssh-key-updater:0.0.4-1"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_SITE_MOUNT_PATH = "/gerrit"
 const GERRIT_CERT_MOUNT_PATH = "/gerrit-cert"
@@ -38,6 +39,9 @@ var setCIUser string
 
 //go:embed static/gerrit/entrypoint.sh
 var entrypoint string
+
+//go:embed static/gerrit/gsku-entrypoint.sh
+var gsku_entrypoint string
 
 //go:embed static/gerrit/init.sh
 var gerritInitScript string
@@ -83,9 +87,6 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool, has_con
 		cm_data["resources.dhall"] = resourcesDhall
 		r.EnsureConfigMap("gerrit-pi", cm_data)
 
-		// Ensure Gerrit Admin API password
-		r.GenerateSecretUUID("gerrit-admin-api-key")
-
 		env := []apiv1.EnvVar{
 			create_env("FQDN", r.cr.Spec.FQDN),
 			create_env("HAS_CONFIG_REPOSITORY", strconv.FormatBool(has_config_repo)),
@@ -130,10 +131,14 @@ func (r *SFController) GerritPostInitJob(name string, zuul_enabled bool, has_con
 
 func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has_config_repo bool) bool {
 	if spec.Enabled {
+
 		// Ensure Gerrit Keystore password
 		r.GenerateSecretUUID("gerrit-keystore-password")
 		// Ensure Gerrit Keycloak client password
 		r.GenerateSecretUUID("gerrit-kc-client-password")
+		// Ensure Gerrit Admin API password
+		r.GenerateSecretUUID("gerrit-admin-api-key")
+
 		// Create a certificate for Gerrit
 		cert := r.create_client_certificate(r.ns, GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit")
 		r.GetOrCreate(&cert)
@@ -152,34 +157,52 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 
 		// Create the deployment
 		dep := create_statefulset(r.ns, GERRIT_IDENT, GERRIT_IMAGE)
-		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
+
+		// Setup the main container
 		dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
+		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+			create_container_port(GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME),
+			create_container_port(GERRIT_SSHD_PORT, GERRIT_SSHD_PORT_NAME),
+		}
+		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
+			create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
+		}
+		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
+		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
+
+		// Setup the sidecar container for gsku
+		dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
+			Name:    "gerrit-gsku",
+			Image:   GSKU_IMAGE,
+			Command: []string{"sh", "-c", gsku_entrypoint},
+			VolumeMounts: []apiv1.VolumeMount{
+				{
+					Name:      "gsku",
+					MountPath: "/etc/github-ssh-key-updater",
+				},
+			},
+			Env: []apiv1.EnvVar{
+				create_secret_env("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
+				create_secret_env("KEYCLOAK_ADMIN_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
+				create_secret_env("SF_SERVICE_PASSWORD", "mosquitto-sf-service-password", "mosquitto-sf-service-password"),
+			},
+		})
+
+		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
+
+		// Need host alias to let the Gerrit container to access keycloak internaly
+		// via the public keycloak url
 		dep.Spec.Template.Spec.HostAliases = []apiv1.HostAlias{{
 			IP:        kc_ip,
 			Hostnames: []string{"keycloak." + r.cr.Spec.FQDN},
 		}}
 
-		// This port definition is informational all ports exposed by the container
-		// will be available to the network.
-		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-			create_container_port(GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME),
-			create_container_port(GERRIT_SSHD_PORT, GERRIT_SSHD_PORT_NAME),
-		}
-
-		// Expose env vars
-		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
-			create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
-		}
-
 		// Expose a volume that contain certmanager certs for Gerrit
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 			create_volume_secret(GERRIT_IDENT + "-client-tls"),
+			create_empty_dir("gsku"),
 		}
-
-		// Create readiness probes
-		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
-		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
 
 		// Create annotations based on Gerrit parameters
 		jsonSpec, _ := json.Marshal(spec)
