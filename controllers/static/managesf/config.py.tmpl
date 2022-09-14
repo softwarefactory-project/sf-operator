@@ -1,0 +1,104 @@
+app = {
+    'guess_content_type_from_ext': False,
+    'root': 'managesf.controllers.root.RootController',
+    'modules': ['managesf'],
+    'debug': False,
+    'template_path': '%(confdir)s/managesf/templates',
+}
+
+logging = {
+    'root': {'level': 'WARNING', 'handlers': ['normal', 'console']},
+    'disable_existing_loggers': False,
+    'loggers': {
+        'managesf': {
+            'level': 'INFO',
+            'handlers': ['normal', 'console'],
+            'propagate': False
+        },
+    },
+    'handlers': {
+        'console': {'level': 'INFO', 'class': 'logging.StreamHandler', 'formatter': 'console'},
+        'normal': {
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'level': 'DEBUG',
+            'formatter': 'normal',
+            'filename': '/var/log/managesf/managesf.log',
+            'when': 'D',
+            'interval': 1,
+            'backupCount': 30,
+        },
+    },
+    'formatters': {
+        'console': {'format': ('%(levelname)-5.5s [%(name)s]''[%(threadName)s] %(message)s')},
+        'normal': {'format': ('%(asctime)s %(levelname)-5.5s [%(name)s]''[%(threadName)s] %(message)s')},
+    }
+}
+
+services = [
+{{- if .Gerrit_enabled }}
+    'SFGerrit',
+    'keycloak',
+{{- end -}}
+{{ if .Zuul_enabled }}
+    'SFNodepool',
+{{- end }}
+]
+
+managesf = {
+    'host': '{{ .ManageSFIdent }}.{{ .Fqdn }}',
+    'sshkey_priv_path': '/var/lib/managesf/.ssh/id_rsa',
+}
+
+admin = {
+    'name': 'admin',
+    'email': 'admin@{{ .Fqdn }}',
+}
+
+resources = {
+    'workdir': '/var/lib/managesf',
+    'subdir': 'resources',
+    'master_repo': 'gerrit.{{ .Fqdn }}/r/config',
+    'tenant_name': 'local',
+    'public_url': 'https://{{ .Fqdn }}/manage',
+    'connections': {'__force_dict__': True}
+}
+
+{{ if .Gerrit_enabled -}}
+gerrit = {
+    'url': 'gerrit-httpd',
+    'password': '{{ .GerritAdminPassword }}',
+    'host': 'gerrit-httpd',
+    'top_domain': '{{ .Fqdn }}',
+    'ssh_port': 29418,
+    'sshkey_priv_path': '/var/lib/managesf/.ssh/id_rsa',
+}
+{{ end -}}
+
+{{ if .Zuul_enabled }}
+zuul = {
+    'api_root_url': 'zuul-web',
+}
+{{- end }}
+
+sqlalchemy = {
+    'url': 'mysql://managesf:{{ .ManagesfDBPassword }}@mariadb:3306/managesf?charset=utf8',
+    'encoding': 'utf-8',
+}
+
+policy = {
+    'policy_file': '/etc/managesf/policy.yaml',
+}
+
+# Activate API v2 here
+# list endpoints to implement, and services these endpoints must interact with
+
+api = {
+    'v2': {
+        'builds': [],
+        'jobs': [],
+    }
+}
+
+auth = {
+    'type': 'keycloak',
+}

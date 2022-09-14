@@ -80,6 +80,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	keycloakStatus := true
 	opensearchStatus := true
 	opensearchdashboardsStatus := true
+	managesfStatus := true
 	if mariadbStatus {
 		etherpadStatus = r.DeployEtherpad(sf.Spec.Etherpad.Enabled)
 		lodgeitStatus = r.DeployLodgeit(sf.Spec.Lodgeit.Enabled)
@@ -110,6 +111,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		configStatus = r.SetupConfigJob()
 	}
 
+	managesfStatus = r.DeployManagesf(managesfStatus, sf.Spec.Gerrit.Enabled, sf.Spec.Zuul.Enabled)
 	// Handle populate of the config repository
 	var config_repo_url string
 	var config_repo_user string
@@ -151,13 +153,14 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		"mosquittoStatus", mosquittoStatus,
 		"configStatus", configStatus,
 		"configRepoStatus", configRepoStatus,
+		"managesfStatus", managesfStatus,
 	)
 
 	ready := (mariadbStatus && etherpadStatus && zuulStatus &&
 		gerritStatus && lodgeitStatus && keycloakStatus &&
 		zkStatus && nodepoolStatus && opensearchStatus &&
 		opensearchdashboardsStatus && configStatus && configRepoStatus &&
-		murmurStatus && mosquittoStatus && jaegerStatus)
+		murmurStatus && mosquittoStatus && jaegerStatus && managesfStatus)
 
 	if ready {
 		r.SetupIngress(keycloakEnabled)
