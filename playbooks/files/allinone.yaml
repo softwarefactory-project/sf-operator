@@ -4,8 +4,6 @@ metadata:
   name: my-sf
 spec:
   fqdn: "sftests.com"
-  mosquitto:
-    enabled: true
   etherpad:
     enabled: true
   lodgeit:

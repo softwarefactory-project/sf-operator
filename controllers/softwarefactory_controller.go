@@ -64,9 +64,11 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	// The git server service is needed to store system jobs (config-check and config-update)
 	gitServerStatus := r.DeployGitServer(sf.Spec.Zuul.Enabled)
 
-	// Mariadb is enabled if etherpad or lodgeit is enabled.
 	mariadbEnabled := sf.Spec.Etherpad.Enabled || sf.Spec.Lodgeit.Enabled || sf.Spec.Zuul.Enabled || keycloakEnabled
 	mariadbStatus := r.DeployMariadb(mariadbEnabled)
+
+	mosquitto_enabled := keycloakEnabled
+	mosquittoStatus := r.DeployMosquitto(mosquitto_enabled)
 
 	etherpadStatus := true
 	lodgeitStatus := true
@@ -105,7 +107,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		configStatus = r.SetupConfigJob()
 	}
 
-	mosquittoStatus := r.DeployMosquitto(sf.Spec.Mosquitto)
 	// Handle populate of the config repository
 	var config_repo_url string
 	var config_repo_user string

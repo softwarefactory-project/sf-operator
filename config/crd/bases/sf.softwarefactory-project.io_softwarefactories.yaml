@@ -77,18 +77,6 @@ spec:
                 required:
                 - enabled
                 type: object
-              mosquitto:
-                description: Deploy the Mosquitto service Mosquitto is an open source
-                  implementation of a server of the MQTT protocol. It also includes
-                  a C and C++ client library, and the mosquitto_pub and mosquitto_sub
-                  utilities for publishing and subscribing.
-                properties:
-                  enabled:
-                    description: Enables Service.
-                    type: boolean
-                required:
-                - enabled
-                type: object
               murmur:
                 description: 'Deployment of Murmur service. Mumble is an open source,
                   low-latency, high quality voice chat software primarily intended
