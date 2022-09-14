@@ -183,6 +183,10 @@ kcadm update realms/SF \
   --set "registrationAllowed=true" \
   --set "resetPasswordAllowed=true"
 
+### Set default theme to SF custom ###
+######################################
+kcadm update realms/SF --set "loginTheme=sf" --set "accountTheme=sf"
+
 ### Set the SMTP config ###
 ###########################
 
