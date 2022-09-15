@@ -83,7 +83,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	if mariadbStatus {
 		etherpadStatus = r.DeployEtherpad(sf.Spec.Etherpad.Enabled)
 		lodgeitStatus = r.DeployLodgeit(sf.Spec.Lodgeit.Enabled)
-		keycloakStatus = r.DeployKeycloak(keycloakEnabled, sf.Spec.Gerrit.Enabled)
+		keycloakStatus = r.DeployKeycloak(keycloakEnabled, sf.Spec.Gerrit.Enabled, sf.Spec.Zuul.Enabled)
 	}
 
 	if mariadbStatus && zkStatus && gitServerStatus {

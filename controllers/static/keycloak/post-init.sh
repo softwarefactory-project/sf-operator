@@ -1,10 +1,7 @@
 #!/bin/bash
 
 # TODO:
-# - Change database field type for SSH keys
-# - Setup the SF theme - perhaps add the theme directory three in the container image
 # - Get Postfix enabled in the sf-operator and ensure this pod get the POSTFIX_SERVICE_HOST env var
-# - Perhaps do not manage the github provider config but instead document how to setup it in keycloak
 
 set -ex
 
@@ -90,7 +87,7 @@ function assign_role_to_user () {
     --rolename $role_name
 }
 
-function create_oidc_client () {
+function create_oidc_client_with_secret () {
   # clientid should by the service client name
   local clientid=$1
 
@@ -102,6 +99,22 @@ function create_oidc_client () {
       --set clientId=$clientid \
       --set enabled=true \
       --set clientAuthenticatorType=client-secret
+  fi
+}
+
+function create_oidc_public_client () {
+  # clientid should by the service client name
+  local clientid=$1
+
+  local cid=$(get_client_id $clientid)
+  echo "Found $clientid id: $cid"
+
+  if [ "$cid" == "null" ]; then
+    kcadm create clients --target-realm SF \
+      --set clientId=$clientid \
+      --set enabled=true \
+      --set publicClient=true \
+      --set implicitFlowEnabled=true
   fi
 }
 
@@ -123,6 +136,63 @@ function set_oidc_client_secret () {
 
   kcadm update clients/$cid --target-realm SF \
      --set secret=$secret
+}
+
+function get_client_scope_id () {
+  local scope_name=$1
+
+  kcadm get client-scopes --target-realm SF \
+    --fields name,id | jq -r -c ".[] | select (.name == \"${scope_name}\").id"
+}
+
+function create_client_scope () {
+  local clientid=$1
+  local scope_name=$2
+
+  local sid=$(get_client_scope_id ${scope_name})
+
+  if [ -z "$sid" ]; then
+    local sid=$(kcadm create client-scopes --target-realm SF \
+      --set "name=${scope_name}" \
+      --set "protocol=openid-connect" \
+      --set "attributes.\"include.in.token.scope\"=true" \
+      --set "attributes.\"display.on.consent.screen\"=false" \
+      -o --fields id | jq -r '.id')
+  fi
+
+  # By default Keycloak does not set the "aud" claim to the client ID.
+  # This is however sometimes the expected behavior with some libraries
+  # when validating JWTs (pyJWT does it for example). To avoid problems
+  # we add a mapper to the scope that will add the client ID in the "aud"
+  # claim of the ID token.
+  local mid=$(kcadm get client-scopes/${sid} --target-realm SF \
+    | jq -r '.protocolMappers | .[]? | select (.name == "audience_mapper") | .id')
+  if [ -z "$mid" ]; then
+    kcadm create client-scopes/${sid}/protocol-mappers/models \
+      --target-realm SF \
+      --set name=audience_mapper \
+      --set protocol=openid-connect \
+      --set protocolMapper=oidc-audience-mapper \
+      --set 'config."id.token.claim"=true' \
+      --set 'config."access.token.claim"=true' \
+      --set "config.\"included.client.audience\"=${clientid}"
+
+  fi
+}
+
+function configure_oidc_client_extra_scope () {
+  local clientid=$1
+  local extra_scope=$2
+  local scopes="\"web-origins\", \"profile\", \"roles\", \"email\", \"${extra_scope}\""
+
+  local cid=$(get_client_id $clientid)
+
+  kcadm update clients/$cid --target-realm SF \
+    --set "defaultClientScopes=[$scopes]"
+
+  local sid=$(get_client_scope_id ${extra_scope})
+
+  kcadm update clients/${cid}/default-client-scopes/${sid} --target-realm SF
 }
 
 ### Config kcadm client to communicate with the Keycloak API ###
@@ -193,6 +263,17 @@ kcadm update realms/SF \
   --set "smtpServer.replyTo=admin@${FQDN}" \
   --set 'smtpServer.fromDisplayName="Software Factory IAM"'
 
+### Disable RSA OAEP key signing algorithm globally ###
+#######################################################
+
+# As of Zuul 6 the pyJWT dependency does not support JWTs
+# signed with the RSA-OAEP algorithm, see https://github.com/jpadilla/pyjwt/issues/722
+kid=$(kcadm.sh get components --target-realm SF | jq -r ".[] | select (.name == \"rsa-enc-generated\").id")
+kcadm.sh update components/${kid} \
+  --target-realm SF \
+  --set "config.active=[\"false\"]" \
+  --set "config.enabled=[\"false\"]"
+
 ### Setup MQTT Events listener ###
 ##################################
 
@@ -206,7 +287,15 @@ kcadm update events/config --target-realm SF \
 
 # Setup Gerrit client when a client secret is available in the env vars
 if [ -n "${KEYCLOAK_GERRIT_CLIENT_SECRET}" ]; then
-  create_oidc_client "gerrit"
+  create_oidc_client_with_secret "gerrit"
   set_oidc_client_origin "gerrit"
   set_oidc_client_secret "gerrit" "${KEYCLOAK_GERRIT_CLIENT_SECRET}"
+fi
+
+# Setup Zuul public client
+if [ "${ZUUL_ENABLED}" == "true" ]; then
+  create_oidc_public_client "zuul"
+  set_oidc_client_origin "zuul"
+  create_client_scope "zuul" "zuul_keycloak_scope"
+  configure_oidc_client_extra_scope "zuul" "zuul_keycloak_scope"
 fi

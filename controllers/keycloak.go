@@ -83,7 +83,7 @@ func (r *SFController) KCPostInitDB() bool {
 	}
 }
 
-func (r *SFController) KCPostInit(gerrit_enabled bool) bool {
+func (r *SFController) KCPostInit(gerrit_enabled bool, zuul_enabled bool) bool {
 	var job batchv1.Job
 	job_name := "kc-post-init"
 	found := r.GetM(job_name, &job)
@@ -99,6 +99,11 @@ func (r *SFController) KCPostInit(gerrit_enabled bool) bool {
 		if gerrit_enabled {
 			vars = append(vars,
 				create_secret_env("KEYCLOAK_GERRIT_CLIENT_SECRET", "gerrit-kc-client-password", "gerrit-kc-client-password"),
+			)
+		}
+		if zuul_enabled {
+			vars = append(vars,
+				create_env("ZUUL_ENABLED", "true"),
 			)
 		}
 		container := apiv1.Container{
@@ -134,7 +139,7 @@ func (r *SFController) KCPostInit(gerrit_enabled bool) bool {
 	}
 }
 
-func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool) bool {
+func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool, zuul_enabled bool) bool {
 	if enabled {
 		// Admin master realm password
 		r.GenerateSecretUUID("keycloak-admin-password")
@@ -205,7 +210,7 @@ func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool) bool {
 
 		ready := r.IsStatefulSetReady(&dep)
 		if ready {
-			return r.KCPostInitDB() && r.KCPostInit(gerrit_enabled)
+			return r.KCPostInitDB() && r.KCPostInit(gerrit_enabled, zuul_enabled)
 		} else {
 			return false
 		}

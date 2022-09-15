@@ -29,6 +29,11 @@ func is_statefulset(service string) bool {
 func create_zuul_container(fqdn string, service string) []apiv1.Container {
 	volumes := []apiv1.VolumeMount{
 		{
+			Name:      "ca-cert",
+			MountPath: "/ca-cert",
+			ReadOnly:  true,
+		},
+		{
 			Name:      "zuul-config",
 			MountPath: "/etc/zuul",
 			ReadOnly:  true,
@@ -48,16 +53,21 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 			ReadOnly:  true,
 		},
 	}
+	command := []string{
+		"sh", "-c",
+		fmt.Sprintf("cp /ca-cert/ca.crt /etc/pki/ca-trust/source/anchors/ && update-ca-trust && exec %s -f -d", service),
+	}
 	container := apiv1.Container{
 		Name:    service,
 		Image:   "quay.io/software-factory/" + service + "-ubi:6.2.0-3",
-		Command: []string{service, "-f", "-d"},
+		Command: command,
 		Env: []apiv1.EnvVar{
 			create_secret_env("ZUUL_DB_URI", "zuul-db-uri", "dburi"),
 			create_secret_env("ZUUL_KEYSTORE_PASSWORD", "zuul-keystore-password", ""),
 			create_secret_env("ZUUL_ZK_HOSTS", "zk-hosts", ""),
 			create_secret_env("ZUUL_AUTH_SECRET", "zuul-auth-secret", ""),
 			create_env("ZUUL_FQDN", fqdn),
+			create_env("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
 		},
 		VolumeMounts: volumes,
 	}
@@ -72,6 +82,7 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 func create_zuul_volumes(service string) []apiv1.Volume {
 	var mod int32 = 256 // decimal for 0400 octal
 	volumes := []apiv1.Volume{
+		create_volume_secret("ca-cert"),
 		create_volume_secret("zuul-config"),
 		create_volume_secret("zuul-tenant-yaml"),
 		create_volume_secret("zookeeper-client-tls"),
@@ -109,6 +120,10 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		"zuul-config": checksum([]byte(config)),
 	}
 	fqdn := r.cr.Spec.FQDN
+	kc_ip := r.get_service_ip("keycloak")
+	if kc_ip == "" {
+		return false
+	}
 
 	zs := create_statefulset(r.ns, "zuul-scheduler", "")
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
@@ -150,6 +165,10 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
+	zw.Spec.Template.Spec.HostAliases = []apiv1.HostAlias{{
+		IP:        kc_ip,
+		Hostnames: []string{"keycloak." + fqdn},
+	}}
 	r.GetOrCreate(&zw)
 	zw_dirty := false
 	if !map_equals(&zw.Spec.Template.ObjectMeta.Annotations, &annotations) {
@@ -233,6 +252,18 @@ func addTracingConfig(cfg *ini.File) {
 	cfg.Section(section).NewKey("insecure", "true")
 }
 
+func addAuthConfig(cfg *ini.File, fqdn string) {
+	// The manual authenticator to issue tokens on demand is handled in the static conf file.
+	// OpenID Connect auth with keycloak
+	oidc_section := "auth keycloak"
+	cfg.NewSection(oidc_section)
+	cfg.Section(oidc_section).NewKey("default", "true")
+	cfg.Section(oidc_section).NewKey("driver", "OpenIDConnect")
+	cfg.Section(oidc_section).NewKey("realm", "SF")
+	cfg.Section(oidc_section).NewKey("client_id", "zuul")
+	cfg.Section(oidc_section).NewKey("issuer_id", "https://keycloak."+fqdn+"/realms/SF")
+}
+
 func (r *SFController) LoadConfigINI(zuul_conf string) *ini.File {
 	cfg, err := ini.Load([]byte(zuul_conf))
 	if err != nil {
@@ -278,6 +309,7 @@ func (r *SFController) DeployZuul(spec sfv1.ZuulSpec, gerrit_enabled bool, traci
 		if tracing_enabled {
 			addTracingConfig(cfg_ini)
 		}
+		addAuthConfig(cfg_ini, r.cr.Spec.FQDN)
 		config := r.DumpConfigINI(cfg_ini)
 
 		r.EnsureZuulSecrets(&db_password, config)
