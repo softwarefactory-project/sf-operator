@@ -22,9 +22,11 @@ const MOSQUITTO_PORT_NAME_LISTENER_1 = "mosquittoport1"
 const MOSQUITTO_PORT_LISTENER_2 = 1884
 const MOSQUITTO_PORT_NAME_LISTENER_2 = "mosquittoport2"
 
-func (r *SFController) DeployMosquitto(enabled bool) bool {
+func (r *SFController) DeployMosquitto() bool {
 
-	if enabled {
+	// Mosquitto is enabled if Keycloak is enabled
+	mosquitto_enabled := r.IsKeycloakEnabled() || r.cr.Spec.Zuul.Enabled
+	if mosquitto_enabled {
 		r.GenerateSecretUUID("mosquitto-sf-service-password")
 
 		dep := create_deployment(r.ns, MOSQUITTO_IDENT, MOSQUITTO_IMAGE)

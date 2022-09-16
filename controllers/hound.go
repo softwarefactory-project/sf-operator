@@ -25,9 +25,9 @@ func GenerateHoundConfig() string {
 		"}\n"
 }
 
-func (r *SFController) DeployHound(enabled bool) bool {
+func (r *SFController) DeployHound() bool {
 
-	if enabled {
+	if r.cr.Spec.Hound.Enabled {
 		// Creating hound config.json file
 		config_json := make(map[string]string)
 		config_json["config.json"] = GenerateHoundConfig()

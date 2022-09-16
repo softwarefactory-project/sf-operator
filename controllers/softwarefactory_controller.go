@@ -9,8 +9,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/go-logr/logr"
 
 	"k8s.io/client-go/rest"
@@ -44,16 +46,55 @@ type SFController struct {
 	ctx context.Context
 }
 
+func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
+	if isReady {
+		return color.GreenString(goodmsg)
+	}
+	return color.RedString(badmsg)
+}
+
+func messageInfo(r *SFController, services map[string]bool) string {
+
+	msg := ""
+
+	servicesSorted := []string{}
+	for servicename, _ := range services {
+		servicesSorted = append(servicesSorted, servicename)
+	}
+
+	sort.Strings(servicesSorted)
+
+	for _, servicename := range servicesSorted {
+		statusmsg := messageGenerator(services[servicename], "OK\n", "Waiting ...\n")
+		msg = msg + fmt.Sprintf("\t - %s: %s", color.CyanString(servicename), statusmsg)
+	}
+
+	if msg != "" {
+		msg = "\n" + msg
+	}
+
+	return msg
+}
+
+func isOperatorReady(services map[string]bool) bool {
+	for _, value := range services {
+		if !value {
+			return false
+		}
+	}
+	return true
+}
+
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	sf := r.cr
 
+	services := map[string]bool{}
+
 	jaegerStatus := true
 	if sf.Spec.Telemetry.Enabled {
-		jaegerStatus = r.DeployJaeger(sf.Spec.Telemetry.Enabled)
+		jaegerStatus = r.DeployJaeger()
+		services["Jaeger"] = jaegerStatus
 	}
-
-	// Keycloak is enabled if gerrit is enabled
-	keycloakEnabled := sf.Spec.Gerrit.Enabled || sf.Spec.Zuul.Enabled
 
 	r.EnsureCA()
 
@@ -63,133 +104,103 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	// Ensure SF Admin ssh key pair
 	r.EnsureSSHKey("admin-ssh-key")
 
-	zkStatus := r.DeployZK(sf.Spec.Zuul.Enabled)
 	// The git server service is needed to store system jobs (config-check and config-update)
-	gitServerStatus := r.DeployGitServer(sf.Spec.Zuul.Enabled)
+	services["GitServer"] = r.DeployGitServer()
 
-	mariadbEnabled := sf.Spec.Etherpad.Enabled || sf.Spec.Lodgeit.Enabled || sf.Spec.Zuul.Enabled || keycloakEnabled
-	mariadbStatus := r.DeployMariadb(mariadbEnabled)
+	services["MariaDB"] = r.DeployMariadb()
 
-	mosquitto_enabled := keycloakEnabled
-	mosquittoStatus := r.DeployMosquitto(mosquitto_enabled)
+	services["Zookeeper"] = r.DeployZookeeper()
 
-	etherpadStatus := true
-	lodgeitStatus := true
-	zuulStatus := true
-	nodepoolStatus := true
-	keycloakStatus := false
-	opensearchStatus := true
-	opensearchdashboardsStatus := true
-	managesfStatus := true
-	houndStatus := true
-	gerritbotStatus := true
-	cgitStatus := true
-	postfixStatus := true
-	grafanaStatus := true
-	gatewayStatus := true
-
-	if mariadbStatus {
-		etherpadStatus = r.DeployEtherpad(sf.Spec.Etherpad.Enabled)
-		lodgeitStatus = r.DeployLodgeit(sf.Spec.Lodgeit.Enabled)
-		keycloakStatus = r.DeployKeycloak(
-			keycloakEnabled, sf.Spec.Gerrit.Enabled, sf.Spec.Zuul.Enabled, sf.Spec.OpensearchDashboards.Enabled)
+	// mosquitto is enable if Keycloak is Enabled
+	mosquitto_enabled := r.IsKeycloakEnabled() || r.cr.Spec.Zuul.Enabled
+	if mosquitto_enabled {
+		services["Mosquitto"] = r.DeployMosquitto()
 	}
 
-	if mariadbStatus && zkStatus && gitServerStatus {
-		zuulStatus = r.DeployZuul(sf.Spec.Zuul, sf.Spec.Gerrit.Enabled, sf.Spec.Telemetry.Enabled)
-	}
-	if zkStatus {
-		nodepoolStatus = r.DeployNodepool(sf.Spec.Zuul.Enabled)
-	}
+	if services["MariaDB"] {
+		if sf.Spec.Etherpad.Enabled {
+			services["Etherpad"] = r.DeployEtherpad()
+		}
 
-	gerritStatus := r.DeployGerrit(sf.Spec.Gerrit, sf.Spec.Zuul.Enabled, sf.Spec.ConfigLocations.ConfigRepo == "")
+		if sf.Spec.Lodgeit.Enabled {
+			services["Lodgeit"] = r.DeployLodgeit()
+		}
 
-	if opensearchStatus {
-		opensearchStatus = r.DeployOpensearch(sf.Spec.Opensearch.Enabled)
-	}
-
-	if opensearchdashboardsStatus {
-		opensearchdashboardsStatus = r.DeployOpensearchDashboards(sf.Spec.OpensearchDashboards.Enabled, keycloakStatus)
-	}
-
-	murmurStatus := r.DeployMurmur(sf.Spec.Murmur)
-
-	configStatus := true
-	if mariadbStatus && zkStatus && zuulStatus && gitServerStatus && sf.Spec.Zuul.Enabled {
-		configStatus = r.SetupConfigJob()
+		// Keycloak is enable if Gerrit or Zuul are Enabled
+		keycloakEnabled := r.IsKeycloakEnabled()
+		if keycloakEnabled {
+			services["Keycloak"] = r.DeployKeycloak()
+		}
 	}
 
-	managesfStatus = r.DeployManagesf(managesfStatus, sf.Spec.Gerrit.Enabled, sf.Spec.Zuul.Enabled)
+	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] {
+		services["Zuul"] = r.DeployZuul()
+	}
 
-	configRepoStatus := true
-	if sf.Spec.Gerrit.Enabled && gerritStatus {
-		configRepoStatus = r.SetupConfigRepo(sf.Spec.Gerrit.Enabled)
+	if services["Zookeeper"] {
+		services["NodePool"] = r.DeployNodepool()
+	}
+
+	services["Gerrit"] = r.DeployGerrit()
+
+	if sf.Spec.Opensearch.Enabled {
+		services["Opensearch"] = r.DeployOpensearch()
+	}
+
+	if sf.Spec.OpensearchDashboards.Enabled {
+		services["OpensearchDashboard"] = r.DeployOpensearchDashboards()
+	}
+
+	if sf.Spec.Murmur.Enabled {
+		services["Murmur"] = r.DeployMurmur()
+	}
+
+	if services["MariaDB"] && services["Zookeeper"] && services["Zuul"] && services["GitServer"] && sf.Spec.Zuul.Enabled {
+		services["Config"] = r.SetupConfigJob()
+	}
+
+	// managesfEnabled is enabled if Gerrit is Enabled
+	managesfEnabled := r.cr.Spec.Gerrit.Enabled
+	if managesfEnabled {
+		services["ManageSF"] = r.DeployManagesf()
+	}
+
+	if sf.Spec.Gerrit.Enabled && services["Gerrit"] {
+		services["ConfigRepo"] = r.SetupConfigRepo(sf.Spec.Gerrit.Enabled)
 	}
 
 	if sf.Spec.Hound.Enabled {
-		houndStatus = r.DeployHound(sf.Spec.Hound.Enabled)
+		services["Hound"] = r.DeployHound()
 	}
 
-	if sf.Spec.GerritBot.Enabled && gerritStatus {
-		gerritbotStatus = r.DeployGerritBot(sf.Spec.GerritBot.Enabled)
+	if sf.Spec.GerritBot.Enabled && services["Gerrit"] {
+		services["GerritBot"] = r.DeployGerritBot()
 	}
 
-	if sf.Spec.Cgit.Enabled && gerritStatus {
-		cgitStatus = r.DeployCgit(sf.Spec.Cgit.Enabled)
+	if sf.Spec.Cgit.Enabled && services["Gerrit"] {
+		services["CGit"] = r.DeployCgit()
 	}
 
 	if sf.Spec.Postfix.Enabled {
-		postfixStatus = r.DeployPostfix(sf.Spec.Postfix.Enabled)
+		services["Postfix"] = r.DeployPostfix()
 	}
 
-	if sf.Spec.Grafana.Enabled && mariadbStatus {
-		grafanaStatus = r.DeployGrafana(sf.Spec.Grafana.Enabled)
+	if sf.Spec.Grafana.Enabled && services["MariaDB"] {
+		services["Grafana"] = r.DeployGrafana()
 	}
 
-	if sf.Spec.Gerrit.Enabled || sf.Spec.Zuul.Enabled ||
-		sf.Spec.OpensearchDashboards.Enabled || sf.Spec.Grafana.Enabled ||
-		sf.Spec.Etherpad.Enabled || sf.Spec.Lodgeit.Enabled ||
-		sf.Spec.Hound.Enabled || sf.Spec.Cgit.Enabled ||
-		sf.Spec.Murmur.Enabled {
-		gatewayStatus = r.DeployGateway(true)
+	if IsToDeployGateway(r) {
+		services["Gateway"] = r.DeployGateway()
 	}
 
-	r.log.V(1).Info("Service status:",
-		"mariadbStatus", mariadbStatus,
-		"zkStatus", zkStatus,
-		"gitServerStatus", gitServerStatus,
-		"etherpadStatus", etherpadStatus,
-		"zuulStatus", zuulStatus,
-		"gerritStatus", gerritStatus,
-		"lodgeitStatus", lodgeitStatus,
-		"opensearchStatus", opensearchStatus,
-		"opensearchdashboardsStatus", opensearchdashboardsStatus,
-		"keycloakStatus", keycloakStatus,
-		"murmurStatus", murmurStatus,
-		"mosquittoStatus", mosquittoStatus,
-		"configStatus", configStatus,
-		"configRepoStatus", configRepoStatus,
-		"managesfStatus", managesfStatus,
-		"houndStatus", houndStatus,
-		"gerritbotStatus", gerritbotStatus,
-		"cgitStatus", cgitStatus,
-		"postfixStatus", postfixStatus,
-		"grafanaStatus", grafanaStatus,
-		"gatewayStatus", gatewayStatus,
-	)
+	r.log.V(1).Info(messageInfo(r, services))
 
-	ready := (mariadbStatus && etherpadStatus && zuulStatus &&
-		gerritStatus && lodgeitStatus && keycloakStatus &&
-		zkStatus && nodepoolStatus && opensearchStatus &&
-		opensearchdashboardsStatus && configStatus && configRepoStatus &&
-		murmurStatus && mosquittoStatus && jaegerStatus && managesfStatus &&
-		houndStatus && gerritbotStatus && cgitStatus && postfixStatus &&
-		grafanaStatus && gatewayStatus)
+	ready := isOperatorReady(services)
 
 	if ready {
 		r.PodExec("zuul-scheduler-0", "scheduler-sidecar", []string{"generate-zuul-tenant-yaml.sh"})
 		r.PodExec("zuul-scheduler-0", "zuul-scheduler", []string{"zuul-scheduler", "full-reconfigure"})
-		r.SetupIngress(keycloakEnabled)
+		r.SetupIngress()
 	}
 
 	return sfv1.SoftwareFactoryStatus{

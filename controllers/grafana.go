@@ -87,9 +87,9 @@ func GrafanaTransport(r *SFController) string {
 		"zuul@" + r.cr.Spec.FQDN + " discard:silently\n"
 }
 
-func (r *SFController) DeployGrafana(enabled bool) bool {
+func (r *SFController) DeployGrafana() bool {
 
-	if enabled {
+	if r.cr.Spec.Grafana.Enabled {
 		// Creating DB
 		initContainers, grafanapassword := r.EnsureDBInit(GRAFANA_IDENT)
 

@@ -89,9 +89,9 @@ func GerritBotConfigChannels(r *SFController, channels []sfv1.GerritBotChannelsS
 	return channelsconfig
 }
 
-func (r *SFController) DeployGerritBot(enabled bool) bool {
+func (r *SFController) DeployGerritBot() bool {
 
-	if enabled {
+	if r.cr.Spec.GerritBot.Enabled {
 		// Creating gerritbot config.json file
 		conf_data := make(map[string]string)
 		conf_data["gerritbot.conf"] = GerritBotConfig(r, r.cr.Spec.GerritBot.IRCbot)

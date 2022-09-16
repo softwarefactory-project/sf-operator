@@ -22,8 +22,8 @@ const GS_PI_MOUNT_PATH = "/entry"
 //go:embed static/git-server/update-system-config.sh
 var preInitScript string
 
-func (r *SFController) DeployGitServer(enabled bool) bool {
-	if enabled {
+func (r *SFController) DeployGitServer() bool {
+	if r.cr.Spec.Zuul.Enabled {
 		cm_data := make(map[string]string)
 		cm_data["pre-init.sh"] = preInitScript
 		r.EnsureConfigMap(GS_IDENT+"-pi", cm_data)

@@ -58,8 +58,8 @@ type OSUser struct {
 	Description  string   `json:"description"`
 }
 
-func (r *SFController) DeployOpensearch(enabled bool) bool {
-	if enabled {
+func (r *SFController) DeployOpensearch() bool {
+	if r.cr.Spec.Opensearch.Enabled {
 
 		server_cert := r.create_client_certificate(r.ns, "opensearch-server", "ca-issuer", "opensearch-server-tls", "opensearch")
 		r.GetOrCreate(&server_cert)

@@ -82,9 +82,9 @@ func PostfixTransport(r *SFController) string {
 		"zuul@" + r.cr.Spec.FQDN + " discard:silently\n"
 }
 
-func (r *SFController) DeployPostfix(enabled bool) bool {
+func (r *SFController) DeployPostfix() bool {
 
-	if enabled {
+	if r.cr.Spec.Postfix.Enabled {
 		// Creating postfix config.json file
 		conf_data := make(map[string]string)
 

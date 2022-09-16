@@ -14,8 +14,8 @@ import (
 const JAEGER_PORT = 16686
 const JAEGER_PORT_NAME = "jaeger"
 
-func (r *SFController) DeployJaeger(enabled bool) bool {
-	if enabled {
+func (r *SFController) DeployJaeger() bool {
+	if r.cr.Spec.Telemetry.Enabled {
 		dep := create_deployment(r.ns, "jaeger", "quay.io/jaegertracing/all-in-one:latest")
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 			create_env("COLLECTOR_OTLP_ENABLED", "true"),

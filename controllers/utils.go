@@ -771,7 +771,7 @@ func (r *SFController) ensure_ingress(ingress netv1.Ingress, name string) {
 	}
 }
 
-func (r *SFController) SetupIngress(keycloakEnabled bool) {
+func (r *SFController) SetupIngress() {
 	if r.cr.Spec.Etherpad.Enabled {
 		var ingress netv1.Ingress
 		name := r.cr.Name + "-etherpad"
@@ -784,7 +784,19 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressEtherpad())
 		r.ensure_ingress(ingress, name)
 	}
-	if keycloakEnabled {
+	if r.cr.Spec.Gerrit.Enabled {
+		var ingress netv1.Ingress
+		name := r.cr.Name + "-gerrit"
+		ingress = netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			},
+		}
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGerrit()...)
+		r.ensure_ingress(ingress, name)
+	}
+	if r.IsKeycloakEnabled() {
 		var ingress netv1.Ingress
 		name := r.cr.Name + "-keycloak"
 		ingress = netv1.Ingress{
@@ -799,18 +811,6 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 			},
 		}
 		ingress.Spec.Rules = r.IngressKeycloak()
-		r.ensure_ingress(ingress, name)
-	}
-	if r.cr.Spec.Gerrit.Enabled {
-		var ingress netv1.Ingress
-		name := r.cr.Name + "-gerrit"
-		ingress = netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-			},
-		}
-		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGerrit()...)
 		r.ensure_ingress(ingress, name)
 	}
 	if r.cr.Spec.Zuul.Enabled {

@@ -139,9 +139,9 @@ func GenerateConfigFile(r *SFController, spec sfv1.MurmurSpec) string {
 	return configText
 }
 
-func (r *SFController) DeployMurmur(spec sfv1.MurmurSpec) bool {
+func (r *SFController) DeployMurmur() bool {
 
-	if spec.Enabled {
+	if r.cr.Spec.Murmur.Enabled {
 
 		// Creating Murmur Probe script as a ConfigMap
 		cm_probe_data := make(map[string]string)
@@ -150,7 +150,7 @@ func (r *SFController) DeployMurmur(spec sfv1.MurmurSpec) bool {
 
 		// Creating Murmur Configuration file as a ConfigMap
 		cm_config := make(map[string]string)
-		cm_config["umurmur.conf"] = GenerateConfigFile(r, spec)
+		cm_config["umurmur.conf"] = GenerateConfigFile(r, r.cr.Spec.Murmur)
 		r.EnsureConfigMap(MURMUR_IDENT+"-umurmurd", cm_config)
 
 		// Generating murmur Passwords

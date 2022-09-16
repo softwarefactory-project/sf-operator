@@ -27,8 +27,9 @@ providers: []
 
 }
 
-func (r *SFController) DeployNodepool(enabled bool) bool {
-	if enabled {
+func (r *SFController) DeployNodepool() bool {
+	// Nodepool is enable if Zuul is enabled
+	if r.cr.Spec.Zuul.Enabled {
 		r.EnsureNodepoolSecrets()
 		r.CreateYAMLs(nodepool_objs)
 		var dep appsv1.Deployment

@@ -335,14 +335,16 @@ func (r *SFController) DumpConfigINI(cfg *ini.File) string {
 	return writer.String()
 }
 
-func (r *SFController) DeployZuul(spec sfv1.ZuulSpec, gerrit_enabled bool, tracing_enabled bool) bool {
-	if spec.Enabled {
+func (r *SFController) DeployZuul() bool {
+
+	if r.cr.Spec.Zuul.Enabled {
 		init_containers, db_password := r.EnsureDBInit("zuul")
 		r.EnsureSSHKey("zuul-ssh-key")
-		gerrit_conns := spec.GerritConns
+
+		gerrit_conns := r.cr.Spec.Zuul.GerritConns
 
 		// Add local gerrit connection if needed
-		if gerrit_enabled {
+		if r.cr.Spec.Gerrit.Enabled {
 			r.GenerateSecretUUID("zuul-gerrit-api-key")
 			gerrit_conn := sfv1.GerritConnection{
 				Name:              "gerrit",
@@ -363,7 +365,7 @@ func (r *SFController) DeployZuul(spec sfv1.ZuulSpec, gerrit_enabled bool, traci
 		for _, conn := range gerrit_conns {
 			r.AddGerritConnection(cfg_ini, conn)
 		}
-		if tracing_enabled {
+		if r.cr.Spec.Telemetry.Enabled {
 			addTracingConfig(cfg_ini)
 		}
 		addAuthConfig(cfg_ini, r.cr.Spec.FQDN)

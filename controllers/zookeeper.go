@@ -13,8 +13,8 @@ import (
 //go:embed templates/zookeeper.yaml
 var zk_objs string
 
-func (r *SFController) DeployZK(enabled bool) bool {
-	if enabled {
+func (r *SFController) DeployZookeeper() bool {
+	if r.cr.Spec.Zuul.Enabled {
 		r.CreateYAMLs(strings.ReplaceAll(zk_objs, "{{ NS }}", r.ns))
 		cert := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper")
 		r.GetOrCreate(&cert)

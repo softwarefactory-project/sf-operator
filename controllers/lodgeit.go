@@ -19,8 +19,8 @@ const LODGEIT_IMAGE string = "quay.io/software-factory/lodgeit:0.3-2"
 const LODGEIT_PORT = 5000
 const LODGEIT_PORT_NAME = "lodgeit"
 
-func (r *SFController) DeployLodgeit(enabled bool) bool {
-	if enabled {
+func (r *SFController) DeployLodgeit() bool {
+	if r.cr.Spec.Lodgeit.Enabled {
 		initContainers, lodgeitmysqlpasswordsecret := r.EnsureDBInit("lodgeit")
 
 		// Generating Lodgeit Passwords

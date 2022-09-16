@@ -54,9 +54,9 @@ func (r *SFController) CgitHttpConfig() string {
 	return template
 }
 
-func (r *SFController) DeployCgit(enabled bool) bool {
+func (r *SFController) DeployCgit() bool {
 
-	if enabled {
+	if r.cr.Spec.Cgit.Enabled {
 		// Creating cgit config.json file
 		conf_data := make(map[string]string)
 

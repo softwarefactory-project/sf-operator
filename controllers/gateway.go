@@ -313,10 +313,20 @@ func gatewayInfoJsonGenerator(r *SFController) string {
 	return string(jsonData)
 }
 
-func (r *SFController) DeployGateway(enabled bool) bool {
+func IsToDeployGateway(r *SFController) bool {
+	if r.cr.Spec.Gerrit.Enabled || r.cr.Spec.Zuul.Enabled ||
+		r.cr.Spec.OpensearchDashboards.Enabled || r.cr.Spec.Grafana.Enabled ||
+		r.cr.Spec.Etherpad.Enabled || r.cr.Spec.Lodgeit.Enabled ||
+		r.cr.Spec.Hound.Enabled || r.cr.Spec.Cgit.Enabled ||
+		r.cr.Spec.Murmur.Enabled {
+		return true
+	}
+	return false
+}
 
-	if enabled {
+func (r *SFController) DeployGateway() bool {
 
+	if IsToDeployGateway(r) {
 		// Generate Gateway Keycloak Password
 		r.GenerateSecretUUID(GATEWAY_IDENT + "-kc-client-password")
 

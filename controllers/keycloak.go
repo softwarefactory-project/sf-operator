@@ -7,8 +7,10 @@ package controllers
 
 import (
 	_ "embed"
+
 	"k8s.io/utils/pointer"
 
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -89,7 +91,7 @@ func (r *SFController) KCPostInitDB() bool {
 	}
 }
 
-func (r *SFController) KCPostInit(gerrit_enabled bool, zuul_enabled bool, opensearch_dashboards_enabled bool) bool {
+func (r *SFController) KCPostInit() bool {
 	var job batchv1.Job
 	job_name := "kc-post-init"
 	found := r.GetM(job_name, &job)
@@ -102,17 +104,17 @@ func (r *SFController) KCPostInit(gerrit_enabled bool, zuul_enabled bool, opense
 			create_secret_env("KEYCLOAK_SF_ADMIN_PASSWORD", "keycloak-sf-admin-password", "keycloak-sf-admin-password"),
 			create_secret_env("KEYCLOAK_SF_SERVICE_PASSWORD", "keycloak-sf-service-password", "keycloak-sf-service-password"),
 		}
-		if gerrit_enabled {
+		if r.cr.Spec.Gerrit.Enabled {
 			vars = append(vars,
 				create_secret_env("KEYCLOAK_GERRIT_CLIENT_SECRET", "gerrit-kc-client-password", "gerrit-kc-client-password"),
 			)
 		}
-		if zuul_enabled {
+		if r.cr.Spec.Zuul.Enabled {
 			vars = append(vars,
 				create_env("ZUUL_ENABLED", "true"),
 			)
 		}
-		if opensearch_dashboards_enabled {
+		if r.cr.Spec.OpensearchDashboards.Enabled {
 			vars = append(vars,
 				create_secret_env("KEYCLOAK_OPENSEARCH_CLIENT_SECRET", "opensearch-kc-client-password", "opensearch-kc-client-password"),
 			)
@@ -157,8 +159,9 @@ func (r *SFController) KCPostInit(gerrit_enabled bool, zuul_enabled bool, opense
 	}
 }
 
-func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool, zuul_enabled bool, opensearch_dashboards_enabled bool) bool {
-	if enabled {
+func (r *SFController) DeployKeycloak() bool {
+
+	if r.IsKeycloakEnabled() {
 		// Admin master realm password
 		r.GenerateSecretUUID("keycloak-admin-password")
 		// Admin SF realm password
@@ -233,7 +236,7 @@ func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool, zuul_en
 
 		ready := r.IsStatefulSetReady(&dep)
 		if ready {
-			return r.KCPostInitDB() && r.KCPostInit(gerrit_enabled, zuul_enabled, opensearch_dashboards_enabled)
+			return r.KCPostInitDB() && r.KCPostInit()
 		} else {
 			return false
 		}
@@ -249,4 +252,23 @@ func (r *SFController) IngressKeycloak() []netv1.IngressRule {
 	return []netv1.IngressRule{
 		create_ingress_rule("keycloak."+r.cr.Spec.FQDN, "keycloak-http", KC_HTTP_PORT),
 	}
+}
+
+func (r *SFController) IsKeycloakReady() bool {
+	if r.IsKeycloakEnabled() {
+		resource := appsv1.StatefulSet{}
+		if r.GetM("keycloak", &resource) {
+			return r.IsStatefulSetReady(&resource)
+		}
+		r.log.V(1).Info("Keycloak Stateful Set resource not found")
+		return false
+	} else {
+		r.log.V(1).Info("Keycloak is not enabled")
+		return false
+	}
+}
+
+func (r *SFController) IsKeycloakEnabled() bool {
+	// Keycloak is enable if Gerrit or Zuul or Opensearch or Grafana are Enabled
+	return r.cr.Spec.Gerrit.Enabled || r.cr.Spec.Zuul.Enabled || r.cr.Spec.Opensearch.Enabled || r.cr.Spec.Grafana.Enabled
 }

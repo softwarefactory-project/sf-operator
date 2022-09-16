@@ -17,8 +17,8 @@ var etherpadSettings string
 const ETHERPAD_PORT = 8080
 const ETHERPAD_PORT_NAME = "etherpad-port"
 
-func (r *SFController) DeployEtherpad(enabled bool) bool {
-	if enabled {
+func (r *SFController) DeployEtherpad() bool {
+	if r.cr.Spec.Etherpad.Enabled {
 		initContainers, _ := r.EnsureDBInit("etherpad")
 		r.GenerateSecretUUID("etherpad-admin-password")
 		cm_data := make(map[string]string)

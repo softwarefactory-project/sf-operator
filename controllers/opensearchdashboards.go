@@ -18,8 +18,9 @@ var os_dashboards_objs string
 const DASHBOARDS_PORT = 5601
 const DASHBOARDS_PORT_NAME = "os"
 
-func (r *SFController) DeployOpensearchDashboards(enabled bool, keycloak_status bool) bool {
-	if enabled {
+func (r *SFController) DeployOpensearchDashboards() bool {
+
+	if r.cr.Spec.OpensearchDashboards.Enabled {
 		// create cert
 		server_cert := r.create_client_certificate(r.ns, "opensearch-dashboards", "ca-issuer", "opensearch-dashboards-tls", "opensearchdashboards")
 		r.GetOrCreate(&server_cert)
@@ -31,7 +32,7 @@ func (r *SFController) DeployOpensearchDashboards(enabled bool, keycloak_status 
 		// where opensearch dashboard attempts to connect on keycloak to get the public keys on
 		// the wellknown endpoint but get a connection refused. It seems that opensearch dashboard
 		// does not retry after.
-		if keycloak_status == false {
+		if r.IsKeycloakReady() == false {
 			return false
 		}
 

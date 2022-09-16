@@ -96,18 +96,18 @@ func GenerateSshConfig(sqlsecret apiv1.Secret, gerrit_enabled bool, zuul_enabled
 	return buf.String()
 }
 
-func (r *SFController) DeployManagesf(enabled bool, gerrit_enabled bool, zuul_enabled bool) bool {
+func (r *SFController) DeployManagesf() bool {
 
-	if enabled {
+	if r.cr.Spec.Gerrit.Enabled {
 		initContainers, managesfpasswordsecret := r.EnsureDBInit("managesf")
 
 		// Creating managesf config.py file
 		config_data := make(map[string]string)
-		config_data["config.py"] = GenerateConfig(managesfpasswordsecret, gerrit_enabled, zuul_enabled, r)
+		config_data["config.py"] = GenerateConfig(managesfpasswordsecret, r.cr.Spec.Gerrit.Enabled, r.cr.Spec.Zuul.Enabled, r)
 		r.EnsureConfigMap(MANAGESF_IDENT, config_data)
 
 		ssh_config_data := make(map[string]string)
-		ssh_config_data["config"] = GenerateSshConfig(managesfpasswordsecret, gerrit_enabled, zuul_enabled, r)
+		ssh_config_data["config"] = GenerateSshConfig(managesfpasswordsecret, r.cr.Spec.Gerrit.Enabled, r.cr.Spec.Zuul.Enabled, r)
 		r.EnsureConfigMap(MANAGESF_IDENT+"-ssh", ssh_config_data)
 
 		dep := create_deployment(r.ns, MANAGESF_IDENT, MANAGESF_IMAGE)
