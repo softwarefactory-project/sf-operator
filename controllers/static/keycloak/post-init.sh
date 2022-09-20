@@ -11,10 +11,6 @@ set -ex
 export PATH=$PATH:~/bin
 alias kcadm=kcadm.sh
 
-# TODO: For now download the jq binary. It might better to provision on the image
-curl -sfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -o ~/bin/jq && \
-  chmod +x ~/bin/jq 
-
 function get_user_id () {
   local username=$1
   kcadm get users --query "username=$username" --fields id -r SF | jq -r '.[0].id'
