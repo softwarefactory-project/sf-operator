@@ -571,11 +571,6 @@ func (r *SFController) GenerateSecretUUID(name string) apiv1.Secret {
 	return r.GenerateSecret(name, func() string { return uuid.New().String() })
 }
 
-// generate a secret if needed using a bcrypt value.
-func (r *SFController) GenerateBCRYPTPassword(name string) apiv1.Secret {
-	return r.GenerateSecret(name, func() string { return gen_bcrypt_pass(uuid.New().String()) })
-}
-
 func (r *SFController) EnsureSSHKey(name string) {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {

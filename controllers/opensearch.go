@@ -12,8 +12,39 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-//go:embed templates/opensearch/opensearch.yml
+// TODO
+// ====
+//
+// - Fix usage of securityadmin.sh command
+// When internal_users.yml change then securityadmin.sh command must be run to update the security index.const
+// However we were unable to make it work
+// ./securityadmin.sh -cacert /usr/share/opensearch/config/certs/ca.crt -cert /usr/share/opensearch/config/certs/tls.crt -h opensearch
+// Will connect to opensearch:9200 ... done
+// Connected as null
+// ERR: null is not an admin user
+// Seems you use a client certificate but this one is not registered as admin_dn
+// Make sure opensearch.yml on all nodes contains:
+// plugins.security.authcz.admin_dn:
+//   - "null"
+//
+
+//go:embed static/opensearch/opensearch.yml
 var os_opensearch_objs string
+
+//go:embed static/opensearch/auth-config.yml
+var os_auth_config string
+
+//go:embed static/opensearch/log4j2.properties
+var os_log4j string
+
+//go:embed static/opensearch/nodes_dn.yml
+var os_nodes_dn string
+
+//go:embed static/opensearch/whitelist.yml
+var os_whitelist string
+
+//go:embed static/opensearch/roles.yml
+var os_roles string
 
 const OPENSEARCH_PORT = 9200
 const OPENSEARCH_TRANSPORT_PORT = 9300
@@ -34,7 +65,6 @@ type OSUser struct {
 
 func (r *SFController) DeployOpensearch(enabled bool) bool {
 	if enabled {
-		r.log.V(1).Info("Opensearch deploy not found")
 
 		server_cert := r.create_client_certificate(r.ns, "opensearch-server", "ca-issuer", "opensearch-server-tls", "opensearch")
 		r.GetOrCreate(&server_cert)
@@ -44,8 +74,8 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 		users_hash := make(map[string]string)
 		for _, user := range users {
 			current_user := "opensearch-" + user + "-password"
-			bcrpt_pass := string(r.GenerateBCRYPTPassword(current_user).Data[current_user])
-			users_hash[user] = bcrpt_pass
+			uuid_pass := string(r.GenerateSecretUUID(current_user).Data[current_user])
+			users_hash[user] = gen_bcrypt_pass(uuid_pass)
 		}
 
 		// create internal_users.yml file
@@ -58,30 +88,28 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 				Hash:        users_hash["admin"],
 				Reserved:    true,
 				Description: "OpenSearch Admin user",
+				BackendRoles: []string{
+					"admin",
+				},
 			},
 			"kibanaserver": OSUser{
-				Hash:        users_hash["kibanaserver"],
-				Reserved:    true,
-				Description: "OpenSearch Dashboards user",
+				Hash:         users_hash["kibanaserver"],
+				Reserved:     true,
+				Description:  "OpenSearch Dashboards user",
+				BackendRoles: []string{"opensearch_dashboards_user"},
 			},
-			"kibanaro": OSUser{
+			"guest": OSUser{
 				Hash:         users_hash["kibanaro"],
 				Reserved:     false,
 				Description:  "OpenSearch Dashboards read only user",
-				BackendRoles: []string{"kibanauser", "readall"},
+				BackendRoles: []string{"opensearch_dashboards_read_only"},
 			},
-			"logstash": OSUser{
-				Hash:         users_hash["logstash"],
-				Reserved:     false,
-				Description:  "OpenSearch Dashboards Logstash user",
-				BackendRoles: []string{"logstash"},
-			},
-			"readall": OSUser{
-				Hash:         users_hash["readall"],
-				Reserved:     false,
-				Description:  "OpenSearch Dashboards readall user",
-				BackendRoles: []string{"readall"},
-			},
+			// "logstash": OSUser{
+			// 	Hash:         users_hash["logstash"],
+			// 	Reserved:     false,
+			// 	Description:  "OpenSearch Dashboards Logstash user",
+			// 	BackendRoles: []string{"logstash"},
+			// },
 		}
 
 		data, err := yaml.Marshal(es_users)
@@ -91,14 +119,19 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 
 		plugin_data := make(map[string]string)
 		plugin_data["internal_users.yml"] = string(data)
+		plugin_data["config.yml"] = string(os_auth_config)
 		r.EnsureConfigMap("opensearch-internal-users", plugin_data)
 
 		// config maps
 		cm_data := make(map[string]string)
 		cm_data["opensearch.yml"] = os_opensearch_objs
+		cm_data["log4j2.properties"] = os_log4j
+		cm_data["nodes_dn.yml"] = os_nodes_dn
+		cm_data["whitelist.yml"] = os_whitelist
+		cm_data["roles.yml"] = os_roles
 		r.EnsureConfigMap("opensearch", cm_data)
 
-		dep := create_statefulset(r.ns, "opensearch", "quay.io/software-factory/opensearch:1.3.1-1")
+		dep := create_statefulset(r.ns, "opensearch", "quay.io/software-factory/opensearch:2.2.0-1")
 		dep.Spec.Template.Spec.Containers[0].Command = []string{
 			"/bin/bash", "-x", "/usr/share/opensearch/opensearch-docker-entrypoint.sh"}
 
@@ -119,12 +152,39 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 				Name:      "opensearch",
 				MountPath: "/usr/share/opensearch/data",
 			},
+			// Only mount the required file to not override the directory content
 			{
-				// mount just an opensearch.yml file, due there is a lot
-				// other configuration files there.
 				Name:      "os-config",
 				MountPath: "/usr/share/opensearch/config/opensearch.yml",
 				SubPath:   "opensearch.yml",
+				ReadOnly:  true,
+			},
+			// Only mount the required file to not override the directory content
+			// {
+			// 	Name:      "os-config",
+			// 	MountPath: "/usr/share/opensearch/config/log4j2.properties",
+			// 	SubPath:   "log4j2.properties",
+			// 	ReadOnly:  true,
+			// },
+			// Only mount the required file to not override the directory content
+			// {
+			// 	Name:      "os-config",
+			// 	MountPath: "/usr/share/opensearch/config/nodes_dn.yml",
+			// 	SubPath:   "nodes_dn.yml",
+			// 	ReadOnly:  true,
+			// },
+			// Only mount the required file to not override the directory content
+			// {
+			// 	Name:      "os-config",
+			// 	MountPath: "/usr/share/opensearch/config/whitelist.yml",
+			// 	SubPath:   "whitelist.yml",
+			// 	ReadOnly:  true,
+			// },
+			// Only mount the required file to not override the directory content
+			{
+				Name:      "os-config",
+				MountPath: "/usr/share/opensearch/config/roles.yml",
+				SubPath:   "roles.yml",
 				ReadOnly:  true,
 			},
 			{
@@ -132,11 +192,18 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 				MountPath: "/usr/share/opensearch/config/certs",
 				ReadOnly:  true,
 			},
+			// Only mount the required file to not override the directory content
 			{
-				// mount just internal_users.yml file
 				Name:      "os-plugin",
-				MountPath: "/usr/share/opensearch/plugins/opensearch-security/securityconfig/internal_users.yml",
+				MountPath: "/usr/share/opensearch/config/opensearch-security/internal_users.yml",
 				SubPath:   "internal_users.yml",
+				ReadOnly:  true,
+			},
+			// Only mount the required file to not override the directory content
+			{
+				Name:      "os-plugin",
+				MountPath: "/usr/share/opensearch/config/opensearch-security/config.yml",
+				SubPath:   "config.yml",
 				ReadOnly:  true,
 			},
 		}
@@ -158,20 +225,11 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 
 		// Expose env vars
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
+			create_env("discovery.type", "single-node"),
 			create_env("node.name", "opensearch-master"),
-			create_env("cluster.initial_master_nodes", "opensearch-master"),
-			create_env("discovery.seed_hosts", `opensearch.`+r.ns+`:9200`),
-			create_env("cluster.name", "opensearch-cluster"),
 			create_env("network.host", "0.0.0.0"),
 			create_env("OPENSEARCH_JAVA_OPTS", "-Xmx512M -Xms512M"),
-			create_env("node.roles", "master,ingest,data,remote_cluster_client"),
 			create_env("DISABLE_INSTALL_DEMO_CONFIG", "true"),
-			// additional
-			create_env("OPENSEARCH_PATH_CONF", "/usr/share/opensearch/config"),
-			create_env("LD_LIBRARY_PATH", ":/usr/share/opensearch/plugins/opensearch-knn/lib"),
-			create_env("JAVA_HOME", "/usr/share/opensearch/jdk"),
-			create_env("OPENSEARCH_HOME", "/usr/share/opensearch"),
-			create_env("HOME", "/usr/share/opensearch"),
 		}
 
 		r.GetOrCreate(&dep)
