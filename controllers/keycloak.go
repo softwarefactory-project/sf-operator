@@ -149,6 +149,7 @@ func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool) bool {
 		// Ensure Keystore password
 		r.GenerateSecretUUID("kc-keystore-password")
 		initContainers, _ := r.EnsureDBInit("keycloak")
+
 		dep := create_statefulset(r.ns, "keycloak", KC_IMAGE)
 		dep.Spec.Template.Spec.InitContainers = append(initContainers, r.KCInitContainer())
 		dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", kc_entrypoint}

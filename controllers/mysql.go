@@ -47,6 +47,7 @@ func (r *SFController) DeployMariadb(enabled bool) bool {
 	if enabled {
 		pass_name := "mariadb-root-password"
 		r.GenerateSecretUUID(pass_name)
+
 		dep := create_statefulset(r.ns, "mariadb", DBImage)
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 			{
