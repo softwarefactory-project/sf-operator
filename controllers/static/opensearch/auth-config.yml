@@ -8,28 +8,25 @@ config:
       basic_internal_auth_domain:
         http_enabled: true
         transport_enabled: true
-        order: 1
+        order: 0
         authentication_backend:
           type: intern
         http_authenticator:
           type: basic
           challenge: false
-#      openid_auth_domain:
-#        http_enabled: true
-#        transport_enabled: true
-#        order: 0
-#        http_authenticator:
-#          type: openid
-#          challenge: false
-#          config:
-#            subject_key: preferred_username
-#            roles_key: roles
-#            openid_connect_url: https://{{ fqdn }}/auth/realms/{{ keycloak_default_realm }}/.well-known/openid-configuration
-#            openid_connect_idp.enable_ssl: true
-#            openid_connect_idp.pemtrustedcas_filepath: "{{ opensearch_container_certs_dir }}/localCA.pem"
-#            openid_connect_idp.verify_hostname: false
-#            skip_users:
-#              - kibanaserver
-#        authentication_backend:
-#          type: noop
-#
+      openid_auth_domain:
+        http_enabled: true
+        transport_enabled: true
+        order: 1
+        http_authenticator:
+          type: openid
+          challenge: false
+          config:
+            subject_key: preferred_username
+            roles_key: roles
+            openid_connect_url: https://keycloak.{{ fqdn }}/realms/SF/.well-known/openid-configuration
+            openid_connect_idp.enable_ssl: true
+            openid_connect_idp.pemtrustedcas_filepath: "/usr/share/opensearch/config/certs/ca.crt"
+            openid_connect_idp.verify_hostname: false
+        authentication_backend:
+          type: noop

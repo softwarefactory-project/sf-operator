@@ -69,6 +69,15 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 		server_cert := r.create_client_certificate(r.ns, "opensearch-server", "ca-issuer", "opensearch-server-tls", "opensearch")
 		r.GetOrCreate(&server_cert)
 
+		// Ensure OpenSearch Keycloak client password
+		r.GenerateSecretUUID("opensearch-kc-client-password")
+
+		// Wait for Keycloak service
+		kc_ip := r.get_service_ip("keycloak")
+		if kc_ip == "" {
+			return false
+		}
+
 		// generate password
 		users := []string{"admin", "kibanaserver", "kibanaro", "logstash", "readall"}
 		users_hash := make(map[string]string)
@@ -146,6 +155,13 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 			create_container_port(OPENSEARCH_PORT, OPENSEARCH_PORT_NAME),
 			create_container_port(OPENSEARCH_TRANSPORT_PORT, OPENSEARCH_TRANSPORT_PORT_NAME),
 		}
+
+		// Need host alias to let the OpenSearch container to access keycloak internaly
+		// via the public keycloak url
+		dep.Spec.Template.Spec.HostAliases = []apiv1.HostAlias{{
+			IP:        kc_ip,
+			Hostnames: []string{"keycloak." + r.cr.Spec.FQDN},
+		}}
 
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 			{
