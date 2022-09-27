@@ -6,6 +6,7 @@ package controllers
 
 import (
 	_ "embed"
+	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -46,6 +47,9 @@ var os_whitelist string
 //go:embed static/opensearch/roles.yml
 var os_roles string
 
+//go:embed static/opensearch/roles_mapping.yml
+var os_roles_mapping string
+
 const OPENSEARCH_PORT = 9200
 const OPENSEARCH_TRANSPORT_PORT = 9300
 const OPENSEARCH_PORT_NAME = "os"
@@ -68,9 +72,6 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 
 		server_cert := r.create_client_certificate(r.ns, "opensearch-server", "ca-issuer", "opensearch-server-tls", "opensearch")
 		r.GetOrCreate(&server_cert)
-
-		// Ensure OpenSearch Keycloak client password
-		r.GenerateSecretUUID("opensearch-kc-client-password")
 
 		// Wait for Keycloak service
 		kc_ip := r.get_service_ip("keycloak")
@@ -128,7 +129,9 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 
 		plugin_data := make(map[string]string)
 		plugin_data["internal_users.yml"] = string(data)
-		plugin_data["config.yml"] = string(os_auth_config)
+		plugin_data["config.yml"] = strings.ReplaceAll(os_auth_config, "{{ FQDN }}", r.cr.Spec.FQDN)
+		plugin_data["roles.yml"] = os_roles
+		plugin_data["roles_mapping.yml"] = os_roles_mapping
 		r.EnsureConfigMap("opensearch-internal-users", plugin_data)
 
 		// config maps
@@ -137,7 +140,6 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 		cm_data["log4j2.properties"] = os_log4j
 		cm_data["nodes_dn.yml"] = os_nodes_dn
 		cm_data["whitelist.yml"] = os_whitelist
-		cm_data["roles.yml"] = os_roles
 		r.EnsureConfigMap("opensearch", cm_data)
 
 		dep := create_statefulset(r.ns, "opensearch", "quay.io/software-factory/opensearch:2.2.0-1")
@@ -196,13 +198,6 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 			// 	SubPath:   "whitelist.yml",
 			// 	ReadOnly:  true,
 			// },
-			// Only mount the required file to not override the directory content
-			{
-				Name:      "os-config",
-				MountPath: "/usr/share/opensearch/config/roles.yml",
-				SubPath:   "roles.yml",
-				ReadOnly:  true,
-			},
 			{
 				Name:      "opensearch-server-certs",
 				MountPath: "/usr/share/opensearch/config/certs",
@@ -220,6 +215,20 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 				Name:      "os-plugin",
 				MountPath: "/usr/share/opensearch/config/opensearch-security/config.yml",
 				SubPath:   "config.yml",
+				ReadOnly:  true,
+			},
+			// Only mount the required file to not override the directory content
+			{
+				Name:      "os-plugin",
+				MountPath: "/usr/share/opensearch/config/opensearch-security/roles_mapping.yml",
+				SubPath:   "roles_mapping.yml",
+				ReadOnly:  true,
+			},
+			// Only mount the required file to not override the directory content
+			{
+				Name:      "os-plugin",
+				MountPath: "/usr/share/opensearch/config/opensearch-security/roles.yml",
+				SubPath:   "roles.yml",
 				ReadOnly:  true,
 			},
 		}

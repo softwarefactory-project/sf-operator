@@ -83,7 +83,7 @@ func (r *SFController) KCPostInitDB() bool {
 	}
 }
 
-func (r *SFController) KCPostInit(gerrit_enabled bool, zuul_enabled bool, opensearch_enabled bool) bool {
+func (r *SFController) KCPostInit(gerrit_enabled bool, zuul_enabled bool, opensearch_dashboards_enabled bool) bool {
 	var job batchv1.Job
 	job_name := "kc-post-init"
 	found := r.GetM(job_name, &job)
@@ -106,7 +106,7 @@ func (r *SFController) KCPostInit(gerrit_enabled bool, zuul_enabled bool, opense
 				create_env("ZUUL_ENABLED", "true"),
 			)
 		}
-		if opensearch_enabled {
+		if opensearch_dashboards_enabled {
 			vars = append(vars,
 				create_secret_env("KEYCLOAK_OPENSEARCH_CLIENT_SECRET", "opensearch-kc-client-password", "opensearch-kc-client-password"),
 			)
@@ -144,7 +144,7 @@ func (r *SFController) KCPostInit(gerrit_enabled bool, zuul_enabled bool, opense
 	}
 }
 
-func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool, zuul_enabled bool, opensearch_enabled bool) bool {
+func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool, zuul_enabled bool, opensearch_dashboards_enabled bool) bool {
 	if enabled {
 		// Admin master realm password
 		r.GenerateSecretUUID("keycloak-admin-password")
@@ -215,7 +215,7 @@ func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool, zuul_en
 
 		ready := r.IsStatefulSetReady(&dep)
 		if ready {
-			return r.KCPostInitDB() && r.KCPostInit(gerrit_enabled, zuul_enabled, opensearch_enabled)
+			return r.KCPostInitDB() && r.KCPostInit(gerrit_enabled, zuul_enabled, opensearch_dashboards_enabled)
 		} else {
 			return false
 		}

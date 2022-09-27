@@ -77,14 +77,14 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	lodgeitStatus := true
 	zuulStatus := true
 	nodepoolStatus := true
-	keycloakStatus := true
+	keycloakStatus := false
 	opensearchStatus := true
 	opensearchdashboardsStatus := true
 	if mariadbStatus {
 		etherpadStatus = r.DeployEtherpad(sf.Spec.Etherpad.Enabled)
 		lodgeitStatus = r.DeployLodgeit(sf.Spec.Lodgeit.Enabled)
 		keycloakStatus = r.DeployKeycloak(
-			keycloakEnabled, sf.Spec.Gerrit.Enabled, sf.Spec.Zuul.Enabled, sf.Spec.Opensearch.Enabled)
+			keycloakEnabled, sf.Spec.Gerrit.Enabled, sf.Spec.Zuul.Enabled, sf.Spec.OpensearchDashboards.Enabled)
 	}
 
 	if mariadbStatus && zkStatus && gitServerStatus {
@@ -101,7 +101,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	}
 
 	if opensearchdashboardsStatus {
-		opensearchdashboardsStatus = r.DeployOpensearchDashboards(sf.Spec.OpensearchDashboards.Enabled)
+		opensearchdashboardsStatus = r.DeployOpensearchDashboards(sf.Spec.OpensearchDashboards.Enabled, keycloakStatus)
 	}
 
 	murmurStatus := r.DeployMurmur(sf.Spec.Murmur)

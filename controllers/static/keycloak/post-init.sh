@@ -176,7 +176,6 @@ function create_client_scope () {
       --set 'config."id.token.claim"=true' \
       --set 'config."access.token.claim"=true' \
       --set "config.\"included.client.audience\"=${clientid}"
-
   fi
 }
 
@@ -193,6 +192,35 @@ function configure_oidc_client_extra_scope () {
   local sid=$(get_client_scope_id ${extra_scope})
 
   kcadm update clients/${cid}/default-client-scopes/${sid} --target-realm SF
+}
+
+function add_mapper () {
+  # Use this function to add a custom claim to the userinfo, access and id
+  # tokens based on an existing protocol mapper. Existing protocol mappers include:
+  # - for realm roles: oidc-usermodel-realm-role-mapper
+  # - for realm groups: oidc-group-membership-mapper
+
+  local clientid=$1
+  local claim_name=$2
+  local protocol_mapper=$3
+
+  local cid=$(get_client_id $clientid)
+
+  local mid=$(kcadm get clients/${cid}/protocol-mappers/models --target-realm SF \
+    | jq -r ".[]? | select (.name == \"${claim_name}\") | .id")
+  if [ -z "$mid" ]; then
+    kcadm create clients/${cid}/protocol-mappers/models --target-realm SF \
+      --set name=${claim_name} \
+      --set protocol=openid-connect \
+      --set protocolMapper=${protocol_mapper} \
+      --set consentRequired=false \
+      --set 'config."multivalued"=true' \
+      --set 'config."userinfo.token.claim"=true' \
+      --set 'config."id.token.claim"=true' \
+      --set 'config."access.token.claim"=true' \
+      --set "config.\"claim.name\"=${claim_name}" \
+      --set 'config."jsonType.label"=String'
+  fi
 }
 
 ### Config kcadm client to communicate with the Keycloak API ###
@@ -302,7 +330,8 @@ fi
 
 # Setup Opensearch client when a client secret is available in the env vars
 if [ -n "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}" ]; then
-  create_oidc_client_with_secret "opensearch"
-  set_oidc_client_origin "opensearch"
-  set_oidc_client_secret "opensearch" "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}"
+  create_oidc_client_with_secret "opensearch-dashboards"
+  set_oidc_client_origin "opensearch-dashboards"
+  set_oidc_client_secret "opensearch-dashboards" "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}"
+  add_mapper "opensearch-dashboards" "roles" "oidc-usermodel-realm-role-mapper"
 fi

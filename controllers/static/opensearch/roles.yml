@@ -5,31 +5,34 @@ _meta:
 # https://opensearch.org/docs/latest/security-plugin/access-control/users-roles/#predefined-roles
 
 # NOTE: this is a dedicated role for the Kibana user that allows to read,
-# search and get data.
-# NOTE: Those indices are required to open e.g. discover function in Kibana
-# when non privileged user was logged into the Kibana before!
-# On fresh installed Kibana with configured roles, internal users and role
-# mappings it will stuck on empty screen.
-# kibana_viewer:
-#   reserved: true
-#   cluster_permissions:
-#     - "cluster_composite_ops_ro"
-#     - "cluster:monitor/main"
-#   index_permissions:
-#     - index_patterns:
-#         - "?kibana*"
-#         - "?kibana"
-#         - "logstash-*"
-#         - "zuul.*"
-#       allowed_actions:
-#         - "read"
-#         - "get"
-#         - "search"
-#         - "indices:monitor/stats"
-#         - "indices:monitor/recovery"
-#         - "indices:admin/mappings/get"
-#   tenant_permissions:
-#     - tenant_patterns:
-#         - "global_tenant"
-#       allowed_actions:
-#         - "kibana_all_read"
+# search and get data. Any users connected via Keycloak get that role
+# associated in the JWT.
+#
+kibana_viewer:
+  reserved: true
+  cluster_permissions:
+    - "cluster_composite_ops_ro"
+    - "cluster:monitor/main"
+  index_permissions:
+    - index_patterns:
+        - "?kibana*"
+        - "?kibana"
+        - "*"
+      allowed_actions:
+        - "read"
+        - "get"
+        - "search"
+        - "indices:data/write/update"
+        - "indices:data/write/index"
+        - "indices:data/write/bulk*"
+        - "indices:monitor/stats"
+        - "indices:monitor/recovery"
+  tenant_permissions:
+    - tenant_patterns:
+        - "global*"
+      allowed_actions:
+        - "kibana_all_read"
+    - tenant_patterns:
+        - "private*"
+      allowed_actions:
+        - "kibana_all_write"

@@ -18,16 +18,35 @@ var os_dashboards_objs string
 const DASHBOARDS_PORT = 5601
 const DASHBOARDS_PORT_NAME = "os"
 
-func (r *SFController) DeployOpensearchDashboards(enabled bool) bool {
+func (r *SFController) DeployOpensearchDashboards(enabled bool, keycloak_status bool) bool {
 	if enabled {
 		r.log.V(1).Info("Opensearch Dashboards deploy not found")
 		// create cert
 		server_cert := r.create_client_certificate(r.ns, "opensearch-dashboards", "ca-issuer", "opensearch-dashboards-tls", "opensearchdashboards")
 		r.GetOrCreate(&server_cert)
 
+		// Ensure OpenSearch Keycloak client password
+		kc_client_secret := r.GenerateSecretUUID("opensearch-kc-client-password")
+
+		// Ensure Keycloak is fully deployed before going further in order to avoid a situation
+		// where opensearch dashboard attempts to connect on keycloak to get the public keys on
+		// the wellknown endpoint but get a connection refused. It seems that opensearch dashboard
+		// does not retry after.
+		if keycloak_status == false {
+			return false
+		}
+
+		// Wait for Keycloak service
+		kc_ip := r.get_service_ip("keycloak")
+		if kc_ip == "" {
+			return false
+		}
+
 		// replace some string in the config file
 		cm_data := make(map[string]string)
-		os_dashboards_objs = strings.ReplaceAll(os_dashboards_objs, "{{ NS }}", r.ns)
+		os_dashboards_objs = strings.ReplaceAll(os_dashboards_objs, "{{ FQDN }}", r.cr.Spec.FQDN)
+		os_dashboards_objs = strings.ReplaceAll(os_dashboards_objs, "{{ KC_CLIENT_SECRET }}",
+			string(kc_client_secret.Data["opensearch-kc-client-password"]))
 		cm_data["opensearch_dashboards.yml"] = os_dashboards_objs
 		r.EnsureConfigMap("opensearch-dashboards", cm_data)
 
@@ -70,6 +89,13 @@ func (r *SFController) DeployOpensearchDashboards(enabled bool) bool {
 				},
 			},
 		}
+
+		// Need host alias to let the OpenSearch dashboard container to access keycloak internaly
+		// via the public keycloak url
+		dep.Spec.Template.Spec.HostAliases = []apiv1.HostAlias{{
+			IP:        kc_ip,
+			Hostnames: []string{"keycloak." + r.cr.Spec.FQDN},
+		}}
 
 		// Expose env vars
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{

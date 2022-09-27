@@ -24,7 +24,7 @@ config:
           config:
             subject_key: preferred_username
             roles_key: roles
-            openid_connect_url: https://keycloak.{{ fqdn }}/realms/SF/.well-known/openid-configuration
+            openid_connect_url: https://keycloak.{{ FQDN }}/realms/SF/.well-known/openid-configuration
             openid_connect_idp.enable_ssl: true
             openid_connect_idp.pemtrustedcas_filepath: "/usr/share/opensearch/config/certs/ca.crt"
             openid_connect_idp.verify_hostname: false
