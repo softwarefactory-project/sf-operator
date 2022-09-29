@@ -81,6 +81,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	opensearchStatus := true
 	opensearchdashboardsStatus := true
 	managesfStatus := true
+	houndStatus := true
 	if mariadbStatus {
 		etherpadStatus = r.DeployEtherpad(sf.Spec.Etherpad.Enabled)
 		lodgeitStatus = r.DeployLodgeit(sf.Spec.Lodgeit.Enabled)
@@ -138,6 +139,10 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 			config_repo_url, config_repo_user, sf.Spec.Gerrit.Enabled)
 	}
 
+	if sf.Spec.Hound.Enabled {
+		houndStatus = r.DeployHound(sf.Spec.Hound.Enabled)
+	}
+
 	r.log.V(1).Info("Service status:",
 		"mariadbStatus", mariadbStatus,
 		"zkStatus", zkStatus,
@@ -154,13 +159,15 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		"configStatus", configStatus,
 		"configRepoStatus", configRepoStatus,
 		"managesfStatus", managesfStatus,
+		"houndStatus", houndStatus,
 	)
 
 	ready := (mariadbStatus && etherpadStatus && zuulStatus &&
 		gerritStatus && lodgeitStatus && keycloakStatus &&
 		zkStatus && nodepoolStatus && opensearchStatus &&
 		opensearchdashboardsStatus && configStatus && configRepoStatus &&
-		murmurStatus && mosquittoStatus && jaegerStatus && managesfStatus)
+		murmurStatus && mosquittoStatus && jaegerStatus && managesfStatus &&
+		houndStatus)
 
 	if ready {
 		r.SetupIngress(keycloakEnabled)

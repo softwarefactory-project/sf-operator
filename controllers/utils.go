@@ -840,6 +840,18 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressJaeger())
 		r.ensure_ingress(ingress, name)
 	}
+	if r.cr.Spec.Hound.Enabled {
+		var ingress netv1.Ingress
+		name := r.cr.Name + "-hound"
+		ingress = netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			},
+		}
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressHound())
+		r.ensure_ingress(ingress, name)
+	}
 }
 
 func (r *SFController) PodExec(pod string, container string, command []string) {
