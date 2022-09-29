@@ -7,6 +7,7 @@ package controllers
 
 import (
 	_ "embed"
+	"k8s.io/utils/pointer"
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -37,6 +38,9 @@ var kc_entrypoint string
 var keycloakInitScript string
 
 func (r *SFController) KCInitContainer() apiv1.Container {
+	securityContext := &apiv1.SecurityContext{
+		RunAsNonRoot: pointer.BoolPtr(false),
+	}
 	return apiv1.Container{
 		Name:    "keycloak-init",
 		Image:   BUSYBOX_IMAGE,
@@ -56,6 +60,7 @@ func (r *SFController) KCInitContainer() apiv1.Container {
 				MountPath: KC_DATA_MOUNT_PATH,
 			},
 		},
+		SecurityContext: securityContext,
 	}
 }
 
@@ -168,6 +173,10 @@ func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool, zuul_en
 		r.GenerateSecretUUID("kc-keystore-password")
 		initContainers, _ := r.EnsureDBInit("keycloak")
 
+		securityContext := &apiv1.SecurityContext{
+			RunAsNonRoot: pointer.BoolPtr(false),
+		}
+
 		dep := create_statefulset(r.ns, "keycloak", KC_IMAGE)
 		dep.Spec.Template.Spec.InitContainers = append(initContainers, r.KCInitContainer())
 		dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", kc_entrypoint}
@@ -177,6 +186,7 @@ func (r *SFController) DeployKeycloak(enabled bool, gerrit_enabled bool, zuul_en
 				MountPath: KC_DATA_MOUNT_PATH,
 			},
 		}
+		dep.Spec.Template.Spec.Containers[0].SecurityContext = securityContext
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 			create_volume_secret("keycloak-client-tls"),
 		}

@@ -1,5 +1,7 @@
+---
+# Deploy sf-operator on Kubernetes
 - job:
-    name: sf-operator-functional-allinone
+    name: sf-operator-functional-allinone-k8s
     run: playbooks/test.yaml
     post-run: playbooks/post.yaml
     nodeset:
@@ -15,10 +17,32 @@
       logclassify_debug: false
       logclassify_report: true
 
+# Deploy sf-operator on OpenShift
+- job:
+    name: sf-operator-functional-allinone-crc
+    run: playbooks/test-crc.yaml
+    timeout: 3600
+    post-run: playbooks/post.yaml
+    nodeset:
+      nodes:
+        name: controller
+        label: centos-8-stream-crc
+    required-projects:
+      - name: software-factory/sf-infra
+    roles:
+      - zuul: software-factory/sf-infra
+    vars:
+      logclassify_logserver_dir: ./
+      logclassify_debug: false
+      logclassify_report: true
+      job_timeout: 3600
+
 - project:
     check:
       jobs:
-        - sf-operator-functional-allinone
+        - sf-operator-functional-allinone-k8s
+        - sf-operator-functional-allinone-crc
     gate:
       jobs:
-        - sf-operator-functional-allinone
+        - sf-operator-functional-allinone-k8s
+        - sf-operator-functional-allinone-crc

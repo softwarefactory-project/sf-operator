@@ -15,7 +15,7 @@ The sf-operator deploys the Software Factory services.
 2. Set user namespace as variable:
 
    ```sh
-   MY_NS=$(kubectl config view | awk '/namespace/ { print $2 }')
+   MY_NS=$(kubectl config view -o jsonpath='{.contexts[].context.namespace}')
    ```
 
 3. Replace the Custom Resource information, for example:
@@ -61,7 +61,37 @@ Above steps are also included in Makefile.
 It might be interesting to run on development.
 
 ```sh
+MY_NS=$(kubectl config view -o jsonpath='{.contexts[].context.namespace}')
+if [ -z "${MY_NS}" ]; then
+    MY_NS=default
+fi
+kubectl create namespace $MY_NS
+make install
 make dev-deployment
+```
+
+## Development CRC
+
+The CRC deployment requires `pull-secret.txt` file, which can be downloaded
+from [here](https://cloud.redhat.com/openshift/create/local).
+How to deploy CRC you can find in `extra/crc` ansible role located in
+sf-infra project.
+
+To recreate sf-operator environment on holded node:
+
+* run first steps defined in `Delete all content related to the sf-operator`
+* create pv storage by executing:
+
+```sh
+cd ~/install_yamls/
+make crc_storage
+```
+
+* Re-run sf-operator
+
+```sh
+cd /home/zuul-worker/src/softwarefactory-project.io/software-factory/sf-operator
+kubectl delete softwarefactory my-sf && kubectl apply -f config/samples && go run ./main.go --namespace $MY_NS
 ```
 
 ## Cheat Sheet
@@ -85,12 +115,15 @@ kubectl exec -it $(getPodName "keycloak") sh
 kubectl delete softwarefactory my-sf && kubectl apply -f config/samples && go run ./main.go --namespace $MY_NS
 ```
 
-* Delete all pods, services etc
+### Delete all content related to the sf-operator
 
 ```sh
-MY_NS=$(kubectl config view | awk '/namespace/ { print $2 }')
+MY_NS=$(kubectl config view -o jsonpath='{.contexts[].context.namespace}')
+if [ -z "${MY_NS}" ]; then
+    MY_NS=default
+fi
 kubectl -n $MY_NS delete all  --all --now
-for resource in certificates ClusterIssuers issuers certificaterequests secrets pvc configmaps deployments pods services ingress;
+for resource in certificates ClusterIssuers issuers certificaterequests secrets pvc pv configmaps deployments pods services ingress;
 do
   kubectl -n $MY_NS delete $resource --all;
 done

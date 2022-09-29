@@ -286,7 +286,7 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	if !sf.Status.Ready {
 		log.V(1).Info("Reconcile running...")
-		delay, _ := time.ParseDuration("5s")
+		delay, _ := time.ParseDuration("20s")
 		return ctrl.Result{RequeueAfter: delay}, nil
 	} else {
 		log.V(1).Info("Reconcile completed!", "sf", sf)
