@@ -261,7 +261,7 @@ set_user "demo" "Demo" "User" "demo" "false"
 
 # Only set those roles when opensearch is deployed
 env | grep OPENSEARCH && {
-  set_role "kibana_viewer" "Default kibana viewer role" "true"
+  set_role "sf_opensearch_dashboards_user" "Default opensearch dashboards roles for SF users" "true"
 }
 
 # Set an admin role
@@ -334,4 +334,8 @@ if [ -n "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}" ]; then
   set_oidc_client_origin "opensearch-dashboards"
   set_oidc_client_secret "opensearch-dashboards" "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}"
   add_mapper "opensearch-dashboards" "roles" "oidc-usermodel-realm-role-mapper"
+  # Fix the error at logout "invalid redirect uri"
+  cid=$(get_client_id "opensearch-dashboards")
+  kcadm update clients/${cid} --target-realm SF \
+    --set "attributes.\"post.logout.redirect.uris\"=https://opensearch-dashboards.${FQDN}/*##"
 fi

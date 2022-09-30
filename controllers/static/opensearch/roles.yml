@@ -4,35 +4,29 @@ _meta:
 # Opensearch comes with pre-defined roles.
 # https://opensearch.org/docs/latest/security-plugin/access-control/users-roles/#predefined-roles
 
-# NOTE: this is a dedicated role for the Kibana user that allows to read,
-# search and get data. Any users connected via Keycloak get that role
-# associated in the JWT.
-#
-kibana_viewer:
+# Opensearch comes with pre-defined actions groups (that are logical groups of permission)
+# https://opensearch.org/docs/latest/security-plugin/access-control/default-action-groups/
+
+# Opensearch permissions are
+# https://opensearch.org/docs/latest/security-plugin/access-control/permissions/
+
+# This roles is permissif but is only applied to users connected via Keycloak.
+# KC add that role into the JWT 'roles' claim list.
+
+sf_opensearch_dashboards_user:
   reserved: true
   cluster_permissions:
     - "cluster_composite_ops_ro"
-    - "cluster:monitor/main"
   index_permissions:
     - index_patterns:
-        - "?kibana*"
-        - "?kibana"
         - "*"
       allowed_actions:
         - "read"
         - "get"
         - "search"
-        - "indices:data/write/update"
-        - "indices:data/write/index"
-        - "indices:data/write/bulk*"
-        - "indices:monitor/stats"
-        - "indices:monitor/recovery"
+        - "write"
   tenant_permissions:
     - tenant_patterns:
-        - "global*"
-      allowed_actions:
-        - "kibana_all_read"
-    - tenant_patterns:
-        - "private*"
+        - "*"
       allowed_actions:
         - "kibana_all_write"
