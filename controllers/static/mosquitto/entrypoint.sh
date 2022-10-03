@@ -5,6 +5,7 @@ set -ex
 env
 
 cat << EOF > /etc/mosquitto/acl.conf
+topic deny keycloak
 topic read #
 user SF_SERVICE_USER
 topic readwrite #
