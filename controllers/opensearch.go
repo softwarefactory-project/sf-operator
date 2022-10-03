@@ -35,15 +35,6 @@ var os_opensearch_objs string
 //go:embed static/opensearch/auth-config.yml
 var os_auth_config string
 
-//go:embed static/opensearch/log4j2.properties
-var os_log4j string
-
-//go:embed static/opensearch/nodes_dn.yml
-var os_nodes_dn string
-
-//go:embed static/opensearch/whitelist.yml
-var os_whitelist string
-
 //go:embed static/opensearch/roles.yml
 var os_roles string
 
@@ -121,19 +112,13 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 			panic(err)
 		}
 
-		plugin_data := make(map[string]string)
-		plugin_data["internal_users.yml"] = string(data)
-		plugin_data["config.yml"] = strings.ReplaceAll(os_auth_config, "{{ FQDN }}", r.cr.Spec.FQDN)
-		plugin_data["roles.yml"] = os_roles
-		plugin_data["roles_mapping.yml"] = os_roles_mapping
-		r.EnsureConfigMap("opensearch-internal-users", plugin_data)
-
 		// config maps
 		cm_data := make(map[string]string)
 		cm_data["opensearch.yml"] = os_opensearch_objs
-		cm_data["log4j2.properties"] = os_log4j
-		cm_data["nodes_dn.yml"] = os_nodes_dn
-		cm_data["whitelist.yml"] = os_whitelist
+		cm_data["internal_users.yml"] = string(data)
+		cm_data["config.yml"] = strings.ReplaceAll(os_auth_config, "{{ FQDN }}", r.cr.Spec.FQDN)
+		cm_data["roles.yml"] = os_roles
+		cm_data["roles_mapping.yml"] = os_roles_mapping
 		r.EnsureConfigMap("opensearch", cm_data)
 
 		dep := create_statefulset(r.ns, "opensearch", "quay.io/software-factory/opensearch:2.2.0-1")
@@ -159,68 +144,44 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 			Hostnames: []string{"keycloak." + r.cr.Spec.FQDN},
 		}}
 
+		// Most of mounts are single file mount (with subpath) to avoid override
+		// the rest of the directory content
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 			{
 				Name:      "opensearch",
 				MountPath: "/usr/share/opensearch/data",
 			},
-			// Only mount the required file to not override the directory content
 			{
 				Name:      "os-config",
 				MountPath: "/usr/share/opensearch/config/opensearch.yml",
 				SubPath:   "opensearch.yml",
 				ReadOnly:  true,
 			},
-			// Only mount the required file to not override the directory content
-			// {
-			// 	Name:      "os-config",
-			// 	MountPath: "/usr/share/opensearch/config/log4j2.properties",
-			// 	SubPath:   "log4j2.properties",
-			// 	ReadOnly:  true,
-			// },
-			// Only mount the required file to not override the directory content
-			// {
-			// 	Name:      "os-config",
-			// 	MountPath: "/usr/share/opensearch/config/nodes_dn.yml",
-			// 	SubPath:   "nodes_dn.yml",
-			// 	ReadOnly:  true,
-			// },
-			// Only mount the required file to not override the directory content
-			// {
-			// 	Name:      "os-config",
-			// 	MountPath: "/usr/share/opensearch/config/whitelist.yml",
-			// 	SubPath:   "whitelist.yml",
-			// 	ReadOnly:  true,
-			// },
 			{
 				Name:      "opensearch-server-certs",
 				MountPath: "/usr/share/opensearch/config/certs",
 				ReadOnly:  true,
 			},
-			// Only mount the required file to not override the directory content
 			{
-				Name:      "os-plugin",
+				Name:      "os-config",
 				MountPath: "/usr/share/opensearch/config/opensearch-security/internal_users.yml",
 				SubPath:   "internal_users.yml",
 				ReadOnly:  true,
 			},
-			// Only mount the required file to not override the directory content
 			{
-				Name:      "os-plugin",
+				Name:      "os-config",
 				MountPath: "/usr/share/opensearch/config/opensearch-security/config.yml",
 				SubPath:   "config.yml",
 				ReadOnly:  true,
 			},
-			// Only mount the required file to not override the directory content
 			{
-				Name:      "os-plugin",
+				Name:      "os-config",
 				MountPath: "/usr/share/opensearch/config/opensearch-security/roles_mapping.yml",
 				SubPath:   "roles_mapping.yml",
 				ReadOnly:  true,
 			},
-			// Only mount the required file to not override the directory content
 			{
-				Name:      "os-plugin",
+				Name:      "os-config",
 				MountPath: "/usr/share/opensearch/config/opensearch-security/roles.yml",
 				SubPath:   "roles.yml",
 				ReadOnly:  true,
@@ -239,7 +200,6 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 					},
 				},
 			},
-			create_volume_cm("os-plugin", "opensearch-internal-users-config-map"),
 		}
 
 		// Expose env vars
