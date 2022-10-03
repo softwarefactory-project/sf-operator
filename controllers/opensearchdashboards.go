@@ -20,7 +20,6 @@ const DASHBOARDS_PORT_NAME = "os"
 
 func (r *SFController) DeployOpensearchDashboards(enabled bool, keycloak_status bool) bool {
 	if enabled {
-		r.log.V(1).Info("Opensearch Dashboards deploy not found")
 		// create cert
 		server_cert := r.create_client_certificate(r.ns, "opensearch-dashboards", "ca-issuer", "opensearch-dashboards-tls", "opensearchdashboards")
 		r.GetOrCreate(&server_cert)
@@ -50,7 +49,7 @@ func (r *SFController) DeployOpensearchDashboards(enabled bool, keycloak_status 
 		cm_data["opensearch_dashboards.yml"] = os_dashboards_objs
 		r.EnsureConfigMap("opensearch-dashboards", cm_data)
 
-		dep := create_statefulset(r.ns, "opensearch-dashboards", "quay.io/software-factory/opensearch-dashboards:2.2.0-1")
+		dep := create_deployment(r.ns, "opensearch-dashboards", "quay.io/software-factory/opensearch-dashboards:2.2.0-1")
 		dep.Spec.Template.Spec.Containers[0].Command = []string{
 			"/bin/bash", "-x", "/usr/share/opensearch-dashboards/opensearch-dashboards-docker-entrypoint.sh"}
 
@@ -108,7 +107,7 @@ func (r *SFController) DeployOpensearchDashboards(enabled bool, keycloak_status 
 		r.GetOrCreate(&dep)
 		srv := create_service(r.ns, "opensearch-dashboards", "opensearch-dashboards", DASHBOARDS_PORT, DASHBOARDS_PORT_NAME)
 		r.GetOrCreate(&srv)
-		return r.IsStatefulSetReady(&dep)
+		return r.IsDeploymentReady(&dep)
 	} else {
 		r.DeleteStatefulSet("opensearch-dashboards")
 		r.DeleteService("opensearch-dashboards")
