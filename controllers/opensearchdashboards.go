@@ -6,12 +6,13 @@ package controllers
 
 import (
 	_ "embed"
+	"strings"
+
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	"strings"
 )
 
-//go:embed templates/opensearch-dashboards/opensearch_dashboards.yml
+//go:embed static/opensearch-dashboards/opensearch_dashboards.yml
 var os_dashboards_objs string
 
 const DASHBOARDS_PORT = 5601
@@ -30,7 +31,7 @@ func (r *SFController) DeployOpensearchDashboards(enabled bool) bool {
 		cm_data["opensearch_dashboards.yml"] = os_dashboards_objs
 		r.EnsureConfigMap("opensearch-dashboards", cm_data)
 
-		dep := create_statefulset(r.ns, "opensearch-dashboards", "quay.io/software-factory/opensearch-dashboards:1.3.1-1")
+		dep := create_statefulset(r.ns, "opensearch-dashboards", "quay.io/software-factory/opensearch-dashboards:2.2.0-1")
 		dep.Spec.Template.Spec.Containers[0].Command = []string{
 			"/bin/bash", "-x", "/usr/share/opensearch-dashboards/opensearch-dashboards-docker-entrypoint.sh"}
 
@@ -57,11 +58,6 @@ func (r *SFController) DeployOpensearchDashboards(enabled bool) bool {
 				MountPath: "/usr/share/opensearch-dashboards/config/certs",
 				ReadOnly:  true,
 			},
-			{
-				Name:      "opensearch-dashboards-ca-certs",
-				MountPath: "/usr/share/opensearch-dashboards/config/ca-certs",
-				ReadOnly:  true,
-			},
 		}
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 			create_volume_cm("opensearch-dashboards-config", "opensearch-dashboards-config-map"),
@@ -73,26 +69,14 @@ func (r *SFController) DeployOpensearchDashboards(enabled bool) bool {
 					},
 				},
 			},
-			{
-				Name: "opensearch-dashboards-ca-certs",
-				VolumeSource: apiv1.VolumeSource{
-					Secret: &apiv1.SecretVolumeSource{
-						SecretName: "ca-cert",
-					},
-				},
-			},
 		}
 
 		// Expose env vars
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 			// env vars available in opensearch dashboards container by executing:
 			// bash -x opensearch-dashboards-docker-entrypoint.sh
-			// create_env("OPENSEARCH_HOSTS", "['https://opensearch.{{ NS }}.svc.cluster.local:9200']"),
 			create_env("OPENSEARCH_USERNAME", "kibanaserver"),
 			create_secret_env("OPENSEARCH_PASSWORD", "opensearch-kibanaserver-password", "opensearch-kibanaserver-password"),
-			// additional
-			create_env("OPENSEARCH_DASHBOARDS_HOME", "/usr/share/opensearch-dashboards"),
-			create_env("HOME", "/usr/share/opensearch-dashboards"),
 		}
 
 		r.GetOrCreate(&dep)

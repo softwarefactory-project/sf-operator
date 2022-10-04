@@ -799,9 +799,19 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: r.ns,
+				Annotations: map[string]string{
+					"nginx.ingress.kubernetes.io/backend-protocol": "HTTPS",
+					"nginx.ingress.kubernetes.io/ssl-redirect":     "true",
+				},
 			},
 		}
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearchDashboards())
+		ingress.Spec.TLS = []netv1.IngressTLS{
+			{
+				Hosts:      []string{"opensearch-dashboards." + r.cr.Spec.FQDN},
+				SecretName: "opensearch-dashboards-tls",
+			},
+		}
 		r.ensure_ingress(ingress, name)
 	}
 	if r.cr.Spec.Lodgeit.Enabled {

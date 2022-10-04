@@ -98,7 +98,7 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 				Reserved:    true,
 				Description: "OpenSearch Admin user",
 				BackendRoles: []string{
-					"admin",
+					"admin", "opensearch_dashboards_user",
 				},
 			},
 			"kibanaserver": OSUser{
@@ -107,7 +107,7 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 				Description:  "OpenSearch Dashboards user",
 				BackendRoles: []string{"opensearch_dashboards_user"},
 			},
-			"guest": OSUser{
+			"kibanaro": OSUser{
 				Hash:         users_hash["kibanaro"],
 				Reserved:     false,
 				Description:  "OpenSearch Dashboards read only user",
