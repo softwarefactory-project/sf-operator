@@ -82,6 +82,40 @@ type MurmurSpec struct {
 	Channels []MurmurChannelSpec `json:"channels,omitempty"`
 }
 
+type GerritBotChannelsSpec struct {
+	// Channel Name
+	Name string `json:"name"`
+	// Events Stream to watch
+	// More info: https://gerrit-review.googlesource.com/Documentation/cmd-stream-events.html#events
+	Events []string `json:"events"`
+	// Project to watch
+	Projects []string `json:"projects"`
+	// Branches to watch
+	Branches []string `json:"branches"`
+}
+
+type GerritBotIRCBotSpec struct {
+	// Bot IRC nick name
+	Nick string `json:"nick"`
+	// Bot password
+	// +optional
+	Password SecretRef `json:"password,omitempty"`
+	// IRC server
+	Server string `json:"server"`
+	// IRC server (default: 6667)
+	// +optional
+	Port int `json:"port,omitempty"`
+	// IRC Bot Channel configuration
+	Channel []GerritBotChannelsSpec `json:"channels"`
+}
+
+type GerritBotSpec struct {
+	// Boolean to Enable GerritBot Service
+	Enabled bool `json:"enabled"`
+	// Gerrit Bot channels.
+	IRCbot GerritBotIRCBotSpec `json:"ircbot"`
+}
+
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
@@ -122,6 +156,11 @@ type SoftwareFactorySpec struct {
 	// Hound is an extremely fast source code search engine.
 	// More info: https://github.com/hound-search/hound
 	Hound BaseSpec `json:"hound,omitempty"`
+
+	// Deploy the gerritbot service
+	// Gerritbot is an IRC bot that will notify IRC channels of Gerrit events.
+	// More info: https://opendev.org/opendev/gerritbot.git
+	GerritBot GerritBotSpec `json:"gerritbot,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

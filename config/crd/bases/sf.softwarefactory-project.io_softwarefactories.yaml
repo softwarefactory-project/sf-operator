@@ -68,6 +68,83 @@ spec:
                   sshd_max_connections_per_user:
                     type: string
                 type: object
+              gerritbot:
+                description: 'Deploy the gerritbot service Gerritbot is an IRC bot
+                  that will notify IRC channels of Gerrit events. More info: https://opendev.org/opendev/gerritbot.git'
+                properties:
+                  enabled:
+                    description: Boolean to Enable GerritBot Service
+                    type: boolean
+                  ircbot:
+                    description: Gerrit Bot channels.
+                    properties:
+                      channels:
+                        description: IRC Bot Channel configuration
+                        items:
+                          properties:
+                            branches:
+                              description: Branches to watch
+                              items:
+                                type: string
+                              type: array
+                            events:
+                              description: 'Events Stream to watch More info: https://gerrit-review.googlesource.com/Documentation/cmd-stream-events.html#events'
+                              items:
+                                type: string
+                              type: array
+                            name:
+                              description: Channel Name
+                              type: string
+                            projects:
+                              description: Project to watch
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - branches
+                          - events
+                          - name
+                          - projects
+                          type: object
+                        type: array
+                      nick:
+                        description: Bot IRC nick name
+                        type: string
+                      password:
+                        description: Bot password
+                        properties:
+                          secretKeyRef:
+                            description: Selects a key of a secret in the pod's namespace
+                            properties:
+                              key:
+                                description: The key of the secret to select from.
+                                  Must be a valid secret key.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
+                        required:
+                        - secretKeyRef
+                        type: object
+                      port:
+                        description: 'IRC server (default: 6667)'
+                        type: integer
+                      server:
+                        description: IRC server
+                        type: string
+                    required:
+                    - channels
+                    - nick
+                    - server
+                    type: object
+                required:
+                - enabled
+                - ircbot
+                type: object
               hound:
                 description: 'Deploy the hound service. Hound is an extremely fast
                   source code search engine. More info: https://github.com/hound-search/hound'

@@ -67,7 +67,7 @@ func GenerateConfig(sqlsecret apiv1.Secret, gerrit_enabled bool, zuul_enabled bo
 	var buf bytes.Buffer
 	err = template.Execute(&buf, configpy)
 	if err != nil {
-		r.log.V(1).Error(err, "Failure while parsing tamplate %s", templatefile)
+		r.log.V(1).Error(err, "Failure while parsing template %s", templatefile)
 	}
 
 	return buf.String()

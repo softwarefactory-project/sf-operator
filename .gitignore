@@ -30,3 +30,4 @@ bundle.Dockerfile
 config/manager/kustomization.yaml
 
 tools/mysf.yaml
+config/crd/bases/_.yaml
