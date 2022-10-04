@@ -299,3 +299,10 @@ if [ "${ZUUL_ENABLED}" == "true" ]; then
   create_client_scope "zuul" "zuul_keycloak_scope"
   configure_oidc_client_extra_scope "zuul" "zuul_keycloak_scope"
 fi
+
+# Setup Opensearch client when a client secret is available in the env vars
+if [ -n "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}" ]; then
+  create_oidc_client_with_secret "opensearch"
+  set_oidc_client_origin "opensearch"
+  set_oidc_client_secret "opensearch" "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}"
+fi
