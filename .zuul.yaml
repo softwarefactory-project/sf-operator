@@ -11,10 +11,28 @@
       logclassify_debug: false
       logclassify_report: true
 
+- job:
+    name: sf-operator-functional-allinone-k8s
+    run: playbooks/test-k8s.yaml
+    post-run: playbooks/post.yaml
+    nodeset:
+      nodes:
+        name: controller
+        label: cloud-fedora-36
+    required-projects:
+      - name: software-factory/sf-infra
+    roles:
+      - zuul: software-factory/sf-infra
+    vars:
+      logclassify_logserver_dir: ./
+      logclassify_debug: false
+      logclassify_report: true
+
 - project:
     check:
       jobs:
         - sf-operator-functional-allinone
+        - sf-operator-functional-allinone-k8s
     gate:
       jobs:
         - sf-operator-functional-allinone
