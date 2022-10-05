@@ -100,7 +100,7 @@ type SoftwareFactorySpec struct {
 	// Deploy the etherpad service.
 	Etherpad BaseSpec `json:"etherpad,omitempty"`
 
-	// Deploy the lodgeit service
+	// Deploy the lodgeit service.
 	Lodgeit BaseSpec `json:"lodgeit,omitempty"`
 
 	// Deploy the opensearch service.
@@ -115,8 +115,13 @@ type SoftwareFactorySpec struct {
 	// More info: https://wiki.mumble.info/wiki/Main_Page
 	Murmur MurmurSpec `json:"murmur,omitempty"`
 
-	// Telemetry service provided by jaeger
+	// Telemetry service provided by jaeger.
 	Telemetry BaseSpec `json:"telemetry,omitempty"`
+
+	// Deploy the hound service.
+	// Hound is an extremely fast source code search engine.
+	// More info: https://github.com/hound-search/hound
+	Hound BaseSpec `json:"hound,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory
