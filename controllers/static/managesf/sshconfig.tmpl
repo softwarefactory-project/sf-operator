@@ -1,0 +1,17 @@
+{{ if .Zuul_enabled -}}
+Host gerrit-sshd
+  User zuul
+  Port 29418
+{{ end -}}
+{{ if .Gerrit_enabled -}}
+Host {{ .Fqdn }}
+  User admin
+  Port 29418
+  IdentityFile /var/lib/managesf/.ssh/id_rsa
+Host gerrit
+  User admin
+  Port 29418
+  IdentityFile /var/lib/managesf/.ssh/id_rsa
+  StrictHostKeyChecking no
+  Hostname {{ .Fqdn }}
+{{ end -}}
