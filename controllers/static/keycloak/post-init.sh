@@ -310,25 +310,28 @@ kcadm update events/config --target-realm SF \
   --set eventsEnabled=true \
   --set enabledEventTypes=[]
 
-### Create OIDC Client config ###
-#################################
+### Configure services for OIDC authentication ###
+##################################################
 
-# Setup Gerrit client when a client secret is available in the env vars
+# Gerrit support
 if [ -n "${KEYCLOAK_GERRIT_CLIENT_SECRET}" ]; then
   create_oidc_client_with_secret "gerrit"
   set_oidc_client_origin "gerrit"
   set_oidc_client_secret "gerrit" "${KEYCLOAK_GERRIT_CLIENT_SECRET}"
 fi
 
-# Setup Zuul public client
+# Zuul support
 if [ "${ZUUL_ENABLED}" == "true" ]; then
   create_oidc_public_client "zuul"
   set_oidc_client_origin "zuul"
   create_client_scope "zuul" "zuul_keycloak_scope"
   configure_oidc_client_extra_scope "zuul" "zuul_keycloak_scope"
+  add_mapper "zuul" "roles" "oidc-usermodel-realm-role-mapper"
+  # Create global admin role
+  set_role "zuul_admin" "This role grants privileged actions such as dequeues and autoholds on every Zuul tenant" "false"
 fi
 
-# Setup Opensearch client when a client secret is available in the env vars
+# Opensearch support
 if [ -n "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}" ]; then
   create_oidc_client_with_secret "opensearch-dashboards"
   set_oidc_client_origin "opensearch-dashboards"
