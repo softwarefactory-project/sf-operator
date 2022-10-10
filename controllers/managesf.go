@@ -57,20 +57,12 @@ func GenerateConfig(sqlsecret apiv1.Secret, gerrit_enabled bool, zuul_enabled bo
 	// Template path
 	templatefile := "controllers/static/managesf/config.py.tmpl"
 
-	// Opening Template file
-	template, err := template.ParseFiles(templatefile)
+	template, err := parse_template(templatefile, configpy)
 	if err != nil {
-		r.log.V(1).Error(err, "File not found")
+		r.log.V(1).Error(err, "Template parsing failed")
 	}
 
-	// Parsing Template
-	var buf bytes.Buffer
-	err = template.Execute(&buf, configpy)
-	if err != nil {
-		r.log.V(1).Error(err, "Failure while parsing template %s", templatefile)
-	}
-
-	return buf.String()
+	return template
 }
 
 func GenerateSshConfig(sqlsecret apiv1.Secret, gerrit_enabled bool, zuul_enabled bool, r *SFController) string {

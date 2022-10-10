@@ -6,12 +6,14 @@
 package controllers
 
 import (
+	"bytes"
 	"crypto/sha256"
 	_ "embed"
 	"fmt"
 	"os"
 	"reflect"
 	"strings"
+	"text/template"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -55,6 +57,31 @@ func checksum(data []byte) string {
 type SSHKey struct {
 	Pub  []byte
 	Priv []byte
+}
+
+// TODO: the line below can be removed when we move to compiler version 1.18 (current 1.17)
+type any = interface{}
+
+// Function to easilly use templates files.
+//
+// Pass the template path relative to the root of the project.
+// And the the data structure to be applied to the template
+func parse_template(templatePath string, data any) (string, error) {
+
+	// Opening Template file
+	template, err := template.ParseFiles(templatePath)
+	if err != nil {
+		return "", fmt.Errorf("file not found")
+	}
+
+	// Parsing Template
+	var buf bytes.Buffer
+	err = template.Execute(&buf, data)
+	if err != nil {
+		return "", fmt.Errorf("failure while parsing template %s", templatePath)
+	}
+
+	return buf.String(), nil
 }
 
 func create_ssh_key() SSHKey {
