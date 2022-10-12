@@ -192,6 +192,28 @@ func create_volume_cm(name string, config_map_ref string) apiv1.Volume {
 	}
 }
 
+// Mounts specific ConfigMap keys on a volume.
+//
+// name - volume name ref
+// config_map_ref - ConfigMap name ref
+// keys - array of key to mount into the volume
+// Each element of the array has a Key and a Path
+//    Key - Reference to the ConfigMap Key name
+//    Path - The relative path of the file to map the key to
+func create_volume_cm_keys(name string, config_map_ref string, keys []apiv1.KeyToPath) apiv1.Volume {
+	return apiv1.Volume{
+		Name: name,
+		VolumeSource: apiv1.VolumeSource{
+			ConfigMap: &apiv1.ConfigMapVolumeSource{
+				LocalObjectReference: apiv1.LocalObjectReference{
+					Name: config_map_ref,
+				},
+				Items: keys,
+			},
+		},
+	}
+}
+
 func create_volume_secret(name string) apiv1.Volume {
 	return apiv1.Volume{
 		Name: name,
@@ -887,6 +909,18 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 			},
 		}
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressHound())
+		r.ensure_ingress(ingress, name)
+	}
+	if r.cr.Spec.Cgit.Enabled {
+		var ingress netv1.Ingress
+		name := r.cr.Name + "-" + CGIT_IDENT
+		ingress = netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			},
+		}
+		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressCgit())
 		r.ensure_ingress(ingress, name)
 	}
 }

@@ -161,6 +161,11 @@ type SoftwareFactorySpec struct {
 	// Gerritbot is an IRC bot that will notify IRC channels of Gerrit events.
 	// More info: https://opendev.org/opendev/gerritbot.git
 	GerritBot GerritBotSpec `json:"gerritbot,omitempty"`
+
+	// Deploy the cgit service
+	// A hyperfast web frontend for git repositories written in C
+	// More info: https://git.zx2c4.com/cgit
+	Cgit BaseSpec `json:"cgit,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

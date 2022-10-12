@@ -1,0 +1,24 @@
+<VirtualHost *:{{ .Port }}>
+ ServerName {{ .Fqdn }}
+ DocumentRoot /var/www/htdocs/cgit/
+ <Directory "/var/www/htdocs/cgit/">
+  Options +ExecCGI
+  AddHandler cgi-script .cgi
+  DirectoryIndex cgit.cgi
+  #AllowOverride None
+  #Options ExecCGI
+  #Order allow,deny
+  #Allow from all
+  RewriteEngine on
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule /(.*)  /cgit/cgit.cgi/$1 [END,QSA]
+  RewriteCond %{QUERY_STRING} service=git-receive-pack
+  RewriteRule .* - [END,F]
+ </Directory>
+ # this part is the magic
+ Alias /cgit/favicon.ico /var/www/htdocs/cgit/favicon.ico
+ Alias /cgit/cgit.png /var/www/htdocs/cgit/cgit.png
+ Alias /cgit/cgit.css /var/www/htdocs/cgit/cgit.css
+ Alias /cgit /var/www/htdocs/cgit/cgit.cgi
+</VirtualHost>

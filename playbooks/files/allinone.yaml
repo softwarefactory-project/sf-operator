@@ -45,3 +45,5 @@ spec:
             - change-merged
           projects:
             - myproject
+  cgit:
+    enabled: true
