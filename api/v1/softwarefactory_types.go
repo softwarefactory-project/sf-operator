@@ -116,6 +116,13 @@ type GerritBotSpec struct {
 	IRCbot GerritBotIRCBotSpec `json:"ircbot"`
 }
 
+type PostfixSpec struct {
+	// Boolean to Enable GerritBot Service
+	Enabled bool `json:"enabled"`
+	// Postfix forward email.
+	ForwardEmail string `json:"forward_email"`
+}
+
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
@@ -166,6 +173,11 @@ type SoftwareFactorySpec struct {
 	// A hyperfast web frontend for git repositories written in C
 	// More info: https://git.zx2c4.com/cgit
 	Cgit BaseSpec `json:"cgit,omitempty"`
+
+	// Deploy the postfix service
+	// Mail server
+	// More info: https://www.postfix.org/start.html
+	Postfix PostfixSpec `json:"postfix,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

@@ -268,6 +268,19 @@ spec:
                 required:
                 - enabled
                 type: object
+              postfix:
+                description: 'Deploy the postfix service Mail server More info: https://www.postfix.org/start.html'
+                properties:
+                  enabled:
+                    description: Boolean to Enable GerritBot Service
+                    type: boolean
+                  forward_email:
+                    description: Postfix forward email.
+                    type: string
+                required:
+                - enabled
+                - forward_email
+                type: object
               telemetry:
                 description: Telemetry service provided by jaeger.
                 properties:
