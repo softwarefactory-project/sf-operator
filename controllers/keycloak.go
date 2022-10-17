@@ -22,6 +22,7 @@ const KC_HTTP_PORT_NAME = "kc-http-port"
 const KC_IMAGE = "quay.io/software-factory/keycloak:19.0.1-4"
 const KC_CERT_MOUNT_PATH = "/keycloak-cert"
 const KC_DATA_MOUNT_PATH = "/keycloak-data"
+const KC_DEFAULT_REALM = "SF"
 
 //go:embed static/keycloak/post-init.sh
 var kcPostInit string
@@ -111,6 +112,13 @@ func (r *SFController) KCPostInit(gerrit_enabled bool, zuul_enabled bool, opense
 				create_secret_env("KEYCLOAK_OPENSEARCH_CLIENT_SECRET", "opensearch-kc-client-password", "opensearch-kc-client-password"),
 			)
 		}
+
+		if r.cr.Spec.Grafana.Enabled {
+			vars = append(vars,
+				create_secret_env("KEYCLOAK_GRAFANA_CLIENT_SECRET", GRAFANA_IDENT+"-kc-client-password", GRAFANA_IDENT+"-kc-client-password"),
+			)
+		}
+
 		container := apiv1.Container{
 			Name:    job_name + "-container",
 			Image:   KC_IMAGE,

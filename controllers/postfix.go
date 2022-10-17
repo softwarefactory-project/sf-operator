@@ -1,7 +1,7 @@
 // Copyright (C) 2022 Red Hat
 // SPDX-License-Identifier: Apache-2.0
 //
-// This package contains the etherpad configuration.
+// This package contains the postfix configuration.
 package controllers
 
 import (

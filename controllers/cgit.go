@@ -1,7 +1,7 @@
 // Copyright (C) 2022 Red Hat
 // SPDX-License-Identifier: Apache-2.0
 //
-// This package contains the etherpad configuration.
+// This package contains the cgit configuration.
 package controllers
 
 import (
@@ -65,7 +65,7 @@ func (r *SFController) DeployCgit(enabled bool) bool {
 		conf_data["cgitrc"] = r.CgitRc()
 		r.EnsureConfigMap(CGIT_IDENT, conf_data)
 
-		dep := create_statefulset(r.ns, CGIT_IDENT, CGIT_IMAGE)
+		dep := create_deployment(r.ns, CGIT_IDENT, CGIT_IMAGE)
 		dep.Spec.Template.Spec.Containers[0].Command = []string{
 			"httpd", "-DFOREGROUND"}
 
@@ -89,10 +89,6 @@ func (r *SFController) DeployCgit(enabled bool) bool {
 				MountPath: "/etc/httpd/conf.d/cgit.conf",
 				SubPath:   "cgit.conf",
 			},
-			{
-				Name:      CGIT_IDENT,
-				MountPath: "/var/lib/gerrit/git/",
-			},
 		}
 
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
@@ -109,7 +105,7 @@ func (r *SFController) DeployCgit(enabled bool) bool {
 		srv := create_service(r.ns, CGIT_IDENT, CGIT_IDENT, CGIT_PORT, CGIT_PORT_NAME)
 		r.GetOrCreate(&srv)
 
-		return r.IsStatefulSetReady(&dep)
+		return r.IsDeploymentReady(&dep)
 	} else {
 		r.DeleteDeployment(CGIT_IDENT)
 		r.DeleteService(CGIT_PORT_NAME)

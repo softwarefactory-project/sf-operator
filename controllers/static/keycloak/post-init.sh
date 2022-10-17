@@ -342,3 +342,10 @@ if [ -n "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}" ]; then
   kcadm update clients/${cid} --target-realm SF \
     --set "attributes.\"post.logout.redirect.uris\"=https://opensearch-dashboards.${FQDN}/*##"
 fi
+
+# Setup Grafana client when a client secret is available in the env vars
+if [ -n "${KEYCLOAK_GRAFANA_CLIENT_SECRET}" ]; then
+  create_oidc_client_with_secret "grafana"
+  set_oidc_client_origin "grafana"
+  set_oidc_client_secret "grafana" "${KEYCLOAK_GRAFANA_CLIENT_SECRET}"
+fi

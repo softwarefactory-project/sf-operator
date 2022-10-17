@@ -178,6 +178,11 @@ type SoftwareFactorySpec struct {
 	// Mail server
 	// More info: https://www.postfix.org/start.html
 	Postfix PostfixSpec `json:"postfix,omitempty"`
+
+	// Deploy the grafana service
+	// Query, visualize, alert on, and understand your data no matter where it’s stored. With Grafana you can create, explore, and share all of your data through beautiful, flexible dashboards.
+	// More info: https://grafana.com/
+	Grafana BaseSpec `json:"grafana,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory
