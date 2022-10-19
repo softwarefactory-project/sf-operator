@@ -83,6 +83,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	managesfStatus := true
 	houndStatus := true
 	gerritbotStatus := true
+	cgitStatus := true
 	if mariadbStatus {
 		etherpadStatus = r.DeployEtherpad(sf.Spec.Etherpad.Enabled)
 		lodgeitStatus = r.DeployLodgeit(sf.Spec.Lodgeit.Enabled)
@@ -149,6 +150,10 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		gerritbotStatus = r.DeployGerritBot(sf.Spec.GerritBot.Enabled)
 	}
 
+	if sf.Spec.Cgit.Enabled && gerritStatus {
+		cgitStatus = r.DeployCgit(sf.Spec.Cgit.Enabled)
+	}
+
 	r.log.V(1).Info("Service status:",
 		"mariadbStatus", mariadbStatus,
 		"zkStatus", zkStatus,
@@ -167,6 +172,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		"managesfStatus", managesfStatus,
 		"houndStatus", houndStatus,
 		"gerritbotStatus", gerritbotStatus,
+		"cgitStatus", cgitStatus,
 	)
 
 	ready := (mariadbStatus && etherpadStatus && zuulStatus &&
@@ -174,7 +180,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		zkStatus && nodepoolStatus && opensearchStatus &&
 		opensearchdashboardsStatus && configStatus && configRepoStatus &&
 		murmurStatus && mosquittoStatus && jaegerStatus && managesfStatus &&
-		houndStatus && gerritbotStatus)
+		houndStatus && gerritbotStatus && cgitStatus)
 
 	if ready {
 		r.SetupIngress(keycloakEnabled)
