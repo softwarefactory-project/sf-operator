@@ -1,5 +1,5 @@
 - hosts: all
   roles:
-    - kubernetes
+    - extra/kubernetes
     - install-sf-operator
     - run-sf-operator
