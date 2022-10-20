@@ -122,6 +122,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	fqdn := r.cr.Spec.FQDN
 	kc_ip := r.get_service_ip("keycloak")
 	if kc_ip == "" {
+		r.log.V(5).Info("can't deploy zuul without the keycloak service ip")
 		return false
 	}
 

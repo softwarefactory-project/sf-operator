@@ -53,7 +53,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	}
 
 	// Keycloak is enabled if gerrit is enabled
-	keycloakEnabled := sf.Spec.Gerrit.Enabled
+	keycloakEnabled := sf.Spec.Gerrit.Enabled || sf.Spec.Zuul.Enabled
 
 	r.EnsureCA()
 
