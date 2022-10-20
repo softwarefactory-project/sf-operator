@@ -34,13 +34,38 @@ var resourcesDhall string
 var sfDhall string
 
 func (r *SFController) SetupBaseSecret() bool {
+
+	// Create a long lived service account token for the use within the
+	// config-update process
+	// See: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account
+	var secret apiv1.Secret
+	secret_name := "config-update-secret"
+	if !r.GetM(secret_name, &secret) {
+		r.log.V(1).Info("Creating the config-update service account secret")
+		secret = apiv1.Secret{
+			Type: "kubernetes.io/service-account-token",
+			ObjectMeta: metav1.ObjectMeta{
+				Name: secret_name,
+				Annotations: map[string]string{
+					"kubernetes.io/service-account.name": "default"},
+				Namespace: r.ns,
+			},
+		}
+		if err := r.Create(r.ctx, &secret); err != nil {
+			panic(err.Error())
+		}
+	}
+
 	var job batchv1.Job
 	job_name := "config-base-secret"
 	found := r.GetM(job_name, &job)
 
+	extra_cmd_vars := []apiv1.EnvVar{
+		create_secret_env("SERVICE_ACCOUNT_TOKEN", secret_name, "token")}
+
 	if !found {
 		r.log.V(1).Info("Creating base secret job")
-		r.CreateR(r.RunCommand(job_name, []string{"config-create-k8s-secret"}))
+		r.CreateR(r.RunCommand(job_name, []string{"config-create-k8s-secret"}, extra_cmd_vars))
 		return false
 	} else if job.Status.Succeeded >= 1 {
 		return true
@@ -50,17 +75,17 @@ func (r *SFController) SetupBaseSecret() bool {
 	}
 }
 
-func (r *SFController) RunCommand(name string, args []string) *batchv1.Job {
+func (r *SFController) RunCommand(name string, args []string, extra_vars []apiv1.EnvVar) *batchv1.Job {
 	job := create_job(
 		r.ns, name,
 		apiv1.Container{
 			Name:    "sf-operator",
 			Image:   BUSYBOX_IMAGE,
 			Command: append([]string{"python3", "/sf_operator/main.py"}, args...),
-			Env: []apiv1.EnvVar{
+			Env: append([]apiv1.EnvVar{
 				create_env("PYTHONPATH", "/"),
 				create_env("FQDN", r.cr.Spec.FQDN),
-			},
+			}, extra_vars...),
 			VolumeMounts: []apiv1.VolumeMount{
 				{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
 			},

@@ -39,17 +39,20 @@ def mk_incluster_k8s_config():
         + ":"
         + os.environ["KUBERNETES_SERVICE_PORT"]
     )
-    return [add("ca.crt"), add("namespace"), add("token"), ("server", api)]
+    return [
+        add("ca.crt"),
+        add("namespace"),
+        ("token", os.environ["SERVICE_ACCOUNT_TOKEN"]),
+        ("server", api)]
 
 
 def create_k8s_secret():
     clone = pynotedb.mk_clone("git://git-server/system-config")
     k8s_secret = clone / "zuul.d" / "k8s-secret.yaml"
-    if not k8s_secret.exists():
-        secret = sf_operator.secret.mk_secret("k8s_config", mk_incluster_k8s_config())
-        k8s_secret.write_text(secret)
-        pynotedb.git(clone, ["add", "zuul.d/k8s-secret.yaml"])
-        pynotedb.commit_and_push(clone, "Add kubernetes secret", "refs/heads/master")
+    secret = sf_operator.secret.mk_secret("k8s_config", mk_incluster_k8s_config())
+    k8s_secret.write_text(secret)
+    pynotedb.git(clone, ["add", "zuul.d/k8s-secret.yaml"])
+    pynotedb.commit_and_push(clone, "Add kubernetes secret", "refs/heads/master")
 
 
 def main():

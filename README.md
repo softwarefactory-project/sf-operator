@@ -150,3 +150,40 @@ To add a new decision:
 2. Edit NNNN-title-with-dashes.md.
 
 More information in the [ADR's README](doc/adr/README.md).
+
+# Open a review on the internal Gerrit - from your host
+
+Add your local SSH key to the gerrit demo user. "demo" user password is "demo". Then:
+
+```sh
+kubectl port-forward service/gerrit-sshd 29418
+cd /tmp
+git clone ssh://demo@localhost:29418/config
+git config user.email demo@fbo-sftests.com
+sed -i "s/^host=.*/host=localhost/" .gitreview
+git review -s
+git checkout .gitreview
+```
+
+Now any change can be done and push via the "git review" command.
+
+# Open a review on the internal Gerrit - from the gerrit pod
+
+We will use the gerrit admin account.
+
+```sh
+kubectl exec -it gerrit-0 bash
+pip3 install --user git-review
+cd /tmp
+git clone ssh://gerrit/config
+cd config
+git review -s
+```
+
+Now any change can be done and push via the "git review" command.
+
+Use the following command to approve a change:
+
+```sh
+ssh gerrit gerrit review 1,1 --code-review "+2" --workflow "+1"
+```

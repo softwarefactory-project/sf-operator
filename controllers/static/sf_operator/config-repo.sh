@@ -69,5 +69,20 @@ EOF
   popd
 fi
 
+# Initialize CI
+mkdir -p zuul.d
+cat << EOF > zuul.d/config.yaml
+- project:
+    check:
+      jobs:
+        - config-check
+    gate:
+      jobs:
+        - config-check
+    post:
+      jobs:
+        - config-update
+EOF
+
 git add -A
 git commit -m"Populate config repository" && git push origin master || true

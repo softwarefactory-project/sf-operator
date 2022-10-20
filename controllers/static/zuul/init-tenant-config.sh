@@ -7,6 +7,7 @@ if ! test -f /var/lib/zuul/main.yaml; then
     name: admin-user
     conditions:
       realm_access.roles: admin
+
 - tenant:
     name: internal
     admin-rules:

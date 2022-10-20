@@ -52,6 +52,7 @@ cat << EOF > zuul.d/jobs-base.yaml
     nodeset:
       nodes: []
 
+# TODO: setup allowed-project rules
 - job:
     name: config-update
     parent: base
@@ -59,9 +60,13 @@ cat << EOF > zuul.d/jobs-base.yaml
     description: Deploy config repo update.
     run: playbooks/config/update.yaml
     semaphore: semaphore-config-update
+    secrets:
+      - k8s_config
     nodeset:
       nodes: []
 
+# TODO: decide where the pipeline should live, e.g. system-config or user config,
+# and how to add the zuul connections.
 - pipeline:
     name: post
     post-review: true
@@ -72,6 +77,83 @@ cat << EOF > zuul.d/jobs-base.yaml
       git-server:
         event:
           - ref-updated
+      gerrit:
+        - event: ref-updated
+          ref: ^refs/heads/.*$
+
+# TODO: hardcode for now on the internal Gerrit but must be configured based
+# on the CRD (for the config repo location).
+- pipeline:
+    name: check
+    description: |
+      Newly uploaded patchsets enter this pipeline to receive an
+      initial +/-1 Verified vote.
+    manager: independent
+    require:
+      gerrit:
+        open: True
+        current-patchset: True
+    trigger:
+      gerrit:
+        - event: patchset-created
+        - event: change-restored
+        - event: comment-added
+          comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*(recheck|reverify)
+        - event: comment-added
+          require-approval:
+            - Verified: [-1, -2]
+              username: zuul
+          approval:
+            - Workflow: 1
+    start:
+      gerrit:
+        Verified: 0
+    success:
+      gerrit:
+        Verified: 1
+    failure:
+      gerrit:
+        Verified: -1
+
+- pipeline:
+    name: gate
+    description: |
+      Changes that have been approved by core developers are enqueued
+      in order in this pipeline, and if they pass tests, will be
+      merged.
+    success-message: Build succeeded (gate pipeline).
+    failure-message: Build failed (gate pipeline). 
+    manager: dependent
+    precedence: high
+    supercedes: check
+    post-review: True
+    require:
+      gerrit:
+        open: True
+        current-patchset: True
+        approval:
+          - Workflow: 1
+    trigger:
+      gerrit:
+        - event: comment-added
+          approval:
+            - Workflow: 1
+        - event: comment-added
+          approval:
+            - Verified: 1
+          username: zuul
+    start:
+      gerrit:
+        Verified: 0
+    success:
+      gerrit:
+        Verified: 2
+        submit: true
+    failure:
+      gerrit:
+        Verified: -2
+    window-floor: 20
+    window-increase-factor: 2
 
 - project:
     post:
@@ -107,15 +189,56 @@ EOF
 
 cat << EOF > playbooks/config/check.yaml
 - hosts: localhost
-  tasks: []
+  tasks:
+    - name: Set speculative config path
+      set_fact:
+        config_root: "{{ zuul.executor.src_root }}/{{ zuul.project.canonical_name }}"
+
+    - name: "Access config repo"
+      command: "ls -al ./resources"
+      args:
+        chdir: '{{ config_root }}'
 EOF
 
 cat << EOF > playbooks/config/update.yaml
 - hosts: localhost
-  tasks: []
+  roles:
+    - setup-k8s-config
+    - apply-k8s-resource
 EOF
 
-git add zuul.d playbooks
+mkdir -p roles/setup-k8s-config/tasks
+cat << EOF > roles/setup-k8s-config/tasks/main.yaml
+- name: ensure config dir
+  file:
+    path: "{{ ansible_env.HOME }}/.kube"
+    state: directory
+
+- name: copy secret content
+  copy:
+    content: "{{ k8s_config['ca.crt'] }}"
+    dest: "{{ ansible_env.HOME }}/.kube/ca.crt"
+    mode: "0600"
+
+- name: setup config
+  command: "{{ item }}"
+  no_log: true
+  loop:
+    - "kubectl config set-cluster local --server='{{ k8s_config['server'] }}' --certificate-authority={{ ansible_env.HOME }}/.kube/ca.crt"
+    - "kubectl config set-credentials local-token --token={{ k8s_config['token'] }}"
+    - "kubectl config set-context local-context --cluster=local --user=local-token --namespace={{ k8s_config['namespace'] }}"
+    - "kubectl config use-context local-context"
+EOF
+
+mkdir -p roles/apply-k8s-resource/tasks
+cat << EOF > roles/apply-k8s-resource/tasks/main.yaml
+- name: Display available resources
+  command: "kubectl api-resources"
+#- name: ensure system config is up-to-date
+#  command: "kubectl apply -f {{ zuul.project.src_dir }}/system/sf.yaml"
+EOF
+
+git add zuul.d playbooks roles
 
 if [ ! -z "$(git status --porcelain)" ]; then
   git commit -m"Set system config base jobs"
