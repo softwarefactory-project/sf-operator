@@ -58,6 +58,7 @@ func (r *SFController) RunCommand(name string, args []string) *batchv1.Job {
 			Command: append([]string{"python3", "/sf_operator/main.py"}, args...),
 			Env: []apiv1.EnvVar{
 				create_env("PYTHONPATH", "/"),
+				create_env("FQDN", r.cr.Spec.FQDN),
 			},
 			VolumeMounts: []apiv1.VolumeMount{
 				{Name: "pymod-sf-operator", MountPath: "/sf_operator"},

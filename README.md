@@ -95,3 +95,10 @@ do
   kubectl -n $MY_NS delete $resource --all;
 done
 ```
+
+
+# sf_operator configuration library
+
+This python package provides helpers code to perform service runtime configuration.
+
+Run locally: `tox -evenv -- sf_operator --help`
