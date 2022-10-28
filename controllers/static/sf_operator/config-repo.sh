@@ -40,6 +40,10 @@ if [ ! -d resources ]; then
   popd
 fi
 
+# Initialize system resource
+mkdir -p system
+cat /sf-provided-cr/sf.yaml > system/sf.yaml
+
 # Initialize gerrit tree
 if [ ! -d gerrit ] && [ "${GERRIT_ENABLED}" == "true" ]; then
   mkdir gerrit && pushd gerrit
