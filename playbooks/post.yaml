@@ -11,6 +11,14 @@
       shell: |
         kubectl -n ingress-nginx logs -l app.kubernetes.io/name=ingress-nginx > ~/zuul-output/logs/ingress.txt
 
+    - name: Get nodes information
+      shell: |
+        kubectl describe nodes > ~/zuul-output/logs/nodes.txt
+
+    - name: Get nodes utilization
+      shell: |
+        kubectl describe nodes | sed -n '/^Allocated /,/^Events:/ { /^  [^(]/ p; } ; /^Name: / p' > ~/zuul-output/logs/nodes-utilization.txt
+
     - name: Describe resources
       shell: |
         for item in $(kubectl get {{ item }} -o name); do
