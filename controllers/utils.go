@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	_ "embed"
 	"fmt"
+	"net/http"
 	"os"
 	"reflect"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -71,7 +73,7 @@ func parse_template(templatePath string, data any) (string, error) {
 	// Opening Template file
 	template, err := template.ParseFiles(templatePath)
 	if err != nil {
-		return "", fmt.Errorf("file not found")
+		return "", fmt.Errorf("file not found: " + templatePath)
 	}
 
 	// Parsing Template
@@ -179,9 +181,9 @@ func create_container_port(port int, name string) apiv1.ContainerPort {
 	}
 }
 
-func create_volume_cm(name string, config_map_ref string) apiv1.Volume {
+func create_volume_cm(volume_name string, config_map_ref string) apiv1.Volume {
 	return apiv1.Volume{
-		Name: name,
+		Name: volume_name,
 		VolumeSource: apiv1.VolumeSource{
 			ConfigMap: &apiv1.ConfigMapVolumeSource{
 				LocalObjectReference: apiv1.LocalObjectReference{
@@ -200,9 +202,9 @@ func create_volume_cm(name string, config_map_ref string) apiv1.Volume {
 // Each element of the array has a Key and a Path
 //    Key - Reference to the ConfigMap Key name
 //    Path - The relative path of the file to map the key to
-func create_volume_cm_keys(name string, config_map_ref string, keys []apiv1.KeyToPath) apiv1.Volume {
+func create_volume_cm_keys(volume_name string, config_map_ref string, keys []apiv1.KeyToPath) apiv1.Volume {
 	return apiv1.Volume{
-		Name: name,
+		Name: volume_name,
 		VolumeSource: apiv1.VolumeSource{
 			ConfigMap: &apiv1.ConfigMapVolumeSource{
 				LocalObjectReference: apiv1.LocalObjectReference{
@@ -935,6 +937,17 @@ func (r *SFController) SetupIngress(keycloakEnabled bool) {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGrafana())
 		r.ensure_ingress(ingress, name)
 	}
+
+	var ingress netv1.Ingress
+	name := r.cr.Name + "-" + GATEWAY_IDENT
+	ingress = netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: r.ns,
+		},
+	}
+	ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGateway())
+	r.ensure_ingress(ingress, name)
 }
 
 func (r *SFController) PodExec(pod string, container string, command []string) {
@@ -1019,6 +1032,30 @@ func (r *SFController) getValueFromKeySecret(secret apiv1.Secret, keyname string
 	}
 
 	return keyvalue, nil
+}
+
+func (r *SFController) ImageToBase64(imagepath string) (string, error) {
+	// Read the file to bytes
+	bytes, err := os.ReadFile(imagepath)
+	if err != nil {
+		r.log.V(1).Error(err, "Something wrong while reading file "+imagepath)
+		return "", err
+	}
+
+	var base64Encoding string
+
+	mimeType := http.DetectContentType(bytes)
+
+	switch mimeType {
+	case "image/jpeg":
+		base64Encoding += "data:image/jpeg;base64,"
+	case "image/png":
+		base64Encoding += "data:image/png;base64,"
+	}
+
+	encodedimage := base64.StdEncoding.EncodeToString(bytes)
+
+	return encodedimage, nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }

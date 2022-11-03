@@ -86,6 +86,8 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	cgitStatus := true
 	postfixStatus := true
 	grafanaStatus := true
+	gatewayStatus := true
+
 	if mariadbStatus {
 		etherpadStatus = r.DeployEtherpad(sf.Spec.Etherpad.Enabled)
 		lodgeitStatus = r.DeployLodgeit(sf.Spec.Lodgeit.Enabled)
@@ -164,6 +166,14 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		grafanaStatus = r.DeployGrafana(sf.Spec.Grafana.Enabled)
 	}
 
+	if sf.Spec.Gerrit.Enabled || sf.Spec.Zuul.Enabled ||
+		sf.Spec.OpensearchDashboards.Enabled || sf.Spec.Grafana.Enabled ||
+		sf.Spec.Etherpad.Enabled || sf.Spec.Lodgeit.Enabled ||
+		sf.Spec.Hound.Enabled || sf.Spec.Cgit.Enabled ||
+		sf.Spec.Murmur.Enabled {
+		gatewayStatus = r.DeployGateway(true)
+	}
+
 	r.log.V(1).Info("Service status:",
 		"mariadbStatus", mariadbStatus,
 		"zkStatus", zkStatus,
@@ -185,6 +195,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		"cgitStatus", cgitStatus,
 		"postfixStatus", postfixStatus,
 		"grafanaStatus", grafanaStatus,
+		"gatewayStatus", gatewayStatus,
 	)
 
 	ready := (mariadbStatus && etherpadStatus && zuulStatus &&
@@ -193,7 +204,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		opensearchdashboardsStatus && configStatus && configRepoStatus &&
 		murmurStatus && mosquittoStatus && jaegerStatus && managesfStatus &&
 		houndStatus && gerritbotStatus && cgitStatus && postfixStatus &&
-		grafanaStatus)
+		grafanaStatus && gatewayStatus)
 
 	if ready {
 		r.SetupIngress(keycloakEnabled)

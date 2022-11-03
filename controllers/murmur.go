@@ -208,6 +208,5 @@ func (r *SFController) DeployMurmur(spec sfv1.MurmurSpec) bool {
 }
 
 func (r *SFController) IngressMurmur() netv1.IngressRule {
-	fmt.Println(MURMUR_IDENT + "." + r.cr.Spec.FQDN)
 	return create_ingress_rule(MURMUR_IDENT+"."+r.cr.Spec.FQDN, MURMUR_PORT_NAME, MURMUR_PORT)
 }

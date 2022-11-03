@@ -61,6 +61,5 @@ func (r *SFController) DeployLodgeit(enabled bool) bool {
 }
 
 func (r *SFController) IngressLodgeit() netv1.IngressRule {
-	fmt.Println(LODGEIT_IDENT + "." + r.cr.Spec.FQDN)
 	return create_ingress_rule(LODGEIT_IDENT+"."+r.cr.Spec.FQDN, LODGEIT_PORT_NAME, LODGEIT_PORT)
 }

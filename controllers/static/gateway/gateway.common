@@ -1,0 +1,51 @@
+    <Directory "/var/www">
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    DocumentRoot /var/www/
+
+    Alias /icons/ "/usr/share/httpd/icons/"
+
+    <Directory "/usr/share/httpd/icons">
+        Options Indexes MultiViews FollowSymlinks
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    RewriteEngine On
+
+    # Disable caching of static or api files
+    <LocationMatch "/static">
+        CacheDisable on
+    </LocationMatch>
+    <LocationMatch "/api">
+        CacheDisable on
+    </LocationMatch>
+
+    Alias "/docs/managesf" "/usr/share/doc/managesf/"
+    Alias "/docs" "/usr/share/doc/software-factory/"
+    <Directory "/usr/share/doc/">
+        Require all granted
+    </Directory>
+
+    <Directory /var/www>
+        AllowOverride None
+        Order allow,deny
+        allow from all
+    </Directory>
+
+    <IfModule mod_proxy.c>
+        <Directory /usr/share/sf-ui>
+            DirectoryIndex index.html
+            Require all granted
+            Order allow,deny
+            Allow from all
+        </Directory>
+        # If the request match an sf-ui SPA route
+
+        RewriteRule ^/$ /usr/share/sf-ui/index.html [L]
+        # If the request match an sf-ui filename, then redirect to it
+        RewriteCond /usr/share/sf-ui/%{REQUEST_FILENAME} -f
+        RewriteRule .* /usr/share/sf-ui/%{REQUEST_FILENAME} [L]
+    </IfModule>
