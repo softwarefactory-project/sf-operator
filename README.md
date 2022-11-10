@@ -129,9 +129,19 @@ do
 done
 ```
 
-
 # sf_operator configuration library
 
 This python package provides helpers code to perform service runtime configuration.
 
 Run locally: `tox -evenv -- sf_operator --help`
+
+## ADR
+
+Architecture Decision Records are available as Markdown format in *doc/adr/*.
+
+To add a new decision:
+
+1. Copy doc/adr/adr-template.md to doc/adr/NNNN-title-with-dashes.md, where NNNN indicates the next number in sequence.
+2. Edit NNNN-title-with-dashes.md.
+
+More information in the [ADR's README](doc/adr/README.md).
