@@ -3,7 +3,7 @@
 set -ex
 
 env
-cd ${HOME}
+cd "${HOME}"
 
 mkdir .ssh
 chmod 0700 .ssh
@@ -16,7 +16,7 @@ Host gerrit
 User admin
 Hostname ${GERRIT_SSHD_PORT_29418_TCP_ADDR}
 Port ${GERRIT_SSHD_SERVICE_PORT_GERRIT_SSHD}
-IdentityFile /root/.ssh/gerrit_admin
+IdentityFile ~/.ssh/gerrit_admin
 StrictHostKeyChecking no
 EOF
 
@@ -124,7 +124,7 @@ gerrit = {
     'host': '${GERRIT_SSHD_SERVICE_HOST}',
     'top_domain': '${FQDN}',
     'ssh_port': 29418,
-    'sshkey_priv_path': '/root/.ssh/gerrit_admin',
+    'sshkey_priv_path': '~/.ssh/gerrit_admin',
 }
 
 resources = {

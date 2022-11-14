@@ -4,6 +4,6 @@
     chdir: "{{ zuul.project.src_dir }}"
 
 - name: Run the operator one shot
-  command: timeout 900 go run ./main.go --namespace default --oneshot
+  command: timeout {{ job_timeout | default(900) }} go run ./main.go --namespace default --oneshot
   args:
     chdir: "{{ zuul.project.src_dir }}"

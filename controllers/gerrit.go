@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"k8s.io/utils/pointer"
 	"strconv"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -58,6 +59,10 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, sp
 		MountPath: GERRIT_CERT_MOUNT_PATH,
 		ReadOnly:  true,
 	}
+
+	securityContext := &apiv1.SecurityContext{
+		RunAsNonRoot: pointer.BoolPtr(false),
+	}
 	container := apiv1.Container{
 		Name:    "gerrit-init",
 		Image:   GERRIT_IMAGE,
@@ -70,7 +75,8 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, sp
 			create_env("FQDN", r.cr.Spec.FQDN),
 			create_secret_env("KEYCLOAK_GERRIT_CLIENT_SECRET", "gerrit-kc-client-password", "gerrit-kc-client-password"),
 		},
-		VolumeMounts: append(volumeMounts, certVolume),
+		VolumeMounts:    append(volumeMounts, certVolume),
+		SecurityContext: securityContext,
 	}
 	return []apiv1.Container{container}
 }
@@ -154,6 +160,13 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 				MountPath: GERRIT_SITE_MOUNT_PATH,
 			},
 		}
+		securityContext := &apiv1.SecurityContext{
+			RunAsNonRoot: pointer.BoolPtr(false),
+		}
+		podSecurityContext := &apiv1.PodSecurityContext{
+			RunAsUser: pointer.Int64(10002),
+			FSGroup:   pointer.Int64(10002),
+		}
 
 		// Create the deployment
 		dep := create_statefulset(r.ns, GERRIT_IDENT, GERRIT_IMAGE)
@@ -170,6 +183,8 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 		}
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
+		dep.Spec.Template.Spec.Containers[0].SecurityContext = securityContext
+		dep.Spec.Template.Spec.SecurityContext = podSecurityContext
 
 		// Setup the sidecar container for gsku
 		dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
