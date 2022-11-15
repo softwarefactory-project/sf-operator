@@ -1058,6 +1058,28 @@ func (r *SFController) ImageToBase64(imagepath string) (string, error) {
 	return encodedimage, nil
 }
 
+func (r *SFController) getConfigRepoCNXInfo() (string, string) {
+	var config_repo_url string
+	var config_repo_user string
+	if r.cr.Spec.ConfigLocations.ConfigRepo == "" && r.cr.Spec.Gerrit.Enabled {
+		config_repo_url = "gerrit-sshd:29418/config"
+		config_repo_user = "admin"
+	} else if r.cr.Spec.ConfigLocations.ConfigRepo != "" {
+		var user string
+		if r.cr.Spec.ConfigLocations.User != "" {
+			user = r.cr.Spec.ConfigLocations.User
+		} else {
+			user = "git"
+		}
+		config_repo_url = r.cr.Spec.ConfigLocations.ConfigRepo
+		config_repo_user = user
+	} else {
+		// TODO: uncomment the panic once the config repo is actually working
+		// panic("ConfigRepo settings not supported !")
+	}
+	return config_repo_url, config_repo_user
+}
+
 func int32Ptr(i int32) *int32 { return &i }
 func boolPtr(b bool) *bool    { return &b }
 func strPtr(s string) *string { return &s }

@@ -120,30 +120,10 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	}
 
 	managesfStatus = r.DeployManagesf(managesfStatus, sf.Spec.Gerrit.Enabled, sf.Spec.Zuul.Enabled)
-	// Handle populate of the config repository
-	var config_repo_url string
-	var config_repo_user string
-	if sf.Spec.ConfigLocations.ConfigRepo == "" && sf.Spec.Gerrit.Enabled {
-		config_repo_url = "gerrit-sshd:29418/config"
-		config_repo_user = "admin"
-	} else if sf.Spec.ConfigLocations.ConfigRepo != "" {
-		var user string
-		if sf.Spec.ConfigLocations.User != "" {
-			user = sf.Spec.ConfigLocations.User
-		} else {
-			user = "git"
-		}
-		config_repo_url = sf.Spec.ConfigLocations.ConfigRepo
-		config_repo_user = user
-	} else {
-		// TODO: uncomment the panic once the config repo is actually working
-		// panic("ConfigRepo settings not supported !")
-	}
 
 	configRepoStatus := true
 	if sf.Spec.Gerrit.Enabled && gerritStatus {
-		configRepoStatus = r.SetupConfigRepo(
-			config_repo_url, config_repo_user, sf.Spec.Gerrit.Enabled)
+		configRepoStatus = r.SetupConfigRepo(sf.Spec.Gerrit.Enabled)
 	}
 
 	if sf.Spec.Hound.Enabled {
@@ -207,6 +187,8 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		grafanaStatus && gatewayStatus)
 
 	if ready {
+		r.PodExec("zuul-scheduler-0", "scheduler-sidecar", []string{"generate-zuul-tenant-yaml.sh"})
+		r.PodExec("zuul-scheduler-0", "zuul-scheduler", []string{"zuul-scheduler", "full-reconfigure"})
 		r.SetupIngress(keycloakEnabled)
 	}
 

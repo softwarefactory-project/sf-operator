@@ -7,8 +7,9 @@ package controllers
 
 import (
 	_ "embed"
-	"sigs.k8s.io/yaml"
 	"strconv"
+
+	"sigs.k8s.io/yaml"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 
@@ -102,7 +103,7 @@ func (r *SFController) getProvidedCR() string {
 	return "# The software factory system resources\n# The config-update job applies change to this file.\n" + string(data)
 }
 
-func (r *SFController) SetupConfigRepo(config_repo_url string, config_repo_user string, gerrit_enabled bool) bool {
+func (r *SFController) SetupConfigRepo(gerrit_enabled bool) bool {
 	r.InstallTooling()
 	var job batchv1.Job
 	job_name := "setup-config-repo"
@@ -114,6 +115,7 @@ func (r *SFController) SetupConfigRepo(config_repo_url string, config_repo_user 
 	})
 
 	if !found {
+		config_url, config_user := r.getConfigRepoCNXInfo()
 		job := create_job(
 			r.ns, job_name,
 			apiv1.Container{
@@ -123,8 +125,8 @@ func (r *SFController) SetupConfigRepo(config_repo_url string, config_repo_user 
 				Env: []apiv1.EnvVar{
 					create_secret_env("SF_ADMIN_SSH", "admin-ssh-key", "priv"),
 					create_env("FQDN", r.cr.Spec.FQDN),
-					create_env("CONFIG_REPO_URL", config_repo_url),
-					create_env("CONFIG_REPO_USER", config_repo_user),
+					create_env("CONFIG_REPO_URL", config_url),
+					create_env("CONFIG_REPO_USER", config_user),
 					create_env("GERRIT_ENABLED", strconv.FormatBool(gerrit_enabled)),
 				},
 				VolumeMounts: []apiv1.VolumeMount{

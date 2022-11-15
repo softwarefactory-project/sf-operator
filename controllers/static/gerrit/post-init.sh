@@ -147,7 +147,7 @@ EOF
 resources: {}
 EOF
     dhall-to-yaml-ng --output \
-      new.yaml <<< "(/entry/resources.dhall).renderInitialResources \"${FQDN}\""
+      new.yaml <<< "(/entry/resources.dhall).renderInternalResources \"${FQDN}\" False"
     managesf-resources direct-apply --new-yaml new.yaml --prev-yaml prev.yaml
   else
     echo "config repository already exists"

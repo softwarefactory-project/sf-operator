@@ -6,7 +6,7 @@
           , github-app-name : Optional Text
           , github-label : Optional Text
           , name : Text
-          , type : < gerrit | github | pagure >
+          , type : < gerrit | git | github | pagure >
           }
         ) ->
         obj.name
@@ -15,7 +15,7 @@
       , github-app-name : Optional Text
       , github-label : Optional Text
       , name : Text
-      , type : < gerrit | github | pagure >
+      , type : < gerrit | git | github | pagure >
       }
   , default =
     { base-url = None Text
@@ -28,7 +28,7 @@
         , github-app-name : Optional Text
         , github-label : Optional Text
         , name : Text
-        , type : < gerrit | github | pagure >
+        , type : < gerrit | git | github | pagure >
         }
     , default =
       { base-url = None Text
@@ -38,9 +38,10 @@
     }
   }
 , ConnectionType =
-  { Type = < gerrit | github | pagure >
-  , gerrit = < gerrit | github | pagure >.gerrit
-  , pagure = < gerrit | github | pagure >.pagure
+  { Type = < gerrit | git | github | pagure >
+  , gerrit = < gerrit | git | github | pagure >.gerrit
+  , git = < gerrit | git | github | pagure >.git
+  , pagure = < gerrit | git | github | pagure >.pagure
   }
 , GitACL =
   { Name =
@@ -135,7 +136,11 @@
                     < Inline :
                         List
                           { mapKey : Text
-                          , mapValue : { zuul/include : Optional (List Text) }
+                          , mapValue :
+                              { connection : Optional Text
+                              , zuul/config-project : Optional Bool
+                              , zuul/include : Optional (List Text)
+                              }
                           }
                     | Name : Text
                     >
@@ -161,7 +166,11 @@
                 < Inline :
                     List
                       { mapKey : Text
-                      , mapValue : { zuul/include : Optional (List Text) }
+                      , mapValue :
+                          { connection : Optional Text
+                          , zuul/config-project : Optional Bool
+                          , zuul/include : Optional (List Text)
+                          }
                       }
                 | Name : Text
                 >
@@ -183,7 +192,11 @@
               < Inline :
                   List
                     { mapKey : Text
-                    , mapValue : { zuul/include : Optional (List Text) }
+                    , mapValue :
+                        { connection : Optional Text
+                        , zuul/config-project : Optional Bool
+                        , zuul/include : Optional (List Text)
+                        }
                     }
               | Name : Text
               >
@@ -208,7 +221,11 @@
                   < Inline :
                       List
                         { mapKey : Text
-                        , mapValue : { zuul/include : Optional (List Text) }
+                        , mapValue :
+                            { connection : Optional Text
+                            , zuul/config-project : Optional Bool
+                            , zuul/include : Optional (List Text)
+                            }
                         }
                   | Name : Text
                   >
@@ -230,7 +247,11 @@
                 < Inline :
                     List
                       { mapKey : Text
-                      , mapValue : { zuul/include : Optional (List Text) }
+                      , mapValue :
+                          { connection : Optional Text
+                          , zuul/config-project : Optional Bool
+                          , zuul/include : Optional (List Text)
+                          }
                       }
                 | Name : Text
                 >
@@ -275,7 +296,7 @@
             , github-app-name : Optional Text
             , github-label : Optional Text
             , name : Text
-            , type : < gerrit | github | pagure >
+            , type : < gerrit | git | github | pagure >
             }
       , groups :
           List
@@ -300,7 +321,11 @@
                       < Inline :
                           List
                             { mapKey : Text
-                            , mapValue : { zuul/include : Optional (List Text) }
+                            , mapValue :
+                                { connection : Optional Text
+                                , zuul/config-project : Optional Bool
+                                , zuul/include : Optional (List Text)
+                                }
                             }
                       | Name : Text
                       >
@@ -318,11 +343,13 @@
             }
       , tenants :
           List
-            { description : Optional Text
+            { default-connection : Optional Text
+            , description : Optional Text
             , name : Text
             , tenant-options :
                 Optional
-                  { zuul/report-build-page : Optional Bool
+                  { zuul/max-job-timeout : Optional Natural
+                  , zuul/report-build-page : Optional Bool
                   , zuul/web-url : Optional Text
                   }
             , url : Text
@@ -339,7 +366,7 @@
                 , github-app-name : Optional Text
                 , github-label : Optional Text
                 , name : Text
-                , type : < gerrit | github | pagure >
+                , type : < gerrit | git | github | pagure >
                 }
           , groups :
               List
@@ -365,7 +392,10 @@
                               List
                                 { mapKey : Text
                                 , mapValue :
-                                    { zuul/include : Optional (List Text) }
+                                    { connection : Optional Text
+                                    , zuul/config-project : Optional Bool
+                                    , zuul/include : Optional (List Text)
+                                    }
                                 }
                           | Name : Text
                           >
@@ -383,11 +413,13 @@
                 }
           , tenants :
               List
-                { description : Optional Text
+                { default-connection : Optional Text
+                , description : Optional Text
                 , name : Text
                 , tenant-options :
                     Optional
-                      { zuul/report-build-page : Optional Bool
+                      { zuul/max-job-timeout : Optional Natural
+                      , zuul/report-build-page : Optional Bool
                       , zuul/web-url : Optional Text
                       }
                 , url : Text
@@ -441,7 +473,7 @@
                 , github-app-name : Optional Text
                 , github-label : Optional Text
                 , name : Text
-                , type : < gerrit | github | pagure >
+                , type : < gerrit | git | github | pagure >
                 }
                 resources.connections
                 ( List
@@ -451,7 +483,7 @@
                         , github-app-name : Optional Text
                         , github-label : Optional Text
                         , name : Text
-                        , type : < gerrit | github | pagure >
+                        , type : < gerrit | git | github | pagure >
                         }
                     }
                 )
@@ -460,7 +492,7 @@
                       , github-app-name : Optional Text
                       , github-label : Optional Text
                       , name : Text
-                      , type : < gerrit | github | pagure >
+                      , type : < gerrit | git | github | pagure >
                       }
                     ) ->
                   \ ( _
@@ -471,7 +503,7 @@
                             , github-app-name : Optional Text
                             , github-label : Optional Text
                             , name : Text
-                            , type : < gerrit | github | pagure >
+                            , type : < gerrit | git | github | pagure >
                             }
                         }
                     ) ->
@@ -484,7 +516,7 @@
                              , github-app-name : Optional Text
                              , github-label : Optional Text
                              , name : Text
-                             , type : < gerrit | github | pagure >
+                             , type : < gerrit | git | github | pagure >
                              }
                          }
                 )
@@ -549,7 +581,10 @@
                               List
                                 { mapKey : Text
                                 , mapValue :
-                                    { zuul/include : Optional (List Text) }
+                                    { connection : Optional Text
+                                    , zuul/config-project : Optional Bool
+                                    , zuul/include : Optional (List Text)
+                                    }
                                 }
                           | Name : Text
                           >
@@ -577,7 +612,10 @@
                                       List
                                         { mapKey : Text
                                         , mapValue :
-                                            { zuul/include :
+                                            { connection : Optional Text
+                                            , zuul/config-project :
+                                                Optional Bool
+                                            , zuul/include :
                                                 Optional (List Text)
                                             }
                                         }
@@ -606,7 +644,9 @@
                                     List
                                       { mapKey : Text
                                       , mapValue :
-                                          { zuul/include : Optional (List Text)
+                                          { connection : Optional Text
+                                          , zuul/config-project : Optional Bool
+                                          , zuul/include : Optional (List Text)
                                           }
                                       }
                                 | Name : Text
@@ -636,7 +676,10 @@
                                           List
                                             { mapKey : Text
                                             , mapValue :
-                                                { zuul/include :
+                                                { connection : Optional Text
+                                                , zuul/config-project :
+                                                    Optional Bool
+                                                , zuul/include :
                                                     Optional (List Text)
                                                 }
                                             }
@@ -669,7 +712,10 @@
                                            List
                                              { mapKey : Text
                                              , mapValue :
-                                                 { zuul/include :
+                                                 { connection : Optional Text
+                                                 , zuul/config-project :
+                                                     Optional Bool
+                                                 , zuul/include :
                                                      Optional (List Text)
                                                  }
                                              }
@@ -736,11 +782,13 @@
                 )
           , tenants =
               List/fold
-                { description : Optional Text
+                { default-connection : Optional Text
+                , description : Optional Text
                 , name : Text
                 , tenant-options :
                     Optional
-                      { zuul/report-build-page : Optional Bool
+                      { zuul/max-job-timeout : Optional Natural
+                      , zuul/report-build-page : Optional Bool
                       , zuul/web-url : Optional Text
                       }
                 , url : Text
@@ -749,11 +797,13 @@
                 ( List
                     { mapKey : Text
                     , mapValue :
-                        { description : Optional Text
+                        { default-connection : Optional Text
+                        , description : Optional Text
                         , name : Text
                         , tenant-options :
                             Optional
-                              { zuul/report-build-page : Optional Bool
+                              { zuul/max-job-timeout : Optional Natural
+                              , zuul/report-build-page : Optional Bool
                               , zuul/web-url : Optional Text
                               }
                         , url : Text
@@ -761,11 +811,13 @@
                     }
                 )
                 ( \ ( _
-                    : { description : Optional Text
+                    : { default-connection : Optional Text
+                      , description : Optional Text
                       , name : Text
                       , tenant-options :
                           Optional
-                            { zuul/report-build-page : Optional Bool
+                            { zuul/max-job-timeout : Optional Natural
+                            , zuul/report-build-page : Optional Bool
                             , zuul/web-url : Optional Text
                             }
                       , url : Text
@@ -775,11 +827,13 @@
                     : List
                         { mapKey : Text
                         , mapValue :
-                            { description : Optional Text
+                            { default-connection : Optional Text
+                            , description : Optional Text
                             , name : Text
                             , tenant-options :
                                 Optional
-                                  { zuul/report-build-page : Optional Bool
+                                  { zuul/max-job-timeout : Optional Natural
+                                  , zuul/report-build-page : Optional Bool
                                   , zuul/web-url : Optional Text
                                   }
                             , url : Text
@@ -791,11 +845,13 @@
                 ( [] : List
                          { mapKey : Text
                          , mapValue :
-                             { description : Optional Text
+                             { default-connection : Optional Text
+                             , description : Optional Text
                              , name : Text
                              , tenant-options :
                                  Optional
-                                   { zuul/report-build-page : Optional Bool
+                                   { zuul/max-job-timeout : Optional Natural
+                                   , zuul/report-build-page : Optional Bool
                                    , zuul/web-url : Optional Text
                                    }
                              , url : Text
@@ -814,7 +870,7 @@
                 , github-app-name : Optional Text
                 , github-label : Optional Text
                 , name : Text
-                , type : < gerrit | github | pagure >
+                , type : < gerrit | git | github | pagure >
                 }
           , groups :
               List
@@ -840,7 +896,10 @@
                               List
                                 { mapKey : Text
                                 , mapValue :
-                                    { zuul/include : Optional (List Text) }
+                                    { connection : Optional Text
+                                    , zuul/config-project : Optional Bool
+                                    , zuul/include : Optional (List Text)
+                                    }
                                 }
                           | Name : Text
                           >
@@ -858,11 +917,13 @@
                 }
           , tenants :
               List
-                { description : Optional Text
+                { default-connection : Optional Text
+                , description : Optional Text
                 , name : Text
                 , tenant-options :
                     Optional
-                      { zuul/report-build-page : Optional Bool
+                      { zuul/max-job-timeout : Optional Natural
+                      , zuul/report-build-page : Optional Bool
                       , zuul/web-url : Optional Text
                       }
                 , url : Text
@@ -870,11 +931,13 @@
           }
         ) ->
         List/fold
-          { description : Optional Text
+          { default-connection : Optional Text
+          , description : Optional Text
           , name : Text
           , tenant-options :
               Optional
-                { zuul/report-build-page : Optional Bool
+                { zuul/max-job-timeout : Optional Natural
+                , zuul/report-build-page : Optional Bool
                 , zuul/web-url : Optional Text
                 }
           , url : Text
@@ -882,11 +945,13 @@
           resources.tenants
           (List { tenant : { name : Text, report-build-page : Optional Bool } })
           ( \ ( _
-              : { description : Optional Text
+              : { default-connection : Optional Text
+                , description : Optional Text
                 , name : Text
                 , tenant-options :
                     Optional
-                      { zuul/report-build-page : Optional Bool
+                      { zuul/max-job-timeout : Optional Natural
+                      , zuul/report-build-page : Optional Bool
                       , zuul/web-url : Optional Text
                       }
                 , url : Text
@@ -902,12 +967,14 @@
                     , report-build-page =
                         ( merge
                             { None =
-                              { zuul/report-build-page = None Bool
+                              { zuul/max-job-timeout = None Natural
+                              , zuul/report-build-page = None Bool
                               , zuul/web-url = None Text
                               }
                             , Some =
                                 \ ( some
-                                  : { zuul/report-build-page : Optional Bool
+                                  : { zuul/max-job-timeout : Optional Natural
+                                    , zuul/report-build-page : Optional Bool
                                     , zuul/web-url : Optional Text
                                     }
                                   ) ->
@@ -930,41 +997,73 @@
       < Inline :
           List
             { mapKey : Text
-            , mapValue : { zuul/include : Optional (List Text) }
+            , mapValue :
+                { connection : Optional Text
+                , zuul/config-project : Optional Bool
+                , zuul/include : Optional (List Text)
+                }
             }
       | Name : Text
       >.Name
-  , Type = { zuul/include : Optional (List Text) }
+  , Type =
+      { connection : Optional Text
+      , zuul/config-project : Optional Bool
+      , zuul/include : Optional (List Text)
+      }
   , Union =
       < Inline :
           List
             { mapKey : Text
-            , mapValue : { zuul/include : Optional (List Text) }
+            , mapValue :
+                { connection : Optional Text
+                , zuul/config-project : Optional Bool
+                , zuul/include : Optional (List Text)
+                }
             }
       | Name : Text
       >
   , WithOptions =
-      \(sr : { zuul/include : Optional (List Text) }) ->
+      \ ( sr
+        : { connection : Optional Text
+          , zuul/config-project : Optional Bool
+          , zuul/include : Optional (List Text)
+          }
+        ) ->
       \(name : Text) ->
         < Inline :
             List
               { mapKey : Text
-              , mapValue : { zuul/include : Optional (List Text) }
+              , mapValue :
+                  { connection : Optional Text
+                  , zuul/config-project : Optional Bool
+                  , zuul/include : Optional (List Text)
+                  }
               }
         | Name : Text
         >.Inline
           [ { mapKey = name, mapValue = sr } ]
-  , default.zuul/include = None (List Text)
-  , schema.Type = { zuul/include : Optional (List Text) }
+  , default =
+    { connection = None Text
+    , zuul/config-project = None Bool
+    , zuul/include = None (List Text)
+    }
+  , schema.Type
+    =
+      { connection : Optional Text
+      , zuul/config-project : Optional Bool
+      , zuul/include : Optional (List Text)
+      }
   }
 , Tenant =
   { Name =
       \ ( tenant
-        : { description : Optional Text
+        : { default-connection : Optional Text
+          , description : Optional Text
           , name : Text
           , tenant-options :
               Optional
-                { zuul/report-build-page : Optional Bool
+                { zuul/max-job-timeout : Optional Natural
+                , zuul/report-build-page : Optional Bool
                 , zuul/web-url : Optional Text
                 }
           , url : Text
@@ -972,30 +1071,36 @@
         ) ->
         tenant.name
   , Type =
-      { description : Optional Text
+      { default-connection : Optional Text
+      , description : Optional Text
       , name : Text
       , tenant-options :
           Optional
-            { zuul/report-build-page : Optional Bool
+            { zuul/max-job-timeout : Optional Natural
+            , zuul/report-build-page : Optional Bool
             , zuul/web-url : Optional Text
             }
       , url : Text
       }
   , default =
-    { description = None Text
+    { default-connection = None Text
+    , description = None Text
     , tenant-options =
         None
-          { zuul/report-build-page : Optional Bool
+          { zuul/max-job-timeout : Optional Natural
+          , zuul/report-build-page : Optional Bool
           , zuul/web-url : Optional Text
           }
     }
   , getOptions =
       \ ( tenant
-        : { description : Optional Text
+        : { default-connection : Optional Text
+          , description : Optional Text
           , name : Text
           , tenant-options :
               Optional
-                { zuul/report-build-page : Optional Bool
+                { zuul/max-job-timeout : Optional Natural
+                , zuul/report-build-page : Optional Bool
                 , zuul/web-url : Optional Text
                 }
           , url : Text
@@ -1003,10 +1108,14 @@
         ) ->
         merge
           { None =
-            { zuul/report-build-page = None Bool, zuul/web-url = None Text }
+            { zuul/max-job-timeout = None Natural
+            , zuul/report-build-page = None Bool
+            , zuul/web-url = None Text
+            }
           , Some =
               \ ( some
-                : { zuul/report-build-page : Optional Bool
+                : { zuul/max-job-timeout : Optional Natural
+                  , zuul/report-build-page : Optional Bool
                   , zuul/web-url : Optional Text
                   }
                 ) ->
@@ -1016,7 +1125,14 @@
   }
 , TenantOptions =
   { Type =
-      { zuul/report-build-page : Optional Bool, zuul/web-url : Optional Text }
-  , default = { zuul/report-build-page = None Bool, zuul/web-url = None Text }
+      { zuul/max-job-timeout : Optional Natural
+      , zuul/report-build-page : Optional Bool
+      , zuul/web-url : Optional Text
+      }
+  , default =
+    { zuul/max-job-timeout = None Natural
+    , zuul/report-build-page = None Bool
+    , zuul/web-url = None Text
+    }
   }
 }

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"strconv"
 
 	ini "gopkg.in/ini.v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -19,8 +20,14 @@ import (
 //go:embed static/zuul/zuul.conf
 var zuul_dot_conf string
 
-//go:embed static/zuul/init_tenant_config.sh
+//go:embed static/zuul/init-tenant-config.sh
 var zuul_init_tenant_config string
+
+//go:embed static/zuul/generate-tenant-config.sh
+var zuul_generate_tenant_config string
+
+//go:embed static/zuul/scheduler-sidecar-entrypoint.sh
+var zuul_scheduler_sidecar_entrypoint string
 
 func is_statefulset(service string) bool {
 	return service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger"
@@ -80,7 +87,8 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 }
 
 func create_zuul_volumes(service string) []apiv1.Volume {
-	var mod int32 = 256 // decimal for 0400 octal
+	var mod int32 = 256     // decimal for 0400 octal
+	var execmod int32 = 448 // decimal for 0700 octal
 	volumes := []apiv1.Volume{
 		create_volume_secret("ca-cert"),
 		create_volume_secret("zuul-config"),
@@ -101,6 +109,20 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 		// for the other, we use an empty dir.
 		volumes = append(volumes, create_empty_dir(service))
 	}
+	if service == "zuul-scheduler" {
+		tooling_vol := apiv1.Volume{
+			Name: "tooling-vol",
+			VolumeSource: apiv1.VolumeSource{
+				ConfigMap: &apiv1.ConfigMapVolumeSource{
+					LocalObjectReference: apiv1.LocalObjectReference{
+						Name: "zuul-scheduler-tooling-config-map",
+					},
+					DefaultMode: &execmod,
+				},
+			},
+		}
+		volumes = append(volumes, tooling_vol)
+	}
 	return volumes
 }
 
@@ -115,6 +137,34 @@ func init_scheduler_config() apiv1.Container {
 	}
 }
 
+func (r *SFController) scheduler_sidecar_container() apiv1.Container {
+	config_url, config_user := r.getConfigRepoCNXInfo()
+	container := apiv1.Container{
+		Name:    "scheduler-sidecar",
+		Image:   BUSYBOX_IMAGE,
+		Command: []string{"sh", "-c", zuul_scheduler_sidecar_entrypoint},
+		Env: []apiv1.EnvVar{
+			create_secret_env("SF_ADMIN_SSH", "admin-ssh-key", "priv"),
+			{
+				Name:  "CONFIG_REPO_URL",
+				Value: config_url,
+			},
+			{
+				Name:  "CONFIG_REPO_USER",
+				Value: config_user,
+			},
+		},
+		VolumeMounts: []apiv1.VolumeMount{
+			{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
+			{
+				Name:      "tooling-vol",
+				SubPath:   "generate-zuul-tenant-yaml.sh",
+				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
+		},
+	}
+	return container
+}
+
 func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, config string) bool {
 	annotations := map[string]string{
 		"zuul-config": checksum([]byte(config)),
@@ -126,11 +176,17 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		return false
 	}
 
+	scheduler_tooling_data := make(map[string]string)
+	scheduler_tooling_data["generate-zuul-tenant-yaml.sh"] = zuul_generate_tenant_config
+	r.EnsureConfigMap("zuul-scheduler-tooling", scheduler_tooling_data)
+
+	zs_volumes := create_zuul_volumes("zuul-scheduler")
 	zs := create_statefulset(r.ns, "zuul-scheduler", "")
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = append(init_containers, init_scheduler_config())
-	zs.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-scheduler")
-	zs.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-scheduler")
+	zs.Spec.Template.Spec.Containers = append(
+		create_zuul_container(fqdn, "zuul-scheduler"), r.scheduler_sidecar_container())
+	zs.Spec.Template.Spec.Volumes = zs_volumes
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
 	r.GetOrCreate(&zs)
@@ -292,7 +348,7 @@ func (r *SFController) DeployZuul(spec sfv1.ZuulSpec, gerrit_enabled bool, traci
 				Name:              "gerrit",
 				Hostname:          GERRIT_SSHD_PORT_NAME,
 				Port:              "29418",
-				Puburl:            "http://" + GERRIT_HTTPD_PORT_NAME,
+				Puburl:            "http://" + GERRIT_HTTPD_PORT_NAME + ":" + strconv.Itoa(GERRIT_HTTPD_PORT),
 				Username:          "zuul",
 				Canonicalhostname: "gerrit." + r.cr.Spec.FQDN,
 				Password:          "zuul-gerrit-api-key",

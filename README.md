@@ -91,7 +91,15 @@ make crc_storage
 
 ```sh
 cd /home/zuul-worker/src/softwarefactory-project.io/software-factory/sf-operator
-kubectl delete softwarefactory my-sf && kubectl apply -f config/samples && go run ./main.go --namespace $MY_NS
+kubectl delete softwarefactory my-sf
+kubectl apply -f config/samples
+go run ./main.go --namespace $MY_NS
+```
+
+It is also possible to pass the custom resources directly to the operator
+
+```sh
+go run ./main.go --namespace $MY_NS --oneshot --cr ~/my-sf.yaml
 ```
 
 ## Cheat Sheet
@@ -112,21 +120,18 @@ kubectl exec -it $(getPodName "keycloak") sh
 * Reset deployment
 
 ```sh
-kubectl delete softwarefactory my-sf && kubectl apply -f config/samples && go run ./main.go --namespace $MY_NS
+kubectl delete softwarefactory my-sf
+kubectl apply -f config/samples
+go run ./main.go --namespace $MY_NS
 ```
 
 ### Delete all content related to the sf-operator
 
+Deleting the SoftwareFactory resource keeps persistent volume and some secrets. To
+wipe all in your namespace, runs:
+
 ```sh
-MY_NS=$(kubectl config view -o jsonpath='{.contexts[].context.namespace}')
-if [ -z "${MY_NS}" ]; then
-    MY_NS=default
-fi
-kubectl -n $MY_NS delete all  --all --now
-for resource in certificates ClusterIssuers issuers certificaterequests secrets pvc pv configmaps deployments pods services ingress;
-do
-  kubectl -n $MY_NS delete $resource --all;
-done
+./tools/wipe-deployment.sh
 ```
 
 # sf_operator configuration library

@@ -23,14 +23,64 @@ let config-groups =
               }
             ]
 
-let initalResources =
+let internalResources =
       \(fqdn : Text) ->
+      \(withConnections : Bool) ->
         let config =
               SoftwareFactory.GitRepository::{
               , name = "config"
               , description = Some "Config repository"
               , acl = Some "config-acl"
               }
+
+        let configSR =
+              SoftwareFactory.SourceRepository.WithOptions
+                SoftwareFactory.SourceRepository::{
+                , connection = Some "gerrit"
+                , zuul/config-project = Some True
+                }
+                "config"
+
+        let systemConfigSR =
+              SoftwareFactory.SourceRepository.WithOptions
+                SoftwareFactory.SourceRepository::{
+                , zuul/config-project = Some True
+                }
+                "system-config"
+
+        let connections =
+              [ SoftwareFactory.Connection::{
+                , name = "git-server"
+                , base-url = Some "git://git-server/"
+                , type = SoftwareFactory.ConnectionType.git
+                }
+              , SoftwareFactory.Connection::{
+                , name = "gerrit"
+                , base-url = Some "http://gerrit-httpd:8080"
+                , type = SoftwareFactory.ConnectionType.gerrit
+                }
+              ]
+
+        let internalProject =
+              SoftwareFactory.Project::{
+              , name = "internal"
+              , tenant = Some "internal"
+              , connection = "git-server"
+              , description = Some "Internal configuration project"
+              , source-repositories = Some [ systemConfigSR, configSR ]
+              }
+
+        let internalTenant =
+              \(fqdn : Text) ->
+                SoftwareFactory.Tenant::{
+                , name = "internal"
+                , url = "https://${fqdn}/manage"
+                , default-connection = Some "git-server"
+                , tenant-options = Some SoftwareFactory.TenantOptions::{
+                  , zuul/report-build-page = Some True
+                  , zuul/max-job-timeout = Some 10800
+                  }
+                }
 
         let config-acl =
               SoftwareFactory.GitACL::{
@@ -69,29 +119,32 @@ let initalResources =
               }
 
         in  SoftwareFactory.Resources::{
-            , projects = [] : List SoftwareFactory.Project.Type
-            , tenants = [] : List SoftwareFactory.Tenant.Type
+            , projects = [ internalProject ]
+            , tenants = [ internalTenant fqdn ]
             , groups = config-groups fqdn
             , acls = [ config-acl ]
-            , connections = [] : List SoftwareFactory.Connection.Type
+            , connections =
+                if    withConnections
+                then  connections
+                else  [] : List SoftwareFactory.Connection.Type
             , repos = [ config ]
             }
 
-let initalGroupsResources =
+let emptyResources =
+      SoftwareFactory.Resources::{
+      , projects = [] : List SoftwareFactory.Project.Type
+      , tenants = [] : List SoftwareFactory.Tenant.Type
+      , groups = [] : List SoftwareFactory.Group.Type
+      , acls = [] : List SoftwareFactory.GitACL.Type
+      , connections = [] : List SoftwareFactory.Connection.Type
+      , repos = [] : List SoftwareFactory.GitRepository.Type
+      }
+
+let renderInternalResources =
       \(fqdn : Text) ->
-        SoftwareFactory.Resources::{
-        , projects = [] : List SoftwareFactory.Project.Type
-        , tenants = [] : List SoftwareFactory.Tenant.Type
-        , groups = config-groups fqdn
-        , acls = [] : List SoftwareFactory.GitACL.Type
-        , connections = [] : List SoftwareFactory.Connection.Type
-        , repos = [] : List SoftwareFactory.GitRepository.Type
-        }
+      \(withConnections : Bool) ->
+        renderResources (internalResources fqdn withConnections)
 
-let renderInitialResources =
-      \(fqdn : Text) -> renderResources (initalResources fqdn)
+let renderEmptyResources = renderResources emptyResources
 
-let renderInitialGroupsResources =
-      \(fqdn : Text) -> renderResources (initalGroupsResources fqdn)
-
-in  { renderInitialResources, renderInitialGroupsResources }
+in  { renderEmptyResources, renderInternalResources }
