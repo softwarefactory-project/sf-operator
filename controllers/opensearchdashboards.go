@@ -49,7 +49,7 @@ func (r *SFController) DeployOpensearchDashboards(enabled bool, keycloak_status 
 		cm_data["opensearch_dashboards.yml"] = os_dashboards_objs
 		r.EnsureConfigMap("opensearch-dashboards", cm_data)
 
-		dep := create_deployment(r.ns, "opensearch-dashboards", "quay.io/software-factory/opensearch-dashboards:2.2.0-1")
+		dep := create_deployment(r.ns, "opensearch-dashboards", "quay.io/software-factory/opensearch-dashboards:2.4.0-1")
 		dep.Spec.Template.Spec.Containers[0].Command = []string{
 			"/bin/bash", "-x", "/usr/share/opensearch-dashboards/opensearch-dashboards-docker-entrypoint.sh"}
 

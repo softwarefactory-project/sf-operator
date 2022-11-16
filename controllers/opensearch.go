@@ -121,7 +121,7 @@ func (r *SFController) DeployOpensearch(enabled bool) bool {
 		cm_data["roles_mapping.yml"] = os_roles_mapping
 		r.EnsureConfigMap("opensearch", cm_data)
 
-		dep := create_statefulset(r.ns, "opensearch", "quay.io/software-factory/opensearch:2.2.0-1")
+		dep := create_statefulset(r.ns, "opensearch", "quay.io/software-factory/opensearch:2.4.0-1")
 		dep.Spec.Template.Spec.Containers[0].Command = []string{
 			"/bin/bash", "-x", "/usr/share/opensearch/opensearch-docker-entrypoint.sh"}
 
