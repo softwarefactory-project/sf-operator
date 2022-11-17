@@ -7,18 +7,6 @@
       shell: |
         /usr/local/bin/crc start --memory 14000 --disk-size 80 --cpus 6
 
-    - name: Setup local storage
-      vars:
-        openshift_deployment: true
-      include_role:
-        name: extra/crc
-        tasks_from: local-storage.yaml
-
-#    - name: Set memory limitation for new pods
-#      include_role:
-#        name: extra/crc
-#        tasks_from: limitation.yaml
-
   roles:
     - install-sf-operator
     - run-sf-operator
