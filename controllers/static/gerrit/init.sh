@@ -35,7 +35,6 @@ java ${JAVA_OPTIONS} -jar /var/gerrit/bin/gerrit.war reindex -d ${GERRIT_SITE}
 echo "Installing plugins ..."
 cp -u /var/gerrit-plugins/* ${GERRIT_SITE}/plugins
 
-echo "Creating admin account if needed"
 cat << EOF > ${HOME}/.gitconfig
 [user]
     name = SF initial configurator
@@ -49,22 +48,6 @@ EOF
 echo "Ensure admin user"
 pynotedb create-admin-user --email "admin@${FQDN}" --pubkey "${GERRIT_ADMIN_SSH_PUB}" \
   --all-users "${GERRIT_SITE}/git/All-Users.git" --scheme gerrit
-
-echo "Copy Gerrit Admin SSH keys on filesystem"
-mkdir -p ${HOME}/.ssh
-echo "${GERRIT_ADMIN_SSH_PUB}" > ${HOME}/.ssh/gerrit_admin.pub
-chmod 0644 ${HOME}/.ssh/gerrit_admin.pub
-echo "${GERRIT_ADMIN_SSH}" > ${HOME}/.ssh/gerrit_admin
-chmod 0600 ${HOME}/.ssh/gerrit_admin
-
-echo "Setup .ssh/config to allow container exec of 'ssh gerrit'"
-cat << EOF > ${HOME}/.ssh/config
-Host gerrit
-User admin
-Hostname ${HOSTNAME}
-Port 29418
-IdentityFile ${HOME}/.ssh/gerrit_admin
-EOF
 
 echo "Setting Gerrit config file ..."
 git config -f ${GERRIT_SITE}/etc/gerrit.config --replace-all gerrit.canonicalWebUrl "https://gerrit.${FQDN}"

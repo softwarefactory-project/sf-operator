@@ -9,8 +9,9 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"k8s.io/utils/pointer"
 	"strconv"
+
+	"k8s.io/utils/pointer"
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -69,7 +70,6 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, sp
 		Command: []string{"sh", "-c", gerritInitScript},
 		Env: []apiv1.EnvVar{
 			create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
-			create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
 			create_secret_env("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
 			create_env("SSHD_MAX_CONNECTIONS_PER_USER", sshd_max_conns_per_user),
 			create_env("FQDN", r.cr.Spec.FQDN),
@@ -180,6 +180,9 @@ func (r *SFController) DeployGerrit(spec sfv1.GerritSpec, zuul_enabled bool, has
 		}
 		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 			create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
+			create_env("FQDN", r.cr.Spec.FQDN),
+			create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
+			create_secret_env("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
 		}
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
