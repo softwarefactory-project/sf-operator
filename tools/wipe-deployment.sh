@@ -15,3 +15,6 @@ for resource in certificates ClusterIssuers issuers certificaterequests secrets 
 do
   kubectl -n $MY_NS delete $resource --all;
 done
+
+# Delete all content in the PV. It canbe helpful on CRC deployment.
+kubectl get pv | grep standard | cut -f 1 -d ' ' | xargs kubectl delete pv

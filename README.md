@@ -96,6 +96,16 @@ kubectl apply -f config/samples
 go run ./main.go --namespace $MY_NS
 ```
 
+On CRC instance:
+
+```sh
+cd /home/zuul-worker/src/softwarefactory-project.io/software-factory/sf-operator
+kubectl delete softwarefactory my-sf
+kubectl get pv | grep standard | cut -f 1 -d ' ' | xargs kubectl delete pv
+bash ~/install_yamls/scripts/delete-pv.sh
+kubectl apply -f config/samples && go run ./main.go --namespace $MY_NS
+```
+
 It is also possible to pass the custom resources directly to the operator
 
 ```sh
