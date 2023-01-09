@@ -2,22 +2,6 @@
 - hosts: all
   vars:
     use_workaround: true
-  pre_tasks:
-    - name: Start CRC
-      shell: |
-        /usr/local/bin/crc start --memory 14000 --disk-size 80 --cpus 6
-
-    - name: Ensure that user is logged
-      shell: >
-        /usr/local/bin/oc login -u kubeadmin
-        -p "$(tail ~/crc-start.log  | grep -i password | head -1 | awk '{print $2}')"
-        https://api.crc.testing:6443
-        --insecure-skip-tls-verify=true
-
-    - name: Show available nodes
-      shell: |
-        /usr/bin/kubectl get nodes
-
   roles:
     - install-sf-operator
     - run-sf-operator

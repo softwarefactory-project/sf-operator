@@ -21,6 +21,7 @@
 - job:
     name: sf-operator-functional-allinone-crc
     run: playbooks/test-crc.yaml
+    parent: base-crc
     timeout: 3600
     post-run: playbooks/post.yaml
     nodeset:
