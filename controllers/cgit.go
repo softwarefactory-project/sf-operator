@@ -12,7 +12,7 @@ import (
 )
 
 const CGIT_IDENT string = "cgit"
-const CGIT_IMAGE string = "quay.io/software-factory/cgit:1.2.3-1"
+const CGIT_IMAGE string = "quay.io/software-factory/cgit:1.2.3-3"
 
 const CGIT_PORT = 37920
 const CGIT_PORT_NAME = "cgit-port"

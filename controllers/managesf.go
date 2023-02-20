@@ -14,7 +14,7 @@ import (
 )
 
 const MANAGESF_IDENT string = "managesf"
-const MANAGESF_IMAGE string = "quay.io/software-factory/managesf:0.27.6-1"
+const MANAGESF_IMAGE string = "quay.io/software-factory/managesf:0.30.0-1"
 
 const MANAGESF_PORT = 20001
 const MANAGESF_PORT_NAME = "managesfport"

@@ -50,7 +50,7 @@ import (
 	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 )
 
-const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.2-1"
+const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.3-1"
 
 func checksum(data []byte) string {
 	return fmt.Sprintf("%x", sha256.Sum256(data))
@@ -200,8 +200,9 @@ func create_volume_cm(volume_name string, config_map_ref string) apiv1.Volume {
 // config_map_ref - ConfigMap name ref
 // keys - array of key to mount into the volume
 // Each element of the array has a Key and a Path
-//    Key - Reference to the ConfigMap Key name
-//    Path - The relative path of the file to map the key to
+//
+//	Key - Reference to the ConfigMap Key name
+//	Path - The relative path of the file to map the key to
 func create_volume_cm_keys(volume_name string, config_map_ref string, keys []apiv1.KeyToPath) apiv1.Volume {
 	return apiv1.Volume{
 		Name: volume_name,

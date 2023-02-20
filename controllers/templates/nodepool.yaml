@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: launcher
-        image: quay.io/software-factory/nodepool-launcher-ubi:5.0.0-8
+        image: quay.io/software-factory/nodepool-launcher-ubi:8.1.0-1
         volumeMounts:
         - name: nodepool-config
           mountPath: /etc/nodepool

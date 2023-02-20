@@ -11,7 +11,7 @@ import (
 
 // The official image seems to consume all the available memory, and it gets OOMed.
 // const DBImage = "quay.io/software-factory/mariadb:10.3.10-1"
-const DBImage = "docker.io/linuxserver/mariadb"
+const DBImage = "quay.io/software-factory/mariadb:10.3.28-2"
 
 const MYSQL_PORT = 3306
 const MYSQL_PORT_NAME = "mariadb-port"
@@ -24,9 +24,9 @@ func (r *SFController) EnsureDBInit(name string) ([]apiv1.Container, apiv1.Secre
 		Name:  "mariadb-client",
 		Image: DBImage,
 		Command: []string{"sh", "-c", `
-echo 'Running: mysql --host=mariadb --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
+echo 'Running: mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
 ATTEMPT=0
-while ! mysql --host=mariadb --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"; do
+while ! mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"; do
     ATTEMPT=$[ $ATTEMPT + 1 ]
     if test $ATTEMPT -eq 10; then
         echo "Failed after $ATTEMPT attempt";

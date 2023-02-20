@@ -12,7 +12,7 @@ import (
 )
 
 const GRAFANA_IDENT string = "grafana"
-const GRAFANA_IMAGE string = "quay.io/software-factory/grafana:7.5.7"
+const GRAFANA_IMAGE string = "quay.io/software-factory/grafana-oss:9.2.6-1"
 
 const GRAFANA_PORT = 3000
 const GRAFANA_PORT_NAME = "grafana-port"
