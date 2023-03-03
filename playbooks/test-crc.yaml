@@ -2,6 +2,11 @@
 - hosts: all
   vars:
     use_workaround: true
+  pre_tasks:
+    - name: Create local PV
+      include_role:
+        name: extra/crc
+        tasks_from: local-storage.yaml
   roles:
     - install-sf-operator
     - run-sf-operator
