@@ -41,16 +41,6 @@ spec:
           spec:
             description: SoftwareFactorySpec defines the desired state of SoftwareFactory
             properties:
-              cgit:
-                description: 'Deploy the cgit service A hyperfast web frontend for
-                  git repositories written in C More info: https://git.zx2c4.com/cgit'
-                properties:
-                  enabled:
-                    description: Enables Service.
-                    type: boolean
-                required:
-                - enabled
-                type: object
               config-locations:
                 description: Config repositories spec
                 properties:

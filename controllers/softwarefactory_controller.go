@@ -177,10 +177,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		services["GerritBot"] = r.DeployGerritBot()
 	}
 
-	if sf.Spec.Cgit.Enabled && services["Gerrit"] {
-		services["CGit"] = r.DeployCgit()
-	}
-
 	if sf.Spec.Postfix.Enabled {
 		services["Postfix"] = r.DeployPostfix()
 	}

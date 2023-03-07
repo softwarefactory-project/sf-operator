@@ -297,7 +297,6 @@ func (in *SoftwareFactorySpec) DeepCopyInto(out *SoftwareFactorySpec) {
 	out.Telemetry = in.Telemetry
 	out.Hound = in.Hound
 	in.GerritBot.DeepCopyInto(&out.GerritBot)
-	out.Cgit = in.Cgit
 	out.Postfix = in.Postfix
 	out.Grafana = in.Grafana
 }

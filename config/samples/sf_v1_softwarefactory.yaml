@@ -44,8 +44,6 @@ spec:
             - change-merged
           projects:
             - myproject
-  cgit:
-    enabled: true
   postfix:
     enabled: true
     forward_email: root@localhost

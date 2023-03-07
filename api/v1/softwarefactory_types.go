@@ -169,11 +169,6 @@ type SoftwareFactorySpec struct {
 	// More info: https://opendev.org/opendev/gerritbot.git
 	GerritBot GerritBotSpec `json:"gerritbot,omitempty"`
 
-	// Deploy the cgit service
-	// A hyperfast web frontend for git repositories written in C
-	// More info: https://git.zx2c4.com/cgit
-	Cgit BaseSpec `json:"cgit,omitempty"`
-
 	// Deploy the postfix service
 	// Mail server
 	// More info: https://www.postfix.org/start.html
