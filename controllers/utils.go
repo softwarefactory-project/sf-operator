@@ -902,18 +902,6 @@ func (r *SFController) SetupIngress() {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressHound())
 		r.ensure_ingress(ingress, name)
 	}
-	if r.cr.Spec.Grafana.Enabled {
-		var ingress netv1.Ingress
-		name := r.cr.Name + "-" + GRAFANA_IDENT
-		ingress = netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-			},
-		}
-		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGrafana())
-		r.ensure_ingress(ingress, name)
-	}
 
 	var ingress netv1.Ingress
 	name := r.cr.Name + "-" + GATEWAY_IDENT

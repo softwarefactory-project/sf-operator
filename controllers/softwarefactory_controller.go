@@ -173,10 +173,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		services["Postfix"] = r.DeployPostfix()
 	}
 
-	if sf.Spec.Grafana.Enabled && services["MariaDB"] {
-		services["Grafana"] = r.DeployGrafana()
-	}
-
 	if IsToDeployGateway(r) {
 		services["Gateway"] = r.DeployGateway()
 	}

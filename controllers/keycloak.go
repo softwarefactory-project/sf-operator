@@ -120,12 +120,6 @@ func (r *SFController) KCPostInit() bool {
 			)
 		}
 
-		if r.cr.Spec.Grafana.Enabled {
-			vars = append(vars,
-				create_secret_env("KEYCLOAK_GRAFANA_CLIENT_SECRET", GRAFANA_IDENT+"-kc-client-password", GRAFANA_IDENT+"-kc-client-password"),
-			)
-		}
-
 		container := apiv1.Container{
 			Name:    job_name + "-container",
 			Image:   KC_IMAGE,
@@ -269,6 +263,6 @@ func (r *SFController) IsKeycloakReady() bool {
 }
 
 func (r *SFController) IsKeycloakEnabled() bool {
-	// Keycloak is enable if Gerrit or Zuul or Opensearch or Grafana are Enabled
-	return r.cr.Spec.Gerrit.Enabled || r.cr.Spec.Zuul.Enabled || r.cr.Spec.Opensearch.Enabled || r.cr.Spec.Grafana.Enabled
+	// Keycloak is enable if Gerrit or Zuul or Opensearch are Enabled
+	return r.cr.Spec.Gerrit.Enabled || r.cr.Spec.Zuul.Enabled || r.cr.Spec.Opensearch.Enabled
 }

@@ -59,18 +59,6 @@ spec:
                   sshd_max_connections_per_user:
                     type: string
                 type: object
-              grafana:
-                description: 'Deploy the grafana service Query, visualize, alert on,
-                  and understand your data no matter where it’s stored. With Grafana
-                  you can create, explore, and share all of your data through beautiful,
-                  flexible dashboards. More info: https://grafana.com/'
-                properties:
-                  enabled:
-                    description: Enables Service.
-                    type: boolean
-                required:
-                - enabled
-                type: object
               hound:
                 description: 'Deploy the hound service. Hound is an extremely fast
                   source code search engine. More info: https://github.com/hound-search/hound'

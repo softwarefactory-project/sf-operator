@@ -32,5 +32,3 @@ spec:
   postfix:
     enabled: true
     forward_email: root@localhost
-  grafana:
-    enabled: true

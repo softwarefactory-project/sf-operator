@@ -44,11 +44,11 @@ function set_user () {
   kcadm set-password --target-realm SF \
     --userid $uid \
     --new-password $password
-  
+
   # Set user email (this refresh the email domain in case of SF domain change)
   kcadm update users/$uid --target-realm SF \
     --set "email=$username@${FQDN}"
-  
+
   # Set user as administrator of the realm if admin option is "true"
   if [ "$is_admin" == "true" ]; then
     echo "Set $username as realm's administrator"
@@ -373,11 +373,4 @@ if [ -n "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}" ]; then
   for os_role in $(curl $os_static_roles_url 2>&1 | grep -e '^[a-zA-Z].*:$' | awk '{sub(/:$/,"")}1'); do
     set_client_scoped_role "opensearch-dashboards" $os_role "" "false"
   done
-fi
-
-# Setup Grafana client when a client secret is available in the env vars
-if [ -n "${KEYCLOAK_GRAFANA_CLIENT_SECRET}" ]; then
-  create_oidc_client_with_secret "grafana"
-  set_oidc_client_origin "grafana"
-  set_oidc_client_secret "grafana" "${KEYCLOAK_GRAFANA_CLIENT_SECRET}"
 fi
