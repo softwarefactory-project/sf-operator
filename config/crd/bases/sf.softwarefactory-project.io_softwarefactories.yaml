@@ -135,24 +135,6 @@ spec:
                 required:
                 - enabled
                 type: object
-              opensearch:
-                description: Deploy the opensearch service.
-                properties:
-                  enabled:
-                    description: Enables Service.
-                    type: boolean
-                required:
-                - enabled
-                type: object
-              opensearchdashboards:
-                description: Deploy the opensearch dashboards service.
-                properties:
-                  enabled:
-                    description: Enables Service.
-                    type: boolean
-                required:
-                - enabled
-                type: object
               postfix:
                 description: 'Deploy the postfix service Mail server More info: https://www.postfix.org/start.html'
                 properties:

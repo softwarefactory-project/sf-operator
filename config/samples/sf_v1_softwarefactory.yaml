@@ -7,10 +7,6 @@ spec:
   gerrit:
     enabled: true
     sshd_max_connections_per_user: "64"
-  opensearch:
-    enabled: true
-  opensearchdashboards:
-    enabled: true
   zuul:
     enabled: true
     gerritconns: []

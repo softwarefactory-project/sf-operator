@@ -52,7 +52,7 @@ If the FQDN is not already configured to point at your kubernetes cluster inboun
 then you need to setup a local entry in /etc/hosts:
 
 ```sh
-echo "${K8S_EXTERNAL_IP} ${FQDN} zuul.${FQDN} gerrit.${FQDN} opensearch.${FQDN}" | sudo tee -a /etc/hosts
+echo "${K8S_EXTERNAL_IP} ${FQDN} zuul.${FQDN} gerrit.${FQDN} | sudo tee -a /etc/hosts
 ```
 
 ## Development

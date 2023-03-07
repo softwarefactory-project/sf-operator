@@ -806,54 +806,6 @@ func (r *SFController) SetupIngress() {
 		name := r.cr.Name + "-zuul"
 		r.ensure_ingress(r.IngressZuul(name), name)
 	}
-	if r.cr.Spec.Opensearch.Enabled {
-		var ingress netv1.Ingress
-		name := r.cr.Name + "-opensearch"
-		// NOTE(dpawlik): The Opensearch service requires special annotations
-		// that will redirect query properly.
-		ingress = netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-				Annotations: map[string]string{
-					"nginx.ingress.kubernetes.io/enable-access-log": "true",
-					"nginx.ingress.kubernetes.io/rewrite-target":    "/",
-					"nginx.ingress.kubernetes.io/backend-protocol":  "HTTPS",
-					"nginx.ingress.kubernetes.io/ssl-redirect":      "true",
-				},
-			},
-		}
-		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearch())
-		ingress.Spec.TLS = []netv1.IngressTLS{
-			{
-				Hosts:      []string{"opensearch." + r.cr.Spec.FQDN},
-				SecretName: "opensearch-server-tls",
-			},
-		}
-		r.ensure_ingress(ingress, name)
-	}
-	if r.cr.Spec.OpensearchDashboards.Enabled {
-		var ingress netv1.Ingress
-		name := r.cr.Name + "-opensearchdashboards"
-		ingress = netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-				Annotations: map[string]string{
-					"nginx.ingress.kubernetes.io/backend-protocol": "HTTPS",
-					"nginx.ingress.kubernetes.io/ssl-redirect":     "true",
-				},
-			},
-		}
-		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressOpensearchDashboards())
-		ingress.Spec.TLS = []netv1.IngressTLS{
-			{
-				Hosts:      []string{"opensearch-dashboards." + r.cr.Spec.FQDN},
-				SecretName: "opensearch-dashboards-tls",
-			},
-		}
-		r.ensure_ingress(ingress, name)
-	}
 	if r.cr.Spec.Murmur.Enabled {
 		var ingress netv1.Ingress
 		name := r.cr.Name + "-murmur"
@@ -945,7 +897,7 @@ func (r *SFController) create_client_certificate(ns string, name string, issuer 
 				certv1.UsageServerAuth,
 				certv1.UsageClientAuth,
 			},
-			// Example DNSNames: opensearch, opensearch.my-sf, opensearch.sftests.com, my-sf
+			// Example DNSNames: service, service.my-sf, service.sftests.com, my-sf
 			DNSNames: []string{
 				servicename,
 				fmt.Sprintf("%s.%s", servicename, r.cr.Name),

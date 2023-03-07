@@ -6,10 +6,6 @@ spec:
   fqdn: "sftests.com"
   gerrit:
     enabled: true
-  opensearch:
-    enabled: true
-  opensearchdashboards:
-    enabled: true
   telemetry:
     enabled: true
   zuul:

@@ -104,12 +104,6 @@ type SoftwareFactorySpec struct {
 	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`
 
-	// Deploy the opensearch service.
-	Opensearch BaseSpec `json:"opensearch,omitempty"`
-
-	// Deploy the opensearch dashboards service.
-	OpensearchDashboards BaseSpec `json:"opensearchdashboards,omitempty"`
-
 	// Deployment of Murmur service.
 	// Mumble is an open source, low-latency, high quality voice
 	// chat software primarily intended for use while gaming.

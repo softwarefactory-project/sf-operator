@@ -114,11 +114,6 @@ func (r *SFController) KCPostInit() bool {
 				create_env("ZUUL_ENABLED", "true"),
 			)
 		}
-		if r.cr.Spec.OpensearchDashboards.Enabled {
-			vars = append(vars,
-				create_secret_env("KEYCLOAK_OPENSEARCH_CLIENT_SECRET", "opensearch-kc-client-password", "opensearch-kc-client-password"),
-			)
-		}
 
 		container := apiv1.Container{
 			Name:    job_name + "-container",
@@ -262,6 +257,6 @@ func (r *SFController) IsKeycloakReady() bool {
 }
 
 func (r *SFController) IsKeycloakEnabled() bool {
-	// Keycloak is enable if Gerrit or Zuul or Opensearch are Enabled
-	return r.cr.Spec.Gerrit.Enabled || r.cr.Spec.Zuul.Enabled || r.cr.Spec.Opensearch.Enabled
+	// Keycloak is enable if Gerrit or Zuul are Enabled
+	return r.cr.Spec.Gerrit.Enabled || r.cr.Spec.Zuul.Enabled
 }

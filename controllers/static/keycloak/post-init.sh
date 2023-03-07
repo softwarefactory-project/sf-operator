@@ -345,32 +345,3 @@ if [ "${ZUUL_ENABLED}" == "true" ]; then
   # Create "admin on every tenant" role
   set_client_scoped_role "zuul" "zuul_admin" "This role grants privileged actions such as dequeues and autoholds on every Zuul tenant" "false"
 fi
-
-# Opensearch support
-if [ -n "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}" ]; then
-  create_oidc_client_with_secret "opensearch-dashboards"
-  set_oidc_client_origin "opensearch-dashboards"
-  set_oidc_client_secret "opensearch-dashboards" "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}"
-  add_mapper "opensearch-dashboards" "roles" "oidc-usermodel-realm-role-mapper"
-  # Fix the error at logout "invalid redirect uri"
-  cid=$(get_client_id "opensearch-dashboards")
-  kcadm update clients/${cid} --target-realm SF \
-    --set "attributes.\"post.logout.redirect.uris\"=https://opensearch-dashboards.${FQDN}/*##"
-  # Custom role we assign by default, gives read/write access to indexes
-  set_client_scoped_role "opensearch-dashboards" "sf_opensearch_dashboards_user" "Default opensearch dashboards roles for SF users" "true"
-  # Create default roles as defined by the opensearch security plugin.
-  # Download the upstream YAML definition file then parse it for role names:
-  os_roles_url="https://raw.githubusercontent.com/opensearch-project/security/main/config/roles.yml"
-  for os_role in $(curl $os_roles_url 2>&1 | grep -e '^[a-zA-Z].*:$' | awk '{sub(/:$/,"")}1'); do
-    is_default="false"
-    # if [ "${os_role}" == "kibana_read_only" ]; then
-    #   is_default="true"
-    # fi
-    set_client_scoped_role "opensearch-dashboards" $os_role "" $is_default
-  done
-  # Static roles definitions URL
-  os_static_roles_url="https://raw.githubusercontent.com/opensearch-project/security/main/src/main/resources/static_config/static_roles.yml"
-  for os_role in $(curl $os_static_roles_url 2>&1 | grep -e '^[a-zA-Z].*:$' | awk '{sub(/:$/,"")}1'); do
-    set_client_scoped_role "opensearch-dashboards" $os_role "" "false"
-  done
-fi

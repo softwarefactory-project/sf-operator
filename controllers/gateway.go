@@ -33,12 +33,11 @@ var gateway_common string
 // Wrapping the map here, the map is not on global scope
 func serviceMapping(r *SFController, service_name string) (key string, value string) {
 	services := map[string]string{
-		GERRIT_IDENT:            "/gerrit",
-		"keycloak":              "/keycloak",
-		"zuul":                  "/zuul",
-		"nodepool":              "/nodepool",
-		"opensearch-dashboards": "/opensearchdashboards",
-		MURMUR_IDENT:            "mumble://" + MURMUR_IDENT + "." + r.cr.Spec.FQDN + "/?version=1.2.0",
+		GERRIT_IDENT: "/gerrit",
+		"keycloak":   "/keycloak",
+		"zuul":       "/zuul",
+		"nodepool":   "/nodepool",
+		MURMUR_IDENT: "mumble://" + MURMUR_IDENT + "." + r.cr.Spec.FQDN + "/?version=1.2.0",
 	}
 
 	for key, value := range services {
@@ -134,10 +133,6 @@ func gatewayServiceConfGenerator(r *SFController) string {
 		appendingService("zuul")
 	}
 
-	if r.cr.Spec.OpensearchDashboards.Enabled {
-		appendingService("opensearch-dashboards")
-	}
-
 	// TODO: Develop an elegant way of retrieving both zuul and node pool versions.
 	data.Services = append(data.Services,
 		Services{
@@ -196,10 +191,6 @@ func checkEnabledServices(r *SFController) []map[string]string {
 	if r.cr.Spec.Zuul.Enabled {
 		appendingServices("zuul")
 		appendingServices("nodepool")
-	}
-
-	if r.cr.Spec.OpensearchDashboards.Enabled {
-		appendingServices("opensearch-dashboards")
 	}
 
 	if r.cr.Spec.Murmur.Enabled {
@@ -270,7 +261,6 @@ func gatewayInfoJsonGenerator(r *SFController) string {
 
 func IsToDeployGateway(r *SFController) bool {
 	if r.cr.Spec.Gerrit.Enabled || r.cr.Spec.Zuul.Enabled ||
-		r.cr.Spec.OpensearchDashboards.Enabled ||
 		r.cr.Spec.Murmur.Enabled {
 		return true
 	}

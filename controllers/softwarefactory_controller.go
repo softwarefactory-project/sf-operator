@@ -129,14 +129,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	services["Gerrit"] = r.DeployGerrit()
 
-	if sf.Spec.Opensearch.Enabled {
-		services["Opensearch"] = r.DeployOpensearch()
-	}
-
-	if sf.Spec.OpensearchDashboards.Enabled {
-		services["OpensearchDashboard"] = r.DeployOpensearchDashboards()
-	}
-
 	if sf.Spec.Murmur.Enabled {
 		services["Murmur"] = r.DeployMurmur()
 	}
