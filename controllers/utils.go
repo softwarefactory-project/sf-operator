@@ -773,18 +773,6 @@ func (r *SFController) ensure_ingress(ingress netv1.Ingress, name string) {
 }
 
 func (r *SFController) SetupIngress() {
-	if r.cr.Spec.Etherpad.Enabled {
-		var ingress netv1.Ingress
-		name := r.cr.Name + "-etherpad"
-		ingress = netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-			},
-		}
-		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressEtherpad())
-		r.ensure_ingress(ingress, name)
-	}
 	if r.cr.Spec.Gerrit.Enabled {
 		var ingress netv1.Ingress
 		name := r.cr.Name + "-gerrit"

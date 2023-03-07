@@ -4,8 +4,6 @@ metadata:
   name: my-sf
 spec:
   fqdn: "sftests.com"
-  etherpad:
-    enabled: true
   lodgeit:
     enabled: true
   gerrit:

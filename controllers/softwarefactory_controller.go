@@ -118,10 +118,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	}
 
 	if services["MariaDB"] {
-		if sf.Spec.Etherpad.Enabled {
-			services["Etherpad"] = r.DeployEtherpad()
-		}
-
 		if sf.Spec.Lodgeit.Enabled {
 			services["Lodgeit"] = r.DeployLodgeit()
 		}

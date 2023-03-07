@@ -49,15 +49,6 @@ spec:
                   user:
                     type: string
                 type: object
-              etherpad:
-                description: Deploy the etherpad service.
-                properties:
-                  enabled:
-                    description: Enables Service.
-                    type: boolean
-                required:
-                - enabled
-                type: object
               fqdn:
                 type: string
               gerrit:

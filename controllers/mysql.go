@@ -45,7 +45,7 @@ done
 
 func (r *SFController) DeployMariadb() bool {
 	keycloakEnabled := r.IsKeycloakEnabled()
-	if r.cr.Spec.Etherpad.Enabled || r.cr.Spec.Lodgeit.Enabled || r.cr.Spec.Zuul.Enabled || keycloakEnabled {
+	if r.cr.Spec.Lodgeit.Enabled || r.cr.Spec.Zuul.Enabled || keycloakEnabled {
 		pass_name := "mariadb-root-password"
 		r.GenerateSecretUUID(pass_name)
 

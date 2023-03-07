@@ -20,4 +20,4 @@ mqtt:
   password: "${SF_SERVICE_PASSWORD}"
 EOF
 
-exec /github-ssh-key-updater-service 
+exec /github-ssh-key-updater-service

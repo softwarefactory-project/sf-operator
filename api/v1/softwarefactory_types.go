@@ -138,9 +138,6 @@ type SoftwareFactorySpec struct {
 	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`
 
-	// Deploy the etherpad service.
-	Etherpad BaseSpec `json:"etherpad,omitempty"`
-
 	// Deploy the lodgeit service.
 	Lodgeit BaseSpec `json:"lodgeit,omitempty"`
 

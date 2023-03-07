@@ -39,7 +39,6 @@ func serviceMapping(r *SFController, service_name string) (key string, value str
 		"nodepool":              "/nodepool",
 		"opensearch-dashboards": "/opensearchdashboards",
 		GRAFANA_IDENT:           "/" + GRAFANA_IDENT,
-		"etherpad":              "/etherpad",
 		LODGEIT_IDENT:           "/lodgeit",
 		HOUND_IDENT:             "/hound",
 		MURMUR_IDENT:            "mumble://" + MURMUR_IDENT + "." + r.cr.Spec.FQDN + "/?version=1.2.0",
@@ -146,10 +145,6 @@ func gatewayServiceConfGenerator(r *SFController) string {
 		appendingService(GRAFANA_IDENT)
 	}
 
-	if r.cr.Spec.Etherpad.Enabled {
-		appendingService("etherpad")
-	}
-
 	if r.cr.Spec.Lodgeit.Enabled {
 		appendingService(LODGEIT_IDENT)
 	}
@@ -224,10 +219,6 @@ func checkEnabledServices(r *SFController) []map[string]string {
 
 	if r.cr.Spec.Grafana.Enabled {
 		appendingServices(GRAFANA_IDENT)
-	}
-
-	if r.cr.Spec.Etherpad.Enabled {
-		appendingServices("etherpad")
 	}
 
 	if r.cr.Spec.Lodgeit.Enabled {
@@ -307,7 +298,7 @@ func gatewayInfoJsonGenerator(r *SFController) string {
 func IsToDeployGateway(r *SFController) bool {
 	if r.cr.Spec.Gerrit.Enabled || r.cr.Spec.Zuul.Enabled ||
 		r.cr.Spec.OpensearchDashboards.Enabled || r.cr.Spec.Grafana.Enabled ||
-		r.cr.Spec.Etherpad.Enabled || r.cr.Spec.Lodgeit.Enabled ||
+		r.cr.Spec.Lodgeit.Enabled ||
 		r.cr.Spec.Hound.Enabled ||
 		r.cr.Spec.Murmur.Enabled {
 		return true
