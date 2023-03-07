@@ -54,13 +54,6 @@ type SecretRef struct {
 	SecretKeyRef Secret `json:"secretKeyRef"`
 }
 
-type PostfixSpec struct {
-	// Boolean to Enable Postfix Service
-	Enabled bool `json:"enabled"`
-	// Postfix forward email.
-	ForwardEmail string `json:"forward_email"`
-}
-
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
@@ -75,11 +68,6 @@ type SoftwareFactorySpec struct {
 
 	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`
-
-	// Deploy the postfix service
-	// Mail server
-	// More info: https://www.postfix.org/start.html
-	Postfix PostfixSpec `json:"postfix,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

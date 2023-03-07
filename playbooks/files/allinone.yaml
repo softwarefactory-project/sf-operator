@@ -9,6 +9,3 @@ spec:
   zuul:
     enabled: true
     gerritconns: []
-  postfix:
-    enabled: true
-    forward_email: root@localhost

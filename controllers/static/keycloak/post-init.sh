@@ -1,8 +1,4 @@
 #!/bin/bash
-
-# TODO:
-# - Get Postfix enabled in the sf-operator and ensure this pod get the POSTFIX_SERVICE_HOST env var
-
 set -ex
 
 export PATH=$PATH:~/bin
@@ -295,16 +291,6 @@ kcadm update realms/SF \
 ### Set default theme to SF custom ###
 ######################################
 kcadm update realms/SF --set "loginTheme=sf" --set "accountTheme=sf"
-
-### Set the SMTP config ###
-###########################
-
-kcadm update realms/SF \
-  --set "smtpServer.host=${POSTFIX_SERVICE_HOST}" \
-  --set "smtpServer.port=25" \
-  --set "smtpServer.from=keycloak@${FQDN}" \
-  --set "smtpServer.replyTo=admin@${FQDN}" \
-  --set 'smtpServer.fromDisplayName="Software Factory IAM"'
 
 ### Disable RSA OAEP key signing algorithm globally ###
 #######################################################
