@@ -806,18 +806,6 @@ func (r *SFController) SetupIngress() {
 		name := r.cr.Name + "-zuul"
 		r.ensure_ingress(r.IngressZuul(name), name)
 	}
-	if r.cr.Spec.Murmur.Enabled {
-		var ingress netv1.Ingress
-		name := r.cr.Name + "-murmur"
-		ingress = netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-			},
-		}
-		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressMurmur())
-		r.ensure_ingress(ingress, name)
-	}
 	if r.cr.Spec.Telemetry.Enabled {
 		var ingress netv1.Ingress
 		name := r.cr.Name + "-jaeger"

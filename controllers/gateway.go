@@ -37,7 +37,6 @@ func serviceMapping(r *SFController, service_name string) (key string, value str
 		"keycloak":   "/keycloak",
 		"zuul":       "/zuul",
 		"nodepool":   "/nodepool",
-		MURMUR_IDENT: "mumble://" + MURMUR_IDENT + "." + r.cr.Spec.FQDN + "/?version=1.2.0",
 	}
 
 	for key, value := range services {
@@ -193,10 +192,6 @@ func checkEnabledServices(r *SFController) []map[string]string {
 		appendingServices("nodepool")
 	}
 
-	if r.cr.Spec.Murmur.Enabled {
-		appendingServices(MURMUR_IDENT)
-	}
-
 	return services
 }
 
@@ -260,8 +255,7 @@ func gatewayInfoJsonGenerator(r *SFController) string {
 }
 
 func IsToDeployGateway(r *SFController) bool {
-	if r.cr.Spec.Gerrit.Enabled || r.cr.Spec.Zuul.Enabled ||
-		r.cr.Spec.Murmur.Enabled {
+	if r.cr.Spec.Gerrit.Enabled || r.cr.Spec.Zuul.Enabled {
 		return true
 	}
 	return false

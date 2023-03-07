@@ -129,10 +129,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	services["Gerrit"] = r.DeployGerrit()
 
-	if sf.Spec.Murmur.Enabled {
-		services["Murmur"] = r.DeployMurmur()
-	}
-
 	if services["MariaDB"] && services["Zookeeper"] && services["Zuul"] && services["GitServer"] && sf.Spec.Zuul.Enabled {
 		services["Config"] = r.SetupConfigJob()
 	}

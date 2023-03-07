@@ -10,16 +10,6 @@ spec:
   zuul:
     enabled: true
     gerritconns: []
-  murmur:
-    enabled: true
-    maxusers: 42
-    channels:
-      - name: Dev
-        description: Developers lounge
-      - name: Meeting
-        description: Meeting room
-      - name: Meeting-Alt
-        description: Second meeting room
   postfix:
     enabled: true
     forward_email: root@localhost

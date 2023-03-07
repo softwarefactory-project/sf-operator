@@ -54,34 +54,6 @@ type SecretRef struct {
 	SecretKeyRef Secret `json:"secretKeyRef"`
 }
 
-type MurmurChannelSpec struct {
-	// Channel name
-	Name string `json:"name"`
-	// Brief Channel Description
-	Description string `json:"description"`
-	// Channel Password ( default empty )
-	// +optional
-	Password SecretRef `json:"password,omitempty"`
-}
-
-type MurmurSpec struct {
-	// Boolean to Enable Murmur Service
-	Enabled bool `json:"enabled"`
-	// Max Number of Users Per Server ( default 42 )
-	// +optional
-	Maxusers int `json:"maxusers,omitempty"`
-	// Server Password ( default empty ). This field is defined as Kubernetes Secret.
-	// +optional
-	Password SecretRef `json:"password,omitempty"`
-	// Server Message at Connection
-	// +optional
-	WelcomeText string `json:"welcometext,omitempty"`
-	// Murmur Channels. A Channel is defined with the following properties: name (required),
-	// description ( required ) and password ( optional )
-	// +optional
-	Channels []MurmurChannelSpec `json:"channels,omitempty"`
-}
-
 type PostfixSpec struct {
 	// Boolean to Enable Postfix Service
 	Enabled bool `json:"enabled"`
@@ -103,12 +75,6 @@ type SoftwareFactorySpec struct {
 
 	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`
-
-	// Deployment of Murmur service.
-	// Mumble is an open source, low-latency, high quality voice
-	// chat software primarily intended for use while gaming.
-	// More info: https://wiki.mumble.info/wiki/Main_Page
-	Murmur MurmurSpec `json:"murmur,omitempty"`
 
 	// Telemetry service provided by jaeger.
 	Telemetry BaseSpec `json:"telemetry,omitempty"`
