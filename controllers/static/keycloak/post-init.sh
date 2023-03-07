@@ -78,6 +78,26 @@ function set_role () {
   fi
 }
 
+# Same as above, but client-scoped. Notice client ID is the first parameter
+function set_client_scoped_role () {
+  local clientid=$1
+  local role_name=$2
+  local role_desc=$3
+  local default=$4
+
+  local cid=$(get_client_id $clientid)
+  kcadm get-roles --rolename $role_name --cclientid $1 --fields id -r SF > /dev/null || \
+    kcadm create clients/${cid}/roles --target-realm SF \
+      --set "name=$role_name" \
+      --set "description=$role_desc"
+
+  if [ "$default" == "true" ]; then
+    kcadm add-roles --target-realm SF --cclientid $clientid \
+      --rname default-roles-sf \
+      --rolename $role_name
+  fi
+}
+
 function assign_role_to_user () {
   local role_name=$1
   local username=$2
@@ -259,18 +279,13 @@ set_user "demo" "Demo" "User" "demo" "false"
 ### Define some REALM roles ###
 ###############################
 
-# Only set those roles when opensearch is deployed
-env | grep OPENSEARCH && {
-  set_role "sf_opensearch_dashboards_user" "Default opensearch dashboards roles for SF users" "true"
-}
-
 # Set an admin role
 set_role "admin" "Admin access" "false"
 
 # Assign the admin role to the admin user
 assign_role_to_user "admin" "admin"
 
-### Set password registration to in ###
+### Set password registration to on ###
 #######################################
 
 kcadm update realms/SF \
@@ -327,8 +342,8 @@ if [ "${ZUUL_ENABLED}" == "true" ]; then
   create_client_scope "zuul" "zuul_keycloak_scope"
   configure_oidc_client_extra_scope "zuul" "zuul_keycloak_scope"
   add_mapper "zuul" "roles" "oidc-usermodel-realm-role-mapper"
-  # Create global admin role
-  set_role "zuul_admin" "This role grants privileged actions such as dequeues and autoholds on every Zuul tenant" "false"
+  # Create "admin on every tenant" role
+  set_client_scoped_role "zuul" "zuul_admin" "This role grants privileged actions such as dequeues and autoholds on every Zuul tenant" "false"
 fi
 
 # Opensearch support
@@ -341,6 +356,23 @@ if [ -n "${KEYCLOAK_OPENSEARCH_CLIENT_SECRET}" ]; then
   cid=$(get_client_id "opensearch-dashboards")
   kcadm update clients/${cid} --target-realm SF \
     --set "attributes.\"post.logout.redirect.uris\"=https://opensearch-dashboards.${FQDN}/*##"
+  # Custom role we assign by default, gives read/write access to indexes
+  set_client_scoped_role "opensearch-dashboards" "sf_opensearch_dashboards_user" "Default opensearch dashboards roles for SF users" "true"
+  # Create default roles as defined by the opensearch security plugin.
+  # Download the upstream YAML definition file then parse it for role names:
+  os_roles_url="https://raw.githubusercontent.com/opensearch-project/security/main/config/roles.yml"
+  for os_role in $(curl $os_roles_url 2>&1 | grep -e '^[a-zA-Z].*:$' | awk '{sub(/:$/,"")}1'); do
+    is_default="false"
+    # if [ "${os_role}" == "kibana_read_only" ]; then
+    #   is_default="true"
+    # fi
+    set_client_scoped_role "opensearch-dashboards" $os_role "" $is_default
+  done
+  # Static roles definitions URL
+  os_static_roles_url="https://raw.githubusercontent.com/opensearch-project/security/main/src/main/resources/static_config/static_roles.yml"
+  for os_role in $(curl $os_static_roles_url 2>&1 | grep -e '^[a-zA-Z].*:$' | awk '{sub(/:$/,"")}1'); do
+    set_client_scoped_role "opensearch-dashboards" $os_role "" "false"
+  done
 fi
 
 # Setup Grafana client when a client secret is available in the env vars
