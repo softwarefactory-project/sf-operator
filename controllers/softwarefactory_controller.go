@@ -137,10 +137,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		services["ConfigRepo"] = r.SetupConfigRepo(sf.Spec.Gerrit.Enabled)
 	}
 
-	if IsToDeployGateway(r) {
-		services["Gateway"] = r.DeployGateway()
-	}
-
 	r.log.V(1).Info(messageInfo(r, services))
 
 	ready := isOperatorReady(services)
