@@ -59,16 +59,6 @@ spec:
                   sshd_max_connections_per_user:
                     type: string
                 type: object
-              hound:
-                description: 'Deploy the hound service. Hound is an extremely fast
-                  source code search engine. More info: https://github.com/hound-search/hound'
-                properties:
-                  enabled:
-                    description: Enables Service.
-                    type: boolean
-                required:
-                - enabled
-                type: object
               lodgeit:
                 description: Deploy the lodgeit service.
                 properties:

@@ -122,11 +122,6 @@ type SoftwareFactorySpec struct {
 	// Telemetry service provided by jaeger.
 	Telemetry BaseSpec `json:"telemetry,omitempty"`
 
-	// Deploy the hound service.
-	// Hound is an extremely fast source code search engine.
-	// More info: https://github.com/hound-search/hound
-	Hound BaseSpec `json:"hound,omitempty"`
-
 	// Deploy the postfix service
 	// Mail server
 	// More info: https://www.postfix.org/start.html

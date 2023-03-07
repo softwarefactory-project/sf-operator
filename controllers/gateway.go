@@ -39,7 +39,6 @@ func serviceMapping(r *SFController, service_name string) (key string, value str
 		"nodepool":              "/nodepool",
 		"opensearch-dashboards": "/opensearchdashboards",
 		LODGEIT_IDENT:           "/lodgeit",
-		HOUND_IDENT:             "/hound",
 		MURMUR_IDENT:            "mumble://" + MURMUR_IDENT + "." + r.cr.Spec.FQDN + "/?version=1.2.0",
 	}
 
@@ -144,10 +143,6 @@ func gatewayServiceConfGenerator(r *SFController) string {
 		appendingService(LODGEIT_IDENT)
 	}
 
-	if r.cr.Spec.Hound.Enabled {
-		appendingService(HOUND_IDENT)
-	}
-
 	// TODO: Develop an elegant way of retrieving both zuul and node pool versions.
 	data.Services = append(data.Services,
 		Services{
@@ -214,10 +209,6 @@ func checkEnabledServices(r *SFController) []map[string]string {
 
 	if r.cr.Spec.Lodgeit.Enabled {
 		appendingServices(LODGEIT_IDENT)
-	}
-
-	if r.cr.Spec.Hound.Enabled {
-		appendingServices(HOUND_IDENT)
 	}
 
 	if r.cr.Spec.Murmur.Enabled {
@@ -290,7 +281,6 @@ func IsToDeployGateway(r *SFController) bool {
 	if r.cr.Spec.Gerrit.Enabled || r.cr.Spec.Zuul.Enabled ||
 		r.cr.Spec.OpensearchDashboards.Enabled ||
 		r.cr.Spec.Lodgeit.Enabled ||
-		r.cr.Spec.Hound.Enabled ||
 		r.cr.Spec.Murmur.Enabled {
 		return true
 	}

@@ -27,8 +27,6 @@ spec:
         description: Meeting room
       - name: Meeting-Alt
         description: Second meeting room
-  hound:
-    enabled: true
   postfix:
     enabled: true
     forward_email: root@localhost

@@ -225,7 +225,6 @@ func (in *SoftwareFactorySpec) DeepCopyInto(out *SoftwareFactorySpec) {
 	out.OpensearchDashboards = in.OpensearchDashboards
 	in.Murmur.DeepCopyInto(&out.Murmur)
 	out.Telemetry = in.Telemetry
-	out.Hound = in.Hound
 	out.Postfix = in.Postfix
 }
 

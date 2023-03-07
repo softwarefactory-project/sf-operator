@@ -165,10 +165,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		services["ConfigRepo"] = r.SetupConfigRepo(sf.Spec.Gerrit.Enabled)
 	}
 
-	if sf.Spec.Hound.Enabled {
-		services["Hound"] = r.DeployHound()
-	}
-
 	if sf.Spec.Postfix.Enabled {
 		services["Postfix"] = r.DeployPostfix()
 	}
