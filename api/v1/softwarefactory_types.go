@@ -76,9 +76,6 @@ type SoftwareFactorySpec struct {
 	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`
 
-	// Telemetry service provided by jaeger.
-	Telemetry BaseSpec `json:"telemetry,omitempty"`
-
 	// Deploy the postfix service
 	// Mail server
 	// More info: https://www.postfix.org/start.html

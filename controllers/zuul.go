@@ -365,9 +365,6 @@ func (r *SFController) DeployZuul() bool {
 		for _, conn := range gerrit_conns {
 			r.AddGerritConnection(cfg_ini, conn)
 		}
-		if r.cr.Spec.Telemetry.Enabled {
-			addTracingConfig(cfg_ini)
-		}
 		addAuthConfig(cfg_ini, r.cr.Spec.FQDN)
 		config := r.DumpConfigINI(cfg_ini)
 

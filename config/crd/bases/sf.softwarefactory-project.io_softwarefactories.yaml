@@ -72,15 +72,6 @@ spec:
                 - enabled
                 - forward_email
                 type: object
-              telemetry:
-                description: Telemetry service provided by jaeger.
-                properties:
-                  enabled:
-                    description: Enables Service.
-                    type: boolean
-                required:
-                - enabled
-                type: object
               zuul:
                 description: Zuul service spec
                 properties:

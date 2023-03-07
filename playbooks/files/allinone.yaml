@@ -6,8 +6,6 @@ spec:
   fqdn: "sftests.com"
   gerrit:
     enabled: true
-  telemetry:
-    enabled: true
   zuul:
     enabled: true
     gerritconns: []

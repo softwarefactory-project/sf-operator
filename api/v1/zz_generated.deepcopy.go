@@ -183,7 +183,6 @@ func (in *SoftwareFactorySpec) DeepCopyInto(out *SoftwareFactorySpec) {
 	out.ConfigLocations = in.ConfigLocations
 	out.Gerrit = in.Gerrit
 	in.Zuul.DeepCopyInto(&out.Zuul)
-	out.Telemetry = in.Telemetry
 	out.Postfix = in.Postfix
 }
 

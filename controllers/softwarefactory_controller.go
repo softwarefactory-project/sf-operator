@@ -90,12 +90,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	services := map[string]bool{}
 
-	jaegerStatus := true
-	if sf.Spec.Telemetry.Enabled {
-		jaegerStatus = r.DeployJaeger()
-		services["Jaeger"] = jaegerStatus
-	}
-
 	r.EnsureCA()
 
 	storage_class := create_storageclass("standard")
