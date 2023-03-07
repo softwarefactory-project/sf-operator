@@ -105,14 +105,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	services["Zookeeper"] = r.DeployZookeeper()
 
-	if services["MariaDB"] {
-		// Keycloak is enable if Gerrit or Zuul are Enabled
-		keycloakEnabled := r.IsKeycloakEnabled()
-		if keycloakEnabled {
-			services["Keycloak"] = r.DeployKeycloak()
-		}
-	}
-
 	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] {
 		services["Zuul"] = r.DeployZuul()
 	}

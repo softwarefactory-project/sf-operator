@@ -73,7 +73,6 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, sp
 			create_secret_env("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
 			create_env("SSHD_MAX_CONNECTIONS_PER_USER", sshd_max_conns_per_user),
 			create_env("FQDN", r.cr.Spec.FQDN),
-			create_secret_env("KEYCLOAK_GERRIT_CLIENT_SECRET", "gerrit-kc-client-password", "gerrit-kc-client-password"),
 		},
 		VolumeMounts:    append(volumeMounts, certVolume),
 		SecurityContext: securityContext,
@@ -144,19 +143,12 @@ func (r *SFController) DeployGerrit() bool {
 
 		// Ensure Gerrit Keystore password
 		r.GenerateSecretUUID("gerrit-keystore-password")
-		// Ensure Gerrit Keycloak client password
-		r.GenerateSecretUUID("gerrit-kc-client-password")
 		// Ensure Gerrit Admin API password
 		r.GenerateSecretUUID("gerrit-admin-api-key")
 
 		// Create a certificate for Gerrit
 		cert := r.create_client_certificate(r.ns, GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit")
 		r.GetOrCreate(&cert)
-
-		kc_ip := r.get_service_ip("keycloak")
-		if kc_ip == "" {
-			return false
-		}
 
 		volumeMounts := []apiv1.VolumeMount{
 			{
@@ -206,18 +198,10 @@ func (r *SFController) DeployGerrit() bool {
 			},
 			Env: []apiv1.EnvVar{
 				create_secret_env("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
-				create_secret_env("KEYCLOAK_ADMIN_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
 			},
 		})
 
 		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
-
-		// Need host alias to let the Gerrit container to access keycloak internaly
-		// via the public keycloak url
-		dep.Spec.Template.Spec.HostAliases = []apiv1.HostAlias{{
-			IP:        kc_ip,
-			Hostnames: []string{"keycloak." + r.cr.Spec.FQDN},
-		}}
 
 		// Expose a volume that contain certmanager certs for Gerrit
 		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{

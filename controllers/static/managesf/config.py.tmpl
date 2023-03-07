@@ -37,7 +37,6 @@ logging = {
 services = [
 {{- if .Gerrit_enabled }}
     'SFGerrit',
-    'keycloak',
 {{- end -}}
 {{ if .Zuul_enabled }}
     'SFNodepool',
@@ -97,8 +96,4 @@ api = {
         'builds': [],
         'jobs': [],
     }
-}
-
-auth = {
-    'type': 'keycloak',
 }

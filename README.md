@@ -117,14 +117,14 @@ go run ./main.go --namespace $MY_NS --oneshot --cr ~/my-sf.yaml
 * Get a service logs (from the first container)
 
 ```sh
-kubectl logs deployment/keycloak -f
+kubectl logs deployment/gerrit -f
 ``````
 
 * Join a service container (by getting the container name with it's label)
 
 ```sh
 function getPodName { kubectl get pods -lrun=$1 -o  'jsonpath={.items[0].metadata.name}'; }
-kubectl exec -it $(getPodName "keycloak") sh
+kubectl exec -it $(getPodName "gerrit") sh
 ```
 
 * Reset deployment

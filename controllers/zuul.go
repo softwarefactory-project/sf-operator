@@ -170,11 +170,6 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		"zuul-config": checksum([]byte(config)),
 	}
 	fqdn := r.cr.Spec.FQDN
-	kc_ip := r.get_service_ip("keycloak")
-	if kc_ip == "" {
-		r.log.V(5).Info("can't deploy zuul without the keycloak service ip")
-		return false
-	}
 
 	scheduler_tooling_data := make(map[string]string)
 	scheduler_tooling_data["generate-zuul-tenant-yaml.sh"] = zuul_generate_tenant_config
@@ -222,10 +217,6 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
-	zw.Spec.Template.Spec.HostAliases = []apiv1.HostAlias{{
-		IP:        kc_ip,
-		Hostnames: []string{"keycloak." + fqdn},
-	}}
 	r.GetOrCreate(&zw)
 	zw_dirty := false
 	if !map_equals(&zw.Spec.Template.ObjectMeta.Annotations, &annotations) {
@@ -309,18 +300,6 @@ func addTracingConfig(cfg *ini.File) {
 	cfg.Section(section).NewKey("insecure", "true")
 }
 
-func addAuthConfig(cfg *ini.File, fqdn string) {
-	// The manual authenticator to issue tokens on demand is handled in the static conf file.
-	// OpenID Connect auth with keycloak
-	oidc_section := "auth keycloak"
-	cfg.NewSection(oidc_section)
-	cfg.Section(oidc_section).NewKey("default", "true")
-	cfg.Section(oidc_section).NewKey("driver", "OpenIDConnect")
-	cfg.Section(oidc_section).NewKey("realm", "SF")
-	cfg.Section(oidc_section).NewKey("client_id", "zuul")
-	cfg.Section(oidc_section).NewKey("issuer_id", "https://keycloak."+fqdn+"/realms/SF")
-}
-
 func (r *SFController) LoadConfigINI(zuul_conf string) *ini.File {
 	cfg, err := ini.Load([]byte(zuul_conf))
 	if err != nil {
@@ -365,7 +344,6 @@ func (r *SFController) DeployZuul() bool {
 		for _, conn := range gerrit_conns {
 			r.AddGerritConnection(cfg_ini, conn)
 		}
-		addAuthConfig(cfg_ini, r.cr.Spec.FQDN)
 		config := r.DumpConfigINI(cfg_ini)
 
 		r.EnsureZuulSecrets(&db_password, config)

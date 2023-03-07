@@ -785,23 +785,6 @@ func (r *SFController) SetupIngress() {
 		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGerrit()...)
 		r.ensure_ingress(ingress, name)
 	}
-	if r.IsKeycloakEnabled() {
-		var ingress netv1.Ingress
-		name := r.cr.Name + "-keycloak"
-		ingress = netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-				Annotations: map[string]string{
-					"nginx.ingress.kubernetes.io/proxy-buffer-size":      "512k",
-					"nginx.ingress.kubernetes.io/proxy-buffers":          "4 512k",
-					"nginx.ingress.kubernetes.io/proxy-busy-buffer-size": "512k",
-				},
-			},
-		}
-		ingress.Spec.Rules = r.IngressKeycloak()
-		r.ensure_ingress(ingress, name)
-	}
 	if r.cr.Spec.Zuul.Enabled {
 		name := r.cr.Name + "-zuul"
 		r.ensure_ingress(r.IngressZuul(name), name)
