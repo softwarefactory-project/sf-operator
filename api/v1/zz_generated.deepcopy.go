@@ -220,7 +220,6 @@ func (in *SoftwareFactorySpec) DeepCopyInto(out *SoftwareFactorySpec) {
 	out.ConfigLocations = in.ConfigLocations
 	out.Gerrit = in.Gerrit
 	in.Zuul.DeepCopyInto(&out.Zuul)
-	out.Lodgeit = in.Lodgeit
 	out.Opensearch = in.Opensearch
 	out.OpensearchDashboards = in.OpensearchDashboards
 	in.Murmur.DeepCopyInto(&out.Murmur)

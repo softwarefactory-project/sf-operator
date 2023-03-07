@@ -104,9 +104,6 @@ type SoftwareFactorySpec struct {
 	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`
 
-	// Deploy the lodgeit service.
-	Lodgeit BaseSpec `json:"lodgeit,omitempty"`
-
 	// Deploy the opensearch service.
 	Opensearch BaseSpec `json:"opensearch,omitempty"`
 

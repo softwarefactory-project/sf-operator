@@ -118,10 +118,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	}
 
 	if services["MariaDB"] {
-		if sf.Spec.Lodgeit.Enabled {
-			services["Lodgeit"] = r.DeployLodgeit()
-		}
-
 		// Keycloak is enable if Gerrit or Zuul are Enabled
 		keycloakEnabled := r.IsKeycloakEnabled()
 		if keycloakEnabled {

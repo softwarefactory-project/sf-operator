@@ -854,18 +854,6 @@ func (r *SFController) SetupIngress() {
 		}
 		r.ensure_ingress(ingress, name)
 	}
-	if r.cr.Spec.Lodgeit.Enabled {
-		var ingress netv1.Ingress
-		name := r.cr.Name + "-lodgeit"
-		ingress = netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-			},
-		}
-		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressLodgeit())
-		r.ensure_ingress(ingress, name)
-	}
 	if r.cr.Spec.Murmur.Enabled {
 		var ingress netv1.Ingress
 		name := r.cr.Name + "-murmur"

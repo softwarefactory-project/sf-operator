@@ -4,8 +4,6 @@ metadata:
   name: my-sf
 spec:
   fqdn: "sftests.com"
-  lodgeit:
-    enabled: true
   gerrit:
     enabled: true
     sshd_max_connections_per_user: "64"

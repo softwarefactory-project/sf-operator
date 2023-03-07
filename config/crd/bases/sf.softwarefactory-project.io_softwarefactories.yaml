@@ -59,15 +59,6 @@ spec:
                   sshd_max_connections_per_user:
                     type: string
                 type: object
-              lodgeit:
-                description: Deploy the lodgeit service.
-                properties:
-                  enabled:
-                    description: Enables Service.
-                    type: boolean
-                required:
-                - enabled
-                type: object
               murmur:
                 description: 'Deployment of Murmur service. Mumble is an open source,
                   low-latency, high quality voice chat software primarily intended
