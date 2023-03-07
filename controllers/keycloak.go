@@ -197,7 +197,6 @@ func (r *SFController) DeployKeycloak() bool {
 			create_secret_env("KEYCLOAK_ADMIN_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
 			create_env("KEYCLOAK_ADMIN", "admin"),
 			create_secret_env("KC_KEYSTORE_PASSWORD", "kc-keystore-password", "kc-keystore-password"),
-			create_secret_env("MOSQUITTO_SERVICE_USER_PASSWORD", "mosquitto-sf-service-password", "mosquitto-sf-service-password"),
 		}
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_https_probe("/health/ready", KC_PORT)
 		r.GetOrCreate(&dep)

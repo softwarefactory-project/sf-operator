@@ -207,7 +207,6 @@ func (r *SFController) DeployGerrit() bool {
 			Env: []apiv1.EnvVar{
 				create_secret_env("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
 				create_secret_env("KEYCLOAK_ADMIN_PASSWORD", "keycloak-admin-password", "keycloak-admin-password"),
-				create_secret_env("SF_SERVICE_PASSWORD", "mosquitto-sf-service-password", "mosquitto-sf-service-password"),
 			},
 		})
 

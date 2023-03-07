@@ -12,12 +12,6 @@ keycloak:
   user: "admin"
   password: "${KEYCLOAK_ADMIN_PASSWORD}"
   version: 19.0
-mqtt:
-  host: "mosquitto"
-  port: 1883
-  topic: "keycloak"
-  user: "SF_SERVICE_USER"
-  password: "${SF_SERVICE_PASSWORD}"
 EOF
 
 exec /github-ssh-key-updater-service

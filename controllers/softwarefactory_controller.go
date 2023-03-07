@@ -58,7 +58,7 @@ func messageInfo(r *SFController, services map[string]bool) string {
 	msg := ""
 
 	servicesSorted := []string{}
-	for servicename, _ := range services {
+	for servicename := range services {
 		servicesSorted = append(servicesSorted, servicename)
 	}
 
@@ -110,12 +110,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	services["MariaDB"] = r.DeployMariadb()
 
 	services["Zookeeper"] = r.DeployZookeeper()
-
-	// mosquitto is enable if Keycloak is Enabled
-	mosquitto_enabled := r.IsKeycloakEnabled() || r.cr.Spec.Zuul.Enabled
-	if mosquitto_enabled {
-		services["Mosquitto"] = r.DeployMosquitto()
-	}
 
 	if services["MariaDB"] {
 		// Keycloak is enable if Gerrit or Zuul are Enabled
