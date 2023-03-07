@@ -169,10 +169,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		services["Hound"] = r.DeployHound()
 	}
 
-	if sf.Spec.GerritBot.Enabled && services["Gerrit"] {
-		services["GerritBot"] = r.DeployGerritBot()
-	}
-
 	if sf.Spec.Postfix.Enabled {
 		services["Postfix"] = r.DeployPostfix()
 	}

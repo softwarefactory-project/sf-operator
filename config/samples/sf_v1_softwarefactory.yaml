@@ -28,20 +28,6 @@ spec:
         description: Second meeting room
   hound:
     enabled: true
-  gerritbot:
-    enabled: true
-    ircbot:
-      nick: sfbot
-      server: irc.freenode.net
-      channels:
-        - name: irc-channel-name
-          branches:
-            - master
-          events:
-            - patchset-created
-            - change-merged
-          projects:
-            - myproject
   postfix:
     enabled: true
     forward_email: root@localhost
