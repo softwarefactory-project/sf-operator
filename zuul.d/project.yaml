@@ -1,0 +1,7 @@
+- project:
+    check:
+      jobs:
+        - sf-operator-functional-allinone-microshift
+    gate:
+      jobs:
+        - sf-operator-functional-allinone-microshift

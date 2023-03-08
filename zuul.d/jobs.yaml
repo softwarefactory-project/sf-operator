@@ -1,13 +1,15 @@
 ---
-# Deploy sf-operator on Kubernetes
+# Deploy sf-operator on microshift
 - job:
-    name: sf-operator-functional-allinone-k8s
-    run: playbooks/test.yaml
+    name: sf-operator-functional-allinone-microshift
+    run: playbooks/test-microshift.yaml
+    parent: base-microshift
+    timeout: 3600
     post-run: playbooks/post.yaml
     nodeset:
       nodes:
         name: controller
-        label: cloud-fedora-36
+        label: cloud-centos-9-stream
     required-projects:
       - name: software-factory/sf-infra
     roles:
@@ -16,11 +18,4 @@
       logclassify_logserver_dir: ./
       logclassify_debug: false
       logclassify_report: true
-
-- project:
-    check:
-      jobs:
-        - sf-operator-functional-allinone-k8s
-    gate:
-      jobs:
-        - sf-operator-functional-allinone-k8s
+      job_timeout: 3600
