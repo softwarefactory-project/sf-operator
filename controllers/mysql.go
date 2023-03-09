@@ -44,32 +44,26 @@ done
 }
 
 func (r *SFController) DeployMariadb() bool {
-	if r.cr.Spec.Zuul.Enabled {
-		pass_name := "mariadb-root-password"
-		r.GenerateSecretUUID(pass_name)
+	pass_name := "mariadb-root-password"
+	r.GenerateSecretUUID(pass_name)
 
-		dep := create_statefulset(r.ns, "mariadb", DBImage)
-		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
-			{
-				Name:      "mariadb",
-				MountPath: "/config/databases",
-			},
-		}
-		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
-			create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
-		}
-		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-			create_container_port(MYSQL_PORT, MYSQL_PORT_NAME),
-		}
-		// TODO: add ready probe
-		r.GetOrCreate(&dep)
-		srv := create_service(r.ns, "mariadb", "mariadb", MYSQL_PORT, MYSQL_PORT_NAME)
-		r.GetOrCreate(&srv)
-
-		return r.IsStatefulSetReady(&dep)
-	} else {
-		r.DeleteStatefulSet("mariadb")
-		r.DeleteService("mariadb")
-		return true
+	dep := create_statefulset(r.ns, "mariadb", DBImage)
+	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      "mariadb",
+			MountPath: "/config/databases",
+		},
 	}
+	dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
+		create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
+	}
+	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+		create_container_port(MYSQL_PORT, MYSQL_PORT_NAME),
+	}
+	// TODO: add ready probe
+	r.GetOrCreate(&dep)
+	srv := create_service(r.ns, "mariadb", "mariadb", MYSQL_PORT, MYSQL_PORT_NAME)
+	r.GetOrCreate(&srv)
+
+	return r.IsStatefulSetReady(&dep)
 }

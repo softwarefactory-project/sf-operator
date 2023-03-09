@@ -23,93 +23,87 @@ const GS_PI_MOUNT_PATH = "/entry"
 var preInitScript string
 
 func (r *SFController) DeployGitServer() bool {
-	if r.cr.Spec.Zuul.Enabled {
-		cm_data := make(map[string]string)
-		cm_data["pre-init.sh"] = preInitScript
-		r.EnsureConfigMap(GS_IDENT+"-pi", cm_data)
+	cm_data := make(map[string]string)
+	cm_data["pre-init.sh"] = preInitScript
+	r.EnsureConfigMap(GS_IDENT+"-pi", cm_data)
 
-		annotations := map[string]string{
-			"system-config": checksum([]byte(preInitScript)),
-		}
-
-		// Create the deployment
-		dep := create_statefulset(r.ns, GS_IDENT, GS_IMAGE)
-		dep.Spec.Template.ObjectMeta.Annotations = annotations
-		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
-			{
-				Name:      GS_IDENT,
-				MountPath: GS_GIT_MOUNT_PATH,
-			},
-		}
-
-		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-			create_volume_cm(GS_IDENT+"-pi", GS_IDENT+"-pi-config-map"),
-		}
-
-		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-			create_container_port(GS_GIT_PORT, GS_GIT_PORT_NAME),
-		}
-
-		// Define initContainer
-		dep.Spec.Template.Spec.InitContainers = []apiv1.Container{
-			{
-				Name:    "init-config",
-				Image:   GS_IMAGE,
-				Command: []string{"/bin/bash", "/entry/pre-init.sh"},
-				Env: []apiv1.EnvVar{
-					create_env("FQDN", r.cr.Spec.FQDN),
-				},
-				VolumeMounts: []apiv1.VolumeMount{
-					{
-						Name:      GS_IDENT,
-						MountPath: GS_GIT_MOUNT_PATH,
-					},
-					{
-						Name:      GS_IDENT + "-pi",
-						MountPath: GS_PI_MOUNT_PATH,
-					},
-				},
-			},
-		}
-
-		// Create readiness probes
-		// Note: The probe is causing error message to be logged by the service
-		// dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GS_GIT_PORT)
-
-		r.GetOrCreate(&dep)
-
-		if map_ensure(&dep.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("System configuration needs to be updated, restarting git-server...")
-			r.UpdateR(&dep)
-			return false
-		}
-
-		// Create services exposed
-		git_service := apiv1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      GS_IDENT,
-				Namespace: r.ns,
-			},
-			Spec: apiv1.ServiceSpec{
-				Ports: []apiv1.ServicePort{
-					{
-						Name:     GS_GIT_PORT_NAME,
-						Protocol: apiv1.ProtocolTCP,
-						Port:     GS_GIT_PORT,
-					},
-				},
-				Type: apiv1.ServiceTypeNodePort,
-				Selector: map[string]string{
-					"app": "sf",
-					"run": GS_IDENT,
-				},
-			}}
-		r.GetOrCreate(&git_service)
-
-		return r.IsStatefulSetReady(&dep)
-	} else {
-		r.DeleteStatefulSet(GS_IDENT)
-		r.DeleteService(GS_GIT_PORT_NAME)
-		return true
+	annotations := map[string]string{
+		"system-config": checksum([]byte(preInitScript)),
 	}
+
+	// Create the deployment
+	dep := create_statefulset(r.ns, GS_IDENT, GS_IMAGE)
+	dep.Spec.Template.ObjectMeta.Annotations = annotations
+	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      GS_IDENT,
+			MountPath: GS_GIT_MOUNT_PATH,
+		},
+	}
+
+	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
+		create_volume_cm(GS_IDENT+"-pi", GS_IDENT+"-pi-config-map"),
+	}
+
+	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+		create_container_port(GS_GIT_PORT, GS_GIT_PORT_NAME),
+	}
+
+	// Define initContainer
+	dep.Spec.Template.Spec.InitContainers = []apiv1.Container{
+		{
+			Name:    "init-config",
+			Image:   GS_IMAGE,
+			Command: []string{"/bin/bash", "/entry/pre-init.sh"},
+			Env: []apiv1.EnvVar{
+				create_env("FQDN", r.cr.Spec.FQDN),
+			},
+			VolumeMounts: []apiv1.VolumeMount{
+				{
+					Name:      GS_IDENT,
+					MountPath: GS_GIT_MOUNT_PATH,
+				},
+				{
+					Name:      GS_IDENT + "-pi",
+					MountPath: GS_PI_MOUNT_PATH,
+				},
+			},
+		},
+	}
+
+	// Create readiness probes
+	// Note: The probe is causing error message to be logged by the service
+	// dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GS_GIT_PORT)
+
+	r.GetOrCreate(&dep)
+
+	if map_ensure(&dep.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		r.log.V(1).Info("System configuration needs to be updated, restarting git-server...")
+		r.UpdateR(&dep)
+		return false
+	}
+
+	// Create services exposed
+	git_service := apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      GS_IDENT,
+			Namespace: r.ns,
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: []apiv1.ServicePort{
+				{
+					Name:     GS_GIT_PORT_NAME,
+					Protocol: apiv1.ProtocolTCP,
+					Port:     GS_GIT_PORT,
+				},
+			},
+			Type: apiv1.ServiceTypeNodePort,
+			Selector: map[string]string{
+				"app": "sf",
+				"run": GS_IDENT,
+			},
+		}}
+	r.GetOrCreate(&git_service)
+
+	return r.IsStatefulSetReady(&dep)
 }

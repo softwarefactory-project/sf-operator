@@ -4,8 +4,5 @@ metadata:
   name: my-sf
 spec:
   fqdn: "sftests.com"
-  gerrit:
-    enabled: true
   zuul:
-    enabled: true
     gerritconns: []

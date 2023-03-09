@@ -292,14 +292,6 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	}
 }
 
-func addTracingConfig(cfg *ini.File) {
-	section := "tracing"
-	cfg.NewSection(section)
-	cfg.Section(section).NewKey("enabled", "true")
-	cfg.Section(section).NewKey("endpoint", "oltp-grpc:4317")
-	cfg.Section(section).NewKey("insecure", "true")
-}
-
 func (r *SFController) LoadConfigINI(zuul_conf string) *ini.File {
 	cfg, err := ini.Load([]byte(zuul_conf))
 	if err != nil {
@@ -316,44 +308,35 @@ func (r *SFController) DumpConfigINI(cfg *ini.File) string {
 
 func (r *SFController) DeployZuul() bool {
 
-	if r.cr.Spec.Zuul.Enabled {
-		init_containers, db_password := r.EnsureDBInit("zuul")
-		r.EnsureSSHKey("zuul-ssh-key")
+	init_containers, db_password := r.EnsureDBInit("zuul")
+	r.EnsureSSHKey("zuul-ssh-key")
 
-		gerrit_conns := r.cr.Spec.Zuul.GerritConns
+	gerrit_conns := r.cr.Spec.Zuul.GerritConns
 
-		// Add local gerrit connection if needed
-		if r.cr.Spec.Gerrit.Enabled {
-			r.GenerateSecretUUID("zuul-gerrit-api-key")
-			gerrit_conn := sfv1.GerritConnection{
-				Name:              "gerrit",
-				Hostname:          GERRIT_SSHD_PORT_NAME,
-				Port:              "29418",
-				Puburl:            "http://" + GERRIT_HTTPD_PORT_NAME + ":" + strconv.Itoa(GERRIT_HTTPD_PORT),
-				Username:          "zuul",
-				Canonicalhostname: "gerrit." + r.cr.Spec.FQDN,
-				Password:          "zuul-gerrit-api-key",
-			}
-			gerrit_conns = append(gerrit_conns, gerrit_conn)
-		}
-
-		// Update base config to add connections
-		base_config := zuul_dot_conf
-
-		cfg_ini := r.LoadConfigINI(base_config)
-		for _, conn := range gerrit_conns {
-			r.AddGerritConnection(cfg_ini, conn)
-		}
-		config := r.DumpConfigINI(cfg_ini)
-
-		r.EnsureZuulSecrets(&db_password, config)
-		return r.EnsureZuulServices(init_containers, config)
-	} else {
-		r.DeleteStatefulSet("zuul-scheduler")
-		r.DeleteDeployment("zuul-web")
-		r.DeleteService("zuul-web")
-		return true
+	// Add local gerrit connection if needed
+	r.GenerateSecretUUID("zuul-gerrit-api-key")
+	gerrit_conn := sfv1.GerritConnection{
+		Name:              "gerrit",
+		Hostname:          GERRIT_SSHD_PORT_NAME,
+		Port:              "29418",
+		Puburl:            "http://" + GERRIT_HTTPD_PORT_NAME + ":" + strconv.Itoa(GERRIT_HTTPD_PORT),
+		Username:          "zuul",
+		Canonicalhostname: "gerrit." + r.cr.Spec.FQDN,
+		Password:          "zuul-gerrit-api-key",
 	}
+	gerrit_conns = append(gerrit_conns, gerrit_conn)
+
+	// Update base config to add connections
+	base_config := zuul_dot_conf
+
+	cfg_ini := r.LoadConfigINI(base_config)
+	for _, conn := range gerrit_conns {
+		r.AddGerritConnection(cfg_ini, conn)
+	}
+	config := r.DumpConfigINI(cfg_ini)
+
+	r.EnsureZuulSecrets(&db_password, config)
+	return r.EnsureZuulServices(init_containers, config)
 }
 
 // Zuul ingress is special because the zuul-web container expect the

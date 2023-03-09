@@ -19,25 +19,21 @@ const MANAGESF_IMAGE string = "quay.io/software-factory/managesf:0.30.0-1"
 const MANAGESF_PORT = 20001
 const MANAGESF_PORT_NAME = "managesfport"
 
-func GenerateConfig(sqlsecret apiv1.Secret, gerrit_enabled bool, zuul_enabled bool, r *SFController) string {
+func GenerateConfig(sqlsecret apiv1.Secret, r *SFController) string {
 
 	// Getting Gerrit Admin password from secret
 	gerritadminpassword := []byte{}
-	if gerrit_enabled {
-		gerritsecret, err := r.getSecretbyNameRef("gerrit-admin-api-key")
-		if err != nil {
-			r.log.V(1).Error(err, "gerrit-admin-api-key secret not found")
-		}
-		gerritadminpassword, err = r.getValueFromKeySecret(gerritsecret, "gerrit-admin-api-key")
-		if err != nil {
-			r.log.V(1).Error(err, "Key not found")
-		}
+	gerritsecret, err := r.getSecretbyNameRef("gerrit-admin-api-key")
+	if err != nil {
+		r.log.V(1).Error(err, "gerrit-admin-api-key secret not found")
+	}
+	gerritadminpassword, err = r.getValueFromKeySecret(gerritsecret, "gerrit-admin-api-key")
+	if err != nil {
+		r.log.V(1).Error(err, "Key not found")
 	}
 
 	// Structure for config.py file template
 	type ConfigPy struct {
-		Zuul_enabled        bool
-		Gerrit_enabled      bool
 		ManageSFIdent       string
 		Fqdn                string
 		GerritAdminPassword string
@@ -46,8 +42,6 @@ func GenerateConfig(sqlsecret apiv1.Secret, gerrit_enabled bool, zuul_enabled bo
 
 	// Initializing Template Structure
 	configpy := ConfigPy{
-		zuul_enabled,
-		gerrit_enabled,
 		MANAGESF_IDENT,
 		r.cr.Spec.FQDN,
 		string(gerritadminpassword),
@@ -65,17 +59,15 @@ func GenerateConfig(sqlsecret apiv1.Secret, gerrit_enabled bool, zuul_enabled bo
 	return template
 }
 
-func GenerateSshConfig(sqlsecret apiv1.Secret, gerrit_enabled bool, zuul_enabled bool, r *SFController) string {
+func GenerateSshConfig(sqlsecret apiv1.Secret, r *SFController) string {
 
 	// Structure for SSH config file template
 	type SshConfig struct {
-		Zuul_enabled   bool
-		Gerrit_enabled bool
-		Fqdn           string
+		Fqdn string
 	}
 
 	// Initializing Template Structure
-	sshconfig := SshConfig{zuul_enabled, gerrit_enabled, r.cr.Spec.FQDN}
+	sshconfig := SshConfig{r.cr.Spec.FQDN}
 
 	// Template path
 	templatefile := "controllers/static/managesf/sshconfig.tmpl"
@@ -98,62 +90,53 @@ func GenerateSshConfig(sqlsecret apiv1.Secret, gerrit_enabled bool, zuul_enabled
 
 func (r *SFController) DeployManagesf() bool {
 
-	if r.cr.Spec.Gerrit.Enabled {
-		initContainers, managesfpasswordsecret := r.EnsureDBInit("managesf")
+	initContainers, managesfpasswordsecret := r.EnsureDBInit("managesf")
 
-		// Creating managesf config.py file
-		config_data := make(map[string]string)
-		config_data["config.py"] = GenerateConfig(managesfpasswordsecret, r.cr.Spec.Gerrit.Enabled, r.cr.Spec.Zuul.Enabled, r)
-		r.EnsureConfigMap(MANAGESF_IDENT, config_data)
+	// Creating managesf config.py file
+	config_data := make(map[string]string)
+	config_data["config.py"] = GenerateConfig(managesfpasswordsecret, r)
+	r.EnsureConfigMap(MANAGESF_IDENT, config_data)
 
-		ssh_config_data := make(map[string]string)
-		ssh_config_data["config"] = GenerateSshConfig(managesfpasswordsecret, r.cr.Spec.Gerrit.Enabled, r.cr.Spec.Zuul.Enabled, r)
-		r.EnsureConfigMap(MANAGESF_IDENT+"-ssh", ssh_config_data)
+	ssh_config_data := make(map[string]string)
+	ssh_config_data["config"] = GenerateSshConfig(managesfpasswordsecret, r)
+	r.EnsureConfigMap(MANAGESF_IDENT+"-ssh", ssh_config_data)
 
-		dep := create_deployment(r.ns, MANAGESF_IDENT, MANAGESF_IMAGE)
+	dep := create_deployment(r.ns, MANAGESF_IDENT, MANAGESF_IMAGE)
 
-		dep.Spec.Template.Spec.InitContainers = initContainers
+	dep.Spec.Template.Spec.InitContainers = initContainers
 
-		dep.Spec.Template.Spec.Containers[0].Command = []string{
-			"managesf.sh"}
+	dep.Spec.Template.Spec.Containers[0].Command = []string{
+		"managesf.sh"}
 
-		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-			create_container_port(MANAGESF_PORT, MANAGESF_PORT_NAME),
-		}
-
-		dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
-			{
-				Name:      MANAGESF_IDENT + "-config-vol",
-				MountPath: "/etc/managesf",
-			},
-			{
-				Name:      MANAGESF_IDENT + "-ssh-config-vol",
-				MountPath: "/var/lib/managesf/.ssh",
-			},
-		}
-
-		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-			//create_empty_dir(MANAGESF_IDENT + "-config-vol"),
-			create_volume_cm(MANAGESF_IDENT+"-config-vol", MANAGESF_IDENT+"-config-map"),
-			create_volume_cm(MANAGESF_IDENT+"-ssh-config-vol", MANAGESF_IDENT+"-ssh-config-map"),
-		}
-
-		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(MANAGESF_PORT)
-
-		r.GetOrCreate(&dep)
-
-		srv := create_service(r.ns, MANAGESF_IDENT, MANAGESF_IDENT, MANAGESF_PORT, MANAGESF_PORT_NAME)
-		r.GetOrCreate(&srv)
-
-		return r.IsDeploymentReady(&dep)
-	} else {
-		r.DeleteDeployment(MANAGESF_IDENT)
-		r.DeleteService(MANAGESF_PORT_NAME)
-		r.DeleteSecret("managesf-db-password")
-		r.DeleteConfigMap(MANAGESF_IDENT + "-config-map")
-		r.DeleteConfigMap(MANAGESF_IDENT + "-ssh" + "-config-map")
-		return true
+	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+		create_container_port(MANAGESF_PORT, MANAGESF_PORT_NAME),
 	}
+
+	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      MANAGESF_IDENT + "-config-vol",
+			MountPath: "/etc/managesf",
+		},
+		{
+			Name:      MANAGESF_IDENT + "-ssh-config-vol",
+			MountPath: "/var/lib/managesf/.ssh",
+		},
+	}
+
+	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
+		//create_empty_dir(MANAGESF_IDENT + "-config-vol"),
+		create_volume_cm(MANAGESF_IDENT+"-config-vol", MANAGESF_IDENT+"-config-map"),
+		create_volume_cm(MANAGESF_IDENT+"-ssh-config-vol", MANAGESF_IDENT+"-ssh-config-map"),
+	}
+
+	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(MANAGESF_PORT)
+
+	r.GetOrCreate(&dep)
+
+	srv := create_service(r.ns, MANAGESF_IDENT, MANAGESF_IDENT, MANAGESF_PORT, MANAGESF_PORT_NAME)
+	r.GetOrCreate(&srv)
+
+	return r.IsDeploymentReady(&dep)
 }
 
 func (r *SFController) IngressManagesf() []netv1.IngressRule {

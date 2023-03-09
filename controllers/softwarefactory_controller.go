@@ -86,8 +86,6 @@ func isOperatorReady(services map[string]bool) bool {
 }
 
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
-	sf := r.cr
-
 	services := map[string]bool{}
 
 	r.EnsureCA()
@@ -115,18 +113,14 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	services["Gerrit"] = r.DeployGerrit()
 
-	if services["MariaDB"] && services["Zookeeper"] && services["Zuul"] && services["GitServer"] && sf.Spec.Zuul.Enabled {
+	if services["MariaDB"] && services["Zookeeper"] && services["Zuul"] && services["GitServer"] {
 		services["Config"] = r.SetupConfigJob()
 	}
 
-	// managesfEnabled is enabled if Gerrit is Enabled
-	managesfEnabled := r.cr.Spec.Gerrit.Enabled
-	if managesfEnabled {
-		services["ManageSF"] = r.DeployManagesf()
-	}
+	services["ManageSF"] = r.DeployManagesf()
 
-	if sf.Spec.Gerrit.Enabled && services["Gerrit"] {
-		services["ConfigRepo"] = r.SetupConfigRepo(sf.Spec.Gerrit.Enabled)
+	if services["Gerrit"] {
+		services["ConfigRepo"] = r.SetupConfigRepo()
 	}
 
 	r.log.V(1).Info(messageInfo(r, services))

@@ -7,15 +7,12 @@ package controllers
 
 import (
 	_ "embed"
-	"strconv"
-
-	"sigs.k8s.io/yaml"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
-
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 //go:embed static/sf_operator/secret.py
@@ -128,7 +125,7 @@ func (r *SFController) getProvidedCR() string {
 	return "# The software factory system resources\n# The config-update job applies change to this file.\n" + string(data)
 }
 
-func (r *SFController) SetupConfigRepo(gerrit_enabled bool) bool {
+func (r *SFController) SetupConfigRepo() bool {
 	r.InstallTooling()
 	var job batchv1.Job
 	job_name := "setup-config-repo"
@@ -152,7 +149,6 @@ func (r *SFController) SetupConfigRepo(gerrit_enabled bool) bool {
 					create_env("FQDN", r.cr.Spec.FQDN),
 					create_env("CONFIG_REPO_URL", config_url),
 					create_env("CONFIG_REPO_USER", config_user),
-					create_env("GERRIT_ENABLED", strconv.FormatBool(gerrit_enabled)),
 				},
 				VolumeMounts: []apiv1.VolumeMount{
 					{Name: "pymod-sf-operator", MountPath: "/sf_operator"},

@@ -54,16 +54,12 @@ spec:
               gerrit:
                 description: Gerrit service spec
                 properties:
-                  enabled:
-                    type: boolean
                   sshd_max_connections_per_user:
                     type: string
                 type: object
               zuul:
                 description: Zuul service spec
                 properties:
-                  enabled:
-                    type: boolean
                   gerritconns:
                     items:
                       properties:

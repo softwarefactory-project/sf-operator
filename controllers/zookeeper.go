@@ -14,17 +14,10 @@ import (
 var zk_objs string
 
 func (r *SFController) DeployZookeeper() bool {
-	if r.cr.Spec.Zuul.Enabled {
-		r.CreateYAMLs(strings.ReplaceAll(zk_objs, "{{ NS }}", r.ns))
-		cert := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper")
-		r.GetOrCreate(&cert)
-		var dep appsv1.StatefulSet
-		r.GetM("zookeeper", &dep)
-		return r.IsStatefulSetReady(&dep)
-	} else {
-		r.DeleteStatefulSet("zookeeper")
-		r.DeleteService("zookeeper")
-		r.DeleteService("zookeeper-headless")
-		return true
-	}
+	r.CreateYAMLs(strings.ReplaceAll(zk_objs, "{{ NS }}", r.ns))
+	cert := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper")
+	r.GetOrCreate(&cert)
+	var dep appsv1.StatefulSet
+	r.GetM("zookeeper", &dep)
+	return r.IsStatefulSetReady(&dep)
 }
