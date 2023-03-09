@@ -1,4 +1,4 @@
-- hosts: all
+- hosts: "{{ hostname | default('all') }}"
   roles:
     - install-sf-operator
     - run-sf-operator

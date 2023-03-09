@@ -15,6 +15,8 @@
           pkgs.go
           # 0.10.1 in nixpkgs 22.11
           pkgs.gopls
+          # 2.14.0 in nixpkgs 22.11
+          pkgs.ansible
         ];
         shellHook = ''
           echo "Welcome in $name"

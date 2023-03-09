@@ -4,6 +4,7 @@
       - golang
       - make
   become: true
+  when: install_requirements | bool == true
 
 - name: Check cluster access
   command: oc cluster-info
@@ -13,7 +14,7 @@
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
-- name: Install sf-operator CRDs
+- name: Install the CRDS
   command: make install
   args:
     chdir: "{{ zuul.project.src_dir }}"

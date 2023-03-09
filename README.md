@@ -15,6 +15,13 @@ To add a new decision:
 
 More information in the [ADR's README](doc/adr/README.md).
 
+## System requirement
+
+You need to install the following dependencies on your dev machine:
+- make
+- golang
+- ansible-core
+
 ## Run the SF operator in devel mode
 
 The operator will automatically use the current context in your kubeconfig file (i.e. whatever `oc cluster-info` shows).
@@ -76,6 +83,24 @@ curl -k https://${MICROSHIFT_IP} -H "HOST: zuul.sftests.com"
 oc delete softwarefactory my-sf
 go run ./main.go --namespace default --cr "./my-sf.yaml"
 ```
+
+## Run ci test locally
+
+You can run CI tests on your local microshift deployment with
+
+```sh
+./tools/run_ci_tests.sh
+```
+
+This command is a wrapper on top of `ansible-playbook` to run the same Ansible play
+than the CI. The command accepts extra Ansible parameters. For instance to override
+the default `microshift _host` var:
+
+```sh
+./tools/run_ci_tests.sh --extra-vars "microshift_host=my-microshift"
+```
+
+We run the same playbook used by zuul during CI jobs
 
 ## Wipe all content in dev namespace
 
