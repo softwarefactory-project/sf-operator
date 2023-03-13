@@ -48,7 +48,12 @@
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
-- name: Install the CRDS
+- name: Install cert-manager operator
+  command: make install-cert-manager
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Install the CRDs
   command: make install
   args:
     chdir: "{{ zuul.project.src_dir }}"

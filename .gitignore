@@ -29,7 +29,7 @@ testbin/*
 bundle.Dockerfile
 config/manager/kustomization.yaml
 
-tools/mysf.yaml
+my-sf.yaml
 config/crd/bases/_.yaml
 
 # python sf_operator

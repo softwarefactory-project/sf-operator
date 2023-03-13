@@ -2,7 +2,7 @@
 
 set -ex
 
-MY_NS=$(kubectl config view -o jsonpath='{.contexts[].context.namespace}')
+MY_NS=$(kubectl config view -o jsonpath='{.contexts[?(@.name == "microshift")].context.namespace}')
 
 if [ -z "${MY_NS}" ]; then
     echo "Unable to find a context namespace in user kube config"
@@ -16,5 +16,5 @@ do
   kubectl -n $MY_NS delete $resource --all;
 done
 
-# Delete all content in the PV. It canbe helpful on CRC deployment.
-kubectl get pv | grep standard | cut -f 1 -d ' ' | xargs kubectl delete pv
+# Delete all content in the PV
+kubectl get pv | cut -f 1 -d ' ' | xargs kubectl delete pv
