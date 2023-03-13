@@ -3,27 +3,27 @@
     - name: Get logs
       command: kubectl get all
 
+    - name: Get nodes information
+      shell: |
+        oc get all -A > ~/zuul-output/logs/cluster-resources-all.txt
+
     - name: Get events
       shell: |
-        kubectl get events > ~/zuul-output/logs/events.txt
-
-    - name: Get ingress logs
-      shell: |
-        kubectl -n ingress-nginx logs -l app.kubernetes.io/name=ingress-nginx > ~/zuul-output/logs/ingress.txt
+        oc get events > ~/zuul-output/logs/events.txt
 
     - name: Get nodes information
       shell: |
-        kubectl describe nodes > ~/zuul-output/logs/nodes.txt
+        oc describe nodes > ~/zuul-output/logs/nodes.txt
 
     - name: Get nodes utilization
       shell: |
-        kubectl describe nodes | sed -n '/^Allocated /,/^Events:/ { /^  [^(]/ p; } ; /^Name: / p' > ~/zuul-output/logs/nodes-utilization.txt
+        oc describe nodes | sed -n '/^Allocated /,/^Events:/ { /^  [^(]/ p; } ; /^Name: / p' > ~/zuul-output/logs/nodes-utilization.txt
 
     - name: Describe resources
       shell: |
         for item in $(kubectl get {{ item }} -o name); do
           mkdir -p ~/zuul-output/logs/$(dirname $item)
-          kubectl describe $item > ~/zuul-output/logs/${item}.txt
+          oc describe $item > ~/zuul-output/logs/${item}.txt
         done
       ignore_errors: yes
       loop:
@@ -36,7 +36,7 @@
 
     - name: Collect logs
       shell: |
-        for pod in $(kubectl get pods -o name); do
+        for pod in $(oc get pods -o name); do
           mkdir -p ~/zuul-output/logs/$(dirname $pod)
-          kubectl logs $pod > ~/zuul-output/logs/${pod}-logs.txt
+          oc logs $pod > ~/zuul-output/logs/${pod}-logs.txt
         done

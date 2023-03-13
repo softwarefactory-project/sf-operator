@@ -4,7 +4,7 @@
     name: sf-operator-functional-allinone-microshift
     run: playbooks/test-microshift.yaml
     parent: base-microshift
-    timeout: 3600
+    timeout: 900
     post-run: playbooks/post.yaml
     nodeset:
       nodes:
@@ -18,6 +18,5 @@
       logclassify_logserver_dir: ./
       logclassify_debug: false
       logclassify_report: true
-      job_timeout: 3600
       # microshift deployment
       pv_storageclass: standard
