@@ -19,3 +19,5 @@
       logclassify_debug: false
       logclassify_report: true
       job_timeout: 3600
+      # microshift deployment
+      pv_storageclass: standard
