@@ -10,10 +10,7 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-type BaseSpec struct {
-	// Enables Service.
-	Enabled bool `json:"enabled"`
-}
+type BaseSpec struct{}
 
 type ConfigLocationsSpec struct {
 	ConfigRepo string `json:"config-repo,omitempty"`
@@ -32,12 +29,10 @@ type GerritConnection struct {
 }
 
 type ZuulSpec struct {
-	Enabled     bool               `json:"enabled,omitempty"`
 	GerritConns []GerritConnection `json:"gerritconns,omitempty"`
 }
 
 type GerritSpec struct {
-	Enabled                   bool   `json:"enabled,omitempty"`
 	SshdMaxConnectionsPerUser string `json:"sshd_max_connections_per_user,omitempty"`
 }
 

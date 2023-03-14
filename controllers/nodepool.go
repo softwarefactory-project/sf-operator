@@ -28,15 +28,9 @@ providers: []
 }
 
 func (r *SFController) DeployNodepool() bool {
-	// Nodepool is enable if Zuul is enabled
-	if r.cr.Spec.Zuul.Enabled {
-		r.EnsureNodepoolSecrets()
-		r.CreateYAMLs(nodepool_objs)
-		var dep appsv1.Deployment
-		r.GetM("nodepool-launcher", &dep)
-		return r.IsDeploymentReady(&dep)
-	} else {
-		r.DeleteDeployment("nodepool-launcher")
-		return true
-	}
+	r.EnsureNodepoolSecrets()
+	r.CreateYAMLs(nodepool_objs)
+	var dep appsv1.Deployment
+	r.GetM("nodepool-launcher", &dep)
+	return r.IsDeploymentReady(&dep)
 }

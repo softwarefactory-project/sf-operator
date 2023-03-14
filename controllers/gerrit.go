@@ -100,12 +100,10 @@ func (r *SFController) GerritPostInitJob(name string, has_config_repo bool) bool
 		}
 		ci_users := []apiv1.EnvVar{}
 
-		if r.cr.Spec.Zuul.Enabled {
-			ci_users = append(
-				ci_users,
-				create_secret_env("CI_USER_SSH_zuul", "zuul-ssh-key", "pub"),
-				create_secret_env("CI_USER_API_zuul", "zuul-gerrit-api-key", "zuul-gerrit-api-key"))
-		}
+		ci_users = append(
+			ci_users,
+			create_secret_env("CI_USER_SSH_zuul", "zuul-ssh-key", "pub"),
+			create_secret_env("CI_USER_API_zuul", "zuul-gerrit-api-key", "zuul-gerrit-api-key"))
 
 		container := apiv1.Container{
 			Name:    fmt.Sprintf("%s-container", job_name),
@@ -136,133 +134,126 @@ func (r *SFController) GerritPostInitJob(name string, has_config_repo bool) bool
 
 func (r *SFController) DeployGerrit() bool {
 
-	if r.cr.Spec.Gerrit.Enabled {
-		spec := r.cr.Spec.Gerrit
+	spec := r.cr.Spec.Gerrit
 
-		has_config_repo := r.cr.Spec.ConfigLocations.ConfigRepo == ""
+	has_config_repo := r.cr.Spec.ConfigLocations.ConfigRepo == ""
 
-		// Ensure Gerrit Keystore password
-		r.GenerateSecretUUID("gerrit-keystore-password")
-		// Ensure Gerrit Admin API password
-		r.GenerateSecretUUID("gerrit-admin-api-key")
+	// Ensure Gerrit Keystore password
+	r.GenerateSecretUUID("gerrit-keystore-password")
+	// Ensure Gerrit Admin API password
+	r.GenerateSecretUUID("gerrit-admin-api-key")
 
-		// Create a certificate for Gerrit
-		cert := r.create_client_certificate(r.ns, GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit")
-		r.GetOrCreate(&cert)
+	// Create a certificate for Gerrit
+	cert := r.create_client_certificate(r.ns, GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit")
+	r.GetOrCreate(&cert)
 
-		volumeMounts := []apiv1.VolumeMount{
+	volumeMounts := []apiv1.VolumeMount{
+		{
+			Name:      GERRIT_IDENT,
+			MountPath: GERRIT_SITE_MOUNT_PATH,
+		},
+	}
+	securityContext := &apiv1.SecurityContext{
+		RunAsNonRoot: pointer.BoolPtr(false),
+	}
+	podSecurityContext := &apiv1.PodSecurityContext{
+		RunAsUser: pointer.Int64(10002),
+		FSGroup:   pointer.Int64(10002),
+	}
+
+	// Create the deployment
+	dep := create_statefulset(r.ns, GERRIT_IDENT, GERRIT_IMAGE)
+
+	// Setup the main container
+	dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
+	dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
+	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+		create_container_port(GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME),
+		create_container_port(GERRIT_SSHD_PORT, GERRIT_SSHD_PORT_NAME),
+	}
+	dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
+		create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
+		create_env("FQDN", r.cr.Spec.FQDN),
+		create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
+		create_secret_env("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
+	}
+	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
+	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
+	dep.Spec.Template.Spec.Containers[0].SecurityContext = securityContext
+	dep.Spec.Template.Spec.SecurityContext = podSecurityContext
+
+	// Setup the sidecar container for gsku
+	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
+		Name:    "gerrit-gsku",
+		Image:   GSKU_IMAGE,
+		Command: []string{"sh", "-c", gsku_entrypoint},
+		VolumeMounts: []apiv1.VolumeMount{
 			{
-				Name:      GERRIT_IDENT,
-				MountPath: GERRIT_SITE_MOUNT_PATH,
+				Name:      "gsku",
+				MountPath: "/etc/github-ssh-key-updater",
 			},
-		}
-		securityContext := &apiv1.SecurityContext{
-			RunAsNonRoot: pointer.BoolPtr(false),
-		}
-		podSecurityContext := &apiv1.PodSecurityContext{
-			RunAsUser: pointer.Int64(10002),
-			FSGroup:   pointer.Int64(10002),
-		}
+		},
+		Env: []apiv1.EnvVar{
+			create_secret_env("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
+		},
+	})
 
-		// Create the deployment
-		dep := create_statefulset(r.ns, GERRIT_IDENT, GERRIT_IMAGE)
+	dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
 
-		// Setup the main container
-		dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
-		dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
-		dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-			create_container_port(GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME),
-			create_container_port(GERRIT_SSHD_PORT, GERRIT_SSHD_PORT_NAME),
-		}
-		dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
-			create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
-			create_env("FQDN", r.cr.Spec.FQDN),
-			create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
-			create_secret_env("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
-		}
-		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
-		dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
-		dep.Spec.Template.Spec.Containers[0].SecurityContext = securityContext
-		dep.Spec.Template.Spec.SecurityContext = podSecurityContext
+	// Expose a volume that contain certmanager certs for Gerrit
+	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
+		create_volume_secret(GERRIT_IDENT + "-client-tls"),
+		create_empty_dir("gsku"),
+	}
 
-		// Setup the sidecar container for gsku
-		dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
-			Name:    "gerrit-gsku",
-			Image:   GSKU_IMAGE,
-			Command: []string{"sh", "-c", gsku_entrypoint},
-			VolumeMounts: []apiv1.VolumeMount{
-				{
-					Name:      "gsku",
-					MountPath: "/etc/github-ssh-key-updater",
-				},
-			},
-			Env: []apiv1.EnvVar{
-				create_secret_env("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
-			},
-		})
-
-		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
-
-		// Expose a volume that contain certmanager certs for Gerrit
-		dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-			create_volume_secret(GERRIT_IDENT + "-client-tls"),
-			create_empty_dir("gsku"),
-		}
-
-		// Create annotations based on Gerrit parameters
-		jsonSpec, _ := json.Marshal(spec)
-		annotations := map[string]string{
-			"fqdn": r.cr.Spec.FQDN,
-			"spec": string(jsonSpec),
-		}
+	// Create annotations based on Gerrit parameters
+	jsonSpec, _ := json.Marshal(spec)
+	annotations := map[string]string{
+		"fqdn": r.cr.Spec.FQDN,
+		"spec": string(jsonSpec),
+	}
+	dep.Spec.Template.ObjectMeta.Annotations = annotations
+	r.GetOrCreate(&dep)
+	if !map_equals(&dep.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		// Update the annotation - this force the statefulset controler to respawn the container
 		dep.Spec.Template.ObjectMeta.Annotations = annotations
-		r.GetOrCreate(&dep)
-		if !map_equals(&dep.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			// Update the annotation - this force the statefulset controler to respawn the container
-			dep.Spec.Template.ObjectMeta.Annotations = annotations
-			// ReInit initContainers to ensure new spec is used
-			dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
-			r.log.V(1).Info("Gerrit configuration changed, restarting ...")
-			// Update the deployment resource
-			r.UpdateR(&dep)
-		}
+		// ReInit initContainers to ensure new spec is used
+		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
+		r.log.V(1).Info("Gerrit configuration changed, restarting ...")
+		// Update the deployment resource
+		r.UpdateR(&dep)
+	}
 
-		// Create services exposed by Gerrit
-		httpd_service := create_service(
-			r.ns, GERRIT_HTTPD_PORT_NAME, GERRIT_IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME)
-		sshd_service := apiv1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      GERRIT_SSHD_PORT_NAME,
-				Namespace: r.ns,
+	// Create services exposed by Gerrit
+	httpd_service := create_service(
+		r.ns, GERRIT_HTTPD_PORT_NAME, GERRIT_IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME)
+	sshd_service := apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      GERRIT_SSHD_PORT_NAME,
+			Namespace: r.ns,
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: []apiv1.ServicePort{
+				{
+					Name:     GERRIT_SSHD_PORT_NAME,
+					Protocol: apiv1.ProtocolTCP,
+					Port:     GERRIT_SSHD_PORT,
+				},
 			},
-			Spec: apiv1.ServiceSpec{
-				Ports: []apiv1.ServicePort{
-					{
-						Name:     GERRIT_SSHD_PORT_NAME,
-						Protocol: apiv1.ProtocolTCP,
-						Port:     GERRIT_SSHD_PORT,
-					},
-				},
-				Type: apiv1.ServiceTypeNodePort,
-				Selector: map[string]string{
-					"app": "sf",
-					"run": GERRIT_IDENT,
-				},
-			}}
-		r.GetOrCreate(&httpd_service)
-		r.GetOrCreate(&sshd_service)
+			Type: apiv1.ServiceTypeNodePort,
+			Selector: map[string]string{
+				"app": "sf",
+				"run": GERRIT_IDENT,
+			},
+		}}
+	r.GetOrCreate(&httpd_service)
+	r.GetOrCreate(&sshd_service)
 
-		ready := r.IsStatefulSetReady(&dep)
-		if ready {
-			return r.GerritPostInitJob("post-init", has_config_repo)
-		} else {
-			return false
-		}
+	ready := r.IsStatefulSetReady(&dep)
+	if ready {
+		return r.GerritPostInitJob("post-init", has_config_repo)
 	} else {
-		r.DeleteStatefulSet(GERRIT_IDENT)
-		r.DeleteService(GERRIT_HTTPD_PORT_NAME)
-		r.DeleteService(GERRIT_SSHD_PORT_NAME)
-		return true
+		return false
 	}
 }
 

@@ -773,22 +773,19 @@ func (r *SFController) ensure_ingress(ingress netv1.Ingress, name string) {
 }
 
 func (r *SFController) SetupIngress() {
-	if r.cr.Spec.Gerrit.Enabled {
-		var ingress netv1.Ingress
-		name := r.cr.Name + "-gerrit"
-		ingress = netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-			},
-		}
-		ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGerrit()...)
-		r.ensure_ingress(ingress, name)
+	var ingress netv1.Ingress
+	name := r.cr.Name + "-gerrit"
+	ingress = netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: r.ns,
+		},
 	}
-	if r.cr.Spec.Zuul.Enabled {
-		name := r.cr.Name + "-zuul"
-		r.ensure_ingress(r.IngressZuul(name), name)
-	}
+	ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGerrit()...)
+	r.ensure_ingress(ingress, name)
+
+	zuul_ingress := r.cr.Name + "-zuul"
+	r.ensure_ingress(r.IngressZuul(zuul_ingress), zuul_ingress)
 }
 
 func (r *SFController) PodExec(pod string, container string, command []string) {
@@ -902,7 +899,7 @@ func (r *SFController) ImageToBase64(imagepath string) (string, error) {
 func (r *SFController) getConfigRepoCNXInfo() (string, string) {
 	var config_repo_url string
 	var config_repo_user string
-	if r.cr.Spec.ConfigLocations.ConfigRepo == "" && r.cr.Spec.Gerrit.Enabled {
+	if r.cr.Spec.ConfigLocations.ConfigRepo == "" {
 		config_repo_url = "gerrit-sshd:29418/config"
 		config_repo_user = "admin"
 	} else if r.cr.Spec.ConfigLocations.ConfigRepo != "" {
