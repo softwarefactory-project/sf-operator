@@ -5,55 +5,15 @@
       - make
   become: true
 
-- name: Check if there is main Kubernetes config
-  become: true
-  stat:
-    path: /etc/kubernetes/admin.conf
-  register: _k8s_config
-
-- name: Copy kubernetes config to the directory
-  block:
-    - name: Ensure kube dir exists
-      file:
-        path: "{{ ansible_env.HOME }}/.kube"
-        state: directory
-
-    - name: Copy admin config to the kube location
-      become: true
-      copy:
-        src: /etc/kubernetes/admin.conf
-        dest: "{{ ansible_env.HOME }}/.kube/config"
-        owner: "1000"
-        group: "1000"
-        remote_src: true
-  when: _k8s_config.stat.exists
-
-- name: Configure default namespace
-  command: kubectl config set-context --current --namespace=default
-  environment:
-    KUBECONFIG: "{{ ansible_env.HOME }}/.kube/config"
-
-- name: Build the operator
-  command: make build
-  args:
-    chdir: "{{ zuul.project.src_dir }}"
-
-- name: Ensure the project is clean
-  shell: |
-    if [ ! -z "$(git status --porcelain)" ]; then
-      git status
-      echo "Add the above files modified by 'make build' to your commit and re-submit"
-      exit 1
-    fi
-  args:
-    chdir: "{{ zuul.project.src_dir }}"
+- name: Check cluster access
+  command: kubectl cluster-info
 
 - name: Install cert-manager operator
   command: make install-cert-manager
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
-- name: Install the CRDs
+- name: Install sf-operator CRDs
   command: make install
   args:
     chdir: "{{ zuul.project.src_dir }}"

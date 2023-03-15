@@ -1,9 +1,4 @@
-- name: Install test CR
-  command: kubectl apply -f playbooks/files/allinone.yaml
-  args:
-    chdir: "{{ zuul.project.src_dir }}"
-
-- name: Run the operator one shot
-  command: timeout {{ job_timeout | default(900) }} go run ./main.go --namespace default --oneshot
+- name: Run the operator
+  command: go run ./main.go --namespace default --oneshot --cr playbooks/files/allinone.yaml
   args:
     chdir: "{{ zuul.project.src_dir }}"

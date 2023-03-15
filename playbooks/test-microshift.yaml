@@ -2,3 +2,4 @@
   roles:
     - install-sf-operator
     - run-sf-operator
+    - test-sf-operator

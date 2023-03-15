@@ -70,7 +70,7 @@ then you need to setup a local entry in /etc/hosts:
 
 ```sh
 echo "${K8S_EXTERNAL_IP} ${FQDN} zuul.${FQDN} gerrit.${FQDN} | sudo tee -a /etc/hosts
-firefox https://zuul.${FQDN}/
+firefox http://zuul.${FQDN}/
 ```
 
 ## Reset a deployment

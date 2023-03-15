@@ -1,0 +1,23 @@
+- name: Attempt to access Gerrit via the ingress
+  ansible.builtin.uri:
+    url: http://{{ microshift_host }}
+    method: GET
+    return_content: true
+    headers:
+      Host: "gerrit.sftests.com"
+  register: this
+  until: "'PolyGerrit' in this.content"
+  retries: 3
+  delay: 5
+
+- name: Attempt to access Zuul WEB via the ingress
+  ansible.builtin.uri:
+    url: http://{{ microshift_host }}/api/tenants
+    method: GET
+    return_content: true
+    headers:
+      Host: "zuul.sftests.com"
+  register: this
+  until: "'internal' in this.content"
+  retries: 3
+  delay: 5
