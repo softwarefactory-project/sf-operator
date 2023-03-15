@@ -17,6 +17,8 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
+const ZUUL_WEB_PORT = 9000
+
 //go:embed static/zuul/zuul.conf
 var zuul_dot_conf string
 
@@ -227,7 +229,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		r.UpdateR(&zw)
 	}
 
-	srv := create_service(r.ns, "zuul-web", "zuul-web", 9000, "zuul-web")
+	srv := create_service(r.ns, "zuul-web", "zuul-web", ZUUL_WEB_PORT, "zuul-web")
 	r.GetOrCreate(&srv)
 
 	return r.IsStatefulSetReady(&zs) && r.IsStatefulSetReady(&ze) && r.IsDeploymentReady(&zw)
@@ -345,11 +347,8 @@ func (r *SFController) DeployZuul() bool {
 // expected
 func (r *SFController) IngressZuulRedirect(name string) netv1.Ingress {
 	pt := netv1.PathTypePrefix
-	host := "zuul." + r.cr.Spec.FQDN
-	service := "zuul-web"
-	port := 9000
 	rule := netv1.IngressRule{
-		Host: host,
+		Host: "zuul." + r.cr.Spec.FQDN,
 		IngressRuleValue: netv1.IngressRuleValue{
 			HTTP: &netv1.HTTPIngressRuleValue{
 				Paths: []netv1.HTTPIngressPath{
@@ -358,9 +357,9 @@ func (r *SFController) IngressZuulRedirect(name string) netv1.Ingress {
 						Path:     "/zuul",
 						Backend: netv1.IngressBackend{
 							Service: &netv1.IngressServiceBackend{
-								Name: service,
+								Name: "zuul-web",
 								Port: netv1.ServiceBackendPort{
-									Number: int32(port),
+									Number: int32(ZUUL_WEB_PORT),
 								},
 							},
 						},
@@ -384,31 +383,10 @@ func (r *SFController) IngressZuulRedirect(name string) netv1.Ingress {
 }
 
 func (r *SFController) IngressZuul(name string) netv1.Ingress {
-	pt := netv1.PathTypePrefix
-	host := "zuul." + r.cr.Spec.FQDN
-	service := "zuul-web"
-	port := 9000
-	rule := netv1.IngressRule{
-		Host: host,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						PathType: &pt,
-						Path:     "/",
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Name: service,
-								Port: netv1.ServiceBackendPort{
-									Number: int32(port),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+
+	rule := create_ingress_rule(
+		"zuul."+r.cr.Spec.FQDN, "zuul-web", ZUUL_WEB_PORT)
+
 	return netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -418,4 +396,12 @@ func (r *SFController) IngressZuul(name string) netv1.Ingress {
 			Rules: []netv1.IngressRule{rule},
 		},
 	}
+}
+
+func (r *SFController) setupZuulIngress() {
+	zuul_ingress := r.cr.Name + "-zuul"
+	r.ensure_ingress(r.IngressZuul(zuul_ingress), zuul_ingress)
+
+	zuul_ingress_red := r.cr.Name + "-zuul-red"
+	r.ensure_ingress(r.IngressZuulRedirect(zuul_ingress_red), zuul_ingress_red)
 }

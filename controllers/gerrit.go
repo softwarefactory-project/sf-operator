@@ -257,8 +257,22 @@ func (r *SFController) DeployGerrit() bool {
 	}
 }
 
-func (r *SFController) IngressGerrit() []netv1.IngressRule {
-	return []netv1.IngressRule{
-		create_ingress_rule(GERRIT_IDENT+"."+r.cr.Spec.FQDN, GERRIT_HTTPD_PORT_NAME, GERRIT_HTTPD_PORT),
+func (r *SFController) setupGerritIngress() {
+	rule := create_ingress_rule(
+		GERRIT_IDENT+"."+r.cr.Spec.FQDN, GERRIT_HTTPD_PORT_NAME, GERRIT_HTTPD_PORT)
+
+	name := r.cr.Name + "-gerrit"
+
+	var ingress netv1.Ingress
+	ingress = netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: r.ns,
+		},
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{rule},
+		},
 	}
+
+	r.ensure_ingress(ingress, name)
 }

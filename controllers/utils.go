@@ -772,24 +772,6 @@ func (r *SFController) ensure_ingress(ingress netv1.Ingress, name string) {
 	}
 }
 
-func (r *SFController) SetupIngress() {
-	var ingress netv1.Ingress
-	name := r.cr.Name + "-gerrit"
-	ingress = netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.ns,
-		},
-	}
-	ingress.Spec.Rules = append(ingress.Spec.Rules, r.IngressGerrit()...)
-	r.ensure_ingress(ingress, name)
-
-	zuul_ingress := r.cr.Name + "-zuul"
-	zuul_ingress_red := r.cr.Name + "-zuul-red"
-	r.ensure_ingress(r.IngressZuul(zuul_ingress), zuul_ingress)
-	r.ensure_ingress(r.IngressZuulRedirect(zuul_ingress_red), zuul_ingress_red)
-}
-
 func (r *SFController) PodExec(pod string, container string, command []string) {
 	r.log.V(1).Info("Running pod execution", "pod", pod, "command", command)
 	execReq := r.RESTClient.

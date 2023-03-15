@@ -85,6 +85,11 @@ func isOperatorReady(services map[string]bool) bool {
 	return true
 }
 
+func (r *SFController) SetupIngress() {
+	r.setupGerritIngress()
+	r.setupZuulIngress()
+}
+
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	services := map[string]bool{}
 
