@@ -78,7 +78,7 @@ If the FQDN is not already configured to point at your kubernetes cluster inboun
 then you need to setup a local entry in /etc/hosts:
 
 ```sh
-echo "${MICROSHIFT_IP} zuul.sftests.com gerrit.sftests.com | sudo tee -a /etc/hosts
+echo "${MICROSHIFT_IP} zuul.sftests.com gerrit.sftests.com" | sudo tee -a /etc/hosts
 firefox https://zuul.sftests.com
 firefox https://gerrit.sftests.com
 ```
