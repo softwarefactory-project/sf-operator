@@ -785,7 +785,9 @@ func (r *SFController) SetupIngress() {
 	r.ensure_ingress(ingress, name)
 
 	zuul_ingress := r.cr.Name + "-zuul"
+	zuul_ingress_red := r.cr.Name + "-zuul-red"
 	r.ensure_ingress(r.IngressZuul(zuul_ingress), zuul_ingress)
+	r.ensure_ingress(r.IngressZuulRedirect(zuul_ingress_red), zuul_ingress_red)
 }
 
 func (r *SFController) PodExec(pod string, container string, command []string) {
