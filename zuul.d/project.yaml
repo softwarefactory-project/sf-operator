@@ -5,3 +5,6 @@
     gate:
       jobs:
         - sf-operator-functional-allinone-microshift
+    periodic:
+      jobs:
+        - sf-operator-functional-allinone-microshift
