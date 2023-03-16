@@ -1,8 +1,9 @@
 - name: Attempt to access Gerrit via the ingress
   ansible.builtin.uri:
-    url: http://{{ microshift_host }}
+    url: https://{{ microshift_host }}
     method: GET
     return_content: true
+    validate_certs: false
     headers:
       Host: "gerrit.sftests.com"
   register: this
@@ -12,9 +13,10 @@
 
 - name: Attempt to access Zuul WEB via the ingress
   ansible.builtin.uri:
-    url: http://{{ microshift_host }}/api/tenants
+    url: https://{{ microshift_host }}/api/tenants
     method: GET
     return_content: true
+    validate_certs: false
     headers:
       Host: "zuul.sftests.com"
   register: this

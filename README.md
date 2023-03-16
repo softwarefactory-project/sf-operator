@@ -59,14 +59,15 @@ then you need to setup a local entry in /etc/hosts:
 
 ```sh
 echo "${MICROSHIFT_IP} zuul.sftests.com gerrit.sftests.com | sudo tee -a /etc/hosts
-firefox http://zuul.sftests.com/
+firefox https://zuul.sftests.com
+firefox https://gerrit.sftests.com
 ```
 
 Or
 
 ```sh
-curl http://${MICROSHIFT_IP} -H "HOST: gerrit.sftests.com"
-curl http://${MICROSHIFT_IP} -H "HOST: zuul.sftests.com"
+curl -k https://${MICROSHIFT_IP} -H "HOST: gerrit.sftests.com"
+curl -k https://${MICROSHIFT_IP} -H "HOST: zuul.sftests.com"
 ```
 
 ## Reset a deployment

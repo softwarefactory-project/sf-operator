@@ -15,7 +15,6 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
@@ -259,20 +258,7 @@ func (r *SFController) DeployGerrit() bool {
 
 func (r *SFController) setupGerritIngress() {
 	rule := create_ingress_rule(
-		GERRIT_IDENT+"."+r.cr.Spec.FQDN, GERRIT_HTTPD_PORT_NAME, GERRIT_HTTPD_PORT)
+		GERRIT_IDENT+"."+r.cr.Spec.FQDN, GERRIT_HTTPD_PORT_NAME, GERRIT_HTTPD_PORT, "/")
 
-	name := r.cr.Name + "-gerrit"
-
-	var ingress netv1.Ingress
-	ingress = netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.ns,
-		},
-		Spec: netv1.IngressSpec{
-			Rules: []netv1.IngressRule{rule},
-		},
-	}
-
-	r.ensure_ingress(ingress, name)
+	r.ensureHTTPSIngress(r.cr.Name+"-gerrit", rule, map[string]string{})
 }

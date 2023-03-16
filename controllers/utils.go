@@ -718,7 +718,7 @@ func create_job(ns string, name string, container apiv1.Container) batchv1.Job {
 		}}
 }
 
-func create_ingress_rule(host string, service string, port int) netv1.IngressRule {
+func create_ingress_rule(host string, service string, port int, path string) netv1.IngressRule {
 	pt := netv1.PathTypePrefix
 	return netv1.IngressRule{
 		Host: host,
@@ -727,7 +727,7 @@ func create_ingress_rule(host string, service string, port int) netv1.IngressRul
 				Paths: []netv1.HTTPIngressPath{
 					{
 						PathType: &pt,
-						Path:     "/",
+						Path:     path,
 						Backend: netv1.IngressBackend{
 							Service: &netv1.IngressServiceBackend{
 								Name: service,
@@ -741,6 +741,36 @@ func create_ingress_rule(host string, service string, port int) netv1.IngressRul
 			},
 		},
 	}
+}
+
+func (r *SFController) ensure_ingress(ingress netv1.Ingress, name string) {
+	found := r.GetM(name, &ingress)
+	if !found {
+		r.CreateR(&ingress)
+	} else {
+		if err := r.Update(r.ctx, &ingress); err != nil {
+			panic(err.Error())
+		}
+	}
+}
+
+func (r *SFController) ensureHTTPSIngress(name string, rule netv1.IngressRule, annotations map[string]string) {
+
+	var ingress netv1.Ingress
+	ingress_annotations := annotations
+	ingress_annotations["route.openshift.io/termination"] = "edge"
+	ingress = netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   r.ns,
+			Annotations: ingress_annotations,
+		},
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{rule},
+		},
+	}
+
+	r.ensure_ingress(ingress, name)
 }
 
 // Get the service clusterIP. Return an empty string if service not found.
@@ -760,16 +790,6 @@ func gen_bcrypt_pass(pass string) string {
 		panic(err)
 	}
 	return string(hashedPassword)
-}
-func (r *SFController) ensure_ingress(ingress netv1.Ingress, name string) {
-	found := r.GetM(name, &ingress)
-	if !found {
-		r.CreateR(&ingress)
-	} else {
-		if err := r.Update(r.ctx, &ingress); err != nil {
-			panic(err.Error())
-		}
-	}
 }
 
 func (r *SFController) PodExec(pod string, container string, command []string) {

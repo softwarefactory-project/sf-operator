@@ -10,7 +10,6 @@ import (
 	"text/template"
 
 	apiv1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
 )
 
 const MANAGESF_IDENT string = "managesf"
@@ -137,10 +136,4 @@ func (r *SFController) DeployManagesf() bool {
 	r.GetOrCreate(&srv)
 
 	return r.IsDeploymentReady(&dep)
-}
-
-func (r *SFController) IngressManagesf() []netv1.IngressRule {
-	return []netv1.IngressRule{
-		create_ingress_rule(MANAGESF_IDENT+"."+r.cr.Spec.FQDN, MANAGESF_IDENT, MANAGESF_PORT),
-	}
 }

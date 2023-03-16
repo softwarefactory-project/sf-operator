@@ -11,7 +11,6 @@ import (
 
 	ini "gopkg.in/ini.v1"
 	apiv1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
@@ -341,67 +340,18 @@ func (r *SFController) DeployZuul() bool {
 	return r.EnsureZuulServices(init_containers, config)
 }
 
-// Zuul ingress is special because the zuul-web container expect the
-// the files to be served at `/zuul/`, but it is listening on `/`.
-// Thus this ingress remove the `/zuul/` so that the javascript loads as
-// expected
-func (r *SFController) IngressZuulRedirect(name string) netv1.Ingress {
-	pt := netv1.PathTypePrefix
-	rule := netv1.IngressRule{
-		Host: "zuul." + r.cr.Spec.FQDN,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						PathType: &pt,
-						Path:     "/zuul",
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Name: "zuul-web",
-								Port: netv1.ServiceBackendPort{
-									Number: int32(ZUUL_WEB_PORT),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	return netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.ns,
-			Annotations: map[string]string{
-				"haproxy.router.openshift.io/rewrite-target": "/",
-			},
-		},
-		Spec: netv1.IngressSpec{
-			Rules: []netv1.IngressRule{rule},
-		},
-	}
-}
-
-func (r *SFController) IngressZuul(name string) netv1.Ingress {
-
-	rule := create_ingress_rule(
-		"zuul."+r.cr.Spec.FQDN, "zuul-web", ZUUL_WEB_PORT)
-
-	return netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.ns,
-		},
-		Spec: netv1.IngressSpec{
-			Rules: []netv1.IngressRule{rule},
-		},
-	}
-}
-
 func (r *SFController) setupZuulIngress() {
-	zuul_ingress := r.cr.Name + "-zuul"
-	r.ensure_ingress(r.IngressZuul(zuul_ingress), zuul_ingress)
+	r.ensureHTTPSIngress(r.cr.Name+"-zuul",
+		create_ingress_rule(
+			"zuul."+r.cr.Spec.FQDN, "zuul-web", ZUUL_WEB_PORT, "/"), map[string]string{})
 
-	zuul_ingress_red := r.cr.Name + "-zuul-red"
-	r.ensure_ingress(r.IngressZuulRedirect(zuul_ingress_red), zuul_ingress_red)
+	// Zuul ingress is special because the zuul-web container expect the
+	// the files to be served at `/zuul/`, but it is listening on `/`.
+	// Thus this ingress remove the `/zuul/` so that the javascript loads as
+	// expected
+	r.ensureHTTPSIngress(r.cr.Name+"-zuul-red",
+		create_ingress_rule(
+			"zuul."+r.cr.Spec.FQDN, "zuul-web", ZUUL_WEB_PORT, "/zuul"), map[string]string{
+			"haproxy.router.openshift.io/rewrite-target": "/",
+		})
 }
