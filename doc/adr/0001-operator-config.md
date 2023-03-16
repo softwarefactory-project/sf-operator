@@ -40,20 +40,23 @@ define:
 - the components' configurations
 
 We mean by *components' configurations* any configuration needed by a component that
-is rational in term of definition schema complexity and size. Furthermore
-any configuration that is automatically generated from the config repository must
-not appear in the custom resources definition.
+is rational in term of definition schema complexity and size.
 
-The SoftwareFactory Custom Resources is applied via kubectl to deploy an instance
+Configuration that is automatically generated from the config repository might be
+applied to the deployment by updating the CR instance or by updating specific
+resources like a configMaps.
+
+The SoftwareFactory Custom Resource is applied via kubectl to deploy an instance
 of the sf-operator. At deployment the applied resources defintion is *dumped* in
 the **config** repository.
 
 The **config** git repository and its workflow is the entry point to change the configuration
 of a sf-operator deployment. The repository is hosted on a review capable code hosting
-service (like the included Gerrit component) and stores any configuration not available
-through the **Custom Resources schema**. For instance:
+service (like the included Gerrit component) and stores the deployment configuration.
 
-- the dump of the sf-operator resources (as applied via kubectl)
+For instance:
+
+- the dump of the sf-operator CR (as applied via kubectl)
 - the SF resources definition (projects, Gerrit repositories, ...)
 - the Zuul tenants as flat files (outside the SF resources)
 - the Gerrit replication definition
