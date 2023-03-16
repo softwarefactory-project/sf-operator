@@ -6,7 +6,7 @@
   become: true
 
 - name: Check cluster access
-  command: kubectl cluster-info
+  command: oc cluster-info
 
 - name: Install cert-manager operator
   command: make install-cert-manager

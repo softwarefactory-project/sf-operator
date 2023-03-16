@@ -106,27 +106,27 @@ endif
 
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd | oc apply -f -
 
 .PHONY: install-cert-manager
 install-cert-manager: ## Install the cert-manager operator (TODO: use OLM for that)
 	@bash -c "mkdir -p bundle/; if ! test -f bundle/cert-manager.yaml; then curl -L https://github.com/cert-manager/cert-manager/releases/download/v1.8.2/cert-manager.yaml > bundle/cert-manager.yaml; fi"
 	@bash -c "mkdir -p bin; test -f bin/cmctl || { curl -sSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/download/v1.8.2/cmctl-linux-amd64.tar.gz && tar xzf cmctl.tar.gz && mv cmctl ./bin; rm cmctl.tar.gz; }"
-	kubectl apply -f ./bundle/cert-manager.yaml
+	oc apply -f ./bundle/cert-manager.yaml
 	./bin/cmctl check api --wait=2m
 
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+	$(KUSTOMIZE) build config/crd | oc delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/default | oc apply -f -
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+	$(KUSTOMIZE) build config/default | oc delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build Dependencies
 

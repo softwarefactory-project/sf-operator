@@ -17,13 +17,13 @@ More information in the [ADR's README](doc/adr/README.md).
 
 ## Run the SF operator in devel mode
 
-The operator will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+The operator will automatically use the current context in your kubeconfig file (i.e. whatever `oc cluster-info` shows).
 Make sure that your current context is called `microshift` and use a namespace called `default`.
 
 Be sure to use a dedicated k8s dev instance. We are using `microshift` for that purpose.
 
 ```sh
-kubectl config current-context
+oc config current-context
 # Must be microshift
 ```
 
@@ -72,7 +72,7 @@ curl http://${MICROSHIFT_IP} -H "HOST: zuul.sftests.com"
 ## Reset a deployment
 
 ```sh
-kubectl delete softwarefactory my-sf
+oc delete softwarefactory my-sf
 go run ./main.go --namespace default --cr "./my-sf.yaml"
 ```
 
@@ -100,7 +100,7 @@ Run locally: `tox -evenv -- sf_operator --help`
 Add your local SSH key to the gerrit demo user. "demo" user password is "demo". Then:
 
 ```sh
-kubectl port-forward service/gerrit-sshd 29418
+oc port-forward service/gerrit-sshd 29418
 cd /tmp
 git clone ssh://demo@localhost:29418/config
 git config user.email demo@sftests.com
@@ -116,7 +116,7 @@ Now any change can be done and push via the "git review" command.
 We will use the gerrit admin account.
 
 ```sh
-kubectl exec -it gerrit-0 bash
+oc exec -it gerrit-0 bash
 pip3 install --user git-review
 cd /tmp
 git clone ssh://gerrit/config

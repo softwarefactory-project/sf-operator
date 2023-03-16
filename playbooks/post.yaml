@@ -1,7 +1,7 @@
 - hosts: all
   tasks:
     - name: Get logs
-      command: kubectl get all
+      command: oc get all
 
     - name: Get nodes information
       shell: |
@@ -21,7 +21,7 @@
 
     - name: Describe resources
       shell: |
-        for item in $(kubectl get {{ item }} -o name); do
+        for item in $(oc get {{ item }} -o name); do
           mkdir -p ~/zuul-output/logs/$(dirname $item)
           oc describe $item > ~/zuul-output/logs/${item}.txt
         done
