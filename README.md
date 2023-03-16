@@ -17,7 +17,8 @@ More information in the [ADR's README](doc/adr/README.md).
 
 ## Run the SF operator in devel mode
 
-The operator will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows). Make sure that your developer context is called `microshift`.
+The operator will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+Make sure that your current context is called `microshift` and use a namespace called `default`.
 
 Be sure to use a dedicated k8s dev instance. We are using `microshift` for that purpose.
 
@@ -26,41 +27,29 @@ kubectl config current-context
 # Must be microshift
 ```
 
-0. Install cert-manager operator
+1. Install cert-manager operator
 
    ```sh
    # Ensure cert-manager operator is installed on your instance
    make install-cert-manager
    ```
 
-1. Install the Custom Resource Definition:
+2. Install the Custom Resource Definition:
 
    ```sh
    make install
    ```
 
-2. Set user namespace as variable:
+3. Create your own copy the CR sample, for example:
 
    ```sh
-   # Then run the command by setting up the current context name
-   MY_NS=$(kubectl config view -o jsonpath='{.contexts[?(@.name == "microshift")].context.namespace}')
-   echo $MY_NS
-   ```
-
-3. Replace the Custom Resource information, for example:
-
-   ```sh
-   # Copy the Custom Resoure sample
    cp config/samples/sf_v1_softwarefactory.yaml my-sf.yaml
-   # change FQDN
-   export FQDN="${MY_NS}.sftests.com"
-   sed -i "s/fqdn: \"sftests.com\"/fqdn: \"${FQDN}\"/g" my-sf.yaml
    ```
 
 4. Starts the operator:
 
    ```sh
-   go run ./main.go --namespace $MY_NS --cr "./my-sf.yaml"
+   go run ./main.go --namespace default --cr "./my-sf.yaml"
    ```
 
 ## Access services with the browser
@@ -69,15 +58,22 @@ If the FQDN is not already configured to point at your kubernetes cluster inboun
 then you need to setup a local entry in /etc/hosts:
 
 ```sh
-echo "${K8S_EXTERNAL_IP} ${FQDN} zuul.${FQDN} gerrit.${FQDN} | sudo tee -a /etc/hosts
-firefox http://zuul.${FQDN}/
+echo "${MICROSHIFT_IP} zuul.sftests.com gerrit.sftests.com | sudo tee -a /etc/hosts
+firefox http://zuul.sftests.com/
+```
+
+Or
+
+```sh
+curl http://${MICROSHIFT_IP} -H "HOST: gerrit.sftests.com"
+curl http://${MICROSHIFT_IP} -H "HOST: zuul.sftests.com"
 ```
 
 ## Reset a deployment
 
 ```sh
 kubectl delete softwarefactory my-sf
-go run ./main.go --namespace $MY_NS --cr "./my-sf.yaml"
+go run ./main.go --namespace default --cr "./my-sf.yaml"
 ```
 
 ## Wipe all content in dev namespace
@@ -107,7 +103,7 @@ Add your local SSH key to the gerrit demo user. "demo" user password is "demo". 
 kubectl port-forward service/gerrit-sshd 29418
 cd /tmp
 git clone ssh://demo@localhost:29418/config
-git config user.email demo@fbo-sftests.com
+git config user.email demo@sftests.com
 sed -i "s/^host=.*/host=localhost/" .gitreview
 git review -s
 git checkout .gitreview
