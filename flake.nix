@@ -1,6 +1,6 @@
 {
   description = "SF Operator Project";
-  nixConfig.bash-prompt = "[nix(sf-operator)] ";
+  nixConfig.bash-prompt = "[nix(monocle-operator)] ";
   inputs = { nixpkgs.url = "github:nixos/nixpkgs/22.11"; };
 
   outputs = { self, nixpkgs }:
@@ -11,6 +11,8 @@
         buildInputs = [
           # 4.11.0 in nixpkgs 22.11
           pkgs.openshift
+          # 1.25.4 in nixpkgs 22.11
+          pkgs.kubectl
           # 1.19.3 in nixpkgs 22.11
           pkgs.go
           # 0.10.1 in nixpkgs 22.11

@@ -8,5 +8,5 @@ else
     matcher=$1
 fi
 
-echo $(oc get secret ${secret_name} -o json | jq -r ".data.\"${matcher}\"") | base64 -d
+echo $(kubectl get secret ${secret_name} -o json | jq -r ".data.\"${matcher}\"") | base64 -d
 echo ""

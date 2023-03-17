@@ -7,7 +7,7 @@
   when: install_requirements | bool == true
 
 - name: Check cluster access
-  command: oc cluster-info
+  command: kubectl cluster-info
 
 - name: Install cert-manager operator
   command: make install-cert-manager

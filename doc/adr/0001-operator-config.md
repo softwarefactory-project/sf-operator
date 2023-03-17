@@ -44,7 +44,7 @@ is rational in term of definition schema complexity and size. Furthermore
 any configuration that is automatically generated from the config repository must
 not appear in the custom resources definition.
 
-The SoftwareFactory Custom Resources is applied via oc to deploy an instance
+The SoftwareFactory Custom Resources is applied via kubectl to deploy an instance
 of the sf-operator. At deployment the applied resources defintion is *dumped* in
 the **config** repository.
 
@@ -53,7 +53,7 @@ of a sf-operator deployment. The repository is hosted on a review capable code h
 service (like the included Gerrit component) and stores any configuration not available
 through the **Custom Resources schema**. For instance:
 
-- the dump of the sf-operator resources (as applied via oc)
+- the dump of the sf-operator resources (as applied via kubectl)
 - the SF resources definition (projects, Gerrit repositories, ...)
 - the Zuul tenants as flat files (outside the SF resources)
 - the Gerrit replication definition

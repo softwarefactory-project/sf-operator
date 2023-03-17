@@ -24,13 +24,13 @@ You need to install the following dependencies on your dev machine:
 
 ## Run the SF operator in devel mode
 
-The operator will automatically use the current context in your kubeconfig file (i.e. whatever `oc cluster-info` shows).
+The operator will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 Make sure that your current context is called `microshift` and use a namespace called `default`.
 
 Be sure to use a dedicated k8s dev instance. We are using `microshift` for that purpose.
 
 ```sh
-oc config current-context
+kubectl config current-context
 # Must be microshift
 ```
 
@@ -89,7 +89,7 @@ curl -k https://${MICROSHIFT_IP} -H "HOST: zuul.sftests.com"
 ## Reset a deployment
 
 ```sh
-oc delete softwarefactory my-sf
+kubectl delete softwarefactory my-sf
 go run ./main.go --namespace default --cr "./my-sf.yaml"
 ```
 
@@ -149,7 +149,7 @@ To do so via SSH:
 
 ```sh
 # In a terminal
-oc port-forward service/gerrit-sshd 29418
+kubectl port-forward service/gerrit-sshd 29418
 # In another terminal
 git clone ssh://admin@localhost:29418/config /tmp/config
 cd /tmp/config
