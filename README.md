@@ -53,7 +53,16 @@ oc config current-context
    cp config/samples/sf_v1_softwarefactory.yaml my-sf.yaml
    ```
 
-4. Starts the operator:
+4. Ensure Persistent Volume storage class name
+
+   The operator expects a Storage Class named "standard"
+
+   ```sh
+   kubectl get sc
+   kubectl get pv
+   ```
+
+5. Starts the operator:
 
    ```sh
    go run ./main.go --namespace default --cr "./my-sf.yaml"
@@ -123,37 +132,43 @@ Run locally: `tox -evenv -- sf_operator --help`
 
 ### Open a review on the internal Gerrit - from your host
 
-Add your local SSH key to the gerrit demo user. "demo" user password is "demo". Then:
+First checkout the **config** repository.
+
+To do so via HTTP:
 
 ```sh
+# Get the Gerrit admin user API key
+./tools/get-secret.sh gerrit-admin-api-key
+# Then checkout the config repository
+git clone "https://admin@gerrit.sftests.com/a/config" /tmp/config
+cd /tmp/config
+git remote add gerrit "https://admin:<gerrit-admin-api-key>@gerrit.sftests.com/a/config"
+```
+
+To do so via SSH:
+
+```sh
+# In a terminal
 oc port-forward service/gerrit-sshd 29418
-cd /tmp
-git clone ssh://demo@localhost:29418/config
-git config user.email demo@sftests.com
+# In another terminal
+git clone ssh://admin@localhost:29418/config /tmp/config
+cd /tmp/config
+git config user.email admin@sftests.com
 sed -i "s/^host=.*/host=localhost/" .gitreview
-git review -s
+git review -s # Enter 'admin' user
 git checkout .gitreview
 ```
 
-Now any change can be done and push via the "git review" command.
-
-### Open a review on the internal Gerrit - from the gerrit pod
-
-We will use the gerrit admin account.
+Then add a change and send the review:
 
 ```sh
-oc exec -it gerrit-0 bash
-pip3 install --user git-review
-cd /tmp
-git clone ssh://gerrit/config
-cd config
-git review -s
+touch myfile
+git add myfile && git commit -m"Add myfile"
+git review
 ```
 
-Now any change can be done and push via the "git review" command.
+The **config-check** job is started and Zuul votes on change.
 
-Use the following command to approve a change:
-
-```sh
-ssh gerrit gerrit review 1,1 --code-review "+2" --workflow "+1"
-```
+As the **admin** user on Gerrit, the change can be approved with "CR +2, W+1" then Zuul starts
+the **config-check** job in the **gate** pipeline and the **config-update** job in
+the **post** pipeline.
