@@ -1,0 +1,21 @@
+- name: Attempt to access Gerrit via the ingress
+  ansible.builtin.uri:
+    url: "https://{{ gerrit_host }}"
+    method: GET
+    return_content: true
+    validate_certs: false
+  register: this
+  until: "'PolyGerrit' in this.content"
+  retries: 3
+  delay: 5
+
+- name: Attempt to access Zuul WEB via the ingress
+  ansible.builtin.uri:
+    url: "https://{{ zuul_host }}/api/info"
+    method: GET
+    return_content: true
+    validate_certs: false
+  register: this
+  until: "'{{ fqdn }}' in this.content"
+  retries: 3
+  delay: 5

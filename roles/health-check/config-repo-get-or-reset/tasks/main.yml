@@ -1,0 +1,48 @@
+- name: Reset  config_path checkout and update to origin/master
+  block:
+    - set_fact:
+        config_url: "https://admin:{{ gerrit_admin_api_key }}@{{ gerrit_host}}/a/config"
+
+    - name: "Check if {{ config_path }} exists"
+      stat:
+        path: "{{ config_path }}"
+      register: _config_exists
+
+    - name: Clone config repo
+      command: "git -c http.sslVerify=false clone {{ config_url }} {{ config_path }}"
+      when: _config_exists.stat.isdir is not defined
+
+    # TODO debug for it should work but fails with 'SSL certificate problem'
+    # - name: Clone config repo
+    #   git:
+    #     repo: "{{ config_url }}"
+    #     dest: "{{ config_path }}"
+    #     # TODO could be remove if cert is trusted
+    #     accept_hostkey: yes
+    #     update: no
+
+    # TODO could be remove if cert is trusted
+    - name: Ensure config repo cert is trusted
+      command: git config http.sslverify false
+      args:
+        chdir: "{{ config_path }}"
+
+    - name: Add git remote
+      command: "git remote add gerrit {{ config_url }}"
+      register: _git_remote
+      args:
+        chdir: "{{ config_path }}"
+      # 0 success, 3 remote exists
+      failed_when: _git_remote.rc not in [0,3]
+
+    - name: Reset config
+      command: "{{ git_cmd }}"
+      args:
+        chdir: "{{ config_path }}"
+      loop:
+        - git fetch --all
+        - git checkout master
+        - git reset --hard origin/master --
+        - git clean -f -d
+      loop_control:
+        loop_var: git_cmd

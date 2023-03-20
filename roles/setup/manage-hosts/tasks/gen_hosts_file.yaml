@@ -1,0 +1,16 @@
+- name: "Get {{ host }} ip"
+  shell: "getent ahosts {{ host }} | cut -d' ' -f1 | sort -u"
+  register: _host_ip
+  changed_when: false
+
+- name: "Get {{ microshift_host }} ip"
+  shell: "getent ahosts {{ microshift_host }} | cut -d' ' -f1 | sort -u"
+  register: _microshift_ip
+  changed_when: false
+
+- name: "Ensure {{ host }} in /etc/hosts"
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ _microshift_ip.stdout }} {{ host }}"
+  when: _host_ip.stdout == ""
+  become: yes

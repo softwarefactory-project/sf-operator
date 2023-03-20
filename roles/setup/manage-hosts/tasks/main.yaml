@@ -1,0 +1,4 @@
+- include_tasks: gen_hosts_file.yaml
+  loop: "{{ hosts }}"
+  loop_control:
+    loop_var: host

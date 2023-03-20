@@ -1,0 +1,9 @@
+config_path: /tmp/config
+fqdn: sftests.com
+
+gerrit_host: "gerrit.{{ fqdn }}"
+zuul_host: "zuul.{{ fqdn }}"
+
+hosts:
+  - "{{ gerrit_host }}"
+  - "{{ zuul_host }}"
