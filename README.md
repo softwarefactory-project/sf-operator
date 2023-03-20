@@ -98,7 +98,7 @@ go run ./main.go --namespace default --cr "./my-sf.yaml"
 You can run CI tests on your local microshift deployment with
 
 ```sh
-./tools/run_ci_tests.sh
+./tools/run-ci-tests.sh
 ```
 
 This command is a wrapper on top of `ansible-playbook` to run the same Ansible play
@@ -106,10 +106,16 @@ than the CI. The command accepts extra Ansible parameters. For instance to overr
 the default `microshift _host` var:
 
 ```sh
-./tools/run_ci_tests.sh --extra-vars "microshift_host=my-microshift"
+./tools/run-ci-tests.sh --extra-vars "microshift_host=my-microshift"
 ```
 
-We run the same playbook used by zuul during CI jobs
+We run the same playbook used by zuul during CI jobs `playbooks/test-microshift.yaml`
+
+If you want to run only test-sf-operator role, you can use `test_only` tag
+
+```sh
+./tools/run-ci-tests.sh --tags test_only
+```
 
 ## Wipe all content in dev namespace
 

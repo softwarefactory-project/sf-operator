@@ -2,4 +2,11 @@
   roles:
     - install-sf-operator
     - run-sf-operator
-    - test-sf-operator
+  tasks:
+    - include_role:
+        name: test-sf-operator
+        apply:
+          tags:
+            - test_only
+      tags:
+        - always
