@@ -63,3 +63,7 @@
   fail:
     msg: "Project not found in Zuul"
   when: not (zuul_internal_projects.json | selectattr('name', 'equalto', repository_name) | length == 1)
+
+# Controllers Tests
+- include_role:
+    name: "roles/controllers/logserver"

@@ -5,7 +5,9 @@ validate_certs: false
 
 gerrit_host: "gerrit.{{ fqdn }}"
 zuul_host: "zuul.{{ fqdn }}"
+logserver_host: "logserver.{{ fqdn }}"
 
 hosts:
   - "{{ gerrit_host }}"
   - "{{ zuul_host }}"
+  - "{{ logserver_host }}"

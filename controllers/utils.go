@@ -70,7 +70,7 @@ type any = interface{}
 // Function to easilly use templates files.
 //
 // Pass the template path relative to the root of the project.
-// And the the data structure to be applied to the template
+// And the data structure to be applied to the template
 func parse_template(templatePath string, data any) (string, error) {
 
 	// Opening Template file
@@ -84,6 +84,29 @@ func parse_template(templatePath string, data any) (string, error) {
 	err = template.Execute(&buf, data)
 	if err != nil {
 		return "", fmt.Errorf("failure while parsing template %s", templatePath)
+	}
+
+	return buf.String(), nil
+}
+
+// Function to easilly use templated string.
+//
+// Pass the template text.
+// And the data structure to be applied to the template
+func parse_string(text string, data any) (string, error) {
+
+	template.New("StringtoParse").Parse(text)
+	// Opening Template file
+	template, err := template.New("StringtoParse").Parse(text)
+	if err != nil {
+		return "", fmt.Errorf("Text not in the right format: " + text)
+	}
+
+	// Parsing Template
+	var buf bytes.Buffer
+	err = template.Execute(&buf, data)
+	if err != nil {
+		return "", fmt.Errorf("failure while parsing template %s", text)
 	}
 
 	return buf.String(), nil
