@@ -34,6 +34,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"k8s.io/apimachinery/pkg/labels"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/remotecommand"
 
@@ -498,9 +501,22 @@ func (r *SFController) DeleteR(obj client.Object) {
 
 func (r *SFController) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 	if dep.Status.ReadyReplicas > 0 {
-		return true
+		var podList apiv1.PodList
+		matchLabels := dep.Spec.Selector.MatchLabels
+		labels := labels.SelectorFromSet(labels.Set(matchLabels))
+		labelSelectors := runtimeClient.MatchingLabelsSelector{labels}
+		if err := r.List(r.ctx, &podList, labelSelectors); err != nil {
+			panic(err.Error())
+		}
+		for _, pod := range podList.Items {
+			if pod.Status.Phase == "Running" {
+				return true
+			}
+		}
+		r.log.V(1).Info("Pod is not ready")
+		return false
 	}
-	r.log.V(1).Info("Waiting for statefulset", "name", dep.GetName())
+	r.log.V(1).Info("Waiting for statefulset", "name", dep.GetName(), "status", dep.Status)
 	return false
 }
 
