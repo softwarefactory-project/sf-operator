@@ -341,17 +341,13 @@ func (r *SFController) DeployZuul() bool {
 }
 
 func (r *SFController) setupZuulIngress() {
-	r.ensureHTTPSIngress(r.cr.Name+"-zuul",
-		create_ingress_rule(
-			"zuul."+r.cr.Spec.FQDN, "zuul-web", ZUUL_WEB_PORT, "/"), map[string]string{})
+	r.ensureHTTPSRoute(r.cr.Name+"-zuul", "zuul", "zuul-web", "/", ZUUL_WEB_PORT, map[string]string{})
 
 	// Zuul ingress is special because the zuul-web container expect the
 	// the files to be served at `/zuul/`, but it is listening on `/`.
 	// Thus this ingress remove the `/zuul/` so that the javascript loads as
 	// expected
-	r.ensureHTTPSIngress(r.cr.Name+"-zuul-red",
-		create_ingress_rule(
-			"zuul."+r.cr.Spec.FQDN, "zuul-web", ZUUL_WEB_PORT, "/zuul"), map[string]string{
+	r.ensureHTTPSRoute(r.cr.Name+"-zuul-red", "zuul", "zuul-web", "/zuul", ZUUL_WEB_PORT, map[string]string{
 			"haproxy.router.openshift.io/rewrite-target": "/",
 		})
 }

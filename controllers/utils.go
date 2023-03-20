@@ -43,13 +43,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	apiroutev1 "github.com/openshift/api/route/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
@@ -448,7 +448,7 @@ func (r *SFController) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 		var podList apiv1.PodList
 		matchLabels := dep.Spec.Selector.MatchLabels
 		labels := labels.SelectorFromSet(labels.Set(matchLabels))
-		labelSelectors := runtimeClient.MatchingLabelsSelector{labels}
+		labelSelectors := runtimeClient.MatchingLabelsSelector{Selector: labels}
 		if err := r.List(r.ctx, &podList, labelSelectors); err != nil {
 			panic(err.Error())
 		}
@@ -678,59 +678,41 @@ func create_job(ns string, name string, container apiv1.Container) batchv1.Job {
 		}}
 }
 
-func create_ingress_rule(host string, service string, port int, path string) netv1.IngressRule {
-	pt := netv1.PathTypePrefix
-	return netv1.IngressRule{
-		Host: host,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						PathType: &pt,
-						Path:     path,
-						Backend: netv1.IngressBackend{
-							Service: &netv1.IngressServiceBackend{
-								Name: service,
-								Port: netv1.ServiceBackendPort{
-									Number: int32(port),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func (r *SFController) ensure_ingress(ingress netv1.Ingress, name string) {
-	found := r.GetM(name, &ingress)
+func (r *SFController) ensure_route(route apiroutev1.Route, name string) {
+	found := r.GetM(name, &route)
 	if !found {
-		r.CreateR(&ingress)
+		r.CreateR(&route)
 	} else {
-		if err := r.Update(r.ctx, &ingress); err != nil {
+		if err := r.Update(r.ctx, &route); err != nil {
 			panic(err.Error())
 		}
 	}
 }
 
-func (r *SFController) ensureHTTPSIngress(name string, rule netv1.IngressRule, annotations map[string]string) {
-
-	var ingress netv1.Ingress
-	ingress_annotations := annotations
-	ingress_annotations["route.openshift.io/termination"] = "edge"
-	ingress = netv1.Ingress{
+func (r *SFController) ensureHTTPSRoute(name string, host string, serviceName string, path string, port int, annotations map[string]string) {
+	route := apiroutev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Namespace:   r.ns,
-			Annotations: ingress_annotations,
+			Annotations: annotations,
 		},
-		Spec: netv1.IngressSpec{
-			Rules: []netv1.IngressRule{rule},
+		Spec: apiroutev1.RouteSpec{
+			TLS: &apiroutev1.TLSConfig{
+				InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
+				Termination:                   apiroutev1.TLSTerminationEdge,
+			},
+			Host: host + "." + r.cr.Spec.FQDN,
+			To: apiroutev1.RouteTargetReference{
+				Kind: "Service",
+				Name: serviceName,
+			},
+			Port: &apiroutev1.RoutePort{
+				TargetPort: intstr.FromInt(port),
+			},
+			Path: path,
 		},
 	}
-
-	r.ensure_ingress(ingress, name)
+	r.ensure_route(route, name)
 }
 
 // Get the service clusterIP. Return an empty string if service not found.
