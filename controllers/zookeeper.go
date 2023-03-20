@@ -14,7 +14,9 @@ import (
 var zk_objs string
 
 func (r *SFController) DeployZookeeper() bool {
-	r.CreateYAMLs(strings.ReplaceAll(zk_objs, "{{ NS }}", r.ns))
+	zookeeper_ns := strings.ReplaceAll(zk_objs, "{{ NS }}", r.ns)
+	zookeeper_yaml := strings.ReplaceAll(zookeeper_ns, "{{ SC }}", get_storage_classname(r.cr.Spec))
+	r.CreateYAMLs(zookeeper_yaml)
 	cert := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper")
 	r.GetOrCreate(&cert)
 	var dep appsv1.StatefulSet

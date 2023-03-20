@@ -55,6 +55,9 @@ type SoftwareFactorySpec struct {
 
 	FQDN string `json:"fqdn"`
 
+	// Default storage class to use by Persistent Volume Claims
+	StorageClassName string `json:"storageClassName,omitempty"`
+
 	// Config repositories spec
 	ConfigLocations ConfigLocationsSpec `json:"config-locations,omitempty"`
 

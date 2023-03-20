@@ -44,13 +44,13 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	storage "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
 const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.3-1"
@@ -240,78 +240,22 @@ func create_empty_dir(name string) apiv1.Volume {
 	}
 }
 
-func create_storageclass(name string) storage.StorageClass {
-	binding_mode := storage.VolumeBindingMode("WaitForFirstConsumer")
-	return storage.StorageClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Provisioner:       "rancher.io/local-path",
-		VolumeBindingMode: &binding_mode,
+func get_storage_classname(spec sfv1.SoftwareFactorySpec) string {
+	if spec.StorageClassName != "" {
+		return spec.StorageClassName
+	} else {
+		return "standard"
 	}
 }
 
-// Create a default persistent volume claim.
-// With kind, PVC should be automatically provisioned with https://github.com/rancher/local-path-provisioner
-// If the PVC is stuck in `Pending`, then a local hostPath must be created, e.g.:
-/*
-   apiVersion: v1
-   kind: PersistentVolume
-   metadata:
-     name: pv-kind4
-   spec:
-     storageClassName: standard
-     accessModes:
-       - ReadWriteOnce
-     capacity:
-       storage: 1Gi
-     hostPath:
-       path: /src/pvs4
-*/
-
-// NOTE(dpawlik): So far, that function is not used, due create_pvc
-// is creating a PV, but in the future, probably we would like to
-// assign the PVC to the PV.
-func create_pv(ns string, name string, storage_space string) apiv1.PersistentVolume {
-	path := "/opt/local-path-provisioner"
-	path_name := fmt.Sprintf("%s/%s", path, name)
-	pv_name := fmt.Sprintf("pv-%s", name)
-	initHostPathType := apiv1.HostPathType("DirectoryOrCreate")
-	filesystem := apiv1.PersistentVolumeFilesystem
-	storage_class := "standard"
-
-	return apiv1.PersistentVolume{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pv_name,
-			Namespace: ns,
-		},
-		Spec: apiv1.PersistentVolumeSpec{
-			PersistentVolumeSource: apiv1.PersistentVolumeSource{
-				HostPath: &apiv1.HostPathVolumeSource{
-					Path: path_name,
-					Type: &initHostPathType,
-				},
-			},
-			Capacity: apiv1.ResourceList{
-				apiv1.ResourceStorage: resource.MustParse(storage_space)},
-			AccessModes: []apiv1.PersistentVolumeAccessMode{
-				apiv1.ReadWriteOnce,
-			},
-			VolumeMode:       &filesystem,
-			StorageClassName: storage_class,
-			// ClaimRef: &apiv1.ObjectReference{Name: "some-pvc"},
-		},
-	}
-}
-
-func create_pvc(ns string, name string) apiv1.PersistentVolumeClaim {
+func create_pvc(ns string, name string, storageClassName string) apiv1.PersistentVolumeClaim {
 	return apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
-			StorageClassName: strPtr("standard"),
+			StorageClassName: &storageClassName,
 			AccessModes:      []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
 			Resources: apiv1.ResourceRequirements{
 				Requests: apiv1.ResourceList{
@@ -323,13 +267,13 @@ func create_pvc(ns string, name string) apiv1.PersistentVolumeClaim {
 }
 
 // Create a default statefulset.
-func create_statefulset(ns string, name string, image string) appsv1.StatefulSet {
+func create_statefulset(ns string, name string, image string, storageClassName string) appsv1.StatefulSet {
 	container := apiv1.Container{
 		Name:            name,
 		Image:           image,
 		ImagePullPolicy: "IfNotPresent",
 	}
-	pvc := create_pvc(ns, name)
+	pvc := create_pvc(ns, name, storageClassName)
 	return appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
