@@ -172,3 +172,18 @@ The **config-check** job is started and Zuul votes on change.
 As the **admin** user on Gerrit, the change can be approved with "CR +2, W+1" then Zuul starts
 the **config-check** job in the **gate** pipeline and the **config-update** job in
 the **post** pipeline.
+
+## Debugging Pods
+
+### OC Debug
+A good way to debug pods is using the [oc debug](https://docs.openshift.com/container-platform/4.8/cli_reference/openshift_cli/developer-cli-commands.html#oc-debug) command.
+
+The debug command makes an exact copy of the container passed as argument. It even has the option to select the user to start with.
+
+#### Examples
+```
+oc debug <container to copy>
+oc debug <container to copy> --as-root
+oc debug <container to copy> --as-user=<username>
+```
+
