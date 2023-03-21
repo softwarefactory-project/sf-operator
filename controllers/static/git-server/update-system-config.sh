@@ -205,6 +205,35 @@ cat << EOF > playbooks/config/update.yaml
   roles:
     - setup-k8s-config
     - apply-k8s-resource
+    - add-k8s-hosts
+
+- hosts: zuul-scheduler-sidecar
+  vars:
+    config_ref: "{{ zuul.newrev | default('origin/master') }}"
+  tasks:
+    - name: "Update zuul tenant config"
+      command: /usr/local/bin/generate-zuul-tenant-yaml.sh "{{ config_ref }}"
+
+- hosts: zuul-scheduler
+  tasks:
+    - name: "Reconfigure the scheduler"
+      command: zuul-scheduler full-reconfigure
+EOF
+
+mkdir -p roles/add-k8s-hosts/tasks
+cat << EOF > roles/add-k8s-hosts/tasks/main.yaml
+- add_host:
+    name: "zuul-scheduler-sidecar"
+    ansible_connection: kubectl
+    # https://docs.ansible.com/ansible/latest/collections/kubernetes/core/kubectl_connection.html#ansible-collections-kubernetes-core-kubectl-connection
+    ansible_kubectl_container: scheduler-sidecar
+    ansible_kubectl_pod: "zuul-scheduler-0"
+
+- add_host:
+    name: "zuul-scheduler"
+    ansible_connection: kubectl
+    ansible_kubectl_container: zuul-scheduler
+    ansible_kubectl_pod: "zuul-scheduler-0"
 EOF
 
 mkdir -p roles/setup-k8s-config/tasks
