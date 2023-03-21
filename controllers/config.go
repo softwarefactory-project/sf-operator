@@ -30,7 +30,12 @@ var resourcesDhall string
 //go:embed static/sf_operator/sf.dhall
 var sfDhall string
 
+//go:embed static/sf_operator/config-updater-sa.yaml
+var config_updater_sa string
+
 func (r *SFController) SetupBaseSecret() bool {
+
+	r.CreateYAMLs(config_updater_sa)
 
 	// Create a long lived service account token for the use within the
 	// config-update process
@@ -44,7 +49,7 @@ func (r *SFController) SetupBaseSecret() bool {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: secret_name,
 				Annotations: map[string]string{
-					"kubernetes.io/service-account.name": "default"},
+					"kubernetes.io/service-account.name": "config-updater"},
 				Namespace: r.ns,
 			},
 		}
