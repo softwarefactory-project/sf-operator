@@ -18,9 +18,12 @@ More information in the [ADR's README](doc/adr/README.md).
 ## System requirement
 
 You need to install the following dependencies on your dev machine:
-- make
-- golang
 - ansible-core
+- golang
+- make
+
+And to run tests you need:
+- jq
 
 ## Run the SF operator in devel mode
 
@@ -193,4 +196,3 @@ oc debug <container to copy>
 oc debug <container to copy> --as-root
 oc debug <container to copy> --as-user=<username>
 ```
-

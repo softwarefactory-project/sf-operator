@@ -22,12 +22,12 @@
     #     update: no
 
     # TODO could be remove if cert is trusted
-    - name: Ensure config repo cert is trusted
+    - name: config repo, ensure config repo cert is trusted
       command: git config http.sslverify false
       args:
         chdir: "{{ config_path }}"
 
-    - name: Add git remote
+    - name: config repo, add git remote
       command: "git remote add gerrit {{ config_url }}"
       register: _git_remote
       args:
@@ -35,7 +35,17 @@
       # 0 success, 3 remote exists
       failed_when: _git_remote.rc not in [0,3]
 
-    - name: Reset config
+    - name: config repo, set user
+      shell: "{{ git_user }}"
+      args:
+        chdir: "{{ config_path }}"
+      loop:
+        - git config user.email "admin@sftests.com"
+        - git config user.name "admin"
+      loop_control:
+        loop_var: git_user
+
+    - name: config repo, reset
       command: "{{ git_cmd }}"
       args:
         chdir: "{{ config_path }}"

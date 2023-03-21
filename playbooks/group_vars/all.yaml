@@ -1,6 +1,8 @@
 config_path: /tmp/config
 fqdn: sftests.com
 
+validate_certs: false
+
 gerrit_host: "gerrit.{{ fqdn }}"
 zuul_host: "zuul.{{ fqdn }}"
 

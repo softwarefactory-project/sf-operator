@@ -1,9 +1,18 @@
-- name: Install packages
-  package:
-    name:
-      - golang
-      - make
-  become: true
+- name: Install dependencies
+  block:
+    - name: Install packages
+      package:
+        name:
+          - golang
+          - make
+          # for testing
+          - jq
+          - python3-pip
+      become: true
+
+    - name: Install git-review
+      pip:
+        name: git-review
   when: install_requirements | bool == true
 
 - name: Check cluster access
