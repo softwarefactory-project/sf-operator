@@ -162,6 +162,7 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 				SubPath:   "generate-zuul-tenant-yaml.sh",
 				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
 		},
+		ReadinessProbe: create_readiness_cmd_probe([]string{"cat", "/tmp/healthy"}),
 	}
 	return container
 }

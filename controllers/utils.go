@@ -448,7 +448,7 @@ func (r *SFController) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 		var podList apiv1.PodList
 		matchLabels := dep.Spec.Selector.MatchLabels
 		labels := labels.SelectorFromSet(labels.Set(matchLabels))
-		labelSelectors := runtimeClient.MatchingLabelsSelector{labels}
+		labelSelectors := runtimeClient.MatchingLabelsSelector{Selector: labels}
 		if err := r.List(r.ctx, &podList, labelSelectors); err != nil {
 			panic(err.Error())
 		}
