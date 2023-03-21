@@ -57,6 +57,9 @@ spec:
                   sshd_max_connections_per_user:
                     type: string
                 type: object
+              storageClassName:
+                description: Default storage class to use by Persistent Volume Claims
+                type: string
               zuul:
                 description: Zuul service spec
                 properties:

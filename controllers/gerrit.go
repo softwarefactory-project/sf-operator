@@ -161,7 +161,7 @@ func (r *SFController) DeployGerrit() bool {
 	}
 
 	// Create the deployment
-	dep := create_statefulset(r.ns, GERRIT_IDENT, GERRIT_IMAGE)
+	dep := create_statefulset(r.ns, GERRIT_IDENT, GERRIT_IMAGE, get_storage_classname(r.cr.Spec))
 
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}

@@ -177,7 +177,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	r.EnsureConfigMap("zuul-scheduler-tooling", scheduler_tooling_data)
 
 	zs_volumes := create_zuul_volumes("zuul-scheduler")
-	zs := create_statefulset(r.ns, "zuul-scheduler", "")
+	zs := create_statefulset(r.ns, "zuul-scheduler", "", get_storage_classname(r.cr.Spec))
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = append(init_containers, init_scheduler_config())
 	zs.Spec.Template.Spec.Containers = append(
@@ -196,7 +196,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		r.UpdateR(&zs)
 	}
 
-	ze := create_statefulset(r.ns, "zuul-executor", "")
+	ze := create_statefulset(r.ns, "zuul-executor", "", get_storage_classname(r.cr.Spec))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")
