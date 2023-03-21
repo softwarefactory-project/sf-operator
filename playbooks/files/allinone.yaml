@@ -3,6 +3,7 @@ kind: SoftwareFactory
 metadata:
   name: my-sf
 spec:
+  storageClassName: "topolvm-provisioner"
   fqdn: "sftests.com"
   zuul:
     gerritconns: []
