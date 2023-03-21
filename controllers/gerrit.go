@@ -27,7 +27,6 @@ const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
 const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.5.4-1"
-const GSKU_IMAGE = "quay.io/software-factory/github-ssh-key-updater:0.0.4-1"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_SITE_MOUNT_PATH = "/gerrit"
 const GERRIT_CERT_MOUNT_PATH = "/gerrit-cert"
@@ -40,9 +39,6 @@ var setCIUser string
 
 //go:embed static/gerrit/entrypoint.sh
 var entrypoint string
-
-//go:embed static/gerrit/gsku-entrypoint.sh
-var gsku_entrypoint string
 
 //go:embed static/gerrit/init.sh
 var gerritInitScript string
@@ -181,28 +177,11 @@ func (r *SFController) DeployGerrit() bool {
 	dep.Spec.Template.Spec.Containers[0].SecurityContext = securityContext
 	dep.Spec.Template.Spec.SecurityContext = podSecurityContext
 
-	// Setup the sidecar container for gsku
-	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
-		Name:    "gerrit-gsku",
-		Image:   GSKU_IMAGE,
-		Command: []string{"sh", "-c", gsku_entrypoint},
-		VolumeMounts: []apiv1.VolumeMount{
-			{
-				Name:      "gsku",
-				MountPath: "/etc/github-ssh-key-updater",
-			},
-		},
-		Env: []apiv1.EnvVar{
-			create_secret_env("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
-		},
-	})
-
 	dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
 
 	// Expose a volume that contain certmanager certs for Gerrit
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		create_volume_secret(GERRIT_IDENT + "-client-tls"),
-		create_empty_dir("gsku"),
 	}
 
 	// Create annotations based on Gerrit parameters
