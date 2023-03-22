@@ -236,8 +236,5 @@ func (r *SFController) DeployGerrit() bool {
 }
 
 func (r *SFController) setupGerritIngress() {
-	rule := create_ingress_rule(
-		GERRIT_IDENT+"."+r.cr.Spec.FQDN, GERRIT_HTTPD_PORT_NAME, GERRIT_HTTPD_PORT, "/")
-
-	r.ensureHTTPSIngress(r.cr.Name+"-gerrit", rule, map[string]string{})
+	r.ensureHTTPSRoute(r.cr.Name+"-gerrit", "gerrit", GERRIT_HTTPD_PORT_NAME, "/", GERRIT_HTTPD_PORT, map[string]string{})
 }
