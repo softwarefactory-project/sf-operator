@@ -1,0 +1,22 @@
+admin = {
+    'name': 'admin',
+    'email': 'admin@{{ .Fqdn }}',
+}
+
+resources = {
+    'workdir': '/var/lib/managesf',
+    'subdir': 'resources',
+    'master_repo': 'http://gerrit-httpd:8080/config',
+    'tenant_name': 'local',
+    'public_url': 'https://{{ .Fqdn }}/manage',
+    'connections': {'__force_dict__': True}
+}
+
+gerrit = {
+    'url': 'http://gerrit-httpd:8080/a/',
+    'password': '{{ .GerritAdminPassword }}',
+    'host': 'gerrit-sshd',
+    'top_domain': '{{ .Fqdn }}',
+    'ssh_port': 29418,
+    'sshkey_priv_path': '/var/lib/managesf/.ssh/id_rsa',
+}
