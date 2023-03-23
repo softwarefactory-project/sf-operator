@@ -7,3 +7,18 @@
     - health-check/config-repo-get-or-reset
   loop_control:
     loop_var: role
+
+- set_fact:
+    filename: "myfile-{{ lookup('community.general.random_string', special=false, length=8) }}"
+
+- name: Add empty file in the config repo
+  command: "{{ item }}"
+  args:
+    chdir: "{{ config_path }}"
+  loop:
+    - "touch {{ filename }}"
+    - "git add {{ filename }}"
+    - "git commit -m 'Add {{ filename }}'"
+
+- include_role:
+    name: "roles/health-check/config-repo-submit-change"

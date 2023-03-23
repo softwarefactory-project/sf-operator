@@ -1,0 +1,2 @@
+validate_certs: yes
+retries: 10

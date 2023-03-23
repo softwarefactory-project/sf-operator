@@ -1,0 +1,31 @@
+- name: Register commit sha
+  command: cat .git/refs/heads/master
+  args:
+    chdir: "{{ config_path }}"
+  register: commitsha
+
+- name: grab job uuid in post pipeline
+  shell: >-
+    curl -s -k {{ zuul_web_url }}/api/tenant/{{ zuul_tenant | default('internal') }}/status
+    | jq -r '.pipelines[] | select(.name == "post").change_queues[].heads[][].jobs[]
+    | select(.name == "config-update").uuid'
+  register: _job_uuid
+  # Wait until the executor start the job
+  until: _job_uuid.stdout != "" and "null" not in _job_uuid.stdout
+  retries: "{{ retries }}"
+
+- name: Wait config-update result using zuul-web API
+  uri:
+    url: "{{ zuul_web_url }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=config-update&newrev={{ commitsha.stdout }}"
+    return_content: yes
+    body_format: json
+    validate_certs: false
+  register: _result
+  until: _result.json != [] and _result.json[0]["result"] != None
+  retries: "{{ retries }}"
+  delay: 30
+
+- name: Check config-update result using zuul-web API
+  fail:
+    msg: config-update result was {{ _result.json[0]["result"] }}
+  when: _result.json != [] and _result.json[0]["result"] != 'SUCCESS'
