@@ -53,14 +53,15 @@ kubectl config current-context
    cp config/samples/sf_v1_softwarefactory.yaml my-sf.yaml
    ```
 
-4. Ensure Persistent Volume storage class name
+4. Ensure Storage Class "topolvm-provisioner" available:
 
-   The operator expects a Storage Class named "standard"
+   The operator expects a Storage Class named "topolvm-provisioner"
 
    ```sh
    kubectl get sc
-   kubectl get pv
    ```
+
+   The default SC name can be overriden by using "storageClassName" CRD's field if needed.
 
 5. Starts the operator:
 

@@ -244,7 +244,7 @@ func get_storage_classname(spec sfv1.SoftwareFactorySpec) string {
 	if spec.StorageClassName != "" {
 		return spec.StorageClassName
 	} else {
-		return "standard"
+		return "topolvm-provisioner"
 	}
 }
 
