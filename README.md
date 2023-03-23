@@ -145,11 +145,12 @@ To do so via HTTP:
 
 ```sh
 # Get the Gerrit admin user API key
-./tools/get-secret.sh gerrit-admin-api-key
+gerrit_admin_api_key=$(./tools/get-secret.sh gerrit-admin-api-key)
 # Then checkout the config repository
-git clone "https://admin@gerrit.sftests.com/a/config" /tmp/config
+git -c http.sslVerify=false clone "https://admin:${gerrit_admin_api_key}@gerrit.sftests.com/a/config" /tmp/config
 cd /tmp/config
-git remote add gerrit "https://admin:<gerrit-admin-api-key>@gerrit.sftests.com/a/config"
+git config http.sslverify false
+git remote add gerrit "https://admin:${gerrit_admin_api_key}@gerrit.sftests.com/a/config"
 ```
 
 To do so via SSH:
