@@ -119,6 +119,8 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		services["Config"] = r.SetupConfigJob()
 	}
 
+	services["ManagesfResources"] = r.DeployManagesfResources()
+
 	if services["Gerrit"] {
 		services["ConfigRepo"] = r.SetupConfigRepo()
 	}
