@@ -122,7 +122,7 @@ cat << EOF > zuul.d/jobs-base.yaml
       in order in this pipeline, and if they pass tests, will be
       merged.
     success-message: Build succeeded (gate pipeline).
-    failure-message: Build failed (gate pipeline). 
+    failure-message: Build failed (gate pipeline).
     manager: dependent
     precedence: high
     supercedes: check
@@ -218,6 +218,11 @@ cat << EOF > playbooks/config/update.yaml
   tasks:
     - name: "Reconfigure the scheduler"
       command: zuul-scheduler full-reconfigure
+
+- hosts: managesf-resources
+  tasks:
+    - name: "Applying resources changes"
+      command: managesf-resources apply --zuul-commit {{ zuul.newrev }} --zuul-prev-commit {{ zuul.oldrev }}
 EOF
 
 mkdir -p roles/add-k8s-hosts/tasks
@@ -234,6 +239,21 @@ cat << EOF > roles/add-k8s-hosts/tasks/main.yaml
     ansible_connection: kubectl
     ansible_kubectl_container: zuul-scheduler
     ansible_kubectl_pod: "zuul-scheduler-0"
+
+- name: Fetch managesf-resources Pod info
+  # https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_info_module.html
+  kubernetes.core.k8s_info:
+    kind: Pod
+    label_selectors:
+      - "run = managesf-resources"
+    namespace: "{{ k8s_config['namespace'] }}"
+  register: managesf_resources_info
+
+- add_host:
+    name: "managesf-resources"
+    ansible_connection: kubectl
+    ansible_kubectl_pod: "{{ managesf_resources_info.resources[0].metadata.name }}"
+
 EOF
 
 mkdir -p roles/setup-k8s-config/tasks
