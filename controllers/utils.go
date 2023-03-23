@@ -453,14 +453,30 @@ func (r *SFController) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 			panic(err.Error())
 		}
 		for _, pod := range podList.Items {
-			if pod.Status.Phase == "Running" {
-				return true
+			if pod.Status.Phase != "Running" {
+				r.log.V(1).Info(
+					"Waiting for statefulset state: Running",
+					"name", dep.GetName(),
+					"status", dep.Status)
+				return false
+			}
+			containerStatuses := pod.Status.ContainerStatuses
+			for _, containerStatus := range containerStatuses {
+				if containerStatus.Ready == false {
+					r.log.V(1).Info(
+						"Waiting for statefulset containers ready",
+						"name", dep.GetName(),
+						"status", dep.Status,
+						"podStatus", pod.Status,
+						"containerStatuses", containerStatuses)
+					return false
+				}
 			}
 		}
-		r.log.V(1).Info("Pod is not ready")
-		return false
+		// All containers in Ready state
+		return true
 	}
-	r.log.V(1).Info("Waiting for statefulset", "name", dep.GetName(), "status", dep.Status)
+	// No Replica available
 	return false
 }
 
