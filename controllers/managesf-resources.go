@@ -12,9 +12,6 @@ import (
 
 const MANAGESF_RESOURCES_IDENT string = "managesf-resources"
 
-// TODO: Switch to busybox image
-const MANAGESF_IMAGE string = "quay.io/software-factory/managesf:0.30.0-1"
-
 //go:embed static/managesf-resources/entrypoint.sh
 var managesf_entrypoint string
 
@@ -62,7 +59,7 @@ func (r *SFController) DeployManagesfResources() bool {
 	r.EnsureConfigMap(MANAGESF_RESOURCES_IDENT, config_data)
 
 	// Create the deployment object
-	dep := create_deployment(r.ns, MANAGESF_RESOURCES_IDENT, MANAGESF_IMAGE)
+	dep := create_deployment(r.ns, MANAGESF_RESOURCES_IDENT, BUSYBOX_IMAGE)
 
 	// Amend the deployment's container
 	dep.Spec.Template.Spec.Containers[0].Command = []string{"bash", "-c", managesf_entrypoint}
