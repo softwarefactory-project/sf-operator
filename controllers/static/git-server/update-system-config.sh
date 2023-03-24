@@ -207,6 +207,11 @@ cat << EOF > playbooks/config/update.yaml
     - apply-k8s-resource
     - add-k8s-hosts
 
+- hosts: managesf-resources
+  tasks:
+    - name: "Applying resources changes"
+      command: managesf-resources apply --zuul-commit {{ zuul.newrev }} --zuul-prev-commit {{ zuul.oldrev }}
+
 - hosts: zuul-scheduler-sidecar
   vars:
     config_ref: "{{ zuul.newrev | default('origin/master') }}"
@@ -219,10 +224,6 @@ cat << EOF > playbooks/config/update.yaml
     - name: "Reconfigure the scheduler"
       command: zuul-scheduler full-reconfigure
 
-- hosts: managesf-resources
-  tasks:
-    - name: "Applying resources changes"
-      command: managesf-resources apply --zuul-commit {{ zuul.newrev }} --zuul-prev-commit {{ zuul.oldrev }}
 EOF
 
 mkdir -p roles/add-k8s-hosts/tasks

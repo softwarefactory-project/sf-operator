@@ -25,5 +25,5 @@
     validate_certs: "{{ validate_certs }}"
     method: POST
 
-- name: Get zuul build result
-  include_tasks: get_zuul_web_result.yaml
+- name: Ensure a success config-update
+  include_tasks: ensure-config-update-success.yaml

@@ -9,16 +9,57 @@
     loop_var: role
 
 - set_fact:
-    filename: "myfile-{{ lookup('community.general.random_string', special=false, length=8) }}"
+    random: "{{ lookup('community.general.random_string', special=false, length=8) }}"
 
-- name: Add empty file in the config repo
+- set_fact:
+    config_file_path: "resources/myfile-{{ random }}.yaml"
+    repository_name: ichiban-config-{{ random }}
+
+- name: Create a resources file
+  copy:
+    content: |
+      resources:
+        projects:
+          ichiban-cloud-{{ random }}:
+            tenant: internal
+            description: The best cloud platform engine
+            source-repositories:
+              - ichiban-config-{{ random }}:
+                  connection: gerrit
+                  zuul/config-project: True
+        repos:
+          {{ repository_name }}:
+            description: The config project of ichiban-cloud
+            acl: config-acl
+    dest: "{{ config_path }}/{{ config_file_path }}"
+
+- name: Commit file in the config repo
   command: "{{ item }}"
   args:
     chdir: "{{ config_path }}"
   loop:
-    - "touch {{ filename }}"
-    - "git add {{ filename }}"
-    - "git commit -m 'Add {{ filename }}'"
+    - "git add {{ config_file_path }}"
+    - "git commit -m 'Add {{ config_file_path }}'"
 
 - include_role:
     name: "roles/health-check/config-repo-submit-change"
+
+- name: Ensure repository exists in Gerrit
+  uri:
+    url: "https://{{ gerrit_host }}/projects/{{ repository_name }}"
+    validate_certs: "{{ validate_certs }}"
+    method: GET
+  retries: 10
+
+- name: Get Zuul projects list
+  uri:
+    url: "https://{{ zuul_host }}/api/tenant/internal/projects"
+    validate_certs: "{{ validate_certs }}"
+    method: GET
+  register: zuul_internal_projects
+  retries: 10
+
+- name: Ensure project exists in Zuul (fail if not)
+  fail:
+    msg: "Project not found in Zuul"
+  when: not (zuul_internal_projects.json | selectattr('name', 'equalto', repository_name) | length == 1)
