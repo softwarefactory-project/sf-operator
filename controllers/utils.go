@@ -429,7 +429,7 @@ func (r *SFController) GetM(name string, obj client.Object) bool {
 	return true
 }
 
-// Create resources with the controller reference
+// Create resources with the software-factory as the ownerReferences.
 func (r *SFController) CreateR(obj client.Object) {
 	controllerutil.SetControllerReference(r.cr, obj, r.Scheme)
 	if err := r.Create(r.ctx, obj); err != nil {
@@ -586,10 +586,7 @@ func (r *SFController) GenerateSecret(name string, getData func() string) apiv1.
 			Data:       map[string][]byte{name: []byte(getData())},
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns},
 		}
-		// We don't use CreateR to not own the resource, and keep it after deletion
-		if err := r.Create(r.ctx, &secret); err != nil {
-			panic(err.Error())
-		}
+		r.CreateR(&secret)
 	}
 	return secret
 }
@@ -610,10 +607,7 @@ func (r *SFController) EnsureSSHKey(name string) {
 				"pub":  sshkey.Pub,
 			},
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns}}
-		// We don't use CreateR to not own the resource, and keep it after deletion
-		if err := r.Create(r.ctx, &secret); err != nil {
-			panic(err.Error())
-		}
+		r.CreateR(&secret);
 	}
 }
 
