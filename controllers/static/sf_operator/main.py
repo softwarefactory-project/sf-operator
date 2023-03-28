@@ -66,9 +66,9 @@ def create_zuul_secrets():
             ("ssh_private_key", os.environ["ZUUL_LOGSERVER_PRIVATE_KEY"])
         ],
         unencrypted_items=[
-            ("fqdn", "logserver-sshd:2222"),
+            ("fqdn", "\"logserver-sshd:2222\""),
             ("path", "logs"),
-            ("ssh_known_hosts", get_logserver_fingerprint()),
+            ("ssh_known_hosts", "\"%s\"" % get_logserver_fingerprint()),
             ("ssh_username", "data")
         ]
     )

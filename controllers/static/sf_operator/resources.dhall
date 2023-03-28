@@ -48,6 +48,13 @@ let internalResources =
                 }
                 "system-config"
 
+        let zuulJobsSR =
+              SoftwareFactory.SourceRepository.WithOptions
+                SoftwareFactory.SourceRepository::{
+                , connection = Some "opendev.org"
+                }
+                "zuul/zuul-jobs"
+
         let connections =
               [ SoftwareFactory.Connection::{
                 , name = "git-server"
@@ -59,6 +66,11 @@ let internalResources =
                 , base-url = Some "http://gerrit-httpd:8080"
                 , type = SoftwareFactory.ConnectionType.gerrit
                 }
+              , SoftwareFactory.Connection::{
+                , name = "opendev.org"
+                , base-url = Some "https://opendev.org"
+                , type = SoftwareFactory.ConnectionType.git
+                }
               ]
 
         let internalProject =
@@ -67,7 +79,8 @@ let internalResources =
               , tenant = Some "internal"
               , connection = "git-server"
               , description = Some "Internal configuration project"
-              , source-repositories = Some [ systemConfigSR, configSR ]
+              , source-repositories = Some
+                [ systemConfigSR, configSR, zuulJobsSR ]
               }
 
         let internalTenant =

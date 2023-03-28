@@ -32,8 +32,12 @@ cat << EOF > zuul.d/jobs-base.yaml
     pre-run: playbooks/base/pre.yaml
     post-run:
       - playbooks/base/post.yaml
+    roles:
+      - zuul: zuul/zuul-jobs
     timeout: 1800
     attempts: 3
+    secrets:
+      - site_sflogs
 
 - job:
     name: sleeper
