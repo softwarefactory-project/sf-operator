@@ -258,3 +258,16 @@ oc debug <container to copy>
 oc debug <container to copy> --as-root
 oc debug <container to copy> --as-user=<username>
 ```
+
+#### Checking service name resolution
+
+Normally, if the service is [headless](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services),
+all containers in the cluster should be able to resolve the service ip address,
+or even resolve pod ip address, related to that service.
+For example:
+
+```sh
+kubectl exec -it mariadb-0 -- bash -c "host zookeeper-0.zookeeper-headless.default.svc.cluster.local"
+kubectl exec -it mariadb-0 -- bash -c "host zuul-executor-0.zuul-executor-headless.default.svc.cluster.local"
+kubectl exec -it mariadb-0 -- bash -c "host zuul-executor-0.zuul-executor-headless"
+```

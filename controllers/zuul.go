@@ -17,6 +17,9 @@ import (
 
 const ZUUL_WEB_PORT = 9000
 
+const ZUUL_EXECUTOR_PORT_NAME = "finger"
+const ZUUL_EXECUTOR_PORT = 7900
+
 //go:embed static/zuul/zuul.conf
 var zuul_dot_conf string
 
@@ -208,13 +211,16 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		r.UpdateR(&zs)
 	}
 
-	ze := create_statefulset(r.ns, "zuul-executor", "", get_storage_classname(r.cr.Spec))
+	ze := create_headless_statefulset(r.ns, "zuul-executor", "", get_storage_classname(r.cr.Spec))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	ze.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	ze.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
+	ze.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+		create_container_port(ZUUL_EXECUTOR_PORT, ZUUL_EXECUTOR_PORT_NAME),
+	}
 	r.GetOrCreate(&ze)
 	ze_dirty := false
 	if !map_equals(&ze.Spec.Template.ObjectMeta.Annotations, &annotations) {
@@ -244,6 +250,9 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 
 	srv := create_service(r.ns, "zuul-web", "zuul-web", ZUUL_WEB_PORT, "zuul-web")
 	r.GetOrCreate(&srv)
+
+	srv_ze := create_headless_service(r.ns, "zuul-executor", "zuul-executor", ZUUL_EXECUTOR_PORT, "zuul-executor")
+	r.GetOrCreate(&srv_ze)
 
 	return r.IsStatefulSetReady(&zs) && r.IsStatefulSetReady(&ze) && r.IsDeploymentReady(&zw)
 }
