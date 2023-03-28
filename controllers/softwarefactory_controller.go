@@ -127,12 +127,13 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	r.log.V(1).Info(messageInfo(r, services))
 
-	ready := isOperatorReady(services)
+	ready := false
 
-	if ready {
-		r.PodExec("zuul-scheduler-0", "scheduler-sidecar", []string{"generate-zuul-tenant-yaml.sh"})
-		r.PodExec("zuul-scheduler-0", "zuul-scheduler", []string{"zuul-scheduler", "full-reconfigure"})
-		r.SetupIngress()
+	if isOperatorReady(services) {
+		ready = r.runZuulTenantConfigUpdate()
+		if ready {
+			r.SetupIngress()
+		}
 	}
 
 	return sfv1.SoftwareFactoryStatus{

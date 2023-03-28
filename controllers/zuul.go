@@ -341,6 +341,18 @@ func (r *SFController) DeployZuul() bool {
 	return r.EnsureZuulServices(init_containers, config)
 }
 
+func (r *SFController) runZuulTenantConfigUpdate() bool {
+	err1 := r.PodExec("zuul-scheduler-0", "scheduler-sidecar", []string{"generate-zuul-tenant-yaml.sh"})
+	if err1 == nil {
+		err2 := r.PodExec("zuul-scheduler-0", "zuul-scheduler", []string{"zuul-scheduler", "full-reconfigure"})
+		if err2 == nil {
+			return true
+		}
+
+	}
+	return false
+}
+
 func (r *SFController) setupZuulIngress() {
 	r.ensureHTTPSRoute(r.cr.Name+"-zuul", "zuul", "zuul-web", "/", ZUUL_WEB_PORT, map[string]string{})
 
@@ -349,6 +361,6 @@ func (r *SFController) setupZuulIngress() {
 	// Thus this ingress remove the `/zuul/` so that the javascript loads as
 	// expected
 	r.ensureHTTPSRoute(r.cr.Name+"-zuul-red", "zuul", "zuul-web", "/zuul", ZUUL_WEB_PORT, map[string]string{
-			"haproxy.router.openshift.io/rewrite-target": "/",
-		})
+		"haproxy.router.openshift.io/rewrite-target": "/",
+	})
 }

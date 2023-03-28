@@ -607,7 +607,7 @@ func (r *SFController) EnsureSSHKey(name string) {
 				"pub":  sshkey.Pub,
 			},
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns}}
-		r.CreateR(&secret);
+		r.CreateR(&secret)
 	}
 }
 
@@ -744,7 +744,7 @@ func gen_bcrypt_pass(pass string) string {
 	return string(hashedPassword)
 }
 
-func (r *SFController) PodExec(pod string, container string, command []string) {
+func (r *SFController) PodExec(pod string, container string, command []string) error {
 	r.log.V(1).Info("Running pod execution", "pod", pod, "command", command)
 	execReq := r.RESTClient.
 		Post().
@@ -762,7 +762,7 @@ func (r *SFController) PodExec(pod string, container string, command []string) {
 
 	exec, err := remotecommand.NewSPDYExecutor(r.RESTConfig, "POST", execReq.URL())
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 
 	// r.log.V(1).Info("Streaming start")
@@ -772,8 +772,9 @@ func (r *SFController) PodExec(pod string, container string, command []string) {
 		Tty:    false,
 	})
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
+	return nil
 }
 
 func (r *SFController) create_client_certificate(ns string, name string, issuer string, secret string, servicename string) certv1.Certificate {
