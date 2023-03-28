@@ -17,3 +17,12 @@
   register: this
   until: fqdn in this.content
   retries: "{{ retries }}"
+
+- name: Attempt to access Logserver WEB via the ingress
+  ansible.builtin.uri:
+    url: "https://{{ logserver_host }}/logs/"
+    method: GET
+    validate_certs: "{{ validate_certs }}"
+    status_code: 200
+  retries: "{{ retries }}"
+
