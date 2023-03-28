@@ -117,7 +117,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	services["Gerrit"] = r.DeployGerrit()
 
-	if services["MariaDB"] && services["Zookeeper"] && services["Zuul"] && services["GitServer"] {
+	if services["MariaDB"] && services["Zookeeper"] && services["Zuul"] && services["Logserver"] && services["GitServer"] {
 		services["Config"] = r.SetupConfigJob()
 	}
 

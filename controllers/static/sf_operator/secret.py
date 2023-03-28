@@ -13,7 +13,7 @@ import textwrap
 import base64
 
 
-def mk_secret(name, items):
+def mk_secret(name, items, unencrypted_items=[]):
     # Borrowed from zuul/tools/encrypt_secret.py
     pubkey = urlopen(
         Request("http://zuul-web:9000/api/tenant/internal/key/system-config.pub")
@@ -45,6 +45,10 @@ def mk_secret(name, items):
         """
         % (name)
     )
+
+    if unencrypted_items:
+        for (key, value) in unencrypted_items:
+            secret_output += "      " + key + ": " + value + "\n"
 
     for (key, value) in items:
         secret_output += "      " + key + ": !encrypted/pkcs1-oaep\n"

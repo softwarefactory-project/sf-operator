@@ -33,7 +33,7 @@ var sfDhall string
 //go:embed static/sf_operator/config-updater-sa.yaml
 var config_updater_sa string
 
-func (r *SFController) SetupBaseSecret() bool {
+func (r *SFController) SetupBaseSecrets() bool {
 
 	r.CreateYAMLs(config_updater_sa)
 
@@ -41,7 +41,7 @@ func (r *SFController) SetupBaseSecret() bool {
 	// config-update process
 	// See: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account
 	var secret apiv1.Secret
-	secret_name := "config-update-secret"
+	secret_name := "config-update-secrets"
 	if !r.GetM(secret_name, &secret) {
 		r.log.V(1).Info("Creating the config-update service account secret")
 		secret = apiv1.Secret{
@@ -53,7 +53,7 @@ func (r *SFController) SetupBaseSecret() bool {
 				Namespace: r.ns,
 			},
 		}
-		r.CreateR(&secret);
+		r.CreateR(&secret)
 	}
 
 	var job batchv1.Job
@@ -61,11 +61,13 @@ func (r *SFController) SetupBaseSecret() bool {
 	found := r.GetM(job_name, &job)
 
 	extra_cmd_vars := []apiv1.EnvVar{
-		create_secret_env("SERVICE_ACCOUNT_TOKEN", secret_name, "token")}
+		create_secret_env("SERVICE_ACCOUNT_TOKEN", secret_name, "token"),
+		create_secret_env("ZUUL_LOGSERVER_PRIVATE_KEY", "zuul-ssh-key", "priv"),
+	}
 
 	if !found {
 		r.log.V(1).Info("Creating base secret job")
-		r.CreateR(r.RunCommand(job_name, []string{"config-create-k8s-secret"}, extra_cmd_vars))
+		r.CreateR(r.RunCommand(job_name, []string{"config-create-zuul-secrets"}, extra_cmd_vars))
 		return false
 	} else if job.Status.Succeeded >= 1 {
 		return true
@@ -109,7 +111,7 @@ func (r *SFController) InstallTooling() {
 
 func (r *SFController) SetupConfigJob() bool {
 	r.InstallTooling()
-	return r.SetupBaseSecret()
+	return r.SetupBaseSecrets()
 }
 
 func (r *SFController) getProvidedCR() string {
