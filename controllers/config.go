@@ -53,9 +53,7 @@ func (r *SFController) SetupBaseSecret() bool {
 				Namespace: r.ns,
 			},
 		}
-		if err := r.Create(r.ctx, &secret); err != nil {
-			panic(err.Error())
-		}
+		r.CreateR(&secret);
 	}
 
 	var job batchv1.Job
