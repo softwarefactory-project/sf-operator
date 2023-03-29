@@ -20,3 +20,4 @@
       logclassify_report: true
       # microshift deployment
       pv_storageclass: standard
+      disk_file_sparsed: true
