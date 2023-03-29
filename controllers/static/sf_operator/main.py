@@ -66,15 +66,15 @@ def create_zuul_secrets():
             ("ssh_private_key", os.environ["ZUUL_LOGSERVER_PRIVATE_KEY"])
         ],
         unencrypted_items=[
-            ("fqdn", "\"logserver-sshd:2222\""),
-            ("path", "logs"),
+            ("fqdn", "\"[logserver-sshd]:2222\""),
+            ("path", "rsync"),
             ("ssh_known_hosts", "\"%s\"" % get_logserver_fingerprint()),
             ("ssh_username", "data")
         ]
     )
     logserver_secret.write_text(secret)
     pynotedb.git(
-        clone, 
+        clone,
         ["add",
          "zuul.d/k8s-secret.yaml",
          "zuul.d/sf-logserver-secret.yaml"])

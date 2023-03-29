@@ -4,7 +4,7 @@
 
 - name: Sync file between Zuul Executor and Logserver
   command: |
-    {{ oc_container_runner }} zuul-executor-0 -- rsync -v -Par -e 'ssh -p {{ sshd_port }} -i /var/lib/zuul-ssh/priv -o "StrictHostKeyChecking=no"' /tmp/{{ logserver_file }} data@logserver-sshd:/
+    {{ oc_container_runner }} zuul-executor-0 -- rsync -v -Par -e 'ssh -p {{ sshd_port }} -i /var/lib/zuul-ssh/priv -o "StrictHostKeyChecking=no"' /tmp/{{ logserver_file }} data@logserver-sshd:/home/data/rsync/
 
 - name: Attempt to get file from Logserver WEB via the ingress
   ansible.builtin.uri:

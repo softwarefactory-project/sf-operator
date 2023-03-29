@@ -188,7 +188,25 @@ EOF
 
 cat << EOF > playbooks/base/post.yaml
 - hosts: localhost
-  tasks: []
+  roles:
+    -  role: add-fileserver
+       fileserver: "{{ site_sflogs }}"
+
+- hosts: logserver-sshd
+  vars:
+    ansible_port: ${LOGSERVER_SSHD_SERVICE_PORT}
+  gather_facts: false
+  tasks:
+    - block:
+        - import_role:
+            name: upload-logs
+        - import_role:
+            name: buildset-artifacts-location
+      vars:
+        zuul_log_compress: true
+        zuul_log_url: "https://logserver.${FQDN}/logs/"
+        zuul_logserver_root: "{{ site_sflogs.path }}"
+        zuul_log_verbose: true
 EOF
 
 cat << EOF > playbooks/config/check.yaml

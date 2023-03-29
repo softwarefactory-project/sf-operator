@@ -7,6 +7,7 @@ package controllers
 
 import (
 	_ "embed"
+	"strconv"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,6 +58,7 @@ func (r *SFController) DeployGitServer() bool {
 			Command: []string{"/bin/bash", "/entry/pre-init.sh"},
 			Env: []apiv1.EnvVar{
 				create_env("FQDN", r.cr.Spec.FQDN),
+				create_env("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(LOGSERVER_SSHD_PORT)),
 			},
 			VolumeMounts: []apiv1.VolumeMount{
 				{

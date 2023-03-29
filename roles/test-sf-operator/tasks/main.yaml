@@ -64,6 +64,10 @@
     msg: "Project not found in Zuul"
   when: not (zuul_internal_projects.json | selectattr('name', 'equalto', repository_name) | length == 1)
 
-# Controllers Tests
-- include_role:
-    name: "roles/controllers/logserver"
+- name: Ensure job results exists in Logserver
+  ansible.builtin.uri:
+    url: "{{ item.log_url }}/job-output.txt.gz"
+    validate_certs: "{{ validate_certs }}"
+    method: GET
+  retries: 10
+  loop: "{{ zuul_job_result.json | list }}"

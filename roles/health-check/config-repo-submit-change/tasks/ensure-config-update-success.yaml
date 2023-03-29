@@ -10,7 +10,7 @@
     return_content: yes
     body_format: json
     validate_certs: false
-  register: _result
-  until: _result.json != [] and _result.json[0]["result"] == 'SUCCESS'
+  register: zuul_job_result
+  until: zuul_job_result.json != [] and zuul_job_result.json[0]["result"] == 'SUCCESS'
   retries: "{{ retries }}"
   delay: 30
