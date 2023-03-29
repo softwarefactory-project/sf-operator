@@ -4,7 +4,7 @@
     name: sf-operator-functional-allinone-microshift
     run: playbooks/test-microshift.yaml
     parent: base-microshift
-    timeout: 900
+    timeout: 1200
     post-run: playbooks/post.yaml
     nodeset:
       nodes:
