@@ -15,17 +15,13 @@ const MANAGESF_RESOURCES_IDENT string = "managesf-resources"
 //go:embed static/managesf-resources/entrypoint.sh
 var managesf_entrypoint string
 
-func GenerateConfig(r *SFController) string {
+func GenerateConfig(r *SFController) (string, error) {
 
 	// Getting Gerrit Admin password from secret
-	gerritadminpassword := []byte{}
-	gerritsecret, err := r.getSecretbyNameRef("gerrit-admin-api-key")
+
+	gerritadminpassword, err := r.getSecretData("gerrit-admin-api-key")
 	if err != nil {
-		r.log.V(1).Error(err, "gerrit-admin-api-key secret not found")
-	}
-	gerritadminpassword, err = r.getValueFromKeySecret(gerritsecret, "gerrit-admin-api-key")
-	if err != nil {
-		r.log.V(1).Error(err, "Key not found")
+		return "", err
 	}
 
 	// Structure for config.py file template
@@ -46,16 +42,22 @@ func GenerateConfig(r *SFController) string {
 	template, err := parse_template(templatefile, configpy)
 	if err != nil {
 		r.log.V(1).Error(err, "Template parsing failed")
+		return "", err
 	}
 
-	return template
+	return template, nil
 }
 
 func (r *SFController) DeployManagesfResources() bool {
 
 	// Creating managesf config.py file
 	config_data := make(map[string]string)
-	config_data["config.py"] = GenerateConfig(r)
+	var err error
+	config_data["config.py"], err = GenerateConfig(r)
+	if err != nil {
+		r.log.V(1).Error(err, "Unable to generate managesf config file")
+		return false
+	}
 	r.EnsureConfigMap(MANAGESF_RESOURCES_IDENT, config_data)
 
 	// Create the deployment object

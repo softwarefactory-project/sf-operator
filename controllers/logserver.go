@@ -113,12 +113,11 @@ func (r *SFController) DeployLogserver() bool {
 		create_container_port(LOGSERVER_SSHD_PORT, LOGSERVER_SSHD_PORT_NAME),
 	}
 
-	secret, err := r.getSecretbyNameRef("zuul-ssh-key")
+	pub_key, err := r.getSecretDataFromKey("zuul-ssh-key", "pub")
 	if err != nil {
 		r.log.V(1).Error(err, "Unable to find the secret for the logserver ssh sidecar")
 		return false
 	}
-	pub_key, _ := r.getValueFromKeySecret(secret, "pub")
 	pub_key_b64 := base64.StdEncoding.EncodeToString(pub_key)
 
 	env_sidecar := []apiv1.EnvVar{
