@@ -66,7 +66,7 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 	}
 	container := apiv1.Container{
 		Name:    service,
-		Image:   "quay.io/software-factory/" + service + "-ubi:8.1.0-3",
+		Image:   "quay.io/software-factory/" + service + ":8.2.0-2",
 		Command: command,
 		Env: []apiv1.EnvVar{
 			create_secret_env("ZUUL_DB_URI", "zuul-db-uri", "dburi"),
@@ -126,7 +126,7 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 	return volumes
 }
 
-func (r *SFController) create_zuul_host_alias() []apiv1.HostAlias{
+func (r *SFController) create_zuul_host_alias() []apiv1.HostAlias {
 	return []apiv1.HostAlias{
 		{
 			IP: r.get_service_ip(GERRIT_HTTPD_PORT_NAME),
