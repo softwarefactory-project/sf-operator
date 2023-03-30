@@ -329,12 +329,13 @@ func (r *SFController) DeployZuul() bool {
 	gerrit_conns = append(gerrit_conns, gerrit_conn)
 
 	// Update base config to add connections
-	base_config := zuul_dot_conf
-
-	cfg_ini := r.LoadConfigINI(base_config)
+	cfg_ini := r.LoadConfigINI(zuul_dot_conf)
 	for _, conn := range gerrit_conns {
 		r.AddGerritConnection(cfg_ini, conn)
 	}
+	// Set Zuul web public URL
+	cfg_ini.Section("web").NewKey("root", "https://zuul."+r.cr.Spec.FQDN)
+
 	config := r.DumpConfigINI(cfg_ini)
 
 	r.EnsureZuulSecrets(&db_password, config)
