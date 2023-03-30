@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,7 +23,7 @@ spec:
     spec:
       containers:
       - name: launcher
-        image: quay.io/software-factory/nodepool-launcher-ubi:8.1.0-1
+        image: quay.io/software-factory/nodepool-launcher:8.2.0-1
         volumeMounts:
         - name: nodepool-config
           mountPath: /etc/nodepool
