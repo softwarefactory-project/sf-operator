@@ -9,9 +9,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-// The official image seems to consume all the available memory, and it gets OOMed.
-// const DBImage = "quay.io/software-factory/mariadb:10.3.10-1"
-const DBImage = "quay.io/software-factory/mariadb:10.3.28-2"
+const DBImage = "quay.io/software-factory/mariadb:10.5.16-1"
 
 const MYSQL_PORT = 3306
 const MYSQL_PORT_NAME = "mariadb-port"
