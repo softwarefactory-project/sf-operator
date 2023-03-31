@@ -46,8 +46,23 @@ cat << EOF > ${HOME}/.gitconfig
 EOF
 
 echo "Ensure admin user"
+# This command is noop if admin user already exists
 pynotedb create-admin-user --email "admin@${FQDN}" --pubkey "${GERRIT_ADMIN_SSH_PUB}" \
   --all-users "${GERRIT_SITE}/git/All-Users.git" --scheme gerrit
+# When the admin ssh key secret is refreshed
+echo "Ensure admin user public SSH key"
+rm -Rf /tmp/All-Users
+git clone /gerrit/git/All-Users.git/ /tmp/All-Users
+pushd /tmp/All-Users
+git fetch origin refs/users/01/1
+git checkout FETCH_HEAD
+echo "${GERRIT_ADMIN_SSH_PUB}" > authorized_keys
+git add authorized_keys
+if [ ! -z "$(git status --porcelain)" ]; then
+  git commit -m"Update admin user public ssh key"
+  git push origin HEAD:refs/users/01/1
+fi
+popd
 
 echo "Setting Gerrit config file ..."
 git config -f ${GERRIT_SITE}/etc/gerrit.config --replace-all gerrit.canonicalWebUrl "https://gerrit.${FQDN}"
