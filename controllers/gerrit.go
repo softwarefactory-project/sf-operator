@@ -16,12 +16,14 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
 const GERRIT_IDENT = "gerrit"
 const GERRIT_HTTPD_PORT = 8080
+const GERRIT_HTTPD_HTTP_PORT = 80
 const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 
 const GERRIT_SSHD_PORT = 29418
@@ -203,8 +205,32 @@ func (r *SFController) DeployGerrit() bool {
 	}
 
 	// Create services exposed by Gerrit
-	httpd_service := create_service(
-		r.ns, GERRIT_HTTPD_PORT_NAME, GERRIT_IDENT, GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME)
+	httpd_service :=	apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      GERRIT_HTTPD_PORT_NAME,
+			Namespace: r.ns,
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: []apiv1.ServicePort{
+				{
+					Name:     GERRIT_HTTPD_PORT_NAME,
+					Protocol: apiv1.ProtocolTCP,
+					Port:     GERRIT_HTTPD_PORT,
+					TargetPort: intstr.FromString(GERRIT_HTTPD_PORT_NAME),
+				},
+				{
+					Name:     GERRIT_HTTPD_PORT_NAME + "-internal-http",
+					Protocol: apiv1.ProtocolTCP,
+					Port:     GERRIT_HTTPD_HTTP_PORT,
+					TargetPort: intstr.FromString(GERRIT_HTTPD_PORT_NAME),
+				},
+			},
+			Selector: map[string]string{
+				"app": "sf",
+				"run": GERRIT_IDENT,
+			},
+		}}
+
 	sshd_service := apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      GERRIT_SSHD_PORT_NAME,
