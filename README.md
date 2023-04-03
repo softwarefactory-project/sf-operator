@@ -1,8 +1,35 @@
 # sf-operator
 
-The sf-operator deploys the Software Factory services.
+**sf-operator** is the next version of [Software Factory](https://www.softwarefactory-project.io).
 
-Project status : Work In Progress
+It is an **OpenShift Operator** capable of deploying and maitaining Software Factory's services.
+
+## Contacts
+
+You can reach us on [the Software Factory Matrix channel](https://app.element.io/#/room/#softwarefactory-project:matrix.org).
+
+## Status
+
+The current project status is: **Alpha - DO NOT USE IN PRODUCTION**
+
+See the [CONTRIBUTING documentation](CONTRIBUTING.md) to discover how to hack on the project.
+
+Below are the milestones we are working on:
+
+### Next milestones
+
+TBD
+
+### Alpha 1
+
+- [x] Deployment of **Zuul** (scheduler, executor, web) and **Zookeeper**
+- [x] Deployment of **MariaDB**
+- [x] Deployment of **Gerrit**
+- [x] Deployment of a **Logs Server for Zuul**
+- [x] A **system-config Git repository** to host the config workflow CI configuration
+- [x] A **config Git repository** to host Software Factory services configuration
+- [x] A minimal **config-check** / **config-update** CI workflow
+- [] Demo video
 
 ## ADR
 
@@ -14,186 +41,3 @@ To add a new decision:
 2. Edit NNNN-title-with-dashes.md.
 
 More information in the [ADR's README](doc/adr/README.md).
-
-## System requirement
-
-You need to install the following dependencies on your dev machine:
-- ansible-core
-- golang
-- make
-
-And to run tests you need:
-- jq
-
-## Run the SF operator in devel mode
-
-The operator will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
-Make sure that your current context is called `microshift` and use a namespace called `default`.
-
-Be sure to use a dedicated k8s dev instance. We are using `microshift` for that purpose.
-
-```sh
-kubectl config current-context
-# Must be microshift
-```
-
-1. Install cert-manager operator
-
-   ```sh
-   # Ensure cert-manager operator is installed on your instance
-   make install-cert-manager
-   ```
-
-2. Install the Custom Resource Definition:
-
-   ```sh
-   make install
-   ```
-
-3. Create your own copy the CR sample, for example:
-
-   ```sh
-   cp config/samples/sf_v1_softwarefactory.yaml my-sf.yaml
-   ```
-
-4. Ensure Storage Class "topolvm-provisioner" available:
-
-   The operator expects a Storage Class named "topolvm-provisioner"
-
-   ```sh
-   kubectl get sc
-   ```
-
-   The default SC name can be overriden by using "storageClassName" CRD's field if needed.
-
-5. Starts the operator:
-
-   ```sh
-   go run ./main.go --namespace default --cr "./my-sf.yaml"
-   ```
-
-## Access services with the browser
-
-If the FQDN is not already configured to point at your kubernetes cluster inbound,
-then you need to setup a local entry in /etc/hosts:
-
-```sh
-echo "${MICROSHIFT_IP} zuul.sftests.com gerrit.sftests.com" | sudo tee -a /etc/hosts
-firefox https://zuul.sftests.com
-firefox https://gerrit.sftests.com
-```
-
-Or
-
-```sh
-curl -k https://${MICROSHIFT_IP} -H "HOST: gerrit.sftests.com"
-curl -k https://${MICROSHIFT_IP} -H "HOST: zuul.sftests.com"
-```
-
-## Reset a deployment
-
-```sh
-kubectl delete softwarefactory my-sf
-go run ./main.go --namespace default --cr "./my-sf.yaml"
-```
-
-## Run ci test locally
-
-You can run CI tests on your local microshift deployment with
-
-```sh
-./tools/run-ci-tests.sh
-```
-
-This command is a wrapper on top of `ansible-playbook` to run the same Ansible play
-than the CI. The command accepts extra Ansible parameters. For instance to override
-the default `microshift _host` var:
-
-```sh
-./tools/run-ci-tests.sh --extra-vars "microshift_host=my-microshift"
-```
-
-We run the same playbook used by zuul during CI jobs `playbooks/main.yaml`
-
-If you want to run only test-sf-operator role, you can use `test_only` tag
-
-```sh
-./tools/run-ci-tests.sh --tags test_only
-```
-
-## Wipe all content in dev namespace
-
-Deleting the SoftwareFactory resource keeps persistent volume and some secrets. To
-wipe all in your namespace, runs:
-
-Note that this also delete all Persistent Volumes on the cluster.
-
-```sh
-./tools/wipe-deployment.sh
-```
-
-## sf_operator configuration library
-
-This python package provides helpers code to perform service runtime configuration.
-
-Run locally: `tox -evenv -- sf_operator --help`
-
-## Interact with the deployment
-
-### Open a review on the internal Gerrit - from your host
-
-First checkout the **config** repository.
-
-To do so via HTTP:
-
-```sh
-# Get the Gerrit admin user API key
-gerrit_admin_api_key=$(./tools/get-secret.sh gerrit-admin-api-key)
-# Then checkout the config repository
-git -c http.sslVerify=false clone "https://admin:${gerrit_admin_api_key}@gerrit.sftests.com/a/config" /tmp/config
-cd /tmp/config
-git config http.sslverify false
-git remote add gerrit "https://admin:${gerrit_admin_api_key}@gerrit.sftests.com/a/config"
-```
-
-To do so via SSH:
-
-```sh
-# In a terminal
-kubectl port-forward service/gerrit-sshd 29418
-# In another terminal
-git clone ssh://admin@localhost:29418/config /tmp/config
-cd /tmp/config
-git config user.email admin@sftests.com
-sed -i "s/^host=.*/host=localhost/" .gitreview
-git review -s # Enter 'admin' user
-git checkout .gitreview
-```
-
-Then add a change and send the review:
-
-```sh
-touch myfile
-git add myfile && git commit -m"Add myfile"
-git review
-```
-
-The **config-check** job is started and Zuul votes on change.
-
-As the **admin** user on Gerrit, the change can be approved with "CR +2, W+1" then Zuul starts
-the **config-check** job in the **gate** pipeline and the **config-update** job in
-the **post** pipeline.
-
-## Debugging Pods
-
-### OC Debug
-A good way to debug pods is using the [oc debug](https://docs.openshift.com/container-platform/4.8/cli_reference/openshift_cli/developer-cli-commands.html#oc-debug) command.
-
-The debug command makes an exact copy of the container passed as argument. It even has the option to select the user to start with.
-
-#### Examples
-```
-oc debug <container to copy>
-oc debug <container to copy> --as-root
-oc debug <container to copy> --as-user=<username>
-```
