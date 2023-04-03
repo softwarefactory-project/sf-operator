@@ -8,3 +8,5 @@ spec:
     sshd_max_connections_per_user: "64"
   zuul:
     gerritconns: []
+  # NOTE: use "crc-csi-hostpath-provisioner" in CRC deployment
+  storageClassName: "topolvm-provisioner"
