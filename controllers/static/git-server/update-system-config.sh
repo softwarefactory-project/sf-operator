@@ -6,21 +6,13 @@ env
 
 [ ! -d /git/system-config ] && git init --bare /git/system-config
 
-cd ${HOME}
-cat << EOF > .gitconfig
-[user]
-    name = SF initial configurator
-    email = admin@${FQDN}
-[gitreview]
-    username = admin
-[push]
-    default = simple
-EOF
-
 cd /tmp
 [ -d /tmp/system-config ] && rm -Rf /tmp/system-config
 git clone /git/system-config
 cd /tmp/system-config
+
+git config user.name "sf-operator"
+git config user.email "admin@${FQDN}"
 
 mkdir -p zuul.d playbooks/base playbooks/config
 
