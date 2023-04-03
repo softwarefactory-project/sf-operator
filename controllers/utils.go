@@ -21,6 +21,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
 	"crypto/rand"
@@ -190,6 +191,22 @@ func create_secret_env(env string, secret string, key string) apiv1.EnvVar {
 			},
 		},
 	}
+}
+
+var defaultPodSecurityContext = apiv1.PodSecurityContext{
+	RunAsNonRoot: pointer.Bool(true),
+	SeccompProfile: &apiv1.SeccompProfile{
+		Type: "RuntimeDefault",
+	},
+}
+
+var defaultContainerSecurityContext = apiv1.SecurityContext{
+	AllowPrivilegeEscalation: pointer.Bool(false),
+	Capabilities: &apiv1.Capabilities{
+		Drop: []apiv1.Capability{
+			"ALL",
+		},
+	},
 }
 
 func create_env(env string, value string) apiv1.EnvVar {
