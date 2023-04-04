@@ -1,0 +1,3 @@
+pod_name: "logserver-0"
+container_name: "logserver"
+logserver_copy_content_dest: "/tmp/logserver-content"

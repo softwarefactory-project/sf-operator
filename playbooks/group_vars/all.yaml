@@ -11,3 +11,5 @@ hosts:
   - "{{ gerrit_host }}"
   - "{{ zuul_host }}"
   - "{{ logserver_host }}"
+
+logserver_copy_content_dest: "/tmp/logserver-content"

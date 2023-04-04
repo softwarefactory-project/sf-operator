@@ -71,3 +71,6 @@
     method: GET
   retries: 10
   loop: "{{ zuul_job_result.json | list }}"
+
+- include_role:
+    name: "roles/get-logserver-content"
