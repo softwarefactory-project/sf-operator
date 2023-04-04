@@ -28,7 +28,7 @@ const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
-const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.5.4-1"
+const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.6.4-1"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_SITE_MOUNT_PATH = "/gerrit"
 const GERRIT_CERT_MOUNT_PATH = "/gerrit-cert"
@@ -205,7 +205,7 @@ func (r *SFController) DeployGerrit() bool {
 	}
 
 	// Create services exposed by Gerrit
-	httpd_service :=	apiv1.Service{
+	httpd_service := apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      GERRIT_HTTPD_PORT_NAME,
 			Namespace: r.ns,
@@ -213,15 +213,15 @@ func (r *SFController) DeployGerrit() bool {
 		Spec: apiv1.ServiceSpec{
 			Ports: []apiv1.ServicePort{
 				{
-					Name:     GERRIT_HTTPD_PORT_NAME,
-					Protocol: apiv1.ProtocolTCP,
-					Port:     GERRIT_HTTPD_PORT,
+					Name:       GERRIT_HTTPD_PORT_NAME,
+					Protocol:   apiv1.ProtocolTCP,
+					Port:       GERRIT_HTTPD_PORT,
 					TargetPort: intstr.FromString(GERRIT_HTTPD_PORT_NAME),
 				},
 				{
-					Name:     GERRIT_HTTPD_PORT_NAME + "-internal-http",
-					Protocol: apiv1.ProtocolTCP,
-					Port:     GERRIT_HTTPD_HTTP_PORT,
+					Name:       GERRIT_HTTPD_PORT_NAME + "-internal-http",
+					Protocol:   apiv1.ProtocolTCP,
+					Port:       GERRIT_HTTPD_HTTP_PORT,
 					TargetPort: intstr.FromString(GERRIT_HTTPD_PORT_NAME),
 				},
 			},
