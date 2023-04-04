@@ -852,6 +852,29 @@ func (r *SFController) getValueFromKeySecret(secret apiv1.Secret, keyname string
 	return keyvalue, nil
 }
 
+func (r *SFController) getSecretDataFromKey(name string, key string) ([]byte, error) {
+	secret, err := r.getSecretbyNameRef(name)
+	if err != nil {
+		return []byte{}, err
+	}
+	var subkey string
+	if key == "" {
+		subkey = name
+	} else {
+		subkey = key
+	}
+	data, err := r.getValueFromKeySecret(secret, subkey)
+	if err != nil {
+		return []byte{}, err
+	}
+	return data, nil
+}
+
+// Gets Secret Data in which the Keyname is the same as the Secret Name
+func (r *SFController) getSecretData(name string) ([]byte, error) {
+	return r.getSecretDataFromKey(name, "")
+}
+
 func (r *SFController) ImageToBase64(imagepath string) (string, error) {
 	// Read the file to bytes
 	bytes, err := os.ReadFile(imagepath)
