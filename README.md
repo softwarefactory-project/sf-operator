@@ -113,7 +113,7 @@ the default `microshift _host` var:
 ./tools/run-ci-tests.sh --extra-vars "microshift_host=my-microshift"
 ```
 
-We run the same playbook used by zuul during CI jobs `playbooks/test-microshift.yaml`
+We run the same playbook used by zuul during CI jobs `playbooks/main.yaml`
 
 If you want to run only test-sf-operator role, you can use `test_only` tag
 

@@ -2,7 +2,7 @@
 # Deploy sf-operator on microshift
 - job:
     name: sf-operator-functional-allinone-microshift
-    run: playbooks/test-microshift.yaml
+    run: playbooks/main.yaml
     parent: base-microshift
     timeout: 1200
     post-run: playbooks/post.yaml
