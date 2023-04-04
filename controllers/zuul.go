@@ -7,7 +7,6 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"strconv"
 
 	ini "gopkg.in/ini.v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -127,6 +126,17 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 	return volumes
 }
 
+func (r *SFController) create_zuul_host_alias() []apiv1.HostAlias{
+	return []apiv1.HostAlias{
+		{
+			IP: r.get_service_ip(GERRIT_HTTPD_PORT_NAME),
+			Hostnames: []string{
+				"gerrit." + r.cr.Spec.FQDN,
+			},
+		},
+	}
+}
+
 func init_scheduler_config() apiv1.Container {
 	return apiv1.Container{
 		Name:    "init-scheduler-config",
@@ -181,6 +191,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zs := create_statefulset(r.ns, "zuul-scheduler", "", get_storage_classname(r.cr.Spec))
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = append(init_containers, init_scheduler_config())
+	zs.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	zs.Spec.Template.Spec.Containers = append(
 		create_zuul_container(fqdn, "zuul-scheduler"), r.scheduler_sidecar_container())
 	zs.Spec.Template.Spec.Volumes = zs_volumes
@@ -199,6 +210,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 
 	ze := create_statefulset(r.ns, "zuul-executor", "", get_storage_classname(r.cr.Spec))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
+	ze.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	ze.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
@@ -215,6 +227,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 
 	zw := create_deployment(r.ns, "zuul-web", "")
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
+	zw.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	zw.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-web")
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
@@ -321,7 +334,7 @@ func (r *SFController) DeployZuul() bool {
 		Name:              "gerrit",
 		Hostname:          GERRIT_SSHD_PORT_NAME,
 		Port:              "29418",
-		Puburl:            "http://" + GERRIT_HTTPD_PORT_NAME + ":" + strconv.Itoa(GERRIT_HTTPD_PORT),
+		Puburl:            "http://" + "gerrit." + r.cr.Spec.FQDN,
 		Username:          "zuul",
 		Canonicalhostname: "gerrit." + r.cr.Spec.FQDN,
 		Password:          "zuul-gerrit-api-key",
