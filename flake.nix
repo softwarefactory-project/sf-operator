@@ -1,6 +1,6 @@
 {
   description = "SF Operator Project";
-  nixConfig.bash-prompt = "[nix(monocle-operator)] ";
+  nixConfig.bash-prompt = "[nix(sf-operator)] ";
   inputs = { nixpkgs.url = "github:nixos/nixpkgs/22.11"; };
 
   outputs = { self, nixpkgs }:
@@ -20,6 +20,8 @@
           # 2.14.0 in nixpkgs 22.11
           pkgs.ansible
           pkgs.jq
+          # 0.26.7 in nixpkgs 22.11
+          pkgs.k9s
         ];
         shellHook = ''
           echo "Welcome in $name"
