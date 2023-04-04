@@ -5,17 +5,38 @@ package controllers
 
 import (
 	_ "embed"
-	"strings"
 
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-//go:embed templates/zookeeper.yaml
-var zk_objs string
+var zkTemplate = "controllers/templates/zookeeper.yaml"
+
+type ZookeeperConfig struct {
+	Namespace    string
+	StorageClass string
+	StorageSize  string
+}
+
+func getZKStorageSize(spec sfv1.SoftwareFactorySpec) string {
+	if spec.Zookeeper.StorageSize != "" {
+		return spec.Zookeeper.StorageSize
+	} else {
+		return "1Gi"
+	}
+}
 
 func (r *SFController) DeployZookeeper() bool {
-	zookeeper_ns := strings.ReplaceAll(zk_objs, "{{ NS }}", r.ns)
-	zookeeper_yaml := strings.ReplaceAll(zookeeper_ns, "{{ SC }}", get_storage_classname(r.cr.Spec))
+	zookeeperConfig := ZookeeperConfig{
+		Namespace:    r.ns,
+		StorageClass: get_storage_classname(r.cr.Spec),
+		StorageSize:  getZKStorageSize(r.cr.Spec),
+	}
+
+	zookeeper_yaml, err := parse_template(zkTemplate, zookeeperConfig)
+	if err != nil {
+		r.log.V(1).Error(err, "Template parsing failed")
+	}
 	r.CreateYAMLs(zookeeper_yaml)
 	cert := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper")
 	r.GetOrCreate(&cert)

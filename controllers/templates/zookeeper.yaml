@@ -13,11 +13,11 @@ spec:
     - server auth
     - client auth
   dnsNames:
-  - zookeeper-0.zookeeper-headless.{{ NS }}.svc.cluster.local
+  - zookeeper-0.zookeeper-headless.{{ .Namespace }}.svc.cluster.local
   - zookeeper-0
-  - zookeeper-1.zookeeper-headless.{{ NS }}.svc.cluster.local
+  - zookeeper-1.zookeeper-headless.{{ .Namespace }}.svc.cluster.local
   - zookeeper-1
-  - zookeeper-2.zookeeper-headless.{{ NS }}.svc.cluster.local
+  - zookeeper-2.zookeeper-headless.{{ .Namespace }}.svc.cluster.local
   - zookeeper-2
   issuerRef:
     name: ca-issuer
@@ -356,5 +356,5 @@ spec:
           - "ReadWriteOnce"
         resources:
           requests:
-            storage: "5Gi"
-        storageClassName: "{{ SC }}"
+            storage: "{{ .StorageSize }}"
+        storageClassName: "{{ .StorageClass }}"

@@ -60,6 +60,14 @@ spec:
               storageClassName:
                 description: Default storage class to use by Persistent Volume Claims
                 type: string
+              zookeeper:
+                description: Zookeeper service spec
+                properties:
+                  storageSize:
+                    type: string
+                required:
+                - storageSize
+                type: object
               zuul:
                 description: Zuul service spec
                 properties:

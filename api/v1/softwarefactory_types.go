@@ -36,6 +36,10 @@ type GerritSpec struct {
 	SshdMaxConnectionsPerUser string `json:"sshd_max_connections_per_user,omitempty"`
 }
 
+type ZookeeperSpec struct {
+	StorageSize string `json:"storageSize"`
+}
+
 type Secret struct {
 	// Name of the referent.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -66,6 +70,9 @@ type SoftwareFactorySpec struct {
 
 	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`
+
+	// Zookeeper service spec
+	Zookeeper ZookeeperSpec `json:"zookeeper,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory
