@@ -1,4 +1,0 @@
-sshd_port: 2222
-oc_container_runner: "oc exec -t "
-ssh_client: "zuul-executor-0"
-logserver_file: "logserver-file-to-copy"
