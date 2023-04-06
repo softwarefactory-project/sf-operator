@@ -16,7 +16,7 @@ import (
 const GS_IDENT = "git-server"
 const GS_GIT_PORT = 9418
 const GS_GIT_PORT_NAME = "git-server-port"
-const GS_IMAGE = "quay.io/software-factory/git-deamon:2.39.1-1"
+const GS_IMAGE = "quay.io/software-factory/git-deamon:2.39.1-2"
 const GS_GIT_MOUNT_PATH = "/git"
 const GS_PI_MOUNT_PATH = "/entry"
 
@@ -35,6 +35,7 @@ func (r *SFController) DeployGitServer() bool {
 	// Create the deployment
 	dep := create_statefulset(r.ns, GS_IDENT, GS_IMAGE, get_storage_classname(r.cr.Spec))
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
+	dep.Spec.Template.Spec.SecurityContext = &defaultPodSecurityContext
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      GS_IDENT,
@@ -49,13 +50,15 @@ func (r *SFController) DeployGitServer() bool {
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		create_container_port(GS_GIT_PORT, GS_GIT_PORT_NAME),
 	}
+	dep.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
 
 	// Define initContainer
 	dep.Spec.Template.Spec.InitContainers = []apiv1.Container{
 		{
-			Name:    "init-config",
-			Image:   GS_IMAGE,
-			Command: []string{"/bin/bash", "/entry/pre-init.sh"},
+			Name:            "init-config",
+			Image:           GS_IMAGE,
+			SecurityContext: &defaultContainerSecurityContext,
+			Command:         []string{"/bin/bash", "/entry/pre-init.sh"},
 			Env: []apiv1.EnvVar{
 				create_env("FQDN", r.cr.Spec.FQDN),
 				create_env("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(LOGSERVER_SSHD_PORT)),
