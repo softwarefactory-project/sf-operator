@@ -19,6 +19,7 @@
       logclassify_debug: false
       logclassify_report: true
       # microshift deployment
+      microshift_version: 4.12
       disk_file_sparsed: true
       standard_user: false
       create_pv: false
