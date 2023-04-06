@@ -46,10 +46,17 @@ func (r *SFController) DeployMariadb() bool {
 	r.GenerateSecretUUID(pass_name)
 
 	dep := create_statefulset(r.ns, "mariadb", DBImage, get_storage_classname(r.cr.Spec))
+	dep.Spec.VolumeClaimTemplates = append(
+		dep.Spec.VolumeClaimTemplates,
+		create_pvc(r.ns, "mariadb-logs", get_storage_classname(r.cr.Spec)))
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      "mariadb",
-			MountPath: "/config/databases",
+			MountPath: "/var/lib/mysql",
+		},
+		{
+			Name:      "mariadb-logs",
+			MountPath: "/var/logs/mariadb",
 		},
 	}
 	dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
