@@ -30,6 +30,7 @@ You need to install the following dependencies on your dev machine:
 - ansible-core
 - jq
 - python-tox
+- git-review
 
 ## Hack on SF operator
 
@@ -204,4 +205,14 @@ For example:
 kubectl exec -it mariadb-0 -- bash -c "host zookeeper-0.zookeeper-headless.default.svc.cluster.local"
 kubectl exec -it mariadb-0 -- bash -c "host zuul-executor-0.zuul-executor-headless.default.svc.cluster.local"
 kubectl exec -it mariadb-0 -- bash -c "host zuul-executor-0.zuul-executor-headless"
+
+#### Create new PatchSet in the Gerrit service
+
+Sometimes, when it would be necessary to debug the Gerrit and Zuul CI workflow,
+there is a script that creates a PatchSet in the Gerrit and it would be later
+processed by the Zuul CI.
+To use it, run:
+
+```sh
+bash ./tools/create-ps.sh
 ```
