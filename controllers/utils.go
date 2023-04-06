@@ -307,7 +307,12 @@ func create_pvc(ns string, name string, storageClassName string) apiv1.Persisten
 }
 
 // Create a default statefulset.
-func create_statefulset(ns string, name string, image string, storageClassName string) appsv1.StatefulSet {
+func create_statefulset(ns string, name string, image string, storageClassName string, nameSuffix ...string) appsv1.StatefulSet {
+	service_name := name
+	if nameSuffix != nil {
+		service_name = name + "-" + nameSuffix[0]
+	}
+
 	container := apiv1.Container{
 		Name:            name,
 		Image:           image,
@@ -320,7 +325,8 @@ func create_statefulset(ns string, name string, image string, storageClassName s
 			Namespace: ns,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: int32Ptr(1),
+			Replicas:    int32Ptr(1),
+			ServiceName: service_name,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "sf",
@@ -346,6 +352,11 @@ func create_statefulset(ns string, name string, image string, storageClassName s
 			},
 		},
 	}
+}
+
+// Create a default headless statefulset.
+func create_headless_statefulset(ns string, name string, image string, storageClassName string) appsv1.StatefulSet {
+	return create_statefulset(ns, name, image, storageClassName, "headless")
 }
 
 // Create a default deployment.
@@ -394,6 +405,29 @@ func create_service(ns string, name string, selector string, port int32, port_na
 			Namespace: ns,
 		},
 		Spec: apiv1.ServiceSpec{
+			Ports: []apiv1.ServicePort{
+				{
+					Name:     port_name,
+					Protocol: apiv1.ProtocolTCP,
+					Port:     port,
+				},
+			},
+			Selector: map[string]string{
+				"app": "sf",
+				"run": selector,
+			},
+		}}
+}
+
+// create a headless service.
+func create_headless_service(ns string, name string, selector string, port int32, port_name string) apiv1.Service {
+	return apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name + "-headless",
+			Namespace: ns,
+		},
+		Spec: apiv1.ServiceSpec{
+			ClusterIP: "None",
 			Ports: []apiv1.ServicePort{
 				{
 					Name:     port_name,
