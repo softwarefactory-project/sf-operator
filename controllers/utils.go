@@ -54,7 +54,7 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
-const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.3-1"
+const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.4-1"
 
 func checksum(data []byte) string {
 	return fmt.Sprintf("%x", sha256.Sum256(data))

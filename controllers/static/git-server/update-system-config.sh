@@ -224,7 +224,10 @@ cat << EOF > playbooks/config/update.yaml
 - hosts: managesf-resources
   tasks:
     - name: "Applying resources changes"
-      command: managesf-resources apply --zuul-commit {{ zuul.newrev }} --zuul-prev-commit {{ zuul.oldrev }}
+      command: >
+        managesf-resources --cache-dir ~/ apply
+        --zuul-commit {{ zuul.newrev }}
+        --zuul-prev-commit {{ zuul.oldrev }}
 
 - hosts: zuul-scheduler-sidecar
   vars:

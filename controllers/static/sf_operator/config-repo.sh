@@ -33,12 +33,12 @@ cd config
 # Initialize resources tree
 if [ ! -d resources ]; then
   mkdir resources
-  dhall-to-yaml-ng --output \
+  dhall-to-yaml --output \
     resources/resources.yaml <<< "(/sf_operator/resources.dhall).renderEmptyResources"
 fi
 
 # Update the _internal.yaml resources file
-dhall-to-yaml-ng --output \
+dhall-to-yaml --output \
   resources/_internal.yaml <<< "(/sf_operator/resources.dhall).renderInternalResources \"${FQDN}\" True"
 
 # Initialize zuul directory

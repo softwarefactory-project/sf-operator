@@ -116,8 +116,7 @@ done
 
 if [ "${HAS_CONFIG_REPOSITORY}" == "true" ]; then
   echo "Setup managesf config file"
-  mkdir -p /etc/managesf
-  cat << EOF > /etc/managesf/config.py
+  cat << EOF > $HOME/config.py
 gerrit = {
     'url': 'http://gerrit-httpd:${GERRIT_HTTPD_SERVICE_PORT}/a/',
     'password': '${GERRIT_ADMIN_API_KEY}',
@@ -136,7 +135,6 @@ admin = {
     'email': 'admin@${FQDN}',
 }
 EOF
-  cat /etc/managesf/config.py
 
   # Ensure HTTP access via basic auth for further provisioning
   curl --fail -i -u admin:${GERRIT_ADMIN_API_KEY} http://gerrit-httpd:${GERRIT_HTTPD_SERVICE_PORT}/a/accounts/admin
@@ -146,9 +144,10 @@ EOF
     cat << EOF > prev.yaml
 resources: {}
 EOF
-    dhall-to-yaml-ng --output \
+    dhall-to-yaml --output \
       new.yaml <<< "(/entry/resources.dhall).renderInternalResources \"${FQDN}\" False"
-    managesf-resources direct-apply --new-yaml new.yaml --prev-yaml prev.yaml
+    managesf-resources --managesf-config $HOME/config.py \
+      --cache-dir $HOME direct-apply --new-yaml new.yaml --prev-yaml prev.yaml
   else
     echo "config repository already exists"
   fi

@@ -19,6 +19,7 @@ else
 fi
 
 managesf-configuration --gateway-url "https://${FQDN}" \
+  --cache-dir $HOME \
   --config-dir $HOME/config \
   --default-tenant-name internal \
   --output $HOME/main.yaml zuul
