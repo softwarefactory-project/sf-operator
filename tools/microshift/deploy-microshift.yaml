@@ -1,0 +1,24 @@
+- hosts: localhost
+  gather_facts: no
+  tasks:
+   - name: Ensure microshift role
+     git:
+       repo: https://github.com/openstack-k8s-operators/ansible-microshift-role.git
+       dest: ./ansible-microshift-role
+       update: yes
+- hosts: microshift.dev
+  vars:
+    fqdn: microshift.dev
+    microshift_version: 4.12
+    disk_file_sparsed: true
+    standard_user: false
+    create_pv: false
+    disk_file_size: 30G
+  roles:
+    - ansible-microshift-role
+  tasks:
+    - fetch:
+        src: /var/lib/microshift/resources/kubeadmin/microshift.dev/kubeconfig
+        dest: "./microshift-config"
+        flat: true
+      become: yes
