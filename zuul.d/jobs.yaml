@@ -23,3 +23,5 @@
       disk_file_sparsed: true
       standard_user: false
       create_pv: false
+      # sf-operator testing
+      logserver_copy_content_dest: "~/zuul-output/logs/logserver-content"
