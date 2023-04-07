@@ -58,9 +58,6 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, sp
 		ReadOnly:  true,
 	}
 
-	securityContext := &apiv1.SecurityContext{
-		RunAsNonRoot: pointer.BoolPtr(false),
-	}
 	container := apiv1.Container{
 		Name:    "gerrit-init",
 		Image:   GERRIT_IMAGE,
@@ -72,7 +69,7 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, sp
 			create_env("FQDN", r.cr.Spec.FQDN),
 		},
 		VolumeMounts:    append(volumeMounts, certVolume),
-		SecurityContext: securityContext,
+		SecurityContext: &defaultContainerSecurityContext,
 	}
 	return []apiv1.Container{container}
 }
@@ -103,10 +100,11 @@ func (r *SFController) GerritPostInitJob(name string, has_config_repo bool) bool
 			create_secret_env("CI_USER_API_zuul", "zuul-gerrit-api-key", "zuul-gerrit-api-key"))
 
 		container := apiv1.Container{
-			Name:    fmt.Sprintf("%s-container", job_name),
-			Image:   BUSYBOX_IMAGE,
-			Command: []string{"sh", "-c", postInitScript},
-			Env:     append(env, ci_users...),
+			Name:            fmt.Sprintf("%s-container", job_name),
+			Image:           BUSYBOX_IMAGE,
+			Command:         []string{"sh", "-c", postInitScript},
+			Env:             append(env, ci_users...),
+			SecurityContext: &defaultContainerSecurityContext,
 			VolumeMounts: []apiv1.VolumeMount{
 				{
 					Name:      GERRIT_IDENT + "-pi",
@@ -150,13 +148,6 @@ func (r *SFController) DeployGerrit() bool {
 			MountPath: GERRIT_SITE_MOUNT_PATH,
 		},
 	}
-	securityContext := &apiv1.SecurityContext{
-		RunAsNonRoot: pointer.BoolPtr(false),
-	}
-	podSecurityContext := &apiv1.PodSecurityContext{
-		RunAsUser: pointer.Int64(10002),
-		FSGroup:   pointer.Int64(10002),
-	}
 
 	// Create the deployment
 	dep := create_statefulset(r.ns, GERRIT_IDENT, GERRIT_IMAGE, get_storage_classname(r.cr.Spec))
@@ -176,8 +167,18 @@ func (r *SFController) DeployGerrit() bool {
 	}
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
-	dep.Spec.Template.Spec.Containers[0].SecurityContext = securityContext
+
+	// NOTE: Change to "defaultPodSecurityContext", when image will use non root user.
+	podSecurityContext := &apiv1.PodSecurityContext{
+		RunAsUser:    pointer.Int64(10002),
+		FSGroup:      pointer.Int64(10002),
+		RunAsNonRoot: pointer.Bool(true),
+		SeccompProfile: &apiv1.SeccompProfile{
+			Type: "RuntimeDefault",
+		},
+	}
 	dep.Spec.Template.Spec.SecurityContext = podSecurityContext
+	dep.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
 
 	dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
 
