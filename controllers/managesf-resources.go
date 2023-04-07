@@ -62,9 +62,11 @@ func (r *SFController) DeployManagesfResources() bool {
 
 	// Create the deployment object
 	dep := create_deployment(r.ns, MANAGESF_RESOURCES_IDENT, BUSYBOX_IMAGE)
+	dep.Spec.Template.Spec.SecurityContext = &defaultPodSecurityContext
 
 	// Amend the deployment's container
 	dep.Spec.Template.Spec.Containers[0].Command = []string{"bash", "-c", managesf_entrypoint}
+	dep.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
 	dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 		// managesf-resources need an admin ssh access to the local Gerrit
 		create_secret_env("SF_ADMIN_SSH", "admin-ssh-key", "priv"),
