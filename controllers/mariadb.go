@@ -11,8 +11,8 @@ import (
 
 const DBImage = "quay.io/software-factory/mariadb:10.5.16-2"
 
-const MYSQL_PORT = 3306
-const MYSQL_PORT_NAME = "mariadb-port"
+const MARIADB_PORT = 3306
+const MARIADB_PORT_NAME = "mariadb-port"
 
 func (r *SFController) EnsureDBInit(name string) ([]apiv1.Container, apiv1.Secret) {
 	db_password := r.GenerateSecretUUID(name + "-db-password")
@@ -68,11 +68,15 @@ func (r *SFController) DeployMariadb() bool {
 		create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
 	}
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		create_container_port(MYSQL_PORT, MYSQL_PORT_NAME),
+		create_container_port(MARIADB_PORT, MARIADB_PORT_NAME),
 	}
-	// TODO: add ready probe
+
+	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(MARIADB_PORT)
+	dep.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_tcp_probe(MARIADB_PORT)
+
 	r.GetOrCreate(&dep)
-	srv := create_service(r.ns, "mariadb", "mariadb", MYSQL_PORT, MYSQL_PORT_NAME)
+
+	srv := create_service(r.ns, "mariadb", "mariadb", MARIADB_PORT, MARIADB_PORT_NAME)
 	r.GetOrCreate(&srv)
 
 	return r.IsStatefulSetReady(&dep)
