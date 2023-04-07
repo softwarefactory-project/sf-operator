@@ -81,10 +81,7 @@ func (r *SFController) DeployLogserver() bool {
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
-	keys_pvc := r.create_pvc(LOGSERVER_IDENT+"-keys", get_storage_classname(r.cr.Spec))
-	r.GetOrCreate(&keys_pvc)
-
-	data_pvc := r.create_pvc(LOGSERVER_IDENT, get_storage_classname(r.cr.Spec))
+	data_pvc := r.create_pvc(LOGSERVER_IDENT, r.cr.Spec.Logserver.Storage)
 	r.GetOrCreate(&data_pvc)
 
 	var mod int32 = 256 // decimal for 0400 octal

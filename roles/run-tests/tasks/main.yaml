@@ -54,3 +54,11 @@
 
 - include_role:
     name: "roles/health-check/validate-purgelogs"
+
+- name: Miscellaneous testing
+  include_role:
+    name: "roles/{{ role }}"
+  loop:
+    - test-crd
+  loop_control:
+    loop_var: role

@@ -56,6 +56,11 @@ import (
 
 const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.4-2"
 
+func DEFAULT_QTY_1Gi() resource.Quantity {
+	q, _ := resource.ParseQuantity("1Gi")
+	return q
+}
+
 func checksum(data []byte) string {
 	return fmt.Sprintf("%x", sha256.Sum256(data))
 }
@@ -63,6 +68,11 @@ func checksum(data []byte) string {
 type SSHKey struct {
 	Pub  []byte
 	Priv []byte
+}
+
+type StorageConfig struct {
+	StorageClassName string
+	Size             resource.Quantity
 }
 
 // TODO: the line below can be removed when we move to compiler version 1.18 (current 1.17)
@@ -295,18 +305,20 @@ func get_storage_classname(spec sfv1.SoftwareFactorySpec) string {
 	}
 }
 
-func (r *SFController) create_pvc(name string, storageClassName string) apiv1.PersistentVolumeClaim {
+func (r *SFController) create_pvc(name string, storageSpec sfv1.StorageSpec) apiv1.PersistentVolumeClaim {
+	storageParams := r.getStorageConfOrDefault(storageSpec)
+	qty := storageParams.Size
 	return apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: r.ns,
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
-			StorageClassName: &storageClassName,
+			StorageClassName: &storageParams.StorageClassName,
 			AccessModes:      []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
 			Resources: apiv1.ResourceRequirements{
 				Requests: apiv1.ResourceList{
-					"storage": *resource.NewQuantity(1*1000*1000*1000, resource.DecimalSI),
+					"storage": qty,
 				},
 			},
 		},
@@ -314,7 +326,7 @@ func (r *SFController) create_pvc(name string, storageClassName string) apiv1.Pe
 }
 
 // Create a default statefulset.
-func (r *SFController) create_statefulset(name string, image string, storageClassName string, nameSuffix ...string) appsv1.StatefulSet {
+func (r *SFController) create_statefulset(name string, image string, storageSpec sfv1.StorageSpec, nameSuffix ...string) appsv1.StatefulSet {
 	service_name := name
 	if nameSuffix != nil {
 		service_name = name + "-" + nameSuffix[0]
@@ -326,7 +338,7 @@ func (r *SFController) create_statefulset(name string, image string, storageClas
 		ImagePullPolicy: "IfNotPresent",
 		SecurityContext: create_security_context(false),
 	}
-	pvc := r.create_pvc(name, storageClassName)
+	pvc := r.create_pvc(name, storageSpec)
 	return appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -364,8 +376,8 @@ func (r *SFController) create_statefulset(name string, image string, storageClas
 }
 
 // Create a default headless statefulset.
-func (r *SFController) create_headless_statefulset(name string, image string, storageClassName string) appsv1.StatefulSet {
-	return r.create_statefulset(name, image, storageClassName, "headless")
+func (r *SFController) create_headless_statefulset(name string, image string, storageSpec sfv1.StorageSpec) appsv1.StatefulSet {
+	return r.create_statefulset(name, image, storageSpec, "headless")
 }
 
 // Create a default deployment.
@@ -997,3 +1009,18 @@ func (r *SFController) getConfigRepoCNXInfo() (string, string) {
 func int32Ptr(i int32) *int32 { return &i }
 func boolPtr(b bool) *bool    { return &b }
 func strPtr(s string) *string { return &s }
+
+func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) StorageConfig {
+	var size = DEFAULT_QTY_1Gi()
+	var className = get_storage_classname(r.cr.Spec)
+	if !storageSpec.Size.IsZero() {
+		size = storageSpec.Size
+	}
+	if storageSpec.ClassName != "" {
+		className = storageSpec.ClassName
+	}
+	return StorageConfig{
+		StorageClassName: className,
+		Size:             size,
+	}
+}

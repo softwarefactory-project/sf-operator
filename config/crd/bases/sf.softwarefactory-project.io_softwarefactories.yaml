@@ -56,6 +56,42 @@ spec:
                 properties:
                   sshd_max_connections_per_user:
                     type: string
+                  storage:
+                    properties:
+                      className:
+                        type: string
+                      size:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                        x-kubernetes-validations:
+                        - message: Storage shrinking is not supported
+                          rule: self >= oldSelf
+                    required:
+                    - size
+                    type: object
+                type: object
+              gitserver:
+                description: Git server spec
+                properties:
+                  storage:
+                    properties:
+                      className:
+                        type: string
+                      size:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                        x-kubernetes-validations:
+                        - message: Storage shrinking is not supported
+                          rule: self >= oldSelf
+                    required:
+                    - size
+                    type: object
                 type: object
               logserver:
                 description: Logserver service spec
@@ -68,6 +104,63 @@ spec:
                     description: Logs Older that "x" days will be purge ( default
                       60 days )
                     type: integer
+                  storage:
+                    properties:
+                      className:
+                        type: string
+                      size:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                        x-kubernetes-validations:
+                        - message: Storage shrinking is not supported
+                          rule: self >= oldSelf
+                    required:
+                    - size
+                    type: object
+                required:
+                - storage
+                type: object
+              mariadb:
+                description: MariaDB service spec
+                properties:
+                  dbStorage:
+                    properties:
+                      className:
+                        type: string
+                      size:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                        x-kubernetes-validations:
+                        - message: Storage shrinking is not supported
+                          rule: self >= oldSelf
+                    required:
+                    - size
+                    type: object
+                  logStorage:
+                    properties:
+                      className:
+                        type: string
+                      size:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                        x-kubernetes-validations:
+                        - message: Storage shrinking is not supported
+                          rule: self >= oldSelf
+                    required:
+                    - size
+                    type: object
+                required:
+                - dbStorage
+                - logStorage
                 type: object
               storageClassName:
                 description: Default storage class to use by Persistent Volume Claims
@@ -75,14 +168,47 @@ spec:
               zookeeper:
                 description: Zookeeper service spec
                 properties:
-                  storageSize:
-                    type: string
+                  storage:
+                    properties:
+                      className:
+                        type: string
+                      size:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                        x-kubernetes-validations:
+                        - message: Storage shrinking is not supported
+                          rule: self >= oldSelf
+                    required:
+                    - size
+                    type: object
                 required:
-                - storageSize
+                - storage
                 type: object
               zuul:
                 description: Zuul service spec
                 properties:
+                  executor:
+                    properties:
+                      storage:
+                        properties:
+                          className:
+                            type: string
+                          size:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                            x-kubernetes-validations:
+                            - message: Storage shrinking is not supported
+                              rule: self >= oldSelf
+                        required:
+                        - size
+                        type: object
+                    type: object
                   gerritconns:
                     items:
                       properties:
@@ -108,6 +234,25 @@ spec:
                       - username
                       type: object
                     type: array
+                  scheduler:
+                    properties:
+                      storage:
+                        properties:
+                          className:
+                            type: string
+                          size:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                            x-kubernetes-validations:
+                            - message: Storage shrinking is not supported
+                              rule: self >= oldSelf
+                        required:
+                        - size
+                        type: object
+                    type: object
                 type: object
             required:
             - fqdn
