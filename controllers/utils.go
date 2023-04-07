@@ -756,7 +756,8 @@ func create_job(ns string, name string, container apiv1.Container) batchv1.Job {
 					Containers: []apiv1.Container{
 						container,
 					},
-					RestartPolicy: "Never",
+					RestartPolicy:   "Never",
+					SecurityContext: &defaultPodSecurityContext,
 				},
 			},
 		}}

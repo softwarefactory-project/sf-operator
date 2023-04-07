@@ -91,6 +91,7 @@ func (r *SFController) RunCommand(name string, args []string, extra_vars []apiv1
 			VolumeMounts: []apiv1.VolumeMount{
 				{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
 			},
+			SecurityContext: &defaultContainerSecurityContext,
 		},
 	)
 	job.Spec.Template.Spec.Volumes = []apiv1.Volume{
@@ -159,6 +160,7 @@ func (r *SFController) SetupConfigRepo() bool {
 					{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
 					{Name: "sf-provided-cr", MountPath: "/sf-provided-cr"},
 				},
+				SecurityContext: &defaultContainerSecurityContext,
 			},
 		)
 		job.Spec.Template.Spec.Volumes = []apiv1.Volume{
