@@ -7,6 +7,12 @@
 set -ex
 
 env
+
+if [ "${HOME}" == "/" ]; then
+    echo "HOME can not be / dir!"
+    exit 1
+fi
+
 cd ${HOME}
 
 cat /etc/hosts

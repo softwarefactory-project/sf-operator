@@ -260,12 +260,16 @@ func create_volume_cm_keys(volume_name string, config_map_ref string, keys []api
 	}
 }
 
-func create_volume_secret(name string) apiv1.Volume {
+func create_volume_secret(name string, secret_name ...string) apiv1.Volume {
+	sec_name := name
+	if secret_name != nil {
+		sec_name = secret_name[0]
+	}
 	return apiv1.Volume{
 		Name: name,
 		VolumeSource: apiv1.VolumeSource{
 			Secret: &apiv1.SecretVolumeSource{
-				SecretName: name,
+				SecretName: sec_name,
 			},
 		},
 	}
