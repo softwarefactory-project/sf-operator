@@ -1,0 +1,4 @@
+all:
+  hosts:
+    microshift.dev:
+      ansible_user: '{{ microshift_user | default("cloud-user") }}'

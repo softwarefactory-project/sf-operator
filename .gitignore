@@ -38,3 +38,5 @@ config/crd/bases/_.yaml
 sf_operator.egg-info
 
 /deploy/
+/tools/microshift/ansible-microshift-role/
+/tools/microshift/microshift-config

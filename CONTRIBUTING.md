@@ -4,86 +4,20 @@ This document provides instructions to get started with **sf-operator** developm
 
 ## Code Hosting
 
-The main repository of the project is hosted at [softwarefactory-project.io][https://softwarefactory-project.io/r/software-factory/sf-operator).
+The main repository of the project is hosted at [softwarefactory-project.io](https://softwarefactory-project.io/r/software-factory/sf-operator).
 
 Container images definitions are hosted at the [container-pipeline project](https://softwarefactory-project.io/r/containers) and
 published on [quay.io](https://quay.io/organization/software-factory).
 
-Any contributions are welcome. Use the [git-review workflow](https://softwarefactory-project.io/docs/user/contribute.html#create-a-new-code-review) to interact with these projects.
+All contributions are welcome. Use the [git-review workflow](https://softwarefactory-project.io/docs/user/contribute.html#create-a-new-code-review) to interact with these projects.
 
 Repositories on GitHub are mirrors from **softwarefactory-project.io**.
 
 ## Requirements
 
-We use [Microshift](https://github.com/openshift/microshift) for the **CI** and **developer OpenShift instances**.
+We use [Microshift](https://github.com/openshift/microshift) as the target **OpenShift instance** for SF-Operator when deploying, developing locally, or testing in our **CI**.
 
-### Microshift deployment
-
-We recommend to install Microshift on a dedicated Virtual Machine using the
-[ansible-microshift-role](https://github.com/openstack-k8s-operators/ansible-microshift-role).
-The dedicated Virtual Machine should be a CentOS Stream 9 virtual machine
-(min 2 vCPUs, 2 GB Ram, 20 GB Disk) with the TCP/6443 and TCP/22 (SSH) ports exposed.
-
-Currently a *Pull Secret* is needed. It can be generated [here](https://cloud.redhat.com/openshift/create/local).
-
-Once the Virtual Machine is set up, ensure that your development machine can access via SSH as a regular user
-the Virtual Machine. Furthermore ensure that the regular user can access root user with `sudo -i`.
-
-On you development machine:
-
-```sh
-# Replace with the IP address of your Microshift instance
-export MICROSHIFT_IP=10.42.0.2
-
-# Setup the server IP
-echo "${MICROSHIFT_IP} microshift.dev gerrit.sftests.com zuul.sftests.com logserver.sftests.com" | sudo tee -a /etc/hosts
-
-# Install confmgmt tools
-sudo dnf install -y ansible-core git
-ansible-galaxy collection install community.general community.crypto ansible.posix
-
-# Setup recipe
-mkdir -p deploy; cd deploy
-git clone https://github.com/openstack-k8s-operators/ansible-microshift-role
-cat << EOF > ansible.cfg
-[defaults]
-roles_path = ./
-force_handlers = True
-EOF
-
-cat << EOF > deploy-microshift.yaml
-- hosts: microshift.dev
-  vars:
-    fqdn: microshift.dev
-    disk_file_sparsed: true
-    standard_user: false
-    create_pv: false
-    openshift_pull_secret: |
-      <COPY THE PULL SECRET HERE>
-  roles:
-    - ansible-microshift-role
-  tasks:
-    # This overwrite your local kube/config so backup it before and comment that task.
-    - fetch:
-        src: /var/lib/microshift/resources/kubeadmin/microshift.dev/kubeconfig
-        dest: "~/.kube/config"
-        flat: true
-      become: yes
-EOF
-
-cat << EOF > inventory.yaml
-[microshift.dev]
-microshift.dev:
-  # Adapt the username if needed
-  ansible_user: cloud-user
-EOF
-
-# Run recipe
-ansible-playbook -i inventory.yaml deploy-microshift.yaml
-
-# Validate deployment
-kubectl cluster-info
-```
+We provide [instructions and a deployment script](./tools/microshift/README.md) in the `tools/microshift` folder if you need help setting up your own instance.
 
 ### Dependencies for hacking on the sf-operator
 
