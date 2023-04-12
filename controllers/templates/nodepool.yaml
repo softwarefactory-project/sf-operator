@@ -24,6 +24,11 @@ spec:
       containers:
       - name: launcher
         image: quay.io/software-factory/nodepool-launcher:8.2.0-1
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         volumeMounts:
         - name: nodepool-config
           mountPath: /etc/nodepool
@@ -38,3 +43,9 @@ spec:
       - name: zookeeper-client-tls
         secret:
           secretName: zookeeper-client-tls
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
