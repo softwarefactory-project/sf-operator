@@ -40,6 +40,15 @@ type ZookeeperSpec struct {
 	StorageSize string `json:"storageSize"`
 }
 
+type LogServerSpec struct {
+	// Logs Older that "x" days will be purge ( default 60 days )
+	// +optional
+	RetentionDays int `json:"retentionDays"`
+	// Logs Check. Log will be checked every "X" seconds ( default 3600 s ~= 1 hour )
+	// +optional
+	LoopDelay int `json:"loopDelay"`
+}
+
 type Secret struct {
 	// Name of the referent.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -73,6 +82,9 @@ type SoftwareFactorySpec struct {
 
 	// Zookeeper service spec
 	Zookeeper ZookeeperSpec `json:"zookeeper,omitempty"`
+
+	// Logserver service spec
+	Logserver LogServerSpec `json:"logserver,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

@@ -57,6 +57,18 @@ spec:
                   sshd_max_connections_per_user:
                     type: string
                 type: object
+              logserver:
+                description: Logserver service spec
+                properties:
+                  loopDelay:
+                    description: Logs Check. Log will be checked every "X" seconds
+                      ( default 3600 s ~= 1 hour )
+                    type: integer
+                  retentionDays:
+                    description: Logs Older that "x" days will be purge ( default
+                      60 days )
+                    type: integer
+                type: object
               storageClassName:
                 description: Default storage class to use by Persistent Volume Claims
                 type: string
