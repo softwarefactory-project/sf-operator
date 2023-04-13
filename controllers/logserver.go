@@ -8,7 +8,6 @@ package controllers
 import (
 	_ "embed"
 	"encoding/base64"
-
 	"k8s.io/utils/pointer"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -21,7 +20,8 @@ const LOGSERVER_IMAGE = "registry.access.redhat.com/rhscl/httpd-24-rhel7:latest"
 
 const LOGSERVER_SSHD_PORT = 2222
 const LOGSERVER_SSHD_PORT_NAME = "logserver-sshd"
-const LOGSERVER_SSHD_IMAGE = "quay.io/software-factory/rsync-server:1-2"
+
+const LOGSERVER_SSHD_IMAGE = "quay.io/software-factory/rsync-server:1-4"
 
 const CONTAINER_HTTP_BASE_DIR = "/opt/rh/httpd24/root"
 
@@ -65,10 +65,6 @@ func (r *SFController) DeployLogserver() bool {
 		},
 	}
 
-	securityContext := &apiv1.SecurityContext{
-		RunAsNonRoot: pointer.BoolPtr(true),
-	}
-
 	// Create the deployment
 	dep := create_statefulset(r.ns, LOGSERVER_IDENT, LOGSERVER_IMAGE, get_storage_classname(r.cr.Spec))
 
@@ -88,7 +84,17 @@ func (r *SFController) DeployLogserver() bool {
 
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", LOGSERVER_HTTPD_PORT)
 
-	dep.Spec.Template.Spec.Containers[0].SecurityContext = securityContext
+	podSecurityContext := &apiv1.PodSecurityContext{
+		RunAsUser:    pointer.Int64(1000),
+		FSGroup:      pointer.Int64(1000),
+		RunAsNonRoot: pointer.Bool(true),
+		SeccompProfile: &apiv1.SeccompProfile{
+			Type: "RuntimeDefault",
+		},
+	}
+
+	dep.Spec.Template.Spec.SecurityContext = podSecurityContext
+	dep.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
 
 	// Create services exposed by logserver
 	service_ports := []int32{LOGSERVER_HTTPD_PORT}
@@ -128,12 +134,13 @@ func (r *SFController) DeployLogserver() bool {
 
 	// Setup the sidecar container for sshd
 	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
-		Name:         LOGSERVER_SSHD_PORT_NAME,
-		Image:        LOGSERVER_SSHD_IMAGE,
-		Command:      []string{"/entrypoint.sh"},
-		VolumeMounts: volumeMounts_sidecar,
-		Env:          env_sidecar,
-		Ports:        ports_sidecar,
+		Name:            LOGSERVER_SSHD_PORT_NAME,
+		Image:           LOGSERVER_SSHD_IMAGE,
+		Command:         []string{"/entrypoint.sh"},
+		VolumeMounts:    volumeMounts_sidecar,
+		Env:             env_sidecar,
+		Ports:           ports_sidecar,
+		SecurityContext: &defaultContainerSecurityContext,
 	})
 
 	r.GetOrCreate(&dep)
