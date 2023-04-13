@@ -17,6 +17,28 @@
           - websocket-client
   when: install_requirements | bool == true
 
+- name: Run make
+  command: make
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Check for diff
+  command: git diff
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+  register: render_diff
+
+- name: Abort on diff
+  when:
+    - render_diff.stdout
+  failed_when: true
+  debug:
+    msg: |
+      The repository content is not consistent.
+      Please commit the change made after running `make`.
+
+      {{ render_diff.stdout }}
+
 - name: Check cluster access
   command: kubectl cluster-info
 
