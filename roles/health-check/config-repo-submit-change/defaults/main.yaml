@@ -1,3 +1,5 @@
 zuul_web_url: "https://{{ zuul_host }}"
 validate_certs: yes
 retries: 180
+config_file_path: "resources/myfile-test.yaml"
+repository_name: "ichiban-config-test"

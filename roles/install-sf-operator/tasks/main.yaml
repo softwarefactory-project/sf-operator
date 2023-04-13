@@ -10,9 +10,11 @@
           - python3-pip
       become: true
 
-    - name: Install git-review
+    - name: Install pip packages
       pip:
-        name: git-review
+        name:
+          - git-review
+          - websocket-client
   when: install_requirements | bool == true
 
 - name: Check cluster access

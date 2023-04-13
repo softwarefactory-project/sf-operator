@@ -11,35 +11,10 @@
 - set_fact:
     random: "{{ lookup('community.general.random_string', special=false, length=8) }}"
 
+# Vars used in health-check/config-repo-submit-change
 - set_fact:
     config_file_path: "resources/myfile-{{ random }}.yaml"
-    repository_name: ichiban-config-{{ random }}
-
-- name: Create a resources file
-  copy:
-    content: |
-      resources:
-        projects:
-          ichiban-cloud-{{ random }}:
-            tenant: internal
-            description: The best cloud platform engine
-            source-repositories:
-              - ichiban-config-{{ random }}:
-                  connection: gerrit
-                  zuul/config-project: True
-        repos:
-          {{ repository_name }}:
-            description: The config project of ichiban-cloud
-            acl: config-acl
-    dest: "{{ config_path }}/{{ config_file_path }}"
-
-- name: Commit file in the config repo
-  command: "{{ item }}"
-  args:
-    chdir: "{{ config_path }}"
-  loop:
-    - "git add {{ config_file_path }}"
-    - "git commit -m 'Add {{ config_file_path }}'"
+    repository_name: "ichiban-config-{{ random }}"
 
 - include_role:
     name: "roles/health-check/config-repo-submit-change"

@@ -1,0 +1,21 @@
+---
+# FROM: https://opendev.org/zuul/zuul-operator/src/branch/master/playbooks/zuul-operator-functional/test.yaml#L157-L187
+- name: Wait for config-update post job
+  ansible.builtin.shell: |
+    curl -sk https://{{ zuul_host }}/api/tenant/internal/status | jq -r '.pipelines[].change_queues[].heads[][].jobs[]' | jq -rc 'select(.name == "config-update")' | jq -r '.uuid'
+  register: _job_uuid
+  until: _job_uuid.stdout != "" and "null" not in _job_uuid.stdout
+  retries: 60
+  delay: 1
+
+# Helpful command:
+- name: Connect to console-stream
+  ansible.builtin.shell: |
+    (sleep 30; echo "") | wsdump --nocert -r -t '{"uuid":"{{ _job_uuid.stdout_lines[0] }}","logfile":"console.log"}' wss://{{ zuul_host }}/api/tenant/internal/console-stream
+  register: console_stream
+  failed_when: false
+
+- name: Fail if console stream does not contains expected job output
+  when: "'Job console starting...' not in console_stream.stdout"
+  fail:
+    msg: "Task output is missing from: {{ console_stream.stdout }}"
