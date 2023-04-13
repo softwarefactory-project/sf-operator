@@ -75,8 +75,8 @@ func (r *SFController) DeployMariadb() bool {
 	dep.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_tcp_probe(MARIADB_PORT)
 
 	r.GetOrCreate(&dep)
-
-	srv := create_service(r.ns, "mariadb", "mariadb", MARIADB_PORT, MARIADB_PORT_NAME)
+	service_ports := []int32{MARIADB_PORT}
+	srv := create_service(r.ns, "mariadb", "mariadb", service_ports, MARIADB_PORT_NAME)
 	r.GetOrCreate(&srv)
 
 	return r.IsStatefulSetReady(&dep)

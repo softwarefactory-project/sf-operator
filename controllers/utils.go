@@ -398,20 +398,24 @@ func create_deployment(ns string, name string, image string) appsv1.Deployment {
 }
 
 // create a default service.
-func create_service(ns string, name string, selector string, port int32, port_name string) apiv1.Service {
+func create_service(ns string, name string, selector string, ports []int32, port_name string) apiv1.Service {
+	service_ports := []apiv1.ServicePort{}
+	for _, p := range ports {
+		service_ports = append(
+			service_ports,
+			apiv1.ServicePort{
+				Name:     fmt.Sprintf("%s-%d", port_name, p),
+				Protocol: apiv1.ProtocolTCP,
+				Port:     p,
+			})
+	}
 	return apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 		},
 		Spec: apiv1.ServiceSpec{
-			Ports: []apiv1.ServicePort{
-				{
-					Name:     port_name,
-					Protocol: apiv1.ProtocolTCP,
-					Port:     port,
-				},
-			},
+			Ports: service_ports,
 			Selector: map[string]string{
 				"app": "sf",
 				"run": selector,
@@ -420,7 +424,18 @@ func create_service(ns string, name string, selector string, port int32, port_na
 }
 
 // create a headless service.
-func create_headless_service(ns string, name string, selector string, port int32, port_name string) apiv1.Service {
+func create_headless_service(ns string, name string, selector string, ports []int32, port_name string) apiv1.Service {
+	service_ports := []apiv1.ServicePort{}
+	for _, p := range ports {
+		service_ports = append(
+			service_ports,
+			apiv1.ServicePort{
+				Name:     fmt.Sprintf("%s-%d", port_name, p),
+				Protocol: apiv1.ProtocolTCP,
+				Port:     p,
+			})
+	}
+
 	return apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name + "-headless",
@@ -428,18 +443,13 @@ func create_headless_service(ns string, name string, selector string, port int32
 		},
 		Spec: apiv1.ServiceSpec{
 			ClusterIP: "None",
-			Ports: []apiv1.ServicePort{
-				{
-					Name:     port_name,
-					Protocol: apiv1.ProtocolTCP,
-					Port:     port,
-				},
-			},
+			Ports:     service_ports,
 			Selector: map[string]string{
 				"app": "sf",
 				"run": selector,
 			},
-		}}
+		},
+	}
 }
 
 // --- readiness probes (validate a pod is ready to serve) ---

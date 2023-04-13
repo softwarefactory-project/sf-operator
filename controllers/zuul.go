@@ -248,10 +248,12 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		r.UpdateR(&zw)
 	}
 
-	srv := create_service(r.ns, "zuul-web", "zuul-web", ZUUL_WEB_PORT, "zuul-web")
+	service_ports := []int32{ZUUL_WEB_PORT}
+	srv := create_service(r.ns, "zuul-web", "zuul-web", service_ports, "zuul-web")
 	r.GetOrCreate(&srv)
 
-	srv_ze := create_headless_service(r.ns, "zuul-executor", "zuul-executor", ZUUL_EXECUTOR_PORT, "zuul-executor")
+	headless_ports := []int32{ZUUL_EXECUTOR_PORT}
+	srv_ze := create_headless_service(r.ns, "zuul-executor", "zuul-executor", headless_ports, "zuul-executor")
 	r.GetOrCreate(&srv_ze)
 
 	return r.IsStatefulSetReady(&zs) && r.IsStatefulSetReady(&ze) && r.IsDeploymentReady(&zw)

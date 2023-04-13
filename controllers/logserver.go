@@ -91,8 +91,9 @@ func (r *SFController) DeployLogserver() bool {
 	dep.Spec.Template.Spec.Containers[0].SecurityContext = securityContext
 
 	// Create services exposed by logserver
+	service_ports := []int32{LOGSERVER_HTTPD_PORT}
 	httpd_service := create_service(
-		r.ns, LOGSERVER_HTTPD_PORT_NAME, LOGSERVER_IDENT, LOGSERVER_HTTPD_PORT, LOGSERVER_HTTPD_PORT_NAME)
+		r.ns, LOGSERVER_HTTPD_PORT_NAME, LOGSERVER_IDENT, service_ports, LOGSERVER_HTTPD_PORT_NAME)
 
 	r.GetOrCreate(&httpd_service)
 
@@ -137,7 +138,8 @@ func (r *SFController) DeployLogserver() bool {
 
 	r.GetOrCreate(&dep)
 
-	sshd_service := create_service(r.ns, LOGSERVER_SSHD_PORT_NAME, LOGSERVER_IDENT, LOGSERVER_SSHD_PORT, LOGSERVER_SSHD_PORT_NAME)
+	sshd_service_ports := []int32{LOGSERVER_SSHD_PORT}
+	sshd_service := create_service(r.ns, LOGSERVER_SSHD_PORT_NAME, LOGSERVER_IDENT, sshd_service_ports, LOGSERVER_SSHD_PORT_NAME)
 	r.GetOrCreate(&sshd_service)
 
 	ready := r.IsStatefulSetReady(&dep)
