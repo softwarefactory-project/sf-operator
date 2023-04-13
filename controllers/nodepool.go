@@ -1,36 +1,88 @@
-// Copyright (C) 2022 Red Hat
+// Copyright (C) 2023 Red Hat
 // SPDX-License-Identifier: Apache-2.0
-
 package controllers
 
 import (
 	_ "embed"
-
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
-//go:embed templates/nodepool.yaml
-var nodepool_objs string
+//go:embed static/nodepool/nodepool.yaml
+var nodepoolconf string
 
-func (r *SFController) EnsureNodepoolSecrets() {
+const NL_IDENT = "nodepool-launcher"
+const NL_WEBAPP_PORT_NAME = "nlwebapp"
+const NL_WEBAPP_PORT = 8006
+
+func (r *SFController) DeployNodepool() bool {
+	cert_client := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper")
+	r.GetOrCreate(&cert_client)
+
 	r.GetOrCreate(&apiv1.Secret{
 		Data: map[string][]byte{
-			"nodepool.yaml": []byte(`
-labels: []
-providers: []
-`),
+			"nodepool.yaml": []byte(nodepoolconf),
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "nodepool-yaml", Namespace: r.ns},
 	})
 
-}
+	annotations := map[string]string{
+		"nodepool.yaml": checksum([]byte(nodepoolconf)),
+	}
 
-func (r *SFController) DeployNodepool() bool {
-	r.EnsureNodepoolSecrets()
-	r.CreateYAMLs(nodepool_objs)
-	var dep appsv1.Deployment
-	r.GetM("nodepool-launcher", &dep)
-	return r.IsDeploymentReady(&dep)
+	podSecurityContext := &apiv1.PodSecurityContext{
+		RunAsUser:    pointer.Int64(10001),
+		FSGroup:      pointer.Int64(10001),
+		RunAsNonRoot: pointer.Bool(true),
+		SeccompProfile: &apiv1.SeccompProfile{
+			Type: "RuntimeDefault",
+		},
+	}
+	nl := create_deployment(r.ns, "nodepool-launcher", "")
+	volumes := []apiv1.Volume{
+		create_volume_secret("nodepool-config", "nodepool-yaml"),
+		create_volume_secret("zookeeper-client-tls"),
+	}
+	volume_mount := []apiv1.VolumeMount{
+		{
+			Name:      "zookeeper-client-tls",
+			MountPath: "/tls/client",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "nodepool-config",
+			MountPath: "/etc/nodepool/nodepool.yaml",
+			SubPath:   "nodepool.yaml",
+		},
+	}
+	container := apiv1.Container{
+		Name:            "launcher",
+		Image:           "quay.io/software-factory/" + NL_IDENT + ":8.2.0-1",
+		SecurityContext: &defaultContainerSecurityContext,
+		VolumeMounts:    volume_mount,
+	}
+	nl.Spec.Template.Spec.Volumes = volumes
+	nl.Spec.Template.Spec.Containers = []apiv1.Container{container}
+	nl.Spec.Template.ObjectMeta.Annotations = annotations
+	// FIXME: Add readiness and liveness probe when they are available.
+	//nl.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
+	//nl.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
+	nl.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+		create_container_port(NL_WEBAPP_PORT, NL_WEBAPP_PORT_NAME),
+	}
+
+	nl.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
+	nl.Spec.Template.Spec.SecurityContext = podSecurityContext
+	r.GetOrCreate(&nl)
+	nl_dirty := false
+	if !map_equals(&nl.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		nl.Spec.Template.ObjectMeta.Annotations = annotations
+		nl_dirty = true
+	}
+	if nl_dirty {
+		r.UpdateR(&nl)
+	}
+
+	return r.IsDeploymentReady(&nl)
 }

@@ -1,0 +1,13 @@
+---
+diskimages: []
+labels: []
+providers: []
+webapp:
+  port: 8006
+zookeeper-servers:
+  - host: zookeeper
+    port: 2281
+zookeeper-tls:
+  ca: /tls/client/ca.crt
+  cert: /tls/client/tls.crt
+  key: /tls/client/tls.key
