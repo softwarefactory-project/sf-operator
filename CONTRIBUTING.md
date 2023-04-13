@@ -66,7 +66,7 @@ kubectl config current-context
 4. Start the operator:
 
    ```sh
-   go run ./main.go --namespace default --cr "./my-sf.yaml"
+   go run ./main.go --namespace default --cr ./my-sf.yaml
    ```
 
 ### Access services with the browser
@@ -119,6 +119,14 @@ the default `microshift_host` var:
 ```sh
 ./tools/run-ci-tests.sh --extra-vars "microshift_host=my-microshift"
 ```
+
+To fetch the test suite artifacts locally, run:
+
+```sh
+./tools/fetch-artifacts.sh
+```
+
+Artifacts will be available in the `/tmp/sf-operator-artifacts/` directory.
 
 ### Interact with the deployment
 

@@ -1,3 +1,6 @@
+output_logs_dir: ~/zuul-output/logs
+
 pod_name: "logserver-0"
 container_name: "logserver"
-logserver_copy_content_dest: "/tmp/logserver-content"
+
+output_dir: "{{ output_logs_dir }}/logserver-content"

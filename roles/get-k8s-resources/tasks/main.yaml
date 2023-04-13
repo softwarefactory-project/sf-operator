@@ -1,0 +1,44 @@
+- name: "Ensure {{ output_dir }}"
+  file:
+    path: "{{ output_dir }}"
+    state: directory
+
+- name: Get all resources in current namespace
+  shell: |
+    kubectl get all > {{ output_dir }}/namespace-resources-all.txt
+
+- name: Get all resources over all namespaces
+  shell: |
+    kubectl get all -A > {{ output_dir }}/cluster-resources-all.txt
+
+- name: Get events
+  shell: |
+    kubectl get events > {{ output_dir }}/events.txt
+
+- name: Get nodes information
+  shell: |
+    kubectl describe nodes > {{ output_dir }}/nodes.txt
+
+- name: Describe namespace resources
+  shell: |
+    for item in $(kubectl get {{ item }} -o name); do
+      mkdir -p {{ output_dir }}/$(dirname $item)
+      kubectl describe $item > {{ output_dir }}/${item}.txt
+    done
+  ignore_errors: true
+  loop:
+    - pods
+    - deployments
+    - statefulsets
+    - services
+    - secrets
+    - configmaps
+    - pvc
+    - pv
+
+- name: Collect namespace pods logs
+  shell: |
+    for pod in $(kubectl get pods -o name); do
+      mkdir -p {{ output_dir }}/$(dirname $pod)
+      kubectl logs $pod > {{ output_dir }}/${pod}-logs.txt
+    done
