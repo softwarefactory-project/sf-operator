@@ -8,6 +8,7 @@ package controllers
 import (
 	_ "embed"
 	"encoding/base64"
+
 	"k8s.io/utils/pointer"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -21,7 +22,7 @@ const LOGSERVER_IMAGE = "registry.access.redhat.com/rhscl/httpd-24-rhel7:latest"
 const LOGSERVER_SSHD_PORT = 2222
 const LOGSERVER_SSHD_PORT_NAME = "logserver-sshd"
 
-const LOGSERVER_SSHD_IMAGE = "quay.io/software-factory/rsync-server:1-4"
+const LOGSERVER_SSHD_IMAGE = "quay.io/software-factory/rsync-server:1-5"
 
 const CONTAINER_HTTP_BASE_DIR = "/opt/rh/httpd24/root"
 
