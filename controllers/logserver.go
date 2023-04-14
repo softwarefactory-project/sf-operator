@@ -192,8 +192,10 @@ func (r *SFController) DeployLogserver() bool {
 	sshd_service := r.create_service(LOGSERVER_SSHD_PORT_NAME, LOGSERVER_IDENT, sshd_service_ports, LOGSERVER_SSHD_PORT_NAME)
 	r.GetOrCreate(&sshd_service)
 
+	pvc_readiness := r.reconcile_expand_pvc(LOGSERVER_IDENT, r.cr.Spec.Logserver.Storage)
+
 	ready := r.IsDeploymentReady(&dep)
-	if ready {
+	if ready && pvc_readiness {
 		return true
 	} else {
 		return false
