@@ -8,13 +8,13 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-//go:embed static/zookeeper/ok
+//go:embed static/zookeeper/ok.sh
 var zookeeper_ok string
 
-//go:embed static/zookeeper/ready
+//go:embed static/zookeeper/ready.sh
 var zookeeper_ready string
 
-//go:embed static/zookeeper/run
+//go:embed static/zookeeper/run.sh
 var zookeeper_run string
 
 const ZOOKEEPER_PORT_NAME = "zk"
@@ -34,8 +34,8 @@ const ZK_PI_MOUNT_PATH = "/config-scripts"
 const ZK_DATA_MOUNT_PATH = "/data"
 
 func (r *SFController) DeployZookeeper() bool {
-	cert := r.create_client_certificate(r.ns, "zookeeper-server", "ca-issuer", "zookeeper-server-tls", "zookeeper")
-	cert_client := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper")
+	cert := r.create_client_certificate(r.ns, "zookeeper-server", "ca-issuer", "zookeeper-server-tls", ZK_IDENT)
+	cert_client := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls", ZK_IDENT)
 	r.GetOrCreate(&cert)
 	r.GetOrCreate(&cert_client)
 
@@ -73,7 +73,7 @@ func (r *SFController) DeployZookeeper() bool {
 	}
 
 	container := apiv1.Container{
-		Name:    "zookeeper",
+		Name:    ZK_IDENT,
 		Image:   "quay.io/software-factory/" + ZK_IDENT + ":3.8.0-2",
 		Command: []string{"/bin/bash", "/config-scripts/run.sh"},
 		Env: []apiv1.EnvVar{
@@ -97,14 +97,14 @@ func (r *SFController) DeployZookeeper() bool {
 	}
 
 	service_ports := []int32{ZOOKEEPER_SSL_PORT}
-	srv := create_service(r.ns, "zookeeper", "zookeeper", service_ports, "zookeeper")
+	srv := create_service(r.ns, ZK_IDENT, ZK_IDENT, service_ports, ZK_IDENT)
 	r.GetOrCreate(&srv)
 
 	headless_ports := []int32{ZOOKEEPER_SSL_PORT, ZOOKEEPER_ELECTION_PORT, ZOOKEEPER_SERVER_PORT}
-	srv_zk := create_headless_service(r.ns, "zookeeper", "zookeeper", headless_ports, "zookeeper")
+	srv_zk := create_headless_service(r.ns, ZK_IDENT, ZK_IDENT, headless_ports, ZK_IDENT)
 	r.GetOrCreate(&srv_zk)
 
-	zk := create_headless_statefulset(r.ns, "zookeeper", "", get_storage_classname(r.cr.Spec))
+	zk := create_headless_statefulset(r.ns, ZK_IDENT, "", get_storage_classname(r.cr.Spec))
 	zk.Spec.VolumeClaimTemplates = append(
 		zk.Spec.VolumeClaimTemplates,
 		create_pvc(r.ns, ZK_IDENT+"-data", get_storage_classname(r.cr.Spec)))
