@@ -11,6 +11,7 @@ import (
 	ini "gopkg.in/ini.v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
@@ -39,11 +40,6 @@ func is_statefulset(service string) bool {
 func create_zuul_container(fqdn string, service string) []apiv1.Container {
 	volumes := []apiv1.VolumeMount{
 		{
-			Name:      "ca-cert",
-			MountPath: "/ca-cert",
-			ReadOnly:  true,
-		},
-		{
 			Name:      "zuul-config",
 			MountPath: "/etc/zuul",
 			ReadOnly:  true,
@@ -62,10 +58,16 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 			MountPath: "/var/lib/zuul-ssh",
 			ReadOnly:  true,
 		},
+		{
+			Name:      "ca-cert",
+			MountPath: "/etc/pki/ca-trust/source/anchors/ca.crt",
+			ReadOnly:  true,
+			SubPath:   "ca.crt",
+		},
 	}
 	command := []string{
 		"sh", "-c",
-		fmt.Sprintf("cp /ca-cert/ca.crt /etc/pki/ca-trust/source/anchors/ && update-ca-trust && exec %s -f -d", service),
+		fmt.Sprintf("exec %s -f -d", service),
 	}
 	container := apiv1.Container{
 		Name:    service,
@@ -80,11 +82,6 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 			create_env("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
 		},
 		VolumeMounts: volumes,
-	}
-	if service == "zuul-executor" {
-		container.SecurityContext = &apiv1.SecurityContext{
-			Privileged: boolPtr(true),
-		}
 	}
 	return []apiv1.Container{container}
 }
@@ -148,6 +145,7 @@ func init_scheduler_config() apiv1.Container {
 		VolumeMounts: []apiv1.VolumeMount{
 			{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
 		},
+		SecurityContext: &defaultContainerSecurityContext,
 	}
 }
 
@@ -167,6 +165,10 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 				Name:  "CONFIG_REPO_USER",
 				Value: config_user,
 			},
+			{
+				Name:  "HOME",
+				Value: "/var/lib/zuul",
+			},
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
@@ -175,7 +177,8 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 				SubPath:   "generate-zuul-tenant-yaml.sh",
 				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
 		},
-		ReadinessProbe: create_readiness_cmd_probe([]string{"cat", "/tmp/healthy"}),
+		ReadinessProbe:  create_readiness_cmd_probe([]string{"cat", "/tmp/healthy"}),
+		SecurityContext: &defaultContainerSecurityContext,
 	}
 	return container
 }
@@ -184,6 +187,17 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	annotations := map[string]string{
 		"zuul-config": checksum([]byte(config)),
 	}
+
+	// NOTE: Change to "defaultPodSecurityContext", when image will use non root user.
+	podSecurityContext := &apiv1.PodSecurityContext{
+		RunAsUser:    pointer.Int64(10001),
+		FSGroup:      pointer.Int64(10001),
+		RunAsNonRoot: pointer.Bool(true),
+		SeccompProfile: &apiv1.SeccompProfile{
+			Type: "RuntimeDefault",
+		},
+	}
+
 	fqdn := r.cr.Spec.FQDN
 
 	scheduler_tooling_data := make(map[string]string)
@@ -200,6 +214,9 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zs.Spec.Template.Spec.Volumes = zs_volumes
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
+	zs.Spec.Template.Spec.SecurityContext = podSecurityContext
+	zs.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
+
 	r.GetOrCreate(&zs)
 	zs_dirty := false
 	if !map_equals(&zs.Spec.Template.ObjectMeta.Annotations, &annotations) {
@@ -221,6 +238,13 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	ze.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		create_container_port(ZUUL_EXECUTOR_PORT, ZUUL_EXECUTOR_PORT_NAME),
 	}
+	// NOTE(dpawlik): Zuul Executor needs to privileged pod, due error in the console log:
+	// "bwrap: Can't bind mount /oldroot/etc/resolv.conf on /newroot/etc/resolv.conf: Permission denied""
+	ze.Spec.Template.Spec.SecurityContext = podSecurityContext
+	ze.Spec.Template.Spec.Containers[0].SecurityContext = &apiv1.SecurityContext{
+		Privileged: boolPtr(true),
+	}
+
 	r.GetOrCreate(&ze)
 	ze_dirty := false
 	if !map_equals(&ze.Spec.Template.ObjectMeta.Annotations, &annotations) {
@@ -238,6 +262,10 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
+
+	zw.Spec.Template.Spec.SecurityContext = podSecurityContext
+	zw.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
+
 	r.GetOrCreate(&zw)
 	zw_dirty := false
 	if !map_equals(&zw.Spec.Template.ObjectMeta.Annotations, &annotations) {
