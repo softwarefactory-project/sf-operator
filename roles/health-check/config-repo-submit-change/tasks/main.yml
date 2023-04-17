@@ -1,6 +1,6 @@
 ---
-- name: Create test resource commit
-  include_tasks: create-test-resource.yaml
+- name: Submit change
+  include_tasks: submit-change.yaml
 
 - name: Verify Zuul Console output
   include_tasks: ensure-zuul-console-success.yaml

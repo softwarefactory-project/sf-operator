@@ -11,13 +11,18 @@
 - set_fact:
     random: "{{ lookup('community.general.random_string', special=false, length=8) }}"
 
-# Vars used in health-check/config-repo-submit-change
-- set_fact:
+- name: create vars to generatel and submit resources addition
+  set_fact:
     config_file_path: "resources/myfile-{{ random }}.yaml"
     repository_name: "ichiban-config-{{ random }}"
 
 - include_role:
-    name: "roles/health-check/config-repo-submit-change"
+    name: "roles/{{ role }}"
+  loop:
+    - health-check/config-repo-create-resources
+    - health-check/config-repo-submit-change
+  loop_control:
+    loop_var: role
 
 - name: Ensure repository exists in Gerrit
   uri:
