@@ -83,7 +83,9 @@ kubectl config current-context
 ### Access services with the browser
 
 If the FQDN is not already configured to point at your kubernetes cluster inbound,
-then you need to setup a local entry in /etc/hosts:
+then you need to setup a local entry in /etc/hosts.
+
+Verify services by running:
 
 ```sh
 firefox https://zuul.sftests.com

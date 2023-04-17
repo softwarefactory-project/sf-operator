@@ -19,9 +19,11 @@
       logclassify_debug: false
       logclassify_report: true
       # microshift deployment
-      configure_dnsmasq: false
       disk_file_sparsed: true
       standard_user: false
       create_pv: false
       # post tasks artifacts directory
       output_logs_dir: ~/zuul-output/logs
+      # dnsmasq
+      microshift_additional_addresses:
+        - "sftests.com"
