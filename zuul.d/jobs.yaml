@@ -20,6 +20,7 @@
       logclassify_report: true
       # microshift deployment
       microshift_version: 4.12
+      configure_dnsmasq: false
       disk_file_sparsed: true
       standard_user: false
       create_pv: false
