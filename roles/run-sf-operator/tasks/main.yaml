@@ -1,4 +1,4 @@
 - name: Run the operator
-  command: go run ./main.go --namespace default --oneshot --cr playbooks/files/allinone.yaml
+  command: go run ./main.go --namespace sf --oneshot --cr playbooks/files/allinone.yaml
   args:
     chdir: "{{ zuul.project.src_dir }}"

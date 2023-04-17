@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -ex
-
+export HOME=/gerrit
 GERRIT_SITE="/gerrit"
 GERRIT_CERT="/gerrit-cert"
 

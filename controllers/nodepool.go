@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 )
 
 //go:embed static/nodepool/nodepool.yaml
@@ -31,14 +30,6 @@ func (r *SFController) DeployNodepool() bool {
 		"nodepool.yaml": checksum([]byte(nodepoolconf)),
 	}
 
-	podSecurityContext := &apiv1.PodSecurityContext{
-		RunAsUser:    pointer.Int64(10001),
-		FSGroup:      pointer.Int64(10001),
-		RunAsNonRoot: pointer.Bool(true),
-		SeccompProfile: &apiv1.SeccompProfile{
-			Type: "RuntimeDefault",
-		},
-	}
 	nl := create_deployment(r.ns, "nodepool-launcher", "")
 	volumes := []apiv1.Volume{
 		create_volume_secret("nodepool-config", "nodepool-yaml"),
@@ -59,7 +50,7 @@ func (r *SFController) DeployNodepool() bool {
 	container := apiv1.Container{
 		Name:            "launcher",
 		Image:           "quay.io/software-factory/" + NL_IDENT + ":8.2.0-1",
-		SecurityContext: &defaultContainerSecurityContext,
+		SecurityContext: create_security_context(false),
 		VolumeMounts:    volume_mount,
 	}
 	nl.Spec.Template.Spec.Volumes = volumes
@@ -72,8 +63,6 @@ func (r *SFController) DeployNodepool() bool {
 		create_container_port(NL_WEBAPP_PORT, NL_WEBAPP_PORT_NAME),
 	}
 
-	nl.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
-	nl.Spec.Template.Spec.SecurityContext = podSecurityContext
 	r.GetOrCreate(&nl)
 	nl_dirty := false
 	if !map_equals(&nl.Spec.Template.ObjectMeta.Annotations, &annotations) {

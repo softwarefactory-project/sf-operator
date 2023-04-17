@@ -80,6 +80,7 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 			create_secret_env("ZUUL_AUTH_SECRET", "zuul-auth-secret", ""),
 			create_env("ZUUL_FQDN", fqdn),
 			create_env("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
+			create_env("HOME", "/var/lib/zuul"),
 		},
 		VolumeMounts: volumes,
 	}
@@ -145,7 +146,7 @@ func init_scheduler_config() apiv1.Container {
 		VolumeMounts: []apiv1.VolumeMount{
 			{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
 		},
-		SecurityContext: &defaultContainerSecurityContext,
+		SecurityContext: create_security_context(false),
 	}
 }
 
@@ -157,18 +158,9 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 		Command: []string{"sh", "-c", zuul_scheduler_sidecar_entrypoint},
 		Env: []apiv1.EnvVar{
 			create_secret_env("SF_ADMIN_SSH", "admin-ssh-key", "priv"),
-			{
-				Name:  "CONFIG_REPO_URL",
-				Value: config_url,
-			},
-			{
-				Name:  "CONFIG_REPO_USER",
-				Value: config_user,
-			},
-			{
-				Name:  "HOME",
-				Value: "/var/lib/zuul",
-			},
+			create_env("CONFIG_REPO_URL", config_url),
+			create_env("CONFIG_REPO_USER", config_user),
+			create_env("HOME", "/var/lib/zuul"),
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
@@ -178,7 +170,7 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
 		},
 		ReadinessProbe:  create_readiness_cmd_probe([]string{"cat", "/tmp/healthy"}),
-		SecurityContext: &defaultContainerSecurityContext,
+		SecurityContext: create_security_context(false),
 	}
 	return container
 }
@@ -186,16 +178,6 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, config string) bool {
 	annotations := map[string]string{
 		"zuul-config": checksum([]byte(config)),
-	}
-
-	// NOTE: Change to "defaultPodSecurityContext", when image will use non root user.
-	podSecurityContext := &apiv1.PodSecurityContext{
-		RunAsUser:    pointer.Int64(10001),
-		FSGroup:      pointer.Int64(10001),
-		RunAsNonRoot: pointer.Bool(true),
-		SeccompProfile: &apiv1.SeccompProfile{
-			Type: "RuntimeDefault",
-		},
 	}
 
 	fqdn := r.cr.Spec.FQDN
@@ -214,8 +196,6 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zs.Spec.Template.Spec.Volumes = zs_volumes
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
-	zs.Spec.Template.Spec.SecurityContext = podSecurityContext
-	zs.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
 
 	r.GetOrCreate(&zs)
 	zs_dirty := false
@@ -240,10 +220,8 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	}
 	// NOTE(dpawlik): Zuul Executor needs to privileged pod, due error in the console log:
 	// "bwrap: Can't bind mount /oldroot/etc/resolv.conf on /newroot/etc/resolv.conf: Permission denied""
-	ze.Spec.Template.Spec.SecurityContext = podSecurityContext
-	ze.Spec.Template.Spec.Containers[0].SecurityContext = &apiv1.SecurityContext{
-		Privileged: boolPtr(true),
-	}
+	ze.Spec.Template.Spec.Containers[0].SecurityContext = create_security_context(true)
+	ze.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = pointer.Int64(1000)
 
 	r.GetOrCreate(&ze)
 	ze_dirty := false
@@ -262,9 +240,6 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
-
-	zw.Spec.Template.Spec.SecurityContext = podSecurityContext
-	zw.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
 
 	r.GetOrCreate(&zw)
 	zw_dirty := false

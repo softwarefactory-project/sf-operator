@@ -200,13 +200,16 @@ var defaultPodSecurityContext = apiv1.PodSecurityContext{
 	},
 }
 
-var defaultContainerSecurityContext = apiv1.SecurityContext{
-	AllowPrivilegeEscalation: pointer.Bool(false),
-	Capabilities: &apiv1.Capabilities{
-		Drop: []apiv1.Capability{
-			"ALL",
+func create_security_context(privileged bool) *apiv1.SecurityContext {
+	return &apiv1.SecurityContext{
+		Privileged:               pointer.Bool(privileged),
+		AllowPrivilegeEscalation: pointer.Bool(privileged),
+		Capabilities: &apiv1.Capabilities{
+			Drop: []apiv1.Capability{
+				"ALL",
+			},
 		},
-	},
+	}
 }
 
 func create_env(env string, value string) apiv1.EnvVar {
@@ -321,6 +324,7 @@ func create_statefulset(ns string, name string, image string, storageClassName s
 		Name:            name,
 		Image:           image,
 		ImagePullPolicy: "IfNotPresent",
+		SecurityContext: create_security_context(false),
 	}
 	pvc := create_pvc(ns, name, storageClassName)
 	return appsv1.StatefulSet{
@@ -345,6 +349,7 @@ func create_statefulset(ns string, name string, image string, storageClassName s
 					},
 				},
 				Spec: apiv1.PodSpec{
+					SecurityContext: &defaultPodSecurityContext,
 					Containers: []apiv1.Container{
 						container,
 					},
@@ -369,6 +374,7 @@ func create_deployment(ns string, name string, image string) appsv1.Deployment {
 		Name:            name,
 		Image:           image,
 		ImagePullPolicy: "IfNotPresent",
+		SecurityContext: create_security_context(false),
 	}
 	return appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -395,6 +401,7 @@ func create_deployment(ns string, name string, image string) appsv1.Deployment {
 						container,
 					},
 					AutomountServiceAccountToken: boolPtr(false),
+					SecurityContext:              &defaultPodSecurityContext,
 				},
 			},
 		},

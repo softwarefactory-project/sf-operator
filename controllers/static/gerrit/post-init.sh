@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -ex
-
+export HOME=/tmp
 env
 cd "${HOME}"
 
