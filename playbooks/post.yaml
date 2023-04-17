@@ -1,42 +1,9 @@
-- hosts: all
+- hosts: "{{ hostname | default('all') }}"
   tasks:
-    - name: Get logs
-      command: kubectl get all
+    # Fetch zuul jobs artifacts stored in the logserver during the sf-operator functional test
+    - include_role:
+        name: roles/get-logserver-content
 
-    - name: Get nodes information
-      shell: |
-        oc get all -A > ~/zuul-output/logs/cluster-resources-all.txt
-
-    - name: Get events
-      shell: |
-        oc get events > ~/zuul-output/logs/events.txt
-
-    - name: Get nodes information
-      shell: |
-        oc describe nodes > ~/zuul-output/logs/nodes.txt
-
-    - name: Get nodes utilization
-      shell: |
-        oc describe nodes | sed -n '/^Allocated /,/^Events:/ { /^  [^(]/ p; } ; /^Name: / p' > ~/zuul-output/logs/nodes-utilization.txt
-
-    - name: Describe resources
-      shell: |
-        for item in $(kubectl get {{ item }} -o name); do
-          mkdir -p ~/zuul-output/logs/$(dirname $item)
-          oc describe $item > ~/zuul-output/logs/${item}.txt
-        done
-      ignore_errors: yes
-      loop:
-        - pods
-        - deployments
-        - statefulsets
-        - services
-        - secrets
-        - configmaps
-
-    - name: Collect logs
-      shell: |
-        for pod in $(oc get pods -o name); do
-          mkdir -p ~/zuul-output/logs/$(dirname $pod)
-          oc logs $pod > ~/zuul-output/logs/${pod}-logs.txt
-        done
+    # Fetch some k8s resources details that can help with troubleshooting
+    - include_role:
+        name: roles/get-k8s-resources

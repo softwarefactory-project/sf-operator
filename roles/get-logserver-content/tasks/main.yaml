@@ -1,8 +1,8 @@
-- name: "Ensure removal of {{ logserver_copy_content_dest }}"
+- name: "Ensure removal of {{ output_dir }}"
   file:
-    path: "{{ logserver_copy_content_dest }}"
+    path: "{{ output_dir }}"
     state: absent
 
-- name: "Fetch logserver content on locally in {{ logserver_copy_content_dest }}"
+- name: "Fetch logserver content on locally in {{ output_dir }}"
   command: |
-    kubectl cp {{ pod_name }}:/var/www/logs -c {{ container_name }} {{ logserver_copy_content_dest }}
+    kubectl cp {{ pod_name }}:/var/www/logs -c {{ container_name }} {{ output_dir }}
