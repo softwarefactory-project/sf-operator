@@ -1,4 +1,5 @@
 - name: Install dependencies
+  become: true
   block:
     - name: Install packages
       package:
@@ -8,7 +9,6 @@
           # for testing
           - jq
           - python3-pip
-      become: true
 
     - name: Install pip packages
       pip:
