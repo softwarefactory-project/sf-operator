@@ -36,6 +36,14 @@
     - pvc
     - pv
 
+- name: Describe CRDs
+  shell: |
+    mkdir -p {{ output_dir }}/CRD
+    for item in $(kubectl get crd -o name); do
+      mkdir -p {{ output_dir }}/CRD/$(dirname $item)
+      oc describe $item > {{ output_dir }}/CRD/${item}.txt
+    done
+
 - name: Collect namespace pods logs
   shell: |
     for pod in $(kubectl get pods -o name); do
