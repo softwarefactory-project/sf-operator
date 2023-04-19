@@ -46,7 +46,9 @@
 
 - name: Collect namespace pods logs
   shell: |
+    mkdir -p {{ output_dir }}/pod
     for pod in $(kubectl get pods -o name); do
-      mkdir -p {{ output_dir }}/$(dirname $pod)
-      kubectl logs $pod > {{ output_dir }}/${pod}-logs.txt
+      for container in $(kubectl get $pod -o jsonpath='{.spec.containers[*].name}'); do
+        kubectl logs $pod -c $container > {{ output_dir }}/${pod}-${container}-logs.txt
+      done
     done
