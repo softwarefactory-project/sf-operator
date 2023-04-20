@@ -43,6 +43,9 @@ var entrypoint string
 //go:embed static/gerrit/init.sh
 var gerritInitScript string
 
+//go:embed static/gerrit/ready.sh
+var gerritReadyScript string
+
 func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, spec sfv1.GerritSpec) []apiv1.Container {
 	var sshd_max_conns_per_user string
 	if spec.SshdMaxConnectionsPerUser == "" {
@@ -146,10 +149,18 @@ func (r *SFController) DeployGerrit() bool {
 			Name:      GERRIT_IDENT,
 			MountPath: GERRIT_SITE_MOUNT_PATH,
 		},
+		{
+			Name:      "gerrit-pi",
+			MountPath: "/config-scripts",
+		},
 	}
 
 	// Create the deployment
 	dep := create_statefulset(r.ns, GERRIT_IDENT, GERRIT_IMAGE, get_storage_classname(r.cr.Spec))
+
+	cm_data := make(map[string]string)
+	cm_data["ready.sh"] = gerritReadyScript
+	r.EnsureConfigMap("gerrit-pi", cm_data)
 
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
@@ -165,13 +176,13 @@ func (r *SFController) DeployGerrit() bool {
 		create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
 		create_secret_env("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
 	}
-	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
-	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
+	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_cmd_probe([]string{"bash", "/config-scripts/ready.sh"})
 	dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
 
 	// Expose a volume that contain certmanager certs for Gerrit
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		create_volume_secret(GERRIT_IDENT + "-client-tls"),
+		create_volume_cm("gerrit-pi", "gerrit-pi-config-map"),
 	}
 
 	// Create annotations based on Gerrit parameters
