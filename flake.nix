@@ -22,6 +22,8 @@
           pkgs.jq
           # 0.26.7 in nixpkgs 22.11
           pkgs.k9s
+          # 1.4.1 in nixpkgs 22.11
+          pkgs.python39Packages.websocket-client
         ];
         shellHook = ''
           echo "Welcome in $name"
