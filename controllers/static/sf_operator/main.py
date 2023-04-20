@@ -69,7 +69,7 @@ def create_zuul_secrets():
             ("fqdn", "\"[logserver-sshd]:2222\""),
             ("path", "rsync"),
             ("ssh_known_hosts", "\"%s\"" % get_logserver_fingerprint()),
-            ("ssh_username", "data")
+            ("ssh_username", "zuul")
         ]
     )
     logserver_secret.write_text(secret)

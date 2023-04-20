@@ -11,8 +11,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"k8s.io/utils/pointer"
-
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +26,7 @@ const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
-const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.6.4-1"
+const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.6.4-3"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_SITE_MOUNT_PATH = "/gerrit"
 const GERRIT_CERT_MOUNT_PATH = "/gerrit-cert"
@@ -69,7 +67,7 @@ func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, sp
 			create_env("FQDN", r.cr.Spec.FQDN),
 		},
 		VolumeMounts:    append(volumeMounts, certVolume),
-		SecurityContext: &defaultContainerSecurityContext,
+		SecurityContext: create_security_context(false),
 	}
 	return []apiv1.Container{container}
 }
@@ -87,6 +85,7 @@ func (r *SFController) GerritPostInitJob(name string, has_config_repo bool) bool
 		r.EnsureConfigMap("gerrit-pi", cm_data)
 
 		env := []apiv1.EnvVar{
+			create_env("HOME", "/tmp"),
 			create_env("FQDN", r.cr.Spec.FQDN),
 			create_env("HAS_CONFIG_REPOSITORY", strconv.FormatBool(has_config_repo)),
 			create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
@@ -104,7 +103,7 @@ func (r *SFController) GerritPostInitJob(name string, has_config_repo bool) bool
 			Image:           BUSYBOX_IMAGE,
 			Command:         []string{"sh", "-c", postInitScript},
 			Env:             append(env, ci_users...),
-			SecurityContext: &defaultContainerSecurityContext,
+			SecurityContext: create_security_context(false),
 			VolumeMounts: []apiv1.VolumeMount{
 				{
 					Name:      GERRIT_IDENT + "-pi",
@@ -160,6 +159,7 @@ func (r *SFController) DeployGerrit() bool {
 		create_container_port(GERRIT_SSHD_PORT, GERRIT_SSHD_PORT_NAME),
 	}
 	dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
+		create_env("HOME", "/gerrit"),
 		create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
 		create_env("FQDN", r.cr.Spec.FQDN),
 		create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
@@ -167,19 +167,6 @@ func (r *SFController) DeployGerrit() bool {
 	}
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", GERRIT_HTTPD_PORT)
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GERRIT_SSHD_PORT)
-
-	// NOTE: Change to "defaultPodSecurityContext", when image will use non root user.
-	podSecurityContext := &apiv1.PodSecurityContext{
-		RunAsUser:    pointer.Int64(10002),
-		FSGroup:      pointer.Int64(10002),
-		RunAsNonRoot: pointer.Bool(true),
-		SeccompProfile: &apiv1.SeccompProfile{
-			Type: "RuntimeDefault",
-		},
-	}
-	dep.Spec.Template.Spec.SecurityContext = podSecurityContext
-	dep.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
-
 	dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
 
 	// Expose a volume that contain certmanager certs for Gerrit

@@ -31,7 +31,6 @@ const ZOOKEEPER_SERVER_PORT = 2888
 
 const ZK_IDENT = "zookeeper"
 const ZK_PI_MOUNT_PATH = "/config-scripts"
-const ZK_DATA_MOUNT_PATH = "/data"
 
 func (r *SFController) DeployZookeeper() bool {
 	cert := r.create_client_certificate(r.ns, "zookeeper-server", "ca-issuer", "zookeeper-server-tls", ZK_IDENT)
@@ -64,7 +63,11 @@ func (r *SFController) DeployZookeeper() bool {
 		},
 		{
 			Name:      ZK_IDENT + "-data",
-			MountPath: ZK_DATA_MOUNT_PATH,
+			MountPath: "/data",
+		},
+		{
+			Name:      ZK_IDENT + "-conf",
+			MountPath: "/conf",
 		},
 		{
 			Name:      ZK_IDENT + "-pi",
@@ -73,26 +76,10 @@ func (r *SFController) DeployZookeeper() bool {
 	}
 
 	container := apiv1.Container{
-		Name:    ZK_IDENT,
-		Image:   "quay.io/software-factory/" + ZK_IDENT + ":3.8.0-2",
-		Command: []string{"/bin/bash", "/config-scripts/run.sh"},
-		Env: []apiv1.EnvVar{
-			create_env("ZK_REPLICAS", "1"),
-			create_env("JMXAUTH", "false"),
-			create_env("JMXDISABLE", "false"),
-			create_env("JMXPORT", "1099"),
-			create_env("JMXSSL", "false"),
-			create_env("ZK_SYNC_LIMIT", "10"),
-			create_env("ZK_TICK_TIME", "2000"),
-			create_env("ZOO_AUTOPURGE_PURGEINTERVAL", "0"),
-			create_env("ZOO_AUTOPURGE_SNAPRETAINCOUNT", "3"),
-			create_env("ZOO_INIT_LIMIT", "5"),
-			create_env("ZOO_MAX_CLIENT_CNXNS", "60"),
-			create_env("ZOO_PORT", "2181"),
-			create_env("ZOO_STANDALONE_ENABLED", "false"),
-			create_env("ZOO_TICK_TIME", "2000"),
-		},
-		SecurityContext: &defaultContainerSecurityContext,
+		Name:            ZK_IDENT,
+		Image:           "quay.io/software-factory/" + ZK_IDENT + ":3.8.0-5",
+		Command:         []string{"/bin/bash", "/config-scripts/run.sh"},
+		SecurityContext: create_security_context(false),
 		VolumeMounts:    volumes,
 	}
 
@@ -114,6 +101,7 @@ func (r *SFController) DeployZookeeper() bool {
 		create_volume_cm(ZK_IDENT+"-pi", ZK_IDENT+"-pi-config-map"),
 		create_volume_secret("zookeeper-client-tls"),
 		create_volume_secret("zookeeper-server-tls"),
+		create_empty_dir(ZK_IDENT + "-conf"),
 	}
 	zk.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_cmd_probe([]string{"/bin/bash", "/config-scripts/ready.sh"})
 	zk.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_cmd_probe([]string{"/bin/bash", "/config-scripts/ok.sh"})
@@ -123,7 +111,6 @@ func (r *SFController) DeployZookeeper() bool {
 		create_container_port(ZOOKEEPER_ELECTION_PORT, ZOOKEEPER_ELECTION_PORT_NAME),
 		create_container_port(ZOOKEEPER_SERVER_PORT, ZOOKEEPER_SERVER_PORT_NAME),
 	}
-	zk.Spec.Template.Spec.SecurityContext = &defaultPodSecurityContext
 
 	r.GetOrCreate(&zk)
 	zk_dirty := false

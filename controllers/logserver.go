@@ -9,8 +9,6 @@ import (
 	_ "embed"
 	"encoding/base64"
 
-	"k8s.io/utils/pointer"
-
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -22,11 +20,14 @@ const LOGSERVER_IMAGE = "registry.access.redhat.com/rhscl/httpd-24-rhel7:latest"
 const LOGSERVER_SSHD_PORT = 2222
 const LOGSERVER_SSHD_PORT_NAME = "logserver-sshd"
 
-const LOGSERVER_SSHD_IMAGE = "quay.io/software-factory/rsync-server:1-5"
+const LOGSERVER_SSHD_IMAGE = "quay.io/software-factory/sshd:0.1"
 
 const CONTAINER_HTTP_BASE_DIR = "/opt/rh/httpd24/root"
 
 const LOGSERVER_DATA = "/var/www"
+
+//go:embed static/logserver/run.sh
+var logserver_run string
 
 //go:embed static/logserver/logserver.conf.tmpl
 var logserverconf string
@@ -44,6 +45,7 @@ func (r *SFController) DeployLogserver() bool {
 		LogserverRoot: LOGSERVER_DATA,
 	})
 	cm_data["index.html"] = ""
+	cm_data["run.sh"] = logserver_run
 
 	r.EnsureConfigMap(LOGSERVER_IDENT, cm_data)
 
@@ -85,18 +87,6 @@ func (r *SFController) DeployLogserver() bool {
 
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", LOGSERVER_HTTPD_PORT)
 
-	podSecurityContext := &apiv1.PodSecurityContext{
-		RunAsUser:    pointer.Int64(1000),
-		FSGroup:      pointer.Int64(1000),
-		RunAsNonRoot: pointer.Bool(true),
-		SeccompProfile: &apiv1.SeccompProfile{
-			Type: "RuntimeDefault",
-		},
-	}
-
-	dep.Spec.Template.Spec.SecurityContext = podSecurityContext
-	dep.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
-
 	// Create services exposed by logserver
 	service_ports := []int32{LOGSERVER_HTTPD_PORT}
 	httpd_service := create_service(
@@ -113,7 +103,11 @@ func (r *SFController) DeployLogserver() bool {
 		},
 		{
 			Name:      LOGSERVER_IDENT + "-keys",
-			MountPath: "/opt/ssh/keys",
+			MountPath: "/var/ssh-keys",
+		},
+		{
+			Name:      LOGSERVER_IDENT + "-config-vol",
+			MountPath: "/conf",
 		},
 	}
 
@@ -130,18 +124,18 @@ func (r *SFController) DeployLogserver() bool {
 
 	env_sidecar := []apiv1.EnvVar{
 		create_env("FQDN", r.cr.Spec.FQDN),
-		create_env("AUTHORIZED_KEY_1", pub_key_b64),
+		create_env("AUTHORIZED_KEY", pub_key_b64),
 	}
 
 	// Setup the sidecar container for sshd
 	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
 		Name:            LOGSERVER_SSHD_PORT_NAME,
 		Image:           LOGSERVER_SSHD_IMAGE,
-		Command:         []string{"/entrypoint.sh"},
+		Command:         []string{"bash", "/conf/run.sh"},
 		VolumeMounts:    volumeMounts_sidecar,
 		Env:             env_sidecar,
 		Ports:           ports_sidecar,
-		SecurityContext: &defaultContainerSecurityContext,
+		SecurityContext: create_security_context(false),
 	})
 
 	r.GetOrCreate(&dep)

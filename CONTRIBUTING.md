@@ -37,13 +37,23 @@ You need to install the following dependencies on your dev machine:
 ### Run the operator in devel mode
 
 The operator will automatically use the current context in your kubeconfig file
-(i.e. whatever cluster `kubectl cluster-info` shows). Make sure that your current context is
-called `microshift` and use a namespace called `default`.
+(i.e. whatever cluster `kubectl cluster-info` shows).
+Make sure that your current context is called `microshift`.
 
 ```sh
 kubectl config current-context
 # Must be microshift
 ```
+
+0. Create a new namespace
+
+   ```sh
+   kubectl create namespace sf
+   kubectl config set-context microshift --namespace=sf
+   kubectl label --overwrite ns sf pod-security.kubernetes.io/enforce=privileged
+   kubectl label --overwrite ns sf pod-security.kubernetes.io/enforce-version=v1.24
+   oc adm policy add-scc-to-user privileged -z default
+   ```
 
 1. Install cert-manager operator
 
@@ -67,7 +77,7 @@ kubectl config current-context
 4. Start the operator:
 
    ```sh
-   go run ./main.go --namespace default --cr ./my-sf.yaml
+   go run ./main.go --namespace sf --cr ./my-sf.yaml
    ```
 
 ### Access services with the browser

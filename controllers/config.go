@@ -61,6 +61,7 @@ func (r *SFController) SetupBaseSecrets() bool {
 	found := r.GetM(job_name, &job)
 
 	extra_cmd_vars := []apiv1.EnvVar{
+		create_env("HOME", "/tmp"),
 		create_secret_env("SERVICE_ACCOUNT_TOKEN", secret_name, "token"),
 		create_secret_env("ZUUL_LOGSERVER_PRIVATE_KEY", "zuul-ssh-key", "priv"),
 	}
@@ -91,7 +92,7 @@ func (r *SFController) RunCommand(name string, args []string, extra_vars []apiv1
 			VolumeMounts: []apiv1.VolumeMount{
 				{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
 			},
-			SecurityContext: &defaultContainerSecurityContext,
+			SecurityContext: create_security_context(false),
 		},
 	)
 	job.Spec.Template.Spec.Volumes = []apiv1.Volume{
@@ -155,12 +156,13 @@ func (r *SFController) SetupConfigRepo() bool {
 					create_env("FQDN", r.cr.Spec.FQDN),
 					create_env("CONFIG_REPO_URL", config_url),
 					create_env("CONFIG_REPO_USER", config_user),
+					create_env("HOME", "/tmp"),
 				},
 				VolumeMounts: []apiv1.VolumeMount{
 					{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
 					{Name: "sf-provided-cr", MountPath: "/sf-provided-cr"},
 				},
-				SecurityContext: &defaultContainerSecurityContext,
+				SecurityContext: create_security_context(false),
 			},
 		)
 		job.Spec.Template.Spec.Volumes = []apiv1.Volume{

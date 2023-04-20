@@ -42,6 +42,14 @@
 - name: Check cluster access
   command: kubectl cluster-info
 
+- name: Create namespace
+  shell: |
+    kubectl create namespace sf
+    kubectl config set-context microshift --namespace=sf
+    kubectl label --overwrite ns sf pod-security.kubernetes.io/enforce=privileged
+    kubectl label --overwrite ns sf pod-security.kubernetes.io/enforce-version=v1.24
+    oc adm policy add-scc-to-user privileged -z default
+
 - name: Install cert-manager operator
   command: make install-cert-manager
   args:

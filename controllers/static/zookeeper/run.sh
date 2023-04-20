@@ -1,13 +1,12 @@
 #!/bin/bash
 
 set -a
-ROOT=$(echo /apache-zookeeper-*)
-
-ZK_USER=${ZK_USER:-"zookeeper"}
-ZK_LOG_LEVEL=${ZK_LOG_LEVEL:-"INFO"}
-ZK_DATA_DIR=${ZK_DATA_DIR:-"/data"}
-ZK_DATA_LOG_DIR=${ZK_DATA_LOG_DIR:-"/data/log"}
-ZK_CONF_DIR=${ZK_CONF_DIR:-"/conf"}
+export HOME=/data
+ROOT=/zookeeper
+ZK_LOG_LEVEL="INFO"
+ZK_DATA_DIR="/data"
+ZK_DATA_LOG_DIR="/data/log"
+ZK_CONF_DIR="/conf"
 ZK_CLIENT_PORT=${ZK_CLIENT_PORT:-2181}
 ZK_SSL_CLIENT_PORT=${ZK_SSL_CLIENT_PORT:-2281}
 ZK_SERVER_PORT=${ZK_SERVER_PORT:-2888}
@@ -21,6 +20,10 @@ ZK_MIN_SESSION_TIMEOUT=${ZK_MIN_SESSION_TIMEOUT:- $((ZK_TICK_TIME*2))}
 ZK_MAX_SESSION_TIMEOUT=${ZK_MAX_SESSION_TIMEOUT:- $((ZK_TICK_TIME*20))}
 ZK_SNAP_RETAIN_COUNT=${ZK_SNAP_RETAIN_COUNT:-3}
 ZK_PURGE_INTERVAL=${ZK_PURGE_INTERVAL:-0}
+JMXPORT=1099
+JMXSSL=false
+JMXAUTH=false
+JMXDISABLE=${JMXDISABLE:-false}
 ID_FILE="$ZK_DATA_DIR/myid"
 ZK_CONFIG_FILE="$ZK_CONF_DIR/zoo.cfg"
 LOG4J_PROPERTIES="$ZK_CONF_DIR/log4j.properties"
@@ -28,7 +31,7 @@ HOST=$(hostname)
 DOMAIN=$(hostname -d)
 JVMFLAGS="-Xmx$ZK_HEAP_SIZE -Xms$ZK_HEAP_SIZE"
 
-APPJAR=$(echo "$ROOT"/*jar)
+APPJAR=$(echo $ROOT/*jar)
 CLASSPATH="${ROOT}/lib/*:${APPJAR}:${ZK_CONF_DIR}:"
 
 if [[ $HOST =~ (.*)-([0-9]+)$ ]]; then
@@ -40,7 +43,6 @@ else
     exit 1
 fi
 
-mkdir -p "$ZK_DATA_DIR"
 mkdir -p "$ZK_DATA_LOG_DIR"
 echo $MY_ID >> "$ID_FILE"
 

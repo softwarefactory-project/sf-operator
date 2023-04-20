@@ -21,7 +21,7 @@ func (r *SFController) EnsureDBInit(name string) ([]apiv1.Container, apiv1.Secre
 	container := apiv1.Container{
 		Name:            "mariadb-client",
 		Image:           DBImage,
-		SecurityContext: &defaultContainerSecurityContext,
+		SecurityContext: create_security_context(false),
 		Command: []string{"sh", "-c", `
 echo 'Running: mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
 ATTEMPT=0
@@ -48,9 +48,6 @@ func (r *SFController) DeployMariadb() bool {
 
 	dep := create_statefulset(r.ns, "mariadb", DBImage, get_storage_classname(r.cr.Spec))
 
-	dep.Spec.Template.Spec.SecurityContext = &defaultPodSecurityContext
-	dep.Spec.Template.Spec.Containers[0].SecurityContext = &defaultContainerSecurityContext
-
 	dep.Spec.VolumeClaimTemplates = append(
 		dep.Spec.VolumeClaimTemplates,
 		create_pvc(r.ns, "mariadb-logs", get_storage_classname(r.cr.Spec)))
@@ -61,10 +58,15 @@ func (r *SFController) DeployMariadb() bool {
 		},
 		{
 			Name:      "mariadb-logs",
-			MountPath: "/var/logs/mariadb",
+			MountPath: "/var/log/mariadb",
+		},
+		{
+			Name:      "mariadb-run",
+			MountPath: "/run/mariadb",
 		},
 	}
 	dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
+		create_env("HOME", "/var/lib/mysql"),
 		create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
 	}
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
@@ -73,6 +75,9 @@ func (r *SFController) DeployMariadb() bool {
 
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(MARIADB_PORT)
 	dep.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_tcp_probe(MARIADB_PORT)
+	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
+		create_empty_dir("mariadb-run"),
+	}
 
 	r.GetOrCreate(&dep)
 	service_ports := []int32{MARIADB_PORT}
