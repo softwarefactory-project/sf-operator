@@ -1,12 +1,3 @@
----
-- hosts: localhost
-  gather_facts: no
-  tasks:
-    - name: Ensure microshift role
-      git:
-        repo: https://github.com/openstack-k8s-operators/ansible-microshift-role.git
-        dest: ./ansible-microshift-role
-        update: yes
 - hosts: microshift.dev
   vars:
     fqdn: microshift.dev

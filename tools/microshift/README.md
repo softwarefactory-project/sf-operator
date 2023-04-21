@@ -44,11 +44,12 @@ Install the following dependencies, for RPM-based systems:
 
 * ansible-core
 * git
-* kubectl
 
 ```sh
-sudo dnf install -y ansible-core git kubectl
+sudo dnf install -y ansible-core git
 ```
+
+Install kubectl using your package manager or [by following these instructions](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-kubectl-on-linux).
 
 Once Ansible Core is installed, install the following collections:
 
@@ -79,7 +80,11 @@ export PULL_SECRET=$(cat ${HOME}/Downloads/pull-secret)
 export MICROSHIFT_USER=cloud-user
 ```
 
-Make sure the `inventory.yaml` file defines the right user to SSH into the Microshift target.
+Fetch the `ansible-microshift-role`:
+
+```sh
+git clone https://github.com/openstack-k8s-operators/ansible-microshift-role
+```
 
 Then run the deployment playbook:
 
