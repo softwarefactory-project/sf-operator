@@ -8,6 +8,7 @@ package controllers
 import (
 	_ "embed"
 	"encoding/base64"
+	"strconv"
 
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -28,6 +29,10 @@ const LOGSERVER_DATA = "/var/www"
 
 //go:embed static/logserver/run.sh
 var logserver_run string
+
+const PURGELOG_IDENT = "purgelogs"
+const PURGELOG_IMAGE = "quay.io/software-factory/purgelogs:0.2.1-2"
+const PURGELOG_LOGS_DIR = "/home/logs"
 
 //go:embed static/logserver/logserver.conf.tmpl
 var logserverconf string
@@ -135,6 +140,30 @@ func (r *SFController) DeployLogserver() bool {
 		VolumeMounts:    volumeMounts_sidecar,
 		Env:             env_sidecar,
 		Ports:           ports_sidecar,
+		SecurityContext: create_security_context(false),
+	})
+
+	// PurgeLog container
+	loopdelay := 3600
+	if r.cr.Spec.Logserver.LoopDelay > 0 {
+		loopdelay = r.cr.Spec.Logserver.LoopDelay
+	}
+
+	retentiondays := 60
+	if r.cr.Spec.Logserver.RetentionDays > 0 {
+		retentiondays = r.cr.Spec.Logserver.RetentionDays
+	}
+
+	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
+		Name:    PURGELOG_IDENT,
+		Image:   PURGELOG_IMAGE,
+		Command: []string{"/usr/local/bin/purgelogs", "--retention-days", strconv.Itoa(retentiondays), "--loop", strconv.Itoa(loopdelay), "--log-path-dir", PURGELOG_LOGS_DIR, "--debug"},
+		VolumeMounts: []apiv1.VolumeMount{
+			{
+				Name:      LOGSERVER_IDENT,
+				MountPath: PURGELOG_LOGS_DIR,
+			},
+		},
 		SecurityContext: create_security_context(false),
 	})
 

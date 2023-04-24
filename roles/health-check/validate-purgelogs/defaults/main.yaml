@@ -1,0 +1,3 @@
+pod_name: "logserver-0"
+container_name: "logserver"
+sshd_container_name: "logserver-sshd"

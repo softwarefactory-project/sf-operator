@@ -7,3 +7,5 @@ spec:
   fqdn: "sftests.com"
   zuul:
     gerritconns: []
+  logserver:
+    loopDelay: 5

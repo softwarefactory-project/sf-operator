@@ -172,6 +172,13 @@ cat << EOF > playbooks/base/pre.yaml
   tasks:
     - debug:
         var: zuul
+    - block:
+        - import_role:
+            name: emit-job-header
+        - import_role:
+            name: log-inventory
+      vars:
+        zuul_log_url: "https://logserver.${FQDN}/logs/"
 
 - hosts: all
   tasks:
