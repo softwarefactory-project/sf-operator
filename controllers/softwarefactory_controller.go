@@ -93,11 +93,13 @@ func (r *SFController) SetupIngress() {
 
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	services := map[string]bool{}
+	services["Zuul"] = false
 
 	r.EnsureCA()
 
 	// Ensure SF Admin ssh key pair
 	r.EnsureSSHKey("admin-ssh-key")
+	r.DeployZuulSecrets()
 
 	// The git server service is needed to store system jobs (config-check and config-update)
 	services["GitServer"] = r.DeployGitServer()
@@ -106,26 +108,27 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	services["Zookeeper"] = r.DeployZookeeper()
 
-	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] {
+	services["Gerrit"] = r.DeployGerrit()
+
+	services["Logserver"] = r.DeployLogserver()
+
+	if services["Gerrit"] {
+		services["ConfigRepo"] = r.SetupConfigRepo()
+	}
+
+	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] && services["Gerrit"] && services["ConfigRepo"] {
 		services["Zuul"] = r.DeployZuul()
-		services["Logserver"] = r.DeployLogserver()
 	}
 
 	if services["Zookeeper"] {
 		services["NodePool"] = r.DeployNodepool()
 	}
 
-	services["Gerrit"] = r.DeployGerrit()
-
-	if services["MariaDB"] && services["Zookeeper"] && services["Zuul"] && services["Logserver"] && services["GitServer"] {
+	if services["Zuul"] {
 		services["Config"] = r.SetupConfigJob()
 	}
 
 	services["ManagesfResources"] = r.DeployManagesfResources()
-
-	if services["Gerrit"] {
-		services["ConfigRepo"] = r.SetupConfigRepo()
-	}
 
 	r.log.V(1).Info(messageInfo(r, services))
 

@@ -269,8 +269,6 @@ func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret, config strin
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "zuul-db-uri", Namespace: r.ns},
 	})
-	r.GenerateSecretUUID("zuul-keystore-password")
-	r.GenerateSecretUUID("zuul-auth-secret")
 	r.EnsureSecret(&apiv1.Secret{
 		Data: map[string][]byte{
 			"zuul.conf": []byte(config),
@@ -335,15 +333,19 @@ func (r *SFController) DumpConfigINI(cfg *ini.File) string {
 	return writer.String()
 }
 
-func (r *SFController) DeployZuul() bool {
-
-	init_containers, db_password := r.EnsureDBInit("zuul")
+func (r *SFController) DeployZuulSecrets() {
 	r.EnsureSSHKey("zuul-ssh-key")
+	r.GenerateSecretUUID("zuul-gerrit-api-key")
+	r.GenerateSecretUUID("zuul-keystore-password")
+	r.GenerateSecretUUID("zuul-auth-secret")
+}
+
+func (r *SFController) DeployZuul() bool {
+	init_containers, db_password := r.EnsureDBInit("zuul")
 
 	gerrit_conns := r.cr.Spec.Zuul.GerritConns
 
 	// Add local gerrit connection if needed
-	r.GenerateSecretUUID("zuul-gerrit-api-key")
 	gerrit_conn := sfv1.GerritConnection{
 		Name:              "gerrit",
 		Hostname:          GERRIT_SSHD_PORT_NAME,
