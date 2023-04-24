@@ -1,6 +1,6 @@
 output_logs_dir: ~/zuul-output/logs
 
-pod_name: "logserver-0"
+pod_label: "run=logserver"
 container_name: "logserver"
 
 output_dir: "{{ output_logs_dir }}/logserver-content"
