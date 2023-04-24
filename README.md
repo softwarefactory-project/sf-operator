@@ -14,22 +14,7 @@ The current project status is: **Alpha - DO NOT USE IN PRODUCTION**
 
 See the [CONTRIBUTING documentation](CONTRIBUTING.md) to discover how to hack on the project.
 
-Below are the milestones we are working on:
-
-### Next milestones
-
-TBD
-
-### Alpha 1
-
-- [x] Deployment of **Zuul** (scheduler, executor, web) and **Zookeeper**
-- [x] Deployment of **MariaDB**
-- [x] Deployment of **Gerrit**
-- [x] Deployment of a **Logs Server for Zuul**
-- [x] A **system-config Git repository** to host the config workflow CI configuration
-- [x] A **config Git repository** to host Software Factory services configuration
-- [x] A minimal **config-check** / **config-update** CI workflow
-- [] Demo video
+See the [CHANGELOG](CHANGELOG.md) to read about project development progress.
 
 ## ADR
 
