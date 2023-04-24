@@ -108,11 +108,13 @@ endif
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
-.PHONY: install-cert-manager
-install-cert-manager: ## Install the cert-manager operator (TODO: use OLM for that)
-	@bash -c "mkdir -p bundle/; if ! test -f bundle/cert-manager.yaml; then curl -L https://github.com/cert-manager/cert-manager/releases/download/v1.8.2/cert-manager.yaml > bundle/cert-manager.yaml; fi"
+.PHONY: install-cmctl
+install-cmctl: ## Install the cert-manager cmctl CLI
 	@bash -c "mkdir -p bin; test -f bin/cmctl || { curl -sSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/download/v1.8.2/cmctl-linux-amd64.tar.gz && tar xzf cmctl.tar.gz && mv cmctl ./bin; rm cmctl.tar.gz; }"
-	kubectl apply -f ./bundle/cert-manager.yaml
+
+.PHONY: install-cert-manager
+install-cert-manager: install-cmctl ## Install the cert-manager operator from a OLM sub and wait for API availability
+	kubectl apply -f ./olm-deps/cert-manager.yaml
 	./bin/cmctl check api --wait=2m
 
 .PHONY: uninstall
