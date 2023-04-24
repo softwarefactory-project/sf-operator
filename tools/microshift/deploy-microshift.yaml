@@ -14,6 +14,7 @@
     standard_user: false
     create_pv: false
     disk_file_size: 30G
+    setup_olm: true
     microshift_additional_addresses:
       - "{{ fqdn }}"
       - "sftests.com"

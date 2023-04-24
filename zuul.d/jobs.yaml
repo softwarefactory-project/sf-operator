@@ -22,6 +22,7 @@
       disk_file_sparsed: true
       standard_user: false
       create_pv: false
+      setup_olm: true
       # post tasks artifacts directory
       output_logs_dir: ~/zuul-output/logs
       # dnsmasq
