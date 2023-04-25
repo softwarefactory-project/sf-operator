@@ -4,6 +4,7 @@ package controllers
 
 import (
 	_ "embed"
+
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -49,7 +50,7 @@ func (r *SFController) DeployNodepool() bool {
 	}
 	container := apiv1.Container{
 		Name:            "launcher",
-		Image:           "quay.io/software-factory/" + NL_IDENT + ":8.2.0-1",
+		Image:           "quay.io/software-factory/" + NL_IDENT + ":8.2.0-2",
 		SecurityContext: create_security_context(false),
 		VolumeMounts:    volume_mount,
 	}
