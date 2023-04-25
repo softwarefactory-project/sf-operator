@@ -71,7 +71,7 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 	}
 	container := apiv1.Container{
 		Name:    service,
-		Image:   "quay.io/software-factory/" + service + ":8.2.0-2",
+		Image:   "quay.io/software-factory/" + service + ":8.2.0-4",
 		Command: command,
 		Env: []apiv1.EnvVar{
 			create_secret_env("ZUUL_DB_URI", "zuul-db-uri", "dburi"),
