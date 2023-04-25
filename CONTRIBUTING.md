@@ -225,6 +225,7 @@ For example:
 kubectl exec -it mariadb-0 -- bash -c "host zookeeper-0.zookeeper-headless.default.svc.cluster.local"
 kubectl exec -it mariadb-0 -- bash -c "host zuul-executor-0.zuul-executor-headless.default.svc.cluster.local"
 kubectl exec -it mariadb-0 -- bash -c "host zuul-executor-0.zuul-executor-headless"
+```
 
 #### Create new PatchSet in the Gerrit service
 
@@ -236,3 +237,18 @@ To use it, run:
 ```sh
 bash ./tools/create-ps.sh
 ```
+
+#### Modify an image
+
+If you want to modify an image for testing, you can use buildah after an initial deployment
+on microshift instance as root (eg add acl package on zuul-executor). The example below adds the
+acl package on the zuul-executor image:
+
+```sh
+[root@microshift ~]# dnf install -y buildah
+[root@microshift ~]# CTX=$(buildah from quay.io/software-factory/zuul-executor:8.2.0-3)
+[root@microshift ~]# buildah run $CTX microdnf install -y acl
+[root@microshift ~]# buildah commit --rm $CTX quay.io/software-factory/zuul-executor:8.2.0-3
+```
+
+Then you can wipe the deployment and redeploy to use the newly built image.
