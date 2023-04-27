@@ -6,26 +6,21 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - apps
+  - '*'
   resources:
+  - configmaps
   - deployments
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments/status
-  verbs:
-  - get
-- apiGroups:
-  - apps
-  resources:
+  - jobs
+  - persistentvolumeclaims
+  - pods
+  - pods/exec
+  - rolebindings
+  - roles
+  - routes
+  - routes/custom-host
+  - secrets
+  - serviceaccounts
+  - services
   - statefulsets
   verbs:
   - create
@@ -36,15 +31,25 @@ rules:
   - update
   - watch
 - apiGroups:
-  - apps
+  - '*'
   resources:
+  - configmaps/status
+  - deployments/status
+  - jobs/status
+  - persistentvolumeclaims/status
+  - pods/status
+  - roles/status
+  - routes/status
+  - secrets/status
+  - serviceaccounts/status
+  - services/status
   - statefulsets/status
   verbs:
   - get
 - apiGroups:
-  - batch
+  - cert-manager.io
   resources:
-  - jobs
+  - '*'
   verbs:
   - create
   - delete
@@ -53,30 +58,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - batch
-  resources:
-  - jobs/status
-  verbs:
-  - get
-- apiGroups:
-  - route.openshift.io/v1
-  resources:
-  - routes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - route.openshift.io/v1
-  resources:
-  - routes/status
-  verbs:
-  - get
 - apiGroups:
   - sf.softwarefactory-project.io
   resources:
@@ -103,57 +84,3 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - v1
-  resources:
-  - configmaps
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - v1
-  resources:
-  - configmaps/status
-  verbs:
-  - get
-- apiGroups:
-  - v1
-  resources:
-  - secrets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - v1
-  resources:
-  - secrets/status
-  verbs:
-  - get
-- apiGroups:
-  - v1
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - v1
-  resources:
-  - services/status
-  verbs:
-  - get

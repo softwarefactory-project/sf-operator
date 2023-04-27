@@ -6,6 +6,7 @@
         name:
           - golang
           - make
+          - podman
           # for testing
           - jq
           - python3-pip
@@ -64,7 +65,13 @@
   retries: 10
   delay: 2
 
-- name: Install the CRDS
-  command: make install
+- name: Build the operator image
+  command: make podman-build
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+  become: yes
+
+- name: Install the operator
+  command: kubectl apply -f vanilla-install/operator.yml
   args:
     chdir: "{{ zuul.project.src_dir }}"

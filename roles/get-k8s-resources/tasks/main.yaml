@@ -52,3 +52,4 @@
         kubectl logs $pod -c $container > {{ output_dir }}/${pod}-${container}-logs.txt
       done
     done
+    kubectl -n sf-operator-system logs -l control-plane=controller-manager > {{ output_dir }}/sf-operator-logs.txt
