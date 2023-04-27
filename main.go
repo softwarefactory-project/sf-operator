@@ -48,6 +48,20 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+// getWatchNamespace returns the Namespace the operator should be watching for changes
+func getWatchNamespace() (string, error) {
+	// WatchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
+	// which specifies the Namespace to watch.
+	// An empty value means the operator is running with cluster scope.
+	var watchNamespaceEnvVar = "WATCH_NAMESPACE"
+
+	ns, found := os.LookupEnv(watchNamespaceEnvVar)
+	if !found {
+		return "", fmt.Errorf("%s must be set", watchNamespaceEnvVar)
+	}
+	return ns, nil
+}
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -72,12 +86,26 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
 	if ns == "" {
-		fmt.Println("--namespace argument is required")
-		os.Exit(1)
+		var err error
+		ns, err = getWatchNamespace()
+		if err != nil {
+			setupLog.Info("Unable to get WATCH_NAMESPACE env, " +
+				"the manager will watch and manage resources in all namespaces")
+		} else {
+			setupLog.Info("Got WATCH_NAMESPACE env, " +
+				"the manager will watch and manage resources in " + ns + " namespace")
+
+		}
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	// The dev/standalone running mode require a namespace name to run
+	if ns == "" && crPath != "" {
+		setupLog.Error(nil, "When running standalone, a namespace must be specified")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Namespace:              ns,
