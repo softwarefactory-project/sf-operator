@@ -110,7 +110,7 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 
 .PHONY: install-cmctl
 install-cmctl: ## Install the cert-manager cmctl CLI
-	@bash -c "mkdir -p bin; test -f bin/cmctl || { curl -sSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/download/v1.8.2/cmctl-linux-amd64.tar.gz && tar xzf cmctl.tar.gz && mv cmctl ./bin; rm cmctl.tar.gz; }"
+	@bash -c "mkdir -p bin; test -f bin/cmctl || { curl -sSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/download/v1.11.1/cmctl-linux-amd64.tar.gz && tar xzf cmctl.tar.gz && mv cmctl ./bin; rm cmctl.tar.gz; }"
 
 .PHONY: install-cert-manager
 install-cert-manager: install-cmctl ## Install the cert-manager operator from a OLM sub and wait for API availability
