@@ -16,7 +16,7 @@ import (
 const GS_IDENT = "git-server"
 const GS_GIT_PORT = 9418
 const GS_GIT_PORT_NAME = "git-server-port"
-const GS_IMAGE = "quay.io/software-factory/git-deamon:2.39.1-2"
+const GS_IMAGE = "quay.io/software-factory/git-deamon:2.39.1-3"
 const GS_GIT_MOUNT_PATH = "/git"
 const GS_PI_MOUNT_PATH = "/entry"
 
