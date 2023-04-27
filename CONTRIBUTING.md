@@ -238,7 +238,9 @@ To use it, run:
 bash ./tools/create-ps.sh
 ```
 
-#### Modify an image
+#### Images management
+
+##### Modify an existing image
 
 If you want to modify an image for testing, you can use buildah after an initial deployment
 on microshift instance as root (eg add acl package on zuul-executor). The example below adds the
@@ -252,3 +254,27 @@ acl package on the zuul-executor image:
 ```
 
 Then you can wipe the deployment and redeploy to use the newly built image.
+
+##### Create an image from a Containerfile
+
+If you want to build an image from a Containerfile, you can use buildah to create it on the microshift instance as root.
+The example below creates a sf-op-busybox image
+
+```sh
+[root@microshift ~]# dnf install -y buildah
+[root@microshift ~]# buildah bud -f Containerfile -t sf-op-busybox:1.4-4
+```
+
+For microshift deployment uses cri-o runtime, you can list images with:
+
+```
+[root@microshift ~]# crictl images | grep sf-op-busybox
+localhost/sf-op-busybox                                       1.4-4               c9befa3e7ebf6       885MB
+```
+
+Then modify the controller go file where the image is defined (here it's controllers/utils.go file)
+```go
+const BUSYBOX_IMAGE = "localhost/sf-op-busybox:1.4-4"
+```
+
+Then you can do the deployment to use the newly built image.
