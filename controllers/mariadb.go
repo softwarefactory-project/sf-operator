@@ -9,7 +9,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-const DBImage = "quay.io/software-factory/mariadb:10.5.16-2"
+const DBImage = "quay.io/software-factory/mariadb:10.5.16-3"
 
 const MARIADB_PORT = 3306
 const MARIADB_PORT_NAME = "mariadb-port"
