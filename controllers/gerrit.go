@@ -26,7 +26,7 @@ const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
 
 const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
-const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.6.4-3"
+const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.6.4-4"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_SITE_MOUNT_PATH = "/gerrit"
 const GERRIT_CERT_MOUNT_PATH = "/gerrit-cert"
