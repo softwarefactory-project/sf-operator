@@ -79,8 +79,8 @@ func (r *SFController) SetupBaseSecrets() bool {
 }
 
 func (r *SFController) RunCommand(name string, args []string, extra_vars []apiv1.EnvVar) *batchv1.Job {
-	job := create_job(
-		r.ns, name,
+	job := r.create_job(
+		name,
 		apiv1.Container{
 			Name:    "sf-operator",
 			Image:   BUSYBOX_IMAGE,
@@ -145,8 +145,8 @@ func (r *SFController) SetupConfigRepo() bool {
 
 	if !found {
 		config_url, config_user := r.getConfigRepoCNXInfo()
-		job := create_job(
-			r.ns, job_name,
+		job := r.create_job(
+			job_name,
 			apiv1.Container{
 				Name:    "sf-operator",
 				Image:   BUSYBOX_IMAGE,

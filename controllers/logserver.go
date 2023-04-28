@@ -76,15 +76,15 @@ func (r *SFController) DeployLogserver() bool {
 	}
 
 	// Create the deployment
-	dep := create_deployment(r.ns, LOGSERVER_IDENT, LOGSERVER_IMAGE)
+	dep := r.create_deployment(LOGSERVER_IDENT, LOGSERVER_IMAGE)
 
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
-	keys_pvc := create_pvc(r.ns, LOGSERVER_IDENT+"-keys", get_storage_classname(r.cr.Spec))
+	keys_pvc := r.create_pvc(LOGSERVER_IDENT+"-keys", get_storage_classname(r.cr.Spec))
 	r.GetOrCreate(&keys_pvc)
 
-	data_pvc := create_pvc(r.ns, LOGSERVER_IDENT, get_storage_classname(r.cr.Spec))
+	data_pvc := r.create_pvc(LOGSERVER_IDENT, get_storage_classname(r.cr.Spec))
 	r.GetOrCreate(&data_pvc)
 
 	var mod int32 = 256 // decimal for 0400 octal
@@ -117,8 +117,8 @@ func (r *SFController) DeployLogserver() bool {
 
 	// Create services exposed by logserver
 	service_ports := []int32{LOGSERVER_HTTPD_PORT}
-	httpd_service := create_service(
-		r.ns, LOGSERVER_HTTPD_PORT_NAME, LOGSERVER_IDENT, service_ports, LOGSERVER_HTTPD_PORT_NAME)
+	httpd_service := r.create_service(
+		LOGSERVER_HTTPD_PORT_NAME, LOGSERVER_IDENT, service_ports, LOGSERVER_HTTPD_PORT_NAME)
 	r.GetOrCreate(&httpd_service)
 
 	// Side Car Container
@@ -192,7 +192,7 @@ func (r *SFController) DeployLogserver() bool {
 	r.GetOrCreate(&dep)
 
 	sshd_service_ports := []int32{LOGSERVER_SSHD_PORT}
-	sshd_service := create_service(r.ns, LOGSERVER_SSHD_PORT_NAME, LOGSERVER_IDENT, sshd_service_ports, LOGSERVER_SSHD_PORT_NAME)
+	sshd_service := r.create_service(LOGSERVER_SSHD_PORT_NAME, LOGSERVER_IDENT, sshd_service_ports, LOGSERVER_SSHD_PORT_NAME)
 	r.GetOrCreate(&sshd_service)
 
 	ready := r.IsDeploymentReady(&dep)

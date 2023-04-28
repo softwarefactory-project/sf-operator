@@ -33,7 +33,7 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Create the deployment
-	dep := create_statefulset(r.ns, GS_IDENT, GS_IMAGE, get_storage_classname(r.cr.Spec))
+	dep := r.create_statefulset(GS_IDENT, GS_IMAGE, get_storage_classname(r.cr.Spec))
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 		{

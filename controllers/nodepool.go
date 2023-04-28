@@ -17,7 +17,7 @@ const NL_WEBAPP_PORT_NAME = "nlwebapp"
 const NL_WEBAPP_PORT = 8006
 
 func (r *SFController) DeployNodepool() bool {
-	cert_client := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper")
+	cert_client := r.create_client_certificate("zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper")
 	r.GetOrCreate(&cert_client)
 
 	r.GetOrCreate(&apiv1.Secret{
@@ -31,7 +31,7 @@ func (r *SFController) DeployNodepool() bool {
 		"nodepool.yaml": checksum([]byte(nodepoolconf)),
 	}
 
-	nl := create_deployment(r.ns, "nodepool-launcher", "")
+	nl := r.create_deployment("nodepool-launcher", "")
 	volumes := []apiv1.Volume{
 		create_volume_secret("nodepool-config", "nodepool-yaml"),
 		create_volume_secret("zookeeper-client-tls"),

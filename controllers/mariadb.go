@@ -46,11 +46,11 @@ func (r *SFController) DeployMariadb() bool {
 	pass_name := "mariadb-root-password"
 	r.GenerateSecretUUID(pass_name)
 
-	dep := create_statefulset(r.ns, "mariadb", DBImage, get_storage_classname(r.cr.Spec))
+	dep := r.create_statefulset("mariadb", DBImage, get_storage_classname(r.cr.Spec))
 
 	dep.Spec.VolumeClaimTemplates = append(
 		dep.Spec.VolumeClaimTemplates,
-		create_pvc(r.ns, "mariadb-logs", get_storage_classname(r.cr.Spec)))
+		r.create_pvc("mariadb-logs", get_storage_classname(r.cr.Spec)))
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      "mariadb",
@@ -81,7 +81,7 @@ func (r *SFController) DeployMariadb() bool {
 
 	r.GetOrCreate(&dep)
 	service_ports := []int32{MARIADB_PORT}
-	srv := create_service(r.ns, "mariadb", "mariadb", service_ports, MARIADB_PORT_NAME)
+	srv := r.create_service("mariadb", "mariadb", service_ports, MARIADB_PORT_NAME)
 	r.GetOrCreate(&srv)
 
 	return r.IsStatefulSetReady(&dep)

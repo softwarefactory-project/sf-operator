@@ -61,7 +61,7 @@ func (r *SFController) DeployManagesfResources() bool {
 	r.EnsureConfigMap(MANAGESF_RESOURCES_IDENT, config_data)
 
 	// Create the deployment object
-	dep := create_deployment(r.ns, MANAGESF_RESOURCES_IDENT, BUSYBOX_IMAGE)
+	dep := r.create_deployment(MANAGESF_RESOURCES_IDENT, BUSYBOX_IMAGE)
 
 	// Amend the deployment's container
 	dep.Spec.Template.Spec.Containers[0].Command = []string{"bash", "-c", managesf_entrypoint}

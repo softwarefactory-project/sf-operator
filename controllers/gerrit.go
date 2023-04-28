@@ -114,7 +114,7 @@ func (r *SFController) GerritPostInitJob(name string, has_config_repo bool) bool
 				},
 			},
 		}
-		job := create_job(r.ns, job_name, container)
+		job := r.create_job(job_name, container)
 		job.Spec.Template.Spec.Volumes = []apiv1.Volume{
 			create_volume_cm(GERRIT_IDENT+"-pi", GERRIT_IDENT+"-pi-config-map"),
 		}
@@ -141,7 +141,7 @@ func (r *SFController) DeployGerrit() bool {
 	r.GenerateSecretUUID("gerrit-admin-api-key")
 
 	// Create a certificate for Gerrit
-	cert := r.create_client_certificate(r.ns, GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit")
+	cert := r.create_client_certificate(GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit")
 	r.GetOrCreate(&cert)
 
 	volumeMounts := []apiv1.VolumeMount{
@@ -156,7 +156,7 @@ func (r *SFController) DeployGerrit() bool {
 	}
 
 	// Create the deployment
-	dep := create_statefulset(r.ns, GERRIT_IDENT, GERRIT_IMAGE, get_storage_classname(r.cr.Spec))
+	dep := r.create_statefulset(GERRIT_IDENT, GERRIT_IMAGE, get_storage_classname(r.cr.Spec))
 
 	cm_data := make(map[string]string)
 	cm_data["ready.sh"] = gerritReadyScript

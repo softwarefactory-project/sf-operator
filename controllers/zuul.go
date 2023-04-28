@@ -187,7 +187,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	r.EnsureConfigMap("zuul-scheduler-tooling", scheduler_tooling_data)
 
 	zs_volumes := create_zuul_volumes("zuul-scheduler")
-	zs := create_statefulset(r.ns, "zuul-scheduler", "", get_storage_classname(r.cr.Spec))
+	zs := r.create_statefulset("zuul-scheduler", "", get_storage_classname(r.cr.Spec))
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = append(init_containers, init_scheduler_config())
 	zs.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
@@ -208,7 +208,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		r.UpdateR(&zs)
 	}
 
-	ze := create_headless_statefulset(r.ns, "zuul-executor", "", get_storage_classname(r.cr.Spec))
+	ze := r.create_headless_statefulset("zuul-executor", "", get_storage_classname(r.cr.Spec))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	ze.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-executor")
@@ -233,7 +233,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		r.UpdateR(&ze)
 	}
 
-	zw := create_deployment(r.ns, "zuul-web", "")
+	zw := r.create_deployment("zuul-web", "")
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
 	zw.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	zw.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-web")
@@ -252,11 +252,11 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	}
 
 	service_ports := []int32{ZUUL_WEB_PORT}
-	srv := create_service(r.ns, "zuul-web", "zuul-web", service_ports, "zuul-web")
+	srv := r.create_service("zuul-web", "zuul-web", service_ports, "zuul-web")
 	r.GetOrCreate(&srv)
 
 	headless_ports := []int32{ZUUL_EXECUTOR_PORT}
-	srv_ze := create_headless_service(r.ns, "zuul-executor", "zuul-executor", headless_ports, "zuul-executor")
+	srv_ze := r.create_headless_service("zuul-executor", "zuul-executor", headless_ports, "zuul-executor")
 	r.GetOrCreate(&srv_ze)
 
 	return r.IsStatefulSetReady(&zs) && r.IsStatefulSetReady(&ze) && r.IsDeploymentReady(&zw)

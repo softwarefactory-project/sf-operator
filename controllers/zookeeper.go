@@ -5,6 +5,7 @@ package controllers
 
 import (
 	_ "embed"
+
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -33,8 +34,8 @@ const ZK_IDENT = "zookeeper"
 const ZK_PI_MOUNT_PATH = "/config-scripts"
 
 func (r *SFController) DeployZookeeper() bool {
-	cert := r.create_client_certificate(r.ns, "zookeeper-server", "ca-issuer", "zookeeper-server-tls", ZK_IDENT)
-	cert_client := r.create_client_certificate(r.ns, "zookeeper-client", "ca-issuer", "zookeeper-client-tls", ZK_IDENT)
+	cert := r.create_client_certificate("zookeeper-server", "ca-issuer", "zookeeper-server-tls", ZK_IDENT)
+	cert_client := r.create_client_certificate("zookeeper-client", "ca-issuer", "zookeeper-client-tls", ZK_IDENT)
 	r.GetOrCreate(&cert)
 	r.GetOrCreate(&cert_client)
 
@@ -84,17 +85,17 @@ func (r *SFController) DeployZookeeper() bool {
 	}
 
 	service_ports := []int32{ZOOKEEPER_SSL_PORT}
-	srv := create_service(r.ns, ZK_IDENT, ZK_IDENT, service_ports, ZK_IDENT)
+	srv := r.create_service(ZK_IDENT, ZK_IDENT, service_ports, ZK_IDENT)
 	r.GetOrCreate(&srv)
 
 	headless_ports := []int32{ZOOKEEPER_SSL_PORT, ZOOKEEPER_ELECTION_PORT, ZOOKEEPER_SERVER_PORT}
-	srv_zk := create_headless_service(r.ns, ZK_IDENT, ZK_IDENT, headless_ports, ZK_IDENT)
+	srv_zk := r.create_headless_service(ZK_IDENT, ZK_IDENT, headless_ports, ZK_IDENT)
 	r.GetOrCreate(&srv_zk)
 
-	zk := create_headless_statefulset(r.ns, ZK_IDENT, "", get_storage_classname(r.cr.Spec))
+	zk := r.create_headless_statefulset(ZK_IDENT, "", get_storage_classname(r.cr.Spec))
 	zk.Spec.VolumeClaimTemplates = append(
 		zk.Spec.VolumeClaimTemplates,
-		create_pvc(r.ns, ZK_IDENT+"-data", get_storage_classname(r.cr.Spec)))
+		r.create_pvc(ZK_IDENT+"-data", get_storage_classname(r.cr.Spec)))
 	zk.Spec.Template.Spec.Containers = []apiv1.Container{container}
 	zk.Spec.Template.ObjectMeta.Annotations = annotations
 	zk.Spec.Template.Spec.Volumes = []apiv1.Volume{

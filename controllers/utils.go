@@ -295,11 +295,11 @@ func get_storage_classname(spec sfv1.SoftwareFactorySpec) string {
 	}
 }
 
-func create_pvc(ns string, name string, storageClassName string) apiv1.PersistentVolumeClaim {
+func (r *SFController) create_pvc(name string, storageClassName string) apiv1.PersistentVolumeClaim {
 	return apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: ns,
+			Namespace: r.ns,
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
 			StorageClassName: &storageClassName,
@@ -314,7 +314,7 @@ func create_pvc(ns string, name string, storageClassName string) apiv1.Persisten
 }
 
 // Create a default statefulset.
-func create_statefulset(ns string, name string, image string, storageClassName string, nameSuffix ...string) appsv1.StatefulSet {
+func (r *SFController) create_statefulset(name string, image string, storageClassName string, nameSuffix ...string) appsv1.StatefulSet {
 	service_name := name
 	if nameSuffix != nil {
 		service_name = name + "-" + nameSuffix[0]
@@ -326,11 +326,11 @@ func create_statefulset(ns string, name string, image string, storageClassName s
 		ImagePullPolicy: "IfNotPresent",
 		SecurityContext: create_security_context(false),
 	}
-	pvc := create_pvc(ns, name, storageClassName)
+	pvc := r.create_pvc(name, storageClassName)
 	return appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: ns,
+			Namespace: r.ns,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas:    int32Ptr(1),
@@ -364,12 +364,12 @@ func create_statefulset(ns string, name string, image string, storageClassName s
 }
 
 // Create a default headless statefulset.
-func create_headless_statefulset(ns string, name string, image string, storageClassName string) appsv1.StatefulSet {
-	return create_statefulset(ns, name, image, storageClassName, "headless")
+func (r *SFController) create_headless_statefulset(name string, image string, storageClassName string) appsv1.StatefulSet {
+	return r.create_statefulset(name, image, storageClassName, "headless")
 }
 
 // Create a default deployment.
-func create_deployment(ns string, name string, image string) appsv1.Deployment {
+func (r *SFController) create_deployment(name string, image string) appsv1.Deployment {
 	container := apiv1.Container{
 		Name:            name,
 		Image:           image,
@@ -379,7 +379,7 @@ func create_deployment(ns string, name string, image string) appsv1.Deployment {
 	return appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: ns,
+			Namespace: r.ns,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: int32Ptr(1),
@@ -409,7 +409,7 @@ func create_deployment(ns string, name string, image string) appsv1.Deployment {
 }
 
 // create a default service.
-func create_service(ns string, name string, selector string, ports []int32, port_name string) apiv1.Service {
+func (r *SFController) create_service(name string, selector string, ports []int32, port_name string) apiv1.Service {
 	service_ports := []apiv1.ServicePort{}
 	for _, p := range ports {
 		service_ports = append(
@@ -423,7 +423,7 @@ func create_service(ns string, name string, selector string, ports []int32, port
 	return apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: ns,
+			Namespace: r.ns,
 		},
 		Spec: apiv1.ServiceSpec{
 			Ports: service_ports,
@@ -435,7 +435,7 @@ func create_service(ns string, name string, selector string, ports []int32, port
 }
 
 // create a headless service.
-func create_headless_service(ns string, name string, selector string, ports []int32, port_name string) apiv1.Service {
+func (r *SFController) create_headless_service(name string, selector string, ports []int32, port_name string) apiv1.Service {
 	service_ports := []apiv1.ServicePort{}
 	for _, p := range ports {
 		service_ports = append(
@@ -450,7 +450,7 @@ func create_headless_service(ns string, name string, selector string, ports []in
 	return apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name + "-headless",
-			Namespace: ns,
+			Namespace: r.ns,
 		},
 		Spec: apiv1.ServiceSpec{
 			ClusterIP: "None",
@@ -765,11 +765,11 @@ func (r *SFController) EnsureCA() {
 	r.CreateYAMLs(ca_objs)
 }
 
-func create_job(ns string, name string, container apiv1.Container) batchv1.Job {
+func (r *SFController) create_job(name string, container apiv1.Container) batchv1.Job {
 	return batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: ns,
+			Namespace: r.ns,
 		},
 		Spec: batchv1.JobSpec{
 			Template: apiv1.PodTemplateSpec{
@@ -873,11 +873,11 @@ func (r *SFController) PodExec(pod string, container string, command []string) e
 	return nil
 }
 
-func (r *SFController) create_client_certificate(ns string, name string, issuer string, secret string, servicename string) certv1.Certificate {
+func (r *SFController) create_client_certificate(name string, issuer string, secret string, servicename string) certv1.Certificate {
 	return certv1.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: ns,
+			Namespace: r.ns,
 		},
 		Spec: certv1.CertificateSpec{
 			CommonName: "client",
