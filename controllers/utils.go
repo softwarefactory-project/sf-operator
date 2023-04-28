@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/ssh"
@@ -124,6 +125,36 @@ func parse_template(templatePath string, data any) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+func new_condition(t string, reason string, message string) metav1.Condition {
+	return metav1.Condition{
+		Type:               t,
+		Status:             metav1.ConditionUnknown,
+		Reason:             reason,
+		Message:            message,
+		LastTransitionTime: metav1.NewTime(time.Now()),
+	}
+}
+
+func add_condition(conditions *[]metav1.Condition, t string, reason string, message string) {
+	for _, condition := range *conditions {
+		if condition.Type == t {
+			return
+		}
+	}
+	*conditions = append([]metav1.Condition{new_condition(t, reason, message)}, *conditions...)
+}
+
+func complete_condition(conditions *[]metav1.Condition, t string, reason string, message string) {
+	for i, condition := range *conditions {
+		if condition.Type == t {
+			(*conditions)[i].Status = metav1.ConditionTrue
+			(*conditions)[i].Reason = reason
+			(*conditions)[i].Message = message
+			(*conditions)[i].LastTransitionTime = metav1.NewTime(time.Now())
+		}
+	}
 }
 
 // Function to easilly use templated string.
