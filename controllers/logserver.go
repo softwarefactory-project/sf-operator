@@ -74,33 +74,52 @@ func (r *SFController) DeployLogserver() bool {
 	}
 
 	// Create the deployment
-	dep := create_statefulset(r.ns, LOGSERVER_IDENT, LOGSERVER_IMAGE, get_storage_classname(r.cr.Spec))
+	dep := create_deployment(r.ns, LOGSERVER_IDENT, "")
 
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
-	// Expose volumes
+	// FIXME: why the ssh key can not be mount as secret and it is generated in entrypoint?
+	keys_pvc := create_pvc(r.ns, LOGSERVER_IDENT+"-keys", get_storage_classname(r.cr.Spec))
+	r.GetOrCreate(&keys_pvc)
+
+	data_pvc := create_pvc(r.ns, LOGSERVER_IDENT, get_storage_classname(r.cr.Spec))
+	r.GetOrCreate(&data_pvc)
+
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		create_volume_cm(LOGSERVER_IDENT+"-config-vol", LOGSERVER_IDENT+"-config-map"),
+		{
+			Name: LOGSERVER_IDENT + "-keys",
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: LOGSERVER_IDENT + "-keys",
+				},
+			},
+		},
+		{
+			Name: LOGSERVER_IDENT,
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: LOGSERVER_IDENT,
+				},
+			},
+		},
 	}
-
-	dep.Spec.VolumeClaimTemplates = append(dep.Spec.VolumeClaimTemplates, create_pvc(r.ns, LOGSERVER_IDENT+"-keys", get_storage_classname(r.cr.Spec)))
 
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		create_container_port(LOGSERVER_HTTPD_PORT, LOGSERVER_HTTPD_PORT_NAME),
 	}
 
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", LOGSERVER_HTTPD_PORT)
+	dep.Spec.Template.Spec.Containers[0].Image = LOGSERVER_IMAGE
 
 	// Create services exposed by logserver
 	service_ports := []int32{LOGSERVER_HTTPD_PORT}
 	httpd_service := create_service(
 		r.ns, LOGSERVER_HTTPD_PORT_NAME, LOGSERVER_IDENT, service_ports, LOGSERVER_HTTPD_PORT_NAME)
-
 	r.GetOrCreate(&httpd_service)
 
 	// Side Car Container
-
 	volumeMounts_sidecar := []apiv1.VolumeMount{
 		{
 			Name:      LOGSERVER_IDENT,
@@ -173,7 +192,7 @@ func (r *SFController) DeployLogserver() bool {
 	sshd_service := create_service(r.ns, LOGSERVER_SSHD_PORT_NAME, LOGSERVER_IDENT, sshd_service_ports, LOGSERVER_SSHD_PORT_NAME)
 	r.GetOrCreate(&sshd_service)
 
-	ready := r.IsStatefulSetReady(&dep)
+	ready := r.IsDeploymentReady(&dep)
 	if ready {
 		return true
 	} else {

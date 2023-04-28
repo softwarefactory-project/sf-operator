@@ -3,6 +3,11 @@
     path: "{{ output_dir }}"
     state: absent
 
+- name: Get logserver pod name
+  ansible.builtin.shell: |
+    kubectl get pods -l "{{ pod_label }}" --no-headers -o custom-columns=":metadata.name"
+  register: _logserver_pod_name
+
 - name: "Fetch logserver content on locally in {{ output_dir }}"
   command: |
-    kubectl cp {{ pod_name }}:/var/www/logs -c {{ container_name }} {{ output_dir }}
+    kubectl cp {{ _logserver_pod_name.stdout }}:/var/www/logs -c {{ container_name }} {{ output_dir }}

@@ -6,9 +6,14 @@
   retries: 10
   loop: "{{ zuul_job_result.json | list }}"
 
+- name: Get logserver pod name
+  ansible.builtin.shell: |
+    kubectl get pods -l "{{ pod_label }}" --no-headers -o custom-columns=":metadata.name"
+  register: _logserver_pod_name
+
 - name: Changing Logs modified time
   ansible.builtin.shell: |
-    kubectl exec {{ pod_name }} -c {{ sshd_container_name }} -- find /home/data/rsync/ -mindepth 1 -exec touch --date="1970-01-01" {} \;
+    kubectl exec {{ _logserver_pod_name.stdout }} -c {{ sshd_container_name }} -- find /home/data/rsync/ -mindepth 1 -exec touch --date="1970-01-01" {} \;
 
 - name: Ensure job results do not exist in Logserver after purging
   ansible.builtin.uri:
