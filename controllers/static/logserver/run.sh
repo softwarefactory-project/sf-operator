@@ -10,11 +10,9 @@ chmod 00400 /tmp/home/.ssh/authorized_keys
 chmod 00700 /tmp/home
 ln -s /home/data/rsync /tmp/home/rsync
 
-# Setup sshd service
-test -f /var/ssh-keys/ssh_host_ed25519_key || ssh-keygen -t ed25519 -P "" -f /var/ssh-keys/ssh_host_ed25519_key
-chmod 00400 /var/ssh-keys/*
+## Setup sshd service
 cat > /tmp/home/sshd_config <<EOF
-HostKey /var/ssh-keys/ssh_host_ed25519_key
+HostKey /var/ssh-keys/priv
 Port 2222
 UseDNS no
 UsePAM no
