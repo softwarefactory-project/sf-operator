@@ -1,7 +1,7 @@
 VERSION ?= 0.0.1
 
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/software-factory/sf-operator:latest
+IMG ?= quay.io/software-factory/sf-operator:v$(VERSION)
 BUNDLE_IMG ?= quay.io/software-factory/sf-operator-bundle:v$(VERSION)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.25
@@ -129,6 +129,13 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+##@ Vanilla (Transitional step before we go full bundle)
+# Generate the vanilla-install/operator.yml
+.PHONY: vanilla-install
+vanilla-install: manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default > vanilla-install/operator.yml
 
 ##@ Build Dependencies
 
