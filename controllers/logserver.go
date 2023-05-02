@@ -39,6 +39,8 @@ var logserverconf string
 
 func (r *SFController) DeployLogserver() bool {
 
+	r.EnsureSSHKey(LOGSERVER_IDENT + "-keys")
+
 	cm_data := make(map[string]string)
 	cm_data["logserver.conf"], _ = parse_string(logserverconf, struct {
 		ServerPort    int
@@ -74,25 +76,26 @@ func (r *SFController) DeployLogserver() bool {
 	}
 
 	// Create the deployment
-	dep := create_deployment(r.ns, LOGSERVER_IDENT, "")
+	dep := create_deployment(r.ns, LOGSERVER_IDENT, LOGSERVER_IMAGE)
 
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
-	// FIXME: why the ssh key can not be mount as secret and it is generated in entrypoint?
 	keys_pvc := create_pvc(r.ns, LOGSERVER_IDENT+"-keys", get_storage_classname(r.cr.Spec))
 	r.GetOrCreate(&keys_pvc)
 
 	data_pvc := create_pvc(r.ns, LOGSERVER_IDENT, get_storage_classname(r.cr.Spec))
 	r.GetOrCreate(&data_pvc)
 
+	var mod int32 = 256 // decimal for 0400 octal
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		create_volume_cm(LOGSERVER_IDENT+"-config-vol", LOGSERVER_IDENT+"-config-map"),
 		{
 			Name: LOGSERVER_IDENT + "-keys",
 			VolumeSource: apiv1.VolumeSource{
-				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-					ClaimName: LOGSERVER_IDENT + "-keys",
+				Secret: &apiv1.SecretVolumeSource{
+					SecretName:  LOGSERVER_IDENT + "-keys",
+					DefaultMode: &mod,
 				},
 			},
 		},
@@ -111,7 +114,6 @@ func (r *SFController) DeployLogserver() bool {
 	}
 
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", LOGSERVER_HTTPD_PORT)
-	dep.Spec.Template.Spec.Containers[0].Image = LOGSERVER_IMAGE
 
 	// Create services exposed by logserver
 	service_ports := []int32{LOGSERVER_HTTPD_PORT}
@@ -128,6 +130,7 @@ func (r *SFController) DeployLogserver() bool {
 		{
 			Name:      LOGSERVER_IDENT + "-keys",
 			MountPath: "/var/ssh-keys",
+			ReadOnly:  true,
 		},
 		{
 			Name:      LOGSERVER_IDENT + "-config-vol",
