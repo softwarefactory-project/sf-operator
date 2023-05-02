@@ -1,0 +1,28 @@
+# './bin/operator-sdk cleanup -n bundle-catalog-ns sf-operator' should do the cleaning here
+# However a cert-manager sub is installed into bundle-catalog-ns ns because OLM detected a
+# dependency to the cert-manager CRDs, then using "operator-sdk cleanup" remove the cert-manager CRDs
+# installed by "make install-cert-manager" into the "operators" ns.
+# We might have an inconsistency in our dev workflow if we keep the "go run" dev mode ...
+- name: Clean up previous operator installation
+  when: remote_os_host
+  block:
+    - name: Clean the subscription
+      shell: |
+        kubectl -n bundle-catalog-ns get sub --no-headers | grep sf-operator | \
+          cut -d' ' -f1 | xargs kubectl -n bundle-catalog-ns delete sub
+      ignore_errors: true
+    - name: Clean the csv
+      shell: |
+        kubectl -n bundle-catalog-ns get csv --no-headers | grep sf-operator | \
+          cut -d' ' -f1 | xargs kubectl -n bundle-catalog-ns delete csv
+      ignore_errors: true
+    - name: Clean the catalogsource
+      command: |
+        kubectl -n bundle-catalog-ns delete catalogsource.operators.coreos.com/sf-operator-catalog
+      ignore_errors: true
+    - name: Remove sf in sf namespace
+      command: kubectl -n sf delete sf --all
+      ignore_errors: true
+    - name: Release PVCs in sf namespace
+      command: kubectl -n sf delete pvc --all
+      ignore_errors: true

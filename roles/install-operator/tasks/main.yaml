@@ -1,4 +1,8 @@
-- name: Install the operator
-  community.general.make:
-    target: deploy
-    chdir: "{{ zuul.project.src_dir }}"
+- name: Install the operator via the OLM bundle
+  delegate_to: "{{ os_host }}"
+  command: |
+    bin/operator-sdk run bundle --skip-tls --skip-tls-verify \
+    {{ ci_bundle_img }} --namespace bundle-catalog-ns \
+    --security-context-config restricted
+  args:
+    chdir: "{{ src_dir }}"

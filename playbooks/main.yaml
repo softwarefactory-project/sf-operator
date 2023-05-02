@@ -1,9 +1,10 @@
 - hosts: "{{ hostname | default('all') }}"
   roles:
     - setup-env
-    - setup-microshift
-    - build-operator
-    - build-operator-image
+    - sanity-check
+    - setup-namespaces
+    - build-operator-assets
+    - clean-installations
     - install-operator
     - apply-custom-resources
   tasks:

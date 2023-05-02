@@ -1,0 +1,34 @@
+- name: Is registry container exists
+  command: podman container exists registry
+  register: is_registry_container_exists
+  failed_when: is_registry_container_exists.rc >= 2
+
+- name: Clean registry
+  when: is_registry_container_exists.rc == 0
+  block:
+    - name: Stop registry
+      command: podman stop registry
+
+    - name: Delete registry contrainer
+      command: podman rm registry
+
+- name: Is registry volume exists
+  command: podman volume exists registry
+  register: is_registry_volume_exists
+  failed_when: is_registry_volume_exists.rc >= 2
+
+- name: Clean registry volume
+  when: is_registry_volume_exists.rc == 0
+  command: podman volume rm registry
+
+# quay.io/software-factory/registry:2 is a copy of https://hub.docker.com/_/registry
+- name: Start the podman registry container
+  command: |
+    podman container run -dt -p 5000:5000 --name registry \
+    --volume registry:/var/lib/registry:Z quay.io/software-factory/registry:2
+
+- name: Wait for the registry to be up
+  command: podman image search localhost:5000/ --tls-verify=false
+  register: is_registry_running
+  until: is_registry_running.rc == 0
+  delay: 1

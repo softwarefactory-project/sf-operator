@@ -17,3 +17,17 @@
           - git-review
           - websocket-client
   when: install_requirements | bool == true
+
+- name: Set project source path (running on Zuul)
+  when: zuul.build is defined
+  set_fact:
+    src_dir: "{{ zuul.project.src_dir }}"
+    remote_os_host: false
+    os_host: controller
+
+- name: Set project source path (running on Dev node)
+  when: zuul.build is not defined
+  set_fact:
+    src_dir: "/tmp/sf-operator"
+    remote_os_host: true
+    os_host: "{{ microshift_host }}"

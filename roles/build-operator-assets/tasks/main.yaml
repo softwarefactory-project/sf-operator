@@ -1,0 +1,35 @@
+- name: "Sync sf-operator to {{ microshift_host }} instance"
+  when: remote_os_host
+  command: "rsync -av ../../sf-operator/ {{ microshift_host }}:{{ src_dir }} --exclude=.git --delete"
+
+- name: Setup a local temporary registry
+  delegate_to: "{{ os_host }}"
+  block:
+    - include_role:
+        name: "roles/setup-local-registry"
+
+- name: Build and publish operator assets
+  delegate_to: "{{ os_host }}"
+  block:
+    # Image will be available in crio and Microshift will find it
+    - name: Build the operator image
+      become: true
+      community.general.make:
+        target: operator-build
+        chdir: "{{ src_dir }}"
+
+    - name: Create the operator OLM bundle
+      community.general.make:
+        target: bundle
+        chdir: "{{ src_dir }}"
+
+    - name: Build the operator OLM bundle image
+      community.general.make:
+        target: bundle-build
+        chdir: "{{ src_dir }}"
+        params:
+          BUNDLE_IMG: "{{ ci_bundle_img }}"
+
+    # operator-sdk run commands requires the bundle image to be available on registry
+    - name: Push the OLM bundle image in the local registry
+      command: podman push --tls-verify=false localhost:5000/sf-operator-bundle:latest

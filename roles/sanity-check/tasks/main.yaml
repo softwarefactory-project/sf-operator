@@ -1,0 +1,25 @@
+- name: Ensure no diff (manifests generated)
+  when: not remote_os_host
+  block:
+    - name: Run make
+      command: make
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
+
+    # for some reasons, LICENSE file is updated with cert-manager license during go build
+    - name: Check for diff
+      command: git diff -- ":(exclude)LICENSE"
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
+      register: render_diff
+
+    - name: Abort on diff
+      when:
+        - render_diff.stdout
+      failed_when: true
+      debug:
+        msg: |
+          The repository content is not consistent.
+          Please commit the change made after running `make`.
+
+          {{ render_diff.stdout }}
