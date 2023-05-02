@@ -7,7 +7,9 @@
   ansible.builtin.shell: |
     kubectl get pods -l "{{ pod_label }}" --no-headers -o custom-columns=":metadata.name"
   register: _logserver_pod_name
+  failed_when: false
 
 - name: "Fetch logserver content on locally in {{ output_dir }}"
   command: |
     kubectl cp {{ _logserver_pod_name.stdout }}:/var/www/logs -c {{ container_name }} {{ output_dir }}
+  failed_when: false

@@ -15,6 +15,9 @@ const MANAGESF_RESOURCES_IDENT string = "managesf-resources"
 //go:embed static/managesf-resources/entrypoint.sh
 var managesf_entrypoint string
 
+//go:embed static/managesf-resources/config.py.tmpl
+var managesf_conf string
+
 func GenerateConfig(r *SFController) (string, error) {
 
 	// Getting Gerrit Admin password from secret
@@ -36,10 +39,7 @@ func GenerateConfig(r *SFController) (string, error) {
 		string(gerritadminpassword),
 	}
 
-	// Template path
-	templatefile := "controllers/static/managesf-resources/config.py.tmpl"
-
-	template, err := parse_template(templatefile, configpy)
+	template, err := parse_string(managesf_conf, configpy)
 	if err != nil {
 		r.log.V(1).Error(err, "Template parsing failed")
 		return "", err

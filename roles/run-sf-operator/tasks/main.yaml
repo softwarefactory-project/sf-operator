@@ -1,4 +1,11 @@
-- name: Run the operator
-  command: go run ./main.go --namespace sf --oneshot --cr playbooks/files/allinone.yaml
+- name: Apply the CR
+  command: kubectl apply -f playbooks/files/allinone.yaml
   args:
     chdir: "{{ zuul.project.src_dir }}"
+
+- name: Wait for the CR to be ready
+  command: kubectl get sf my-sf -o=jsonpath='{.status.ready}'
+  register: sf_ready
+  until: "'true' in sf_ready.stdout"
+  retries: 60
+  delay: 10
