@@ -66,12 +66,12 @@
   delay: 2
 
 - name: Build the operator image
-  command: make podman-build
-  args:
+  community.general.make:
+    target: operator-build
     chdir: "{{ zuul.project.src_dir }}"
   become: yes
 
 - name: Install the operator
-  command: kubectl apply -f vanilla-install/operator.yml
-  args:
+  community.general.make:
+    target: deploy
     chdir: "{{ zuul.project.src_dir }}"

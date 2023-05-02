@@ -75,12 +75,12 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
-.PHONY: podman-build
-podman-build: test ## Build podman image with the manager.
+.PHONY: operator-build
+operator-build: test ## Build podman image with the manager.
 	podman build -t ${IMG} .
 
-.PHONY: podman-push
-podman-push: ## Push podman image with the manager.
+.PHONY: operator-push
+operator-push: ## Push podman image with the manager.
 	podman push ${IMG}
 
 .PHONY: bundle
@@ -129,13 +129,6 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-
-##@ Vanilla (Transitional step before we go full bundle)
-# Generate the vanilla-install/operator.yml
-.PHONY: vanilla-install
-vanilla-install: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default > vanilla-install/operator.yml
 
 ##@ Build Dependencies
 
