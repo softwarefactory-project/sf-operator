@@ -17,7 +17,7 @@ const NL_WEBAPP_PORT_NAME = "nlwebapp"
 const NL_WEBAPP_PORT = 8006
 
 func (r *SFController) DeployNodepool() bool {
-	cert_client := r.create_client_certificate("zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper")
+	cert_client := r.create_client_certificate("zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper", r.cr.Spec.FQDN)
 	r.GetOrCreate(&cert_client)
 
 	r.GetOrCreate(&apiv1.Secret{

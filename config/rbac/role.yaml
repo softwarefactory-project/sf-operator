@@ -61,6 +61,32 @@ rules:
 - apiGroups:
   - sf.softwarefactory-project.io
   resources:
+  - logservers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sf.softwarefactory-project.io
+  resources:
+  - logservers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sf.softwarefactory-project.io
+  resources:
+  - logservers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - sf.softwarefactory-project.io
+  resources:
   - softwarefactories
   verbs:
   - create

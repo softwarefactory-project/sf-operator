@@ -7,6 +7,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	_ "embed"
 	"fmt"
@@ -16,13 +17,16 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/ssh"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
+
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/utils/pointer"
 
 	"crypto/rand"
 	"crypto/rsa"
@@ -30,31 +34,39 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
 	"k8s.io/apimachinery/pkg/labels"
-	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
+	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	apiroutev1 "github.com/openshift/api/route/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
 const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.4-2"
+
+type SFUtilContext struct {
+	Client     client.Client
+	Scheme     *runtime.Scheme
+	RESTClient rest.Interface
+	RESTConfig *rest.Config
+	ns         string
+	log        logr.Logger
+	ctx        context.Context
+	owner      client.Object
+}
 
 func DEFAULT_QTY_1Gi() resource.Quantity {
 	q, _ := resource.ParseQuantity("1Gi")
@@ -74,9 +86,6 @@ type StorageConfig struct {
 	StorageClassName string
 	Size             resource.Quantity
 }
-
-// TODO: the line below can be removed when we move to compiler version 1.18 (current 1.17)
-type any = interface{}
 
 // Function to easilly use templates files.
 //
@@ -297,16 +306,15 @@ func create_empty_dir(name string) apiv1.Volume {
 	}
 }
 
-func get_storage_classname(spec sfv1.SoftwareFactorySpec) string {
-	if spec.StorageClassName != "" {
-		return spec.StorageClassName
+func get_storage_classname(storageClassName string) string {
+	if storageClassName != "" {
+		return storageClassName
 	} else {
 		return "topolvm-provisioner"
 	}
 }
 
-func (r *SFController) create_pvc(name string, storageSpec sfv1.StorageSpec) apiv1.PersistentVolumeClaim {
-	storageParams := r.getStorageConfOrDefault(storageSpec)
+func (r *SFUtilContext) create_pvc(name string, storageParams StorageConfig) apiv1.PersistentVolumeClaim {
 	qty := storageParams.Size
 	return apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -326,7 +334,7 @@ func (r *SFController) create_pvc(name string, storageSpec sfv1.StorageSpec) api
 }
 
 // Create a default statefulset.
-func (r *SFController) create_statefulset(name string, image string, storageSpec sfv1.StorageSpec, nameSuffix ...string) appsv1.StatefulSet {
+func (r *SFUtilContext) create_statefulset(name string, image string, storageConfig StorageConfig, nameSuffix ...string) appsv1.StatefulSet {
 	service_name := name
 	if nameSuffix != nil {
 		service_name = name + "-" + nameSuffix[0]
@@ -338,7 +346,7 @@ func (r *SFController) create_statefulset(name string, image string, storageSpec
 		ImagePullPolicy: "IfNotPresent",
 		SecurityContext: create_security_context(false),
 	}
-	pvc := r.create_pvc(name, storageSpec)
+	pvc := r.create_pvc(name, storageConfig)
 	return appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -376,12 +384,12 @@ func (r *SFController) create_statefulset(name string, image string, storageSpec
 }
 
 // Create a default headless statefulset.
-func (r *SFController) create_headless_statefulset(name string, image string, storageSpec sfv1.StorageSpec) appsv1.StatefulSet {
-	return r.create_statefulset(name, image, storageSpec, "headless")
+func (r *SFUtilContext) create_headless_statefulset(name string, image string, storageConfig StorageConfig) appsv1.StatefulSet {
+	return r.create_statefulset(name, image, storageConfig, "headless")
 }
 
 // Create a default deployment.
-func (r *SFController) create_deployment(name string, image string) appsv1.Deployment {
+func (r *SFUtilContext) create_deployment(name string, image string) appsv1.Deployment {
 	container := apiv1.Container{
 		Name:            name,
 		Image:           image,
@@ -421,7 +429,7 @@ func (r *SFController) create_deployment(name string, image string) appsv1.Deplo
 }
 
 // create a default service.
-func (r *SFController) create_service(name string, selector string, ports []int32, port_name string) apiv1.Service {
+func (r *SFUtilContext) create_service(name string, selector string, ports []int32, port_name string) apiv1.Service {
 	service_ports := []apiv1.ServicePort{}
 	for _, p := range ports {
 		service_ports = append(
@@ -447,7 +455,7 @@ func (r *SFController) create_service(name string, selector string, ports []int3
 }
 
 // create a headless service.
-func (r *SFController) create_headless_service(name string, selector string, ports []int32, port_name string) apiv1.Service {
+func (r *SFUtilContext) create_headless_service(name string, selector string, ports []int32, port_name string) apiv1.Service {
 	service_ports := []apiv1.ServicePort{}
 	for _, p := range ports {
 		service_ports = append(
@@ -522,8 +530,8 @@ func create_readiness_tcp_probe(port int) *apiv1.Probe {
 }
 
 // Get a resources, returning if it was found
-func (r *SFController) GetM(name string, obj client.Object) bool {
-	err := r.Get(r.ctx,
+func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
+	err := r.Client.Get(r.ctx,
 		client.ObjectKey{
 			Name:      name,
 			Namespace: r.ns,
@@ -536,27 +544,27 @@ func (r *SFController) GetM(name string, obj client.Object) bool {
 	return true
 }
 
-// Create resources with the software-factory as the ownerReferences.
-func (r *SFController) CreateR(obj client.Object) {
-	controllerutil.SetControllerReference(r.cr, obj, r.Scheme)
-	if err := r.Create(r.ctx, obj); err != nil {
+// Create resources with the owner as the ownerReferences.
+func (r *SFUtilContext) CreateR(obj client.Object) {
+	controllerutil.SetControllerReference(r.owner, obj, r.Scheme)
+	if err := r.Client.Create(r.ctx, obj); err != nil {
 		panic(err.Error())
 	}
 }
 
-func (r *SFController) DeleteR(obj client.Object) {
-	if err := r.Delete(r.ctx, obj); err != nil {
+func (r *SFUtilContext) DeleteR(obj client.Object) {
+	if err := r.Client.Delete(r.ctx, obj); err != nil {
 		panic(err.Error())
 	}
 }
 
-func (r *SFController) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
+func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 	if dep.Status.ReadyReplicas > 0 {
 		var podList apiv1.PodList
 		matchLabels := dep.Spec.Selector.MatchLabels
 		labels := labels.SelectorFromSet(labels.Set(matchLabels))
 		labelSelectors := runtimeClient.MatchingLabelsSelector{Selector: labels}
-		if err := r.List(r.ctx, &podList, labelSelectors); err != nil {
+		if err := r.Client.List(r.ctx, &podList, labelSelectors); err != nil {
 			panic(err.Error())
 		}
 		for _, pod := range podList.Items {
@@ -587,7 +595,7 @@ func (r *SFController) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 	return false
 }
 
-func (r *SFController) IsDeploymentReady(dep *appsv1.Deployment) bool {
+func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 	if dep.Status.ReadyReplicas > 0 {
 		return true
 	}
@@ -595,56 +603,56 @@ func (r *SFController) IsDeploymentReady(dep *appsv1.Deployment) bool {
 	return false
 }
 
-func (r *SFController) DeleteDeployment(name string) {
+func (r *SFUtilContext) DeleteDeployment(name string) {
 	var dep appsv1.Deployment
 	if r.GetM(name, &dep) {
 		r.DeleteR(&dep)
 	}
 }
 
-func (r *SFController) DeleteStatefulSet(name string) {
+func (r *SFUtilContext) DeleteStatefulSet(name string) {
 	var dep appsv1.StatefulSet
 	if r.GetM(name, &dep) {
 		r.DeleteR(&dep)
 	}
 }
 
-func (r *SFController) DeleteConfigMap(name string) {
+func (r *SFUtilContext) DeleteConfigMap(name string) {
 	var dep apiv1.ConfigMap
 	if r.GetM(name, &dep) {
 		r.DeleteR(&dep)
 	}
 }
 
-func (r *SFController) DeleteSecret(name string) {
+func (r *SFUtilContext) DeleteSecret(name string) {
 	var dep apiv1.Secret
 	if r.GetM(name, &dep) {
 		r.DeleteR(&dep)
 	}
 }
 
-func (r *SFController) DeleteService(name string) {
+func (r *SFUtilContext) DeleteService(name string) {
 	var srv apiv1.Service
 	if r.GetM(name, &srv) {
 		r.DeleteR(&srv)
 	}
 }
 
-func (r *SFController) UpdateR(obj client.Object) {
-	controllerutil.SetControllerReference(r.cr, obj, r.Scheme)
+func (r *SFUtilContext) UpdateR(obj client.Object) {
+	controllerutil.SetControllerReference(r.owner, obj, r.Scheme)
 	r.log.V(1).Info("Updating object", "name", obj.GetName())
-	if err := r.Update(r.ctx, obj); err != nil {
+	if err := r.Client.Update(r.ctx, obj); err != nil {
 		panic(err.Error())
 	}
 }
 
-func (r *SFController) PatchR(obj client.Object, patch client.Patch) {
-	if err := r.Patch(r.ctx, obj, patch); err != nil {
+func (r *SFUtilContext) PatchR(obj client.Object, patch client.Patch) {
+	if err := r.Client.Patch(r.ctx, obj, patch); err != nil {
 		panic(err.Error())
 	}
 }
 
-func (r *SFController) DebugStatefulSet(name string) {
+func (r *SFUtilContext) DebugStatefulSet(name string) {
 	var dep appsv1.StatefulSet
 	if !r.GetM(name, &dep) {
 		panic("Can't find the statefulset")
@@ -660,7 +668,7 @@ func (r *SFController) DebugStatefulSet(name string) {
 
 // This does not change an existing object, update needs to be used manually.
 // In the case the object already exists then the function return True
-func (r *SFController) GetOrCreate(obj client.Object) bool {
+func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
 	name := obj.GetName()
 
 	if !r.GetM(name, obj) {
@@ -672,23 +680,22 @@ func (r *SFController) GetOrCreate(obj client.Object) bool {
 }
 
 // Create resource from YAML description
-func (r *SFController) CreateYAML(y string) {
+func (r *SFUtilContext) CreateYAML(y string) {
 	var obj unstructured.Unstructured
 	if err := yaml.Unmarshal([]byte(y), &obj); err != nil {
 		panic(err.Error())
 	}
 	obj.SetNamespace(r.ns)
-	controllerutil.SetControllerReference(r.cr, &obj, r.Scheme)
 	r.GetOrCreate(&obj)
 }
 
-func (r *SFController) CreateYAMLs(ys string) {
+func (r *SFUtilContext) CreateYAMLs(ys string) {
 	for _, y := range strings.Split(ys, "\n---\n") {
 		r.CreateYAML(y)
 	}
 }
 
-func (r *SFController) GenerateSecret(name string, getData func() string) apiv1.Secret {
+func (r *SFUtilContext) GenerateSecret(name string, getData func() string) apiv1.Secret {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
 		r.log.V(1).Info("Creating secret", "name", name)
@@ -702,11 +709,11 @@ func (r *SFController) GenerateSecret(name string, getData func() string) apiv1.
 }
 
 // generate a secret if needed using a uuid4 value.
-func (r *SFController) GenerateSecretUUID(name string) apiv1.Secret {
+func (r *SFUtilContext) GenerateSecretUUID(name string) apiv1.Secret {
 	return r.GenerateSecret(name, func() string { return uuid.New().String() })
 }
 
-func (r *SFController) EnsureSSHKey(name string) {
+func (r *SFUtilContext) EnsureSSHKey(name string) {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
 		r.log.V(1).Info("Creating ssh key", "name", name)
@@ -722,7 +729,7 @@ func (r *SFController) EnsureSSHKey(name string) {
 }
 
 // ensure a config map exists.
-func (r *SFController) EnsureConfigMap(base_name string, data map[string]string) apiv1.ConfigMap {
+func (r *SFUtilContext) EnsureConfigMap(base_name string, data map[string]string) apiv1.ConfigMap {
 	name := base_name + "-config-map"
 	var cm apiv1.ConfigMap
 	if !r.GetM(name, &cm) {
@@ -742,7 +749,7 @@ func (r *SFController) EnsureConfigMap(base_name string, data map[string]string)
 	return cm
 }
 
-func (r *SFController) EnsureSecret(secret *apiv1.Secret) {
+func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
 	var current apiv1.Secret
 	name := secret.GetName()
 	if !r.GetM(name, &current) {
@@ -776,11 +783,11 @@ func map_ensure(m1 *map[string]string, m2 *map[string]string) bool {
 //go:embed static/certificate-authority/certs.yaml
 var ca_objs string
 
-func (r *SFController) EnsureCA() {
+func (r *SFUtilContext) EnsureCA() {
 	r.CreateYAMLs(ca_objs)
 }
 
-func (r *SFController) create_job(name string, container apiv1.Container) batchv1.Job {
+func (r *SFUtilContext) create_job(name string, container apiv1.Container) batchv1.Job {
 	return batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -799,14 +806,17 @@ func (r *SFController) create_job(name string, container apiv1.Container) batchv
 		}}
 }
 
-func (r *SFController) ensure_route(route apiroutev1.Route, name string) {
+func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) {
 	found := r.GetM(name, &route)
 	if !found {
+		r.log.V(1).Info("Creating route...", "name", name)
 		r.CreateR(&route)
 	}
 }
 
-func (r *SFController) ensureHTTPSRoute(name string, host string, serviceName string, path string, port int, annotations map[string]string) {
+func (r *SFUtilContext) ensureHTTPSRoute(
+	name string, host string, serviceName string, path string,
+	port int, annotations map[string]string, fqdn string) {
 	route := apiroutev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -818,7 +828,7 @@ func (r *SFController) ensureHTTPSRoute(name string, host string, serviceName st
 				InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
 				Termination:                   apiroutev1.TLSTerminationEdge,
 			},
-			Host: host + "." + r.cr.Spec.FQDN,
+			Host: host + "." + fqdn,
 			To: apiroutev1.RouteTargetReference{
 				Kind: "Service",
 				Name: serviceName,
@@ -833,7 +843,7 @@ func (r *SFController) ensureHTTPSRoute(name string, host string, serviceName st
 }
 
 // Get the service clusterIP. Return an empty string if service not found.
-func (r *SFController) get_service_ip(service string) string {
+func (r *SFUtilContext) get_service_ip(service string) string {
 	var obj apiv1.Service
 	found := r.GetM(service, &obj)
 	if !found {
@@ -851,7 +861,7 @@ func gen_bcrypt_pass(pass string) string {
 	return string(hashedPassword)
 }
 
-func (r *SFController) PodExec(pod string, container string, command []string) error {
+func (r *SFUtilContext) PodExec(pod string, container string, command []string) error {
 	r.log.V(1).Info("Running pod execution", "pod", pod, "command", command)
 	execReq := r.RESTClient.
 		Post().
@@ -884,7 +894,8 @@ func (r *SFController) PodExec(pod string, container string, command []string) e
 	return nil
 }
 
-func (r *SFController) create_client_certificate(name string, issuer string, secret string, servicename string) certv1.Certificate {
+func (r *SFUtilContext) create_client_certificate(
+	name string, issuer string, secret string, servicename string, fqdn string) certv1.Certificate {
 	return certv1.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -909,16 +920,16 @@ func (r *SFController) create_client_certificate(name string, issuer string, sec
 			// Example DNSNames: service, service.my-sf, service.sftests.com, my-sf
 			DNSNames: []string{
 				servicename,
-				fmt.Sprintf("%s.%s", servicename, r.cr.Name),
-				fmt.Sprintf("%s.%s", servicename, r.cr.Spec.FQDN),
-				r.cr.Name,
+				fmt.Sprintf("%s.%s", servicename, r.owner.GetName()),
+				fmt.Sprintf("%s.%s", servicename, fqdn),
+				r.owner.GetName(),
 			},
 		},
 	}
 }
 
 // Gets Secret by Name Reference
-func (r *SFController) getSecretbyNameRef(name string) (apiv1.Secret, error) {
+func (r *SFUtilContext) getSecretbyNameRef(name string) (apiv1.Secret, error) {
 	var dep apiv1.Secret
 	if r.GetM(name, &dep) {
 		return dep, nil
@@ -927,7 +938,7 @@ func (r *SFController) getSecretbyNameRef(name string) (apiv1.Secret, error) {
 }
 
 // Gets the Value of the Keyname from a Secret
-func (r *SFController) getValueFromKeySecret(secret apiv1.Secret, keyname string) ([]byte, error) {
+func (r *SFUtilContext) getValueFromKeySecret(secret apiv1.Secret, keyname string) ([]byte, error) {
 	keyvalue := secret.Data[keyname]
 	if len(keyvalue) == 0 {
 		return []byte{}, fmt.Errorf("key named %s not found in Secret %s at namespace %s", keyname, secret.Name, secret.Namespace)
@@ -936,7 +947,7 @@ func (r *SFController) getValueFromKeySecret(secret apiv1.Secret, keyname string
 	return keyvalue, nil
 }
 
-func (r *SFController) getSecretDataFromKey(name string, key string) ([]byte, error) {
+func (r *SFUtilContext) getSecretDataFromKey(name string, key string) ([]byte, error) {
 	secret, err := r.getSecretbyNameRef(name)
 	if err != nil {
 		return []byte{}, err
@@ -955,11 +966,11 @@ func (r *SFController) getSecretDataFromKey(name string, key string) ([]byte, er
 }
 
 // Gets Secret Data in which the Keyname is the same as the Secret Name
-func (r *SFController) getSecretData(name string) ([]byte, error) {
+func (r *SFUtilContext) getSecretData(name string) ([]byte, error) {
 	return r.getSecretDataFromKey(name, "")
 }
 
-func (r *SFController) ImageToBase64(imagepath string) (string, error) {
+func (r *SFUtilContext) ImageToBase64(imagepath string) (string, error) {
 	// Read the file to bytes
 	bytes, err := os.ReadFile(imagepath)
 	if err != nil {
@@ -983,35 +994,9 @@ func (r *SFController) ImageToBase64(imagepath string) (string, error) {
 	return encodedimage, nil
 }
 
-func (r *SFController) getConfigRepoCNXInfo() (string, string) {
-	var config_repo_url string
-	var config_repo_user string
-	if r.cr.Spec.ConfigLocations.ConfigRepo == "" {
-		config_repo_url = "gerrit-sshd:29418/config"
-		config_repo_user = "admin"
-	} else if r.cr.Spec.ConfigLocations.ConfigRepo != "" {
-		var user string
-		if r.cr.Spec.ConfigLocations.User != "" {
-			user = r.cr.Spec.ConfigLocations.User
-		} else {
-			user = "git"
-		}
-		config_repo_url = r.cr.Spec.ConfigLocations.ConfigRepo
-		config_repo_user = user
-	} else {
-		// TODO: uncomment the panic once the config repo is actually working
-		// panic("ConfigRepo settings not supported !")
-	}
-	return config_repo_url, config_repo_user
-}
-
-func int32Ptr(i int32) *int32 { return &i }
-func boolPtr(b bool) *bool    { return &b }
-func strPtr(s string) *string { return &s }
-
-func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) StorageConfig {
+func (r *SFUtilContext) baseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName string) StorageConfig {
 	var size = DEFAULT_QTY_1Gi()
-	var className = get_storage_classname(r.cr.Spec)
+	var className = get_storage_classname(storageClassName)
 	if !storageSpec.Size.IsZero() {
 		size = storageSpec.Size
 	}
@@ -1024,7 +1009,7 @@ func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) Sto
 	}
 }
 
-func (r *SFController) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv1.StorageSpec) bool {
+func (r *SFUtilContext) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv1.StorageSpec) bool {
 	new_qty := newStorageSpec.Size
 
 	found_pvc := &apiv1.PersistentVolumeClaim{}
@@ -1061,7 +1046,7 @@ func (r *SFController) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv1
 			},
 		}
 		found_pvc.Spec.Resources = new_resources
-		if err := r.Update(r.ctx, found_pvc); err != nil {
+		if err := r.Client.Update(r.ctx, found_pvc); err != nil {
 			r.log.V(1).Error(err, "Updating PVC failed for volume  "+pvc_name)
 			return false
 		}
@@ -1074,3 +1059,35 @@ func (r *SFController) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv1
 	}
 	return true
 }
+
+// SFController struct-context scoped utils //
+
+func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) StorageConfig {
+	return r.baseGetStorageConfOrDefault(storageSpec, r.cr.Spec.StorageClassName)
+}
+
+func (r *SFController) getConfigRepoCNXInfo() (string, string) {
+	var config_repo_url string
+	var config_repo_user string
+	if r.cr.Spec.ConfigLocations.ConfigRepo == "" {
+		config_repo_url = "gerrit-sshd:29418/config"
+		config_repo_user = "admin"
+	} else if r.cr.Spec.ConfigLocations.ConfigRepo != "" {
+		var user string
+		if r.cr.Spec.ConfigLocations.User != "" {
+			user = r.cr.Spec.ConfigLocations.User
+		} else {
+			user = "git"
+		}
+		config_repo_url = r.cr.Spec.ConfigLocations.ConfigRepo
+		config_repo_user = user
+	} else {
+		// TODO: uncomment the panic once the config repo is actually working
+		// panic("ConfigRepo settings not supported !")
+	}
+	return config_repo_url, config_repo_user
+}
+
+func int32Ptr(i int32) *int32 { return &i }
+func boolPtr(b bool) *bool    { return &b }
+func strPtr(s string) *string { return &s }

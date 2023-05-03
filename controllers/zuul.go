@@ -187,7 +187,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	r.EnsureConfigMap("zuul-scheduler-tooling", scheduler_tooling_data)
 
 	zs_volumes := create_zuul_volumes("zuul-scheduler")
-	zs := r.create_statefulset("zuul-scheduler", "", r.cr.Spec.Zuul.Scheduler.Storage)
+	zs := r.create_statefulset("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage))
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = append(init_containers, init_scheduler_config())
 	zs.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
@@ -208,7 +208,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 		r.UpdateR(&zs)
 	}
 
-	ze := r.create_headless_statefulset("zuul-executor", "", r.cr.Spec.Zuul.Executor.Storage)
+	ze := r.create_headless_statefulset("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	ze.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-executor")
@@ -384,7 +384,7 @@ func (r *SFController) runZuulTenantConfigUpdate() bool {
 }
 
 func (r *SFController) setupZuulIngress() {
-	r.ensureHTTPSRoute(r.cr.Name+"-zuul", "zuul", "zuul-web", "/", ZUUL_WEB_PORT, map[string]string{})
+	r.ensureHTTPSRoute(r.cr.Name+"-zuul", "zuul", "zuul-web", "/", ZUUL_WEB_PORT, map[string]string{}, r.cr.Spec.FQDN)
 
 	// Zuul ingress is special because the zuul-web container expect the
 	// the files to be served at `/zuul/`, but it is listening on `/`.
@@ -392,5 +392,5 @@ func (r *SFController) setupZuulIngress() {
 	// expected
 	r.ensureHTTPSRoute(r.cr.Name+"-zuul-red", "zuul", "zuul-web", "/zuul", ZUUL_WEB_PORT, map[string]string{
 		"haproxy.router.openshift.io/rewrite-target": "/",
-	})
+	}, r.cr.Spec.FQDN)
 }

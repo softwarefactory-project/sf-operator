@@ -69,19 +69,6 @@ type GitServerSpec struct {
 	Storage StorageSpec `json:"storage,omitempty"`
 }
 
-// +kubebuilder:validation:Required
-// +kubebuilder:validation:XValidation:rule="!has(self.retentionDays) || self.retentionDays > 0",message="retentionDays must be a positive integer if set"
-// +kubebuilder:validation:XValidation:rule="!has(self.loopDelay) || self.loopDelay > 0",message="loopDelay must be a positive integer if set"
-type LogServerSpec struct {
-	// Logs Older that "x" days will be purge ( default 60 days )
-	// +optional
-	RetentionDays int `json:"retentionDays,omitempty"`
-	// Logs Check. Log will be checked every "X" seconds ( default 3600 s ~= 1 hour )
-	// +optional
-	LoopDelay int         `json:"loopDelay,omitempty"`
-	Storage   StorageSpec `json:"storage"`
-}
-
 type Secret struct {
 	// Name of the referent.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -117,7 +104,7 @@ type SoftwareFactorySpec struct {
 	Zookeeper ZookeeperSpec `json:"zookeeper,omitempty"`
 
 	// Logserver service spec
-	Logserver LogServerSpec `json:"logserver,omitempty"`
+	Logserver LogServerSpecSettings `json:"logserver,omitempty"`
 
 	// MariaDB service spec
 	MariaDB MariaDBSpec `json:"mariadb,omitempty"`

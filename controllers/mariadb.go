@@ -46,12 +46,12 @@ func (r *SFController) DeployMariadb() bool {
 	pass_name := "mariadb-root-password"
 	r.GenerateSecretUUID(pass_name)
 
-	dep := r.create_statefulset("mariadb", DBImage, r.cr.Spec.MariaDB.DBStorage)
+	dep := r.create_statefulset("mariadb", DBImage, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage))
 
 	dep.Spec.VolumeClaimTemplates = append(
 		dep.Spec.VolumeClaimTemplates,
 		// TODO redirect logs to stdout so we don't need a volume
-		r.create_pvc("mariadb-logs", r.cr.Spec.MariaDB.LogStorage))
+		r.create_pvc("mariadb-logs", r.getStorageConfOrDefault(r.cr.Spec.MariaDB.LogStorage)))
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      "mariadb",
