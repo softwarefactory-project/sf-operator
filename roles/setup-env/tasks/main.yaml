@@ -1,0 +1,19 @@
+- name: Install dependencies
+  become: true
+  block:
+    - name: Install packages
+      package:
+        name:
+          - golang
+          - make
+          - podman
+          # for testing
+          - jq
+          - python3-pip
+
+    - name: Install pip packages
+      pip:
+        name:
+          - git-review
+          - websocket-client
+  when: install_requirements | bool == true

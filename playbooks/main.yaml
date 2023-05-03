@@ -1,10 +1,14 @@
 - hosts: "{{ hostname | default('all') }}"
   roles:
-    - install-sf-operator
-    - run-sf-operator
+    - setup-env
+    - setup-microshift
+    - build-operator
+    - build-operator-image
+    - install-operator
+    - apply-custom-resources
   tasks:
     - include_role:
-        name: test-sf-operator
+        name: run-tests
         apply:
           tags:
             - test_only

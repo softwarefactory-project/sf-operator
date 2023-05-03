@@ -1,0 +1,4 @@
+- name: Install the operator
+  community.general.make:
+    target: deploy
+    chdir: "{{ zuul.project.src_dir }}"

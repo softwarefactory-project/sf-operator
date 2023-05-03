@@ -1,0 +1,24 @@
+- name: Check cluster access
+  command: kubectl cluster-info
+
+- name: Create namespace
+  shell: |
+    kubectl create namespace sf
+    kubectl config set-context microshift --namespace={{ namespace }}
+    kubectl label --overwrite ns {{ namespace }} pod-security.kubernetes.io/enforce=privileged
+    kubectl label --overwrite ns {{ namespace }} pod-security.kubernetes.io/enforce-version=v{{ k8s_version }}
+    oc adm policy add-scc-to-user privileged -z default
+
+- name: Install cert-manager operator
+  community.general.make:
+    target: install-cert-manager
+    chdir: "{{ zuul.project.src_dir }}"
+
+# Attempt to mitigate error
+# 'failed calling webhook "mutate.webhooks.cert-manager.io": failed to call webhook: Post "https://cert-manager-webhook-service.operators.svc:443/mutate?timeout=10s": no endpoints available for service "cert-manager-webhook-service"'
+- name: Ensure cert-manager webhooks deployment ready
+  command: kubectl -n operators get deployment cert-manager-webhook -o yaml
+  register: cert_manager_dep
+  until: "'readyReplicas: 1' in cert_manager_dep.stdout"
+  retries: 10
+  delay: 2

@@ -2,8 +2,8 @@
   tasks:
     # Fetch zuul jobs artifacts stored in the logserver during the sf-operator functional test
     - include_role:
-        name: roles/get-logserver-content
+        name: roles/post/get-logserver-content
 
     # Fetch some k8s resources details that can help with troubleshooting
     - include_role:
-        name: roles/get-k8s-resources
+        name: roles/post/get-k8s-resources

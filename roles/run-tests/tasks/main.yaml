@@ -1,8 +1,8 @@
 - include_role:
     name: "roles/{{ role }}"
   loop:
-    - setup/manage-hosts
-    - setup/get-gerrit-admin-user-api-key
+    - utils/manage-hosts
+    - utils/get-gerrit-admin-user-api-key
     - health-check/check-service-uri
     - health-check/config-repo-get-or-reset
   loop_control:

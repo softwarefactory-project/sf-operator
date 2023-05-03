@@ -1,3 +1,2 @@
-install_requirements: yes
 build_image_locally: yes
 microshift_host: "microshift.dev"

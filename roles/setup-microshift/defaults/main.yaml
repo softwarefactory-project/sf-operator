@@ -1,0 +1,2 @@
+namespace: sf
+k8s_version: 1.24

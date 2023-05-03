@@ -1,0 +1,20 @@
+- name: Build the operator image locally
+  community.general.make:
+    target: operator-build
+    chdir: "{{ zuul.project.src_dir }}"
+  when: build_image_locally | bool == true
+  become: yes
+
+- name: "Build sf-operator image on {{ microshift_host }}"
+  block:
+    # it's not possible to use synchronize here for the “local host” is the host `the synchronize task originates on`, and the “destination host” is the host `synchronize is connecting to`. Aslo the “local host” can be changed to a different host by using `delegate_to` and that's not what we want to do
+    - name: "Sync sf-operator to {{ microshift_host }} instance"
+      command: "rsync -av ../../sf-operator/ {{ microshift_host }}:/tmp/sf-operator/ --exclude=.git --delete"
+
+    - name: build sf-operator image
+      community.general.make:
+        target: operator-build
+        chdir: /tmp/sf-operator
+      become: yes
+      delegate_to: "{{ microshift_host }}"
+  when: build_image_locally | bool == false
