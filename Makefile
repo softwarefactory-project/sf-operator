@@ -84,11 +84,11 @@ podman-push: ## Push podman image with the manager.
 	podman push ${IMG}
 
 .PHONY: bundle
-bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
-	operator-sdk generate kustomize manifests -q
+bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
+	$(LOCALBIN)/operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle $(BUNDLE_GEN_FLAGS)
-	operator-sdk bundle validate ./bundle --verbose
+	$(KUSTOMIZE) build config/manifests | $(LOCALBIN)/operator-sdk generate bundle $(BUNDLE_GEN_FLAGS)
+	$(LOCALBIN)/operator-sdk bundle validate ./bundle --verbose
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
@@ -148,10 +148,12 @@ $(LOCALBIN):
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.0.1
 CONTROLLER_TOOLS_VERSION ?= v0.11.3
+OPERATOR_SDK_VERSION ?= 1.28.0
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -168,3 +170,8 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: operator-sdk
+operator-sdk: $(OPERATOR_SDK)
+$(OPERATOR_SDK): $(LOCALBIN)
+	(test -f $(LOCALBIN)/operator-sdk && [[ "$(shell $(LOCALBIN)/operator-sdk --version)" =~ "$(OPERATOR_SDK_VERSION)" ]] ) || (curl -o $(LOCALBIN)/operator-sdk -sSL https://github.com/operator-framework/operator-sdk/releases/download/v${OPERATOR_SDK_VERSION}/operator-sdk_linux_amd64 && chmod +x $(LOCALBIN)/operator-sdk )
