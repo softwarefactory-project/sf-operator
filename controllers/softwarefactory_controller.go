@@ -34,7 +34,7 @@ type SoftwareFactoryReconciler struct {
 	Oneshot    bool
 }
 
-// Run `make manifests` && `make vanilla-install` to apply rbac change
+// Run `make manifests` to apply rbac change
 //
 //+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=softwarefactories,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=softwarefactories/status,verbs=get;update;patch
