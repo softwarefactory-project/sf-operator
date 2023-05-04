@@ -1,29 +1,30 @@
-- name: "Ensure {{ output_dir }}"
+- set_fact:
+    namespace_opt: "-n {{ namespace }}"
+    dest_dir: "{{ output_dir }}/{{ namespace }}"
+
+- name: "Ensure removal of {{ dest_dir }}"
   file:
-    path: "{{ output_dir }}"
+    path: "{{ dest_dir }}"
+    state: absent
+
+- name: "Ensure {{ dest_dir }}"
+  file:
+    path: "{{ dest_dir }}"
     state: directory
 
-- name: Get all resources in current namespace
+- name: Get all resources
   shell: |
-    kubectl get all > {{ output_dir }}/namespace-resources-all.txt
-
-- name: Get all resources over all namespaces
-  shell: |
-    kubectl get all -A > {{ output_dir }}/cluster-resources-all.txt
+    kubectl {{ namespace_opt }} get all > {{ dest_dir }}/resources-all.txt
 
 - name: Get events
   shell: |
-    kubectl get events > {{ output_dir }}/events.txt
-
-- name: Get nodes information
-  shell: |
-    kubectl describe nodes > {{ output_dir }}/nodes.txt
+    kubectl {{ namespace_opt }} get events > {{ dest_dir }}/events.txt
 
 - name: Describe namespace resources
   shell: |
-    for item in $(kubectl get {{ item }} -o name); do
-      mkdir -p {{ output_dir }}/$(dirname $item)
-      kubectl describe $item > {{ output_dir }}/${item}.txt
+    for item in $(kubectl {{ namespace_opt }} get {{ item }} -o name); do
+      mkdir -p {{ dest_dir }}/$(dirname $item)
+      kubectl {{ namespace_opt }} describe $item > {{ dest_dir }}/${item}.txt
     done
   ignore_errors: true
   loop:
@@ -33,23 +34,17 @@
     - services
     - secrets
     - configmaps
+    - jobs
     - pvc
-    - pv
-
-- name: Describe CRDs
-  shell: |
-    mkdir -p {{ output_dir }}/CRD
-    for item in $(kubectl get crd -o name); do
-      mkdir -p {{ output_dir }}/CRD/$(dirname $item)
-      oc describe $item > {{ output_dir }}/CRD/${item}.txt
-    done
+    - cvs
+    - sub
+    - catalogsources
 
 - name: Collect namespace pods logs
   shell: |
-    mkdir -p {{ output_dir }}/pod
-    for pod in $(kubectl get pods -o name); do
-      for container in $(kubectl get $pod -o jsonpath='{.spec.containers[*].name}'); do
-        kubectl logs $pod -c $container > {{ output_dir }}/${pod}-${container}-logs.txt
+    mkdir -p {{ dest_dir }}/pod
+    for pod in $(kubectl {{ namespace_opt }} get pods -o name); do
+      for container in $(kubectl {{ namespace_opt }} get $pod -o jsonpath='{.spec.containers[*].name}'); do
+        kubectl {{ namespace_opt }} logs $pod -c $container > {{ dest_dir }}/${pod}-${container}-logs.txt
       done
     done
-    kubectl -n sf-operator-system logs -l control-plane=controller-manager > {{ output_dir }}/sf-operator-logs.txt

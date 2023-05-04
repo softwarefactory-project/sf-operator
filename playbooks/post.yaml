@@ -4,6 +4,18 @@
     - include_role:
         name: roles/post/get-logserver-content
 
-    # Fetch some k8s resources details that can help with troubleshooting
+    # Fetch k8s cluster wide resources
+    - include_role:
+        name: roles/post/get-k8s-cluster-resources
+
+    # Fetch k8s resources for the sf namespace
     - include_role:
         name: roles/post/get-k8s-resources
+      vars:
+        namespace: sf
+
+    # Fetch k8s resources for the sf-operator namespace
+    - include_role:
+        name: roles/post/get-k8s-resources
+      vars:
+        namespace: bundle-catalog-ns

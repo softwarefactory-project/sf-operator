@@ -1,0 +1,31 @@
+- name: "Ensure removal of {{ output_dir }}"
+  file:
+    path: "{{ output_dir }}"
+    state: absent
+
+- name: "Ensure {{ output_dir }}"
+  file:
+    path: "{{ output_dir }}"
+    state: directory
+
+- name: Get nodes information
+  shell: |
+    kubectl describe nodes > {{ output_dir }}/nodes.txt
+
+- name: Describe CRDs
+  shell: |
+    mkdir -p {{ output_dir }}/CRDs
+    for item in $(kubectl get crd -o name); do
+      mkdir -p {{ output_dir }}/CRDs/$(dirname $item)
+      oc describe $item > {{ output_dir }}/CRDs/${item}.txt
+    done
+
+- name: Describe resources
+  shell: |
+    for item in $(kubectl get {{ item }} -o name); do
+      mkdir -p {{ output_dir }}/$(dirname $item)
+      kubectl describe $item > {{ output_dir }}/${item}.txt
+    done
+  ignore_errors: true
+  loop:
+    - pv
