@@ -167,4 +167,4 @@ $(ENVTEST): $(LOCALBIN)
 .PHONY: operator-sdk
 operator-sdk: $(OPERATOR_SDK)
 $(OPERATOR_SDK): $(LOCALBIN)
-	(test -f $(LOCALBIN)/operator-sdk && [[ "$(shell $(LOCALBIN)/operator-sdk --version)" =~ "$(OPERATOR_SDK_VERSION)" ]] ) || (curl -o $(LOCALBIN)/operator-sdk -sSL https://github.com/operator-framework/operator-sdk/releases/download/v${OPERATOR_SDK_VERSION}/operator-sdk_linux_amd64 && chmod +x $(LOCALBIN)/operator-sdk )
+	(test -f $(LOCALBIN)/operator-sdk && [[ "$(shell $(LOCALBIN)/operator-sdk version)" =~ "$(OPERATOR_SDK_VERSION)" ]] ) || (curl -o $(LOCALBIN)/operator-sdk -sSL https://github.com/operator-framework/operator-sdk/releases/download/v${OPERATOR_SDK_VERSION}/operator-sdk_linux_amd64 && chmod +x $(LOCALBIN)/operator-sdk )
