@@ -1,16 +1,11 @@
----
-- name: Ensure job results exists in Logserver before purging
-  ansible.builtin.uri:
-    url: "{{ item.log_url }}/job-output.txt.gz"
-    validate_certs: "{{ validate_certs }}"
-    method: GET
-  retries: 10
-  loop: "{{ zuul_job_result.json | list }}"
-
 - name: Get logserver pod name
   ansible.builtin.shell: |
     kubectl get pods -l "{{ pod_label }}" --no-headers -o custom-columns=":metadata.name"
   register: _logserver_pod_name
+
+- name: Save logserver content before changing the date
+  ansible.builtin.shell: |
+    kubectl exec {{ _logserver_pod_name.stdout }} -c {{ sshd_container_name }} -- cp -Rf /home/data/rsync  /tmp/rsync-back;
 
 - name: Changing Logs modified time
   ansible.builtin.shell: |
@@ -26,4 +21,16 @@
   delay: 2
   register: purge_results
   until: purge_results.status == 404
+  loop: "{{ zuul_job_result.json | list }}"
+
+- name: Restore logserver content
+  ansible.builtin.shell: |
+    kubectl exec {{ _logserver_pod_name.stdout }} -c {{ sshd_container_name }} -- rsync -r --delete /tmp/rsync-back/ /home/data/rsync/;
+
+- name: Ensure job results exists in Logserver
+  ansible.builtin.uri:
+    url: "{{ item.log_url }}/job-output.txt.gz"
+    validate_certs: "{{ validate_certs }}"
+    method: GET
+  retries: 10
   loop: "{{ zuul_job_result.json | list }}"
