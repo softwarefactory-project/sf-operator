@@ -1,13 +1,19 @@
+---
 - name: Ensure LogServer was spawned with custom storage size
-  shell: "kubectl get pvc logserver --output custom-columns=CAPACITY:.status.capacity.storage --no-headers"
+  ansible.builtin.command: |
+    kubectl get pvc logserver --output custom-columns=CAPACITY:.status.capacity.storage --no-headers
   register: logserver_capacity
   failed_when: logserver_capacity.stdout != '2Gi'
 
 - name: Ensure it is impossible to shrink storage size in sf CR
   block:
-    - shell: "kubectl patch SoftwareFactory my-sf --type=merge -p '{\"spec\": {\"logserver\": {\"storage\": {\"size\": \"1Gi\"}}}}'"
+    - name: Change storage size
+      ansible.builtin.command: |
+        kubectl patch SoftwareFactory my-sf --type=merge -p '{"spec": {"logserver": {"storage": {"size": "1Gi"}}}}'
       register: patch_result
       ignore_errors: true
-    - fail:
+
+    - name: Check if shrink is working
+      ansible.builtin.fail:
         msg: "Shrinking storage should have failed"
       when: "('shrinking is not supported' not in patch_result.stderr) and ('shrinking is not supported' not in patch_result.stdout)"
