@@ -1,0 +1,17 @@
+exclude_paths:
+  - doc
+  - api
+  - olm-deps
+  - controllers
+  - playbooks
+
+# FROM: https://opendev.org/openstack/project-config/src/branch/master/.ansible-lint
+skip_list:
+  - '106'  # Role name does not match ``^[a-z][a-z0-9_]+$`` pattern
+  - '204'  # [E204] Lines should be no longer than 120 chars
+  - '208'  # File permissions not mentioned
+  - '301'  # [E301] Commands should not change things if nothing needs doing
+  - '306'  # [E306] Shells that use pipes should set the pipefail option
+  - 'fqcn-builtins'  # for now ignore using fully-qualified names
+  - 'yaml[truthy]'   # doesn't like "yes"?
+  - 'yaml[line-length]'

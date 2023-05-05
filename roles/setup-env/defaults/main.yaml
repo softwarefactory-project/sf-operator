@@ -1,1 +1,2 @@
-install_requirements: yes
+---
+install_requirements: true

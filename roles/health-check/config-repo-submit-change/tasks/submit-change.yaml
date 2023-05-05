@@ -1,19 +1,23 @@
 ---
 - name: Submit change
-  command: git review
+  ansible.builtin.command: git review
   args:
     chdir: "{{ config_path}}"
+  tags:
+    - skip_ansible_lint
 
 - name: Get Change-id
-  shell: git log -n 1 | awk '/Change-Id/ {print $2}'
+  ansible.builtin.shell: git log -n 1 | awk '/Change-Id/ {print $2}'
   args:
     chdir: "{{ config_path }}"
   register: _change_id
+  tags:
+    - skip_ansible_lint
 
 # documentation: https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#set-review
 - name: Set Code-Review and Workflow label using gerrit API
-  uri:
-    url: "https://{{ gerrit_host}}/a/changes/{{ _change_id.stdout }}/revisions/current/review"
+  ansible.builtin.uri:
+    url: "https://{{ gerrit_host }}/a/changes/{{ _change_id.stdout }}/revisions/current/review"
     user: admin
     password: "{{ gerrit_admin_api_key }}"
     body_format: json

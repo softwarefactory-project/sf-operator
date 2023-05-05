@@ -1,13 +1,14 @@
+---
 - name: Register commit sha
-  command: cat .git/refs/heads/master
+  ansible.builtin.command: cat .git/refs/heads/master
   args:
     chdir: "{{ config_path }}"
   register: commitsha
 
 - name: Wait config-update SUCCESS result using zuul-web API
-  uri:
+  ansible.builtin.uri:
     url: "{{ zuul_web_url }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=config-update&newrev={{ commitsha.stdout }}"
-    return_content: yes
+    return_content: true
     body_format: json
     validate_certs: false
   register: zuul_job_result

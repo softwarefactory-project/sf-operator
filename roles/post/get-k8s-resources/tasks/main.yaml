@@ -1,27 +1,29 @@
-- set_fact:
+---
+- name: Set proper facts
+  ansible.builtin.set_fact:
     namespace_opt: "-n {{ namespace }}"
     dest_dir: "{{ output_dir }}/{{ namespace }}"
 
 - name: "Ensure removal of {{ dest_dir }}"
-  file:
+  ansible.builtin.file:
     path: "{{ dest_dir }}"
     state: absent
 
 - name: "Ensure {{ dest_dir }}"
-  file:
+  ansible.builtin.file:
     path: "{{ dest_dir }}"
     state: directory
 
 - name: Get all resources
-  shell: |
+  ansible.builtin.shell: |
     kubectl {{ namespace_opt }} get all > {{ dest_dir }}/resources-all.txt
 
 - name: Get events
-  shell: |
+  ansible.builtin.shell: |
     kubectl {{ namespace_opt }} get events > {{ dest_dir }}/events.txt
 
 - name: Describe namespace resources
-  shell: |
+  ansible.builtin.shell: |
     for item in $(kubectl {{ namespace_opt }} get {{ item }} -o name); do
       mkdir -p {{ dest_dir }}/$(dirname $item)
       kubectl {{ namespace_opt }} describe $item > {{ dest_dir }}/${item}.txt
@@ -39,9 +41,11 @@
     - cvs
     - sub
     - catalogsources
+  tags:
+    - skip_ansible_lint
 
 - name: Collect namespace pods logs
-  shell: |
+  ansible.builtin.shell: |
     mkdir -p {{ dest_dir }}/pod
     for pod in $(kubectl {{ namespace_opt }} get pods -o name); do
       for container in $(kubectl {{ namespace_opt }} get $pod -o jsonpath='{.spec.containers[*].name}'); do

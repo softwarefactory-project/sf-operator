@@ -1,8 +1,9 @@
+---
 - name: Get Gerrit admin user API key
-  shell: |
+  ansible.builtin.shell: |
     kubectl get secret gerrit-admin-api-key -o json | jq -r ".data.\"gerrit-admin-api-key\"" | base64 -d -i
   register: _get_gerrit_admin_api_key
 
-- name: set fact for _gerrit_admin_api_key
-  set_fact:
+- name: Set fact for _gerrit_admin_api_key
+  ansible.builtin.set_fact:
     gerrit_admin_api_key: "{{ _get_gerrit_admin_api_key.stdout }}"

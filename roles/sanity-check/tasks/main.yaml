@@ -12,6 +12,8 @@
       args:
         chdir: "{{ zuul.project.src_dir }}"
       register: render_diff
+      tags:
+        - skip_ansible_lint
 
     - name: Abort on diff
       when:

@@ -1,9 +1,9 @@
 ---
 - name: Submit change
-  include_tasks: submit-change.yaml
+  ansible.builtin.include_tasks: submit-change.yaml
 
 - name: Verify Zuul Console output
-  include_tasks: ensure-zuul-console-success.yaml
+  ansible.builtin.include_tasks: ensure-zuul-console-success.yaml
 
 - name: Ensure a success config-update
-  include_tasks: ensure-config-update-success.yaml
+  ansible.builtin.include_tasks: ensure-config-update-success.yaml

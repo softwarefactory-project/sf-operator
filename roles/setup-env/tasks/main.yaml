@@ -1,5 +1,6 @@
 - name: Install dependencies
   become: true
+  when: install_requirements | bool
   block:
     - name: Install packages
       package:
@@ -16,7 +17,6 @@
         name:
           - git-review
           - websocket-client
-  when: install_requirements | bool == true
 
 - name: Set project source path (running on Zuul)
   when: zuul.build is defined

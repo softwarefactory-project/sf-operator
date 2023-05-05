@@ -1,3 +1,4 @@
+---
 # './bin/operator-sdk cleanup -n bundle-catalog-ns sf-operator' should do the cleaning here
 # However a cert-manager sub is installed into bundle-catalog-ns ns because OLM detected a
 # dependency to the cert-manager CRDs, then using "operator-sdk cleanup" remove the cert-manager CRDs
@@ -7,22 +8,36 @@
   when: remote_os_host
   block:
     - name: Clean the subscription
-      shell: |
+      ansible.builtin.shell: |
         kubectl -n bundle-catalog-ns get sub --no-headers | grep sf-operator | \
           cut -d' ' -f1 | xargs kubectl -n bundle-catalog-ns delete sub
       ignore_errors: true
+      tags:
+        - skip_ansible_lint
+
     - name: Clean the csv
-      shell: |
+      ansible.builtin.shell: |
         kubectl -n bundle-catalog-ns get csv --no-headers | grep sf-operator | \
           cut -d' ' -f1 | xargs kubectl -n bundle-catalog-ns delete csv
       ignore_errors: true
+      tags:
+        - skip_ansible_lint
+
     - name: Clean the catalogsource
-      command: |
+      ansible.builtin.command: |
         kubectl -n bundle-catalog-ns delete catalogsource.operators.coreos.com/sf-operator-catalog
       ignore_errors: true
+      tags:
+        - skip_ansible_lint
+
     - name: Remove sf in sf namespace
-      command: kubectl -n sf delete sf --all
+      ansible.builtin.command: kubectl -n sf delete sf --all
       ignore_errors: true
+      tags:
+        - skip_ansible_lint
+
     - name: Release PVCs in sf namespace
-      command: kubectl -n sf delete pvc --all
+      ansible.builtin.command: kubectl -n sf delete pvc --all
       ignore_errors: true
+      tags:
+        - skip_ansible_lint

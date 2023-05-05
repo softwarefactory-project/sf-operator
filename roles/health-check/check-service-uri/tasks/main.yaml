@@ -1,3 +1,4 @@
+---
 # no_log is set to avoid full content on ansible output
 - name: Attempt to access Gerrit
   ansible.builtin.uri:

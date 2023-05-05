@@ -1,4 +1,6 @@
-- include_tasks: gen_hosts_file.yaml
+---
+- name: Generate hosts file
+  ansible.builtin.include_tasks: gen_hosts_file.yaml
   loop: "{{ hosts }}"
   loop_control:
     loop_var: host

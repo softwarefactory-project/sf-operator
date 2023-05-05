@@ -1,3 +1,4 @@
+---
 pod_label: "run=logserver"
 container_name: "logserver"
 sshd_container_name: "logserver-sshd"

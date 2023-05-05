@@ -7,10 +7,14 @@
   until: _job_uuid.stdout != "" and "null" not in _job_uuid.stdout
   retries: 60
   delay: 1
+  tags:
+    - skip_ansible_lint
 
-# Helpful command:
+# Helpful ansible.builtin.command:
 - name: Connect and validate console stream
   ansible.builtin.shell: |
     (sleep 5; echo "") | wsdump --nocert -r -t '{"uuid":"{{ _job_uuid.stdout_lines[0] }}","logfile":"console.log"}' wss://{{ zuul_host }}/api/tenant/internal/console-stream
   register: console_stream
   until: "'Job console starting...' in console_stream.stdout"
+  tags:
+    - skip_ansible_lint

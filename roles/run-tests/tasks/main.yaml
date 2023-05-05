@@ -1,4 +1,6 @@
-- include_role:
+---
+- name: Iterate on tests
+  ansible.builtin.include_role:
     name: "roles/{{ role }}"
   loop:
     - utils/manage-hosts
@@ -8,15 +10,17 @@
   loop_control:
     loop_var: role
 
-- set_fact:
+- name: Set random value
+  ansible.builtin.set_fact:
     random: "{{ lookup('community.general.random_string', special=false, length=8) }}"
 
-- name: create vars to generatel and submit resources addition
-  set_fact:
+- name: Create vars to generatel and submit resources addition
+  ansible.builtin.set_fact:
     config_file_path: "resources/myfile-{{ random }}.yaml"
     repository_name: "ichiban-config-{{ random }}"
 
-- include_role:
+- name: Run tests for config repo
+  ansible.builtin.include_role:
     name: "roles/{{ role }}"
   loop:
     - health-check/config-repo-create-resources
@@ -25,14 +29,14 @@
     loop_var: role
 
 - name: Ensure repository exists in Gerrit
-  uri:
+  ansible.builtin.uri:
     url: "https://{{ gerrit_host }}/projects/{{ repository_name }}"
     validate_certs: "{{ validate_certs }}"
     method: GET
   retries: 10
 
 - name: Get Zuul projects list
-  uri:
+  ansible.builtin.uri:
     url: "https://{{ zuul_host }}/api/tenant/internal/projects"
     validate_certs: "{{ validate_certs }}"
     method: GET
@@ -40,7 +44,7 @@
   retries: 10
 
 - name: Ensure project exists in Zuul (fail if not)
-  fail:
+  ansible.builtin.fail:
     msg: "Project not found in Zuul"
   when: not (zuul_internal_projects.json | selectattr('name', 'equalto', repository_name) | length == 1)
 
@@ -52,5 +56,6 @@
   retries: 10
   loop: "{{ zuul_job_result.json | list }}"
 
-- include_role:
+- name: Validate purgelogs
+  ansible.builtin.include_role:
     name: "roles/health-check/validate-purgelogs"

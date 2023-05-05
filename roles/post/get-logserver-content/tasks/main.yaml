@@ -1,5 +1,6 @@
+---
 - name: "Ensure removal of {{ output_dir }}"
-  file:
+  ansible.builtin.file:
     path: "{{ output_dir }}"
     state: absent
 
@@ -10,6 +11,6 @@
   failed_when: false
 
 - name: "Fetch logserver content on locally in {{ output_dir }}"
-  command: |
+  ansible.builtin.command: |
     kubectl cp {{ _logserver_pod_name.stdout }}:/var/www/logs -c {{ container_name }} {{ output_dir }}
   failed_when: false

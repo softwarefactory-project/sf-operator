@@ -1,3 +1,4 @@
+---
 - name: Ensure job results exists in Logserver before purging
   ansible.builtin.uri:
     url: "{{ item.log_url }}/job-output.txt.gz"

@@ -1,28 +1,36 @@
-- name: Reset  config_path checkout and update to origin/master
+---
+- name: Reset config_path checkout and update to origin/master
   block:
-    - set_fact:
-        config_url: "https://admin:{{ gerrit_admin_api_key }}@{{ gerrit_host}}/a/config"
+    - name: Set required facts
+      ansible.builtin.set_fact:
+        config_url: "https://admin:{{ gerrit_admin_api_key }}@{{ gerrit_host }}/a/config"
 
-    - name: "Ensure {{ config_path }} absent"
-      file:
+    - name: "Ensure dir is not available {{ config_path }}"
+      ansible.builtin.file:
         path: "{{ config_path }}"
         state: absent
 
     - name: Clone config repo
-      command: "git -c http.sslVerify={{ validate_certs }} clone {{ config_url }} {{ config_path }}"
+      ansible.builtin.command: "git -c http.sslVerify={{ validate_certs }} clone {{ config_url }} {{ config_path }}"
+      tags:
+        - skip_ansible_lint
 
-    - name: config repo, ensure config repo cert is trusted
-      command: git config http.sslverify {{ validate_certs }}
+    - name: Config repo, ensure config repo cert is trusted
+      ansible.builtin.command: git config http.sslverify {{ validate_certs }}
       args:
         chdir: "{{ config_path }}"
+      tags:
+        - skip_ansible_lint
 
-    - name: config repo, add git remote
-      command: "git remote add gerrit {{ config_url }}"
+    - name: Config repo, add git remote
+      ansible.builtin.command: "git remote add gerrit {{ config_url }}"
       args:
         chdir: "{{ config_path }}"
+      tags:
+        - skip_ansible_lint
 
-    - name: config repo, set user
-      shell: "{{ git_user }}"
+    - name: Config repo, set user
+      ansible.builtin.command: "{{ git_user }}"
       args:
         chdir: "{{ config_path }}"
       loop:
@@ -30,9 +38,11 @@
         - git config user.name "admin"
       loop_control:
         loop_var: git_user
+      tags:
+        - skip_ansible_lint
 
-    - name: config repo, reset
-      command: "{{ git_cmd }}"
+    - name: Config repo, reset
+      ansible.builtin.command: "{{ git_cmd }}"
       args:
         chdir: "{{ config_path }}"
       loop:
@@ -42,3 +52,5 @@
         - git clean -f -d
       loop_control:
         loop_var: git_cmd
+      tags:
+        - skip_ansible_lint

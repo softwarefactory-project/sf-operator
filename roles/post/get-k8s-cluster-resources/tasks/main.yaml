@@ -1,19 +1,20 @@
+---
 - name: "Ensure removal of {{ output_dir }}"
-  file:
+  ansible.builtin.file:
     path: "{{ output_dir }}"
     state: absent
 
 - name: "Ensure {{ output_dir }}"
-  file:
+  ansible.builtin.file:
     path: "{{ output_dir }}"
     state: directory
 
 - name: Get nodes information
-  shell: |
+  ansible.builtin.shell: |
     kubectl describe nodes > {{ output_dir }}/nodes.txt
 
 - name: Describe CRDs
-  shell: |
+  ansible.builtin.shell: |
     mkdir -p {{ output_dir }}/CRDs
     for item in $(kubectl get crd -o name); do
       mkdir -p {{ output_dir }}/CRDs/$(dirname $item)
@@ -21,7 +22,7 @@
     done
 
 - name: Describe resources
-  shell: |
+  ansible.builtin.shell: |
     for item in $(kubectl get {{ item }} -o name); do
       mkdir -p {{ output_dir }}/$(dirname $item)
       kubectl describe $item > {{ output_dir }}/${item}.txt
@@ -29,3 +30,5 @@
   ignore_errors: true
   loop:
     - pv
+  tags:
+    skip_ansible_lint

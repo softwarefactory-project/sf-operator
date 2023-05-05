@@ -1,6 +1,6 @@
 ---
 - name: Create a resources file
-  copy:
+  ansible.builtin.copy:
     content: |
       resources:
         projects:
@@ -18,7 +18,7 @@
     dest: "{{ config_path }}/{{ config_file_path }}"
 
 - name: Commit file in the config repo
-  command: "{{ item }}"
+  ansible.builtin.command: "{{ item }}"
   args:
     chdir: "{{ config_path }}"
   loop:

@@ -289,7 +289,7 @@ cat << EOF > roles/setup-k8s-config/tasks/main.yaml
     state: directory
 
 - name: copy secret content
-  copy:
+  ansible.builtin.copy:
     content: "{{ k8s_config['ca.crt'] }}"
     dest: "{{ ansible_env.HOME }}/.kube/ca.crt"
     mode: "0600"

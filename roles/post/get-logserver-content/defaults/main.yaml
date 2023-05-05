@@ -1,6 +1,6 @@
+---
 output_logs_dir: ~/zuul-output/logs
+output_dir: "{{ output_logs_dir }}/logserver-content"
 
 pod_label: "run=logserver"
 container_name: "logserver"
-
-output_dir: "{{ output_logs_dir }}/logserver-content"
