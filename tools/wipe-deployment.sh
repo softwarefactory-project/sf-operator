@@ -1,12 +1,5 @@
 #!/bin/sh
 
-set -ex
-
-# Remove the "my-sf" deployment
-kubectl delete SoftwareFactory "${1:-my-sf}"
-
-# Remove the Persistent Volume Claims (PVs and data are deleted as we use topolvm)
-kubectl delete pvc --all
-
-# Remove the operator (installed via make deploy)
-make undeploy || true
+ansible-playbook playbooks/wipe.yaml \
+    -e "hostname=localhost" \
+    -e 'remote_os_host=false'

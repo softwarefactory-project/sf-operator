@@ -108,8 +108,12 @@ This removes the `my-sf` Custom Resource instance.
 kubectl delete softwarefactory my-sf
 ```
 
-However **secrets**, **Persistent Volumes Claims** and **Dynamically provisonned Persistent Volumes**
-are kept and not deleted automatically. To fully wipe a deployment run:
+However:
+
+- **Persistent Volumes Claims** and not cleaned after the deletion of the softwarefactory instance
+- `tools/run-ci-tests.sh` deploys resources via OLM into the `bundle-catalog-ns` namespace
+
+To fully wipe such resources run the following command:
 
 ```sh
 ./tools/wipe-deployment.sh
