@@ -1,14 +1,37 @@
 ---
 - hosts: "{{ hostname | default('all') }}"
+  vars:
+    mode: ci
   roles:
     - setup-env
     - sanity-check
     - setup-namespaces
-    - build-operator-assets
-    - clean-installations
-    - install-operator
-    - apply-custom-resources
   tasks:
+    - name: >-
+        Simulates the "dev" process (start with 'go run' the operator)
+        that we describe in the CONTRIBUTING doc
+      ansible.builtin.include_role:
+        name: "{{ item }}"
+      loop:
+        - run-operator-dev
+      vars:
+        create_test_bundle_ns: false
+      when: mode == 'dev'
+
+    - name: CI process
+      ansible.builtin.include_role:
+        name: "{{ item }}"
+      loop:
+        - build-operator-assets
+        - clean-installations
+        - install-operator
+        - apply-custom-resources
+      when: mode == 'ci'
+
+    - name: Apply custom resources
+      ansible.builtin.include_role:
+        name: apply-custom-resources
+
     - name: Run tests
       ansible.builtin.include_role:
         name: run-tests

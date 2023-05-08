@@ -1,0 +1,4 @@
+src_dir: "{{ zuul.project.src_dir }}"
+remote_os_host: false
+os_host: controller
+zuul: {"project":{"src_dir": "/home/zuul-worker/src/softwarefactory-project.io/software-factory/sf-operator"}}

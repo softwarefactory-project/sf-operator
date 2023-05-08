@@ -89,7 +89,7 @@ git clone https://github.com/openstack-k8s-operators/ansible-microshift-role
 Then run the deployment playbook:
 
 ```sh
-ansible-playbook -i inventory.yaml deploy-microshift.yaml --extra-vars "openshift_pull_secret=${PULL_SECRET} microshift_user=${MICROSHIFT_USER}"
+ansible-playbook -i inventory.yaml deploy-microshift.yaml --extra-var "openshift_pull_secret=${PULL_SECRET} microshift_user=${MICROSHIFT_USER}"
 ```
 
 Once the playbook has ended successfully, you can configure kubectl to

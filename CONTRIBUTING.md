@@ -141,14 +141,14 @@ If you want to only run the testing part (the functional tests only, assuming th
 deployed a Software Factory instance), you can use the `test_only` tag:
 
 ```sh
-./tools/run-ci-tests.sh --tags test_only
+./tools/run-ci-tests.sh --test-only
 ```
 
 The command accepts extra Ansible parameters. For instance to override
 the default `microshift_host` var:
 
 ```sh
-./tools/run-ci-tests.sh --extra-vars "microshift_host=my-microshift"
+./tools/run-ci-tests.sh --extra-var "microshift_host=my-microshift"
 ```
 
 To fetch the test suite artifacts locally, run:
@@ -158,6 +158,36 @@ To fetch the test suite artifacts locally, run:
 ```
 
 Artifacts will be available in the `/tmp/sf-operator-artifacts/` directory.
+
+### sfconfig cli tool
+
+#### Adding a new option
+
+Install cobra-cli
+
+``` bash
+go install github.com/spf13/cobra-cli@latest
+```
+
+``` bash
+cd cli/sfconfig
+cobra-cli add myCommand
+cd -
+```
+
+Then you can edit `cli/sfconfig/cmd/myCommand.go` to add the needed option
+
+The option can be directly used after editing myCommand.go with
+
+``` bash
+go run cli/sfconfig/main.go myCommand
+```
+
+A wrapper also exists on /tools directory
+
+``` bash
+./tools/sfconfig myCommand
+```
 
 ### Interact with the deployment
 

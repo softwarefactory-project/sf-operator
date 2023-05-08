@@ -26,6 +26,7 @@
     parent: base-microshift
     timeout: 1200
     post-run: playbooks/post.yaml
+    run: playbooks/run.yaml
     nodeset:
       nodes:
         name: controller
@@ -70,7 +71,8 @@
     name: sf-operator-functional-allinone-microshift
     description: This test validates a sf-operator deployment via OLM
     parent: base-sf-operator
-    run: playbooks/main.yaml
+    vars:
+      mode: 'ci'
 
 - job:
     name: sf-operator-run-dev
@@ -78,4 +80,5 @@
       This test validates a sf-operator deployment via the dev mode described
       in the contributor doc
     parent: base-sf-operator
-    run: playbooks/dev.yaml
+    vars:
+      mode: 'dev'
