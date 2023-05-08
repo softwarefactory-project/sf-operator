@@ -4,6 +4,7 @@
 package v1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -11,6 +12,13 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type BaseSpec struct{}
+
+type StorageSpec struct {
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:XValidation:rule="self >= oldSelf",message="Storage shrinking is not supported"
+	Size      resource.Quantity `json:"size,string"`
+	ClassName string            `json:"className,omitempty"`
+}
 
 type ConfigLocationsSpec struct {
 	ConfigRepo string `json:"config-repo,omitempty"`
@@ -28,16 +36,37 @@ type GerritConnection struct {
 	VerifySSL         string `json:"verifyssl,omitempty"`
 }
 
+type ZuulExecutorSpec struct {
+	Storage StorageSpec `json:"storage,omitempty"`
+}
+
+type ZuulSchedulerSpec struct {
+	Storage StorageSpec `json:"storage,omitempty"`
+}
+
+// TODO should be ExecutorS / SchedulerS
 type ZuulSpec struct {
 	GerritConns []GerritConnection `json:"gerritconns,omitempty"`
+	Executor    ZuulExecutorSpec   `json:"executor,omitempty"`
+	Scheduler   ZuulSchedulerSpec  `json:"scheduler,omitempty"`
 }
 
 type GerritSpec struct {
-	SshdMaxConnectionsPerUser string `json:"sshd_max_connections_per_user,omitempty"`
+	SshdMaxConnectionsPerUser string      `json:"sshd_max_connections_per_user,omitempty"`
+	Storage                   StorageSpec `json:"storage,omitempty"`
 }
 
 type ZookeeperSpec struct {
-	StorageSize string `json:"storageSize"`
+	Storage StorageSpec `json:"storage"`
+}
+
+type MariaDBSpec struct {
+	DBStorage  StorageSpec `json:"dbStorage"`
+	LogStorage StorageSpec `json:"logStorage"`
+}
+
+type GitServerSpec struct {
+	Storage StorageSpec `json:"storage,omitempty"`
 }
 
 type LogServerSpec struct {
@@ -46,7 +75,8 @@ type LogServerSpec struct {
 	RetentionDays int `json:"retentionDays"`
 	// Logs Check. Log will be checked every "X" seconds ( default 3600 s ~= 1 hour )
 	// +optional
-	LoopDelay int `json:"loopDelay"`
+	LoopDelay int         `json:"loopDelay"`
+	Storage   StorageSpec `json:"storage"`
 }
 
 type Secret struct {
@@ -85,6 +115,12 @@ type SoftwareFactorySpec struct {
 
 	// Logserver service spec
 	Logserver LogServerSpec `json:"logserver,omitempty"`
+
+	// MariaDB service spec
+	MariaDB MariaDBSpec `json:"mariadb,omitempty"`
+
+	// Git server spec
+	GitServer GitServerSpec `json:"gitserver,omitempty"`
 }
 
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory

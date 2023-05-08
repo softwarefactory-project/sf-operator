@@ -20,6 +20,7 @@
       logclassify_report: true
       # microshift deployment
       disk_file_sparsed: true
+      disk_file_size: 40G
       standard_user: false
       create_pv: false
       setup_olm: true

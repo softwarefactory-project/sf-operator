@@ -92,10 +92,10 @@ func (r *SFController) DeployZookeeper() bool {
 	srv_zk := r.create_headless_service(ZK_IDENT, ZK_IDENT, headless_ports, ZK_IDENT)
 	r.GetOrCreate(&srv_zk)
 
-	zk := r.create_headless_statefulset(ZK_IDENT, "", get_storage_classname(r.cr.Spec))
+	zk := r.create_headless_statefulset(ZK_IDENT, "", r.cr.Spec.Zookeeper.Storage)
 	zk.Spec.VolumeClaimTemplates = append(
 		zk.Spec.VolumeClaimTemplates,
-		r.create_pvc(ZK_IDENT+"-data", get_storage_classname(r.cr.Spec)))
+		r.create_pvc(ZK_IDENT+"-data", r.cr.Spec.Zookeeper.Storage))
 	zk.Spec.Template.Spec.Containers = []apiv1.Container{container}
 	zk.Spec.Template.ObjectMeta.Annotations = annotations
 	zk.Spec.Template.Spec.Volumes = []apiv1.Volume{

@@ -10,3 +10,5 @@ spec:
     gerritconns: []
   logserver:
     loopDelay: 5
+    storage:
+      size: 2Gi
