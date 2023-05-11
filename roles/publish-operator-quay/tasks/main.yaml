@@ -1,0 +1,62 @@
+---
+- name: Install dependencies
+  become: true
+  package:
+    name:
+      - golang
+      - make
+      - podman
+
+- name: "Get Bundle Version"
+  ansible.builtin.shell: |
+    awk '/^VERSION/{split($0,s," "); print s[3]}' {{ zuul.project.src_dir }}/Makefile
+  register: _command_results
+
+- name: "Set Version"
+  ansible.builtin.set_fact:
+    bundle_version: "{{ _command_results.stdout }}"
+
+- name: Create the operator OLM bundle
+  community.general.make:
+    target: bundle
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Build the operator's images
+  community.general.make:
+    target: "{{ item.target }}"
+    chdir: "{{ zuul.project.src_dir }}"
+    params:
+      BUNDLE_IMG: "{{ item.IMG_NAME }}"
+      IMG: "{{ item.IMG_NAME }}"
+  loop:
+    - target: bundle-build
+      IMG_NAME: "{{ ci_bundle_img_registry }}:{{ bundle_version }}"
+    - target: operator-build
+      IMG_NAME: "{{ ci_operator_img_registry }}:{{ bundle_version }}"
+
+- name: "Podman Tag"
+  ansible.builtin.shell: >
+    podman tag
+    {{ item }}:{{ bundle_version }}
+    {{ item }}:latest
+  loop:
+    - "{{ ci_bundle_img_registry }}"
+    - "{{ ci_operator_img_registry }}"
+
+- name: "Podman Login to {{ registry_address }}"
+  ansible.builtin.shell: >
+    podman login
+    -u="{{ registry_username }}"
+    -p="{{ registry_password }}"
+    {{ registry_address }}
+  no_log: true
+
+- name: "Podman Push Operator's Images to {{ registry_address }}"
+  ansible.builtin.shell: >
+    podman push
+    {{ item[0] }}:{{ item[1] }}
+  loop: "{{ ['{{ ci_bundle_img_registry }}', '{{ ci_operator_img_registry }}'] | product(['{{ bundle_version }}', 'latest']) | list }}"
+  register: _podman_push
+  retries: 3
+  delay: 3
+  until: "_podman_push is not failed"

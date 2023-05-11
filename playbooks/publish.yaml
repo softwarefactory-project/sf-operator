@@ -1,0 +1,4 @@
+---
+- hosts: "{{ hostname | default('all') }}"
+  roles:
+    - publish-operator-quay

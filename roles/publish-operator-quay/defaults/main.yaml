@@ -1,0 +1,11 @@
+---
+registry_username: "{{ final_registry_secret.username }}"
+registry_password: "{{ final_registry_secret.password }}"
+registry_address: "{{ final_registry_secret.registry }}"
+registry_project: "{{ registry_address }}/software-factory"
+
+ci_operator_image_name: sf-operator
+ci_operator_img_registry: "{{ registry_project }}/{{ ci_operator_image_name }}"
+
+ci_bundle_image_name: sf-operator-bundle
+ci_bundle_img_registry: "{{ registry_project }}/{{ ci_bundle_image_name }}"

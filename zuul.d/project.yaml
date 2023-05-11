@@ -12,6 +12,9 @@
       jobs:
         - sf-operator-functional-allinone-microshift
         - ansible-lint
+    post:
+      jobs:
+        - sf-operator-publish-olm-bundle-image
     periodic:
       jobs:
         - sf-operator-functional-allinone-microshift
