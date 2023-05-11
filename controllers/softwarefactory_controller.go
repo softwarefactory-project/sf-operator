@@ -163,9 +163,13 @@ func (r *SFController) DebugService(debugService string) {
 // Run reconcille loop manually
 func (r *SoftwareFactoryReconciler) Standalone(ctx context.Context, ns string, sf sfv1.SoftwareFactory, debugService string) {
 	log := log.FromContext(ctx)
-	// Ensure the CR name is created
 	sf.SetNamespace(ns)
-	r.Create(ctx, &sf)
+	// Ensure the CR name is created
+	err := r.Create(ctx, &sf)
+	if err != nil {
+		log.Error(err, "Unable to create the sf instance")
+		panic(err.Error())
+	}
 	// Then get's its metadata
 	var current_sf sfv1.SoftwareFactory
 	if err := r.Get(ctx, client.ObjectKey{
