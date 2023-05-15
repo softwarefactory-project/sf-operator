@@ -7,10 +7,12 @@
     check:
       jobs:
         - sf-operator-functional-allinone-microshift
+        - sf-operator-run-dev
         - ansible-lint
     gate:
       jobs:
         - sf-operator-functional-allinone-microshift
+        - sf-operator-run-dev
         - ansible-lint
     post:
       jobs:
@@ -18,3 +20,4 @@
     periodic:
       jobs:
         - sf-operator-functional-allinone-microshift
+        - sf-operator-run-dev

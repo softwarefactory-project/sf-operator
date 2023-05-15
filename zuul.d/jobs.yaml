@@ -20,14 +20,12 @@
           RrPZHG3xuwyIq3bnqMcatGYufBUPH8j9OfzYQLLwM08V5YEq55H0OKAFW+CtpmkUhRTNt
           clLXYqlBNOkutj4lrZLZLo1KdoaOEdOx+6A9Q29Ym3O4yp+Wf2a7rWJSdRNbtM=
 
-# Deploy sf-operator on microshift
+# Base CI job
 - job:
-    name: sf-operator-functional-allinone-microshift
-    run: playbooks/main.yaml
+    name: base-sf-operator
     parent: base-microshift
     timeout: 1200
     post-run: playbooks/post.yaml
-    semaphore: sf-operator-publish-semaphore
     nodeset:
       nodes:
         name: controller
@@ -52,9 +50,11 @@
       microshift_additional_addresses:
         - "sftests.com"
 
+# Images publication job
 - job:
     name: sf-operator-publish-olm-bundle-image
-    description: "Publish operator's olm bundle image"
+    description: Publish operator's olm bundle image
+    semaphore: sf-operator-publish-semaphore
     run: playbooks/publish.yaml
     timeout: 1200
     nodeset:
@@ -64,3 +64,18 @@
     secrets:
       - name: final_registry_secret
         secret: zuul_quay_sf
+
+# Deploy sf-operator on microshift
+- job:
+    name: sf-operator-functional-allinone-microshift
+    description: This test validates a sf-operator deployment via OLM
+    parent: base-sf-operator
+    run: playbooks/main.yaml
+
+- job:
+    name: sf-operator-run-dev
+    description: >
+      This test validates a sf-operator deployment via the dev mode described
+      in the contributor doc
+    parent: base-sf-operator
+    run: playbooks/dev.yaml
