@@ -659,13 +659,16 @@ func (r *SFController) DebugStatefulSet(name string) {
 }
 
 // This does not change an existing object, update needs to be used manually.
-func (r *SFController) GetOrCreate(obj client.Object) {
+// In the case the object already exists then the function return True
+func (r *SFController) GetOrCreate(obj client.Object) bool {
 	name := obj.GetName()
 
 	if !r.GetM(name, obj) {
 		r.log.V(1).Info("Creating object", "name", obj.GetName())
 		r.CreateR(obj)
+		return false
 	}
+	return true
 }
 
 // Create resource from YAML description
