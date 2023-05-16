@@ -15,3 +15,4 @@ skip_list:
   - 'fqcn-builtins'  # for now ignore using fully-qualified names
   - 'yaml[truthy]'   # doesn't like "yes"?
   - 'yaml[line-length]'
+  - 'var-naming[no-role-prefix]'
