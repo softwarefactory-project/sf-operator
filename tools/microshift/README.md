@@ -25,7 +25,7 @@ usermod -aG sudo <user>
 You should also make sure your system is up-to-date, by running
 
 ```sh
-sudo yum update -y
+sudo dnf update -y
 sudo shutdown -r now
 ```
 
@@ -42,57 +42,25 @@ Generate a **pull secret** [here](https://cloud.redhat.com/openshift/create/loca
 
 Install the following dependencies, for RPM-based systems:
 
-* ansible-core
-* git
-
 ```sh
-sudo dnf install -y ansible-core git
-```
-
-Install kubectl using your package manager or [by following these instructions](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-kubectl-on-linux).
-
-Once Ansible Core is installed, install the following collections:
-
-* community.general
-* community.crypto
-* ansible.posix
-
-```sh
-ansible-galaxy collection install community.general community.crypto ansible.posix
+sudo dnf install -y ansible-core golang
 ```
 
 ## Install Microshift
 
 Installing Microshift is straightforward with the [ansible-microshift-role](https://github.com/openstack-k8s-operators/ansible-microshift-role).
-We provide a playbook, `deploy-microshift.yaml`, that downloads and runs the role
+We provide a cli tool sfconfig, that prepares, downloads and runs the role
 on the target host.
 
-Set some environment variables:
+You have to create your own inventory based on ./tools/microshift/inventory.yaml. You have to add the secret on the inventory.
+
+Then from sf-operator directory, run
 
 ```sh
-# Replace with the IP address of your target Microshift instance
-export MICROSHIFT_IP=1.2.3.4
-# Setup host resolution
-echo "${MICROSHIFT_IP} microshift.dev gerrit.sftests.com zuul.sftests.com logserver.sftests.com" | sudo tee -a /etc/hosts
-# Replace with the actual path to your pull-secret
-export PULL_SECRET=$(cat ${HOME}/Downloads/pull-secret)
-# the user that can be used to ssh into the Microshift instance
-export MICROSHIFT_USER=cloud-user
+./tools/sfconfig microshfit -i ~/inventory.yaml
 ```
 
-Fetch the `ansible-microshift-role`:
-
-```sh
-git clone https://github.com/openstack-k8s-operators/ansible-microshift-role
-```
-
-Then run the deployment playbook:
-
-```sh
-ansible-playbook -i inventory.yaml deploy-microshift.yaml --extra-var "openshift_pull_secret=${PULL_SECRET} microshift_user=${MICROSHIFT_USER}"
-```
-
-Once the playbook has ended successfully, you can configure kubectl to
+Once the deployment has ended successfully, you can configure kubectl to
 use Microshift:
 
 ```sh
