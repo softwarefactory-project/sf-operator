@@ -17,3 +17,55 @@
       ansible.builtin.fail:
         msg: "Shrinking storage should have failed"
       when: "('shrinking is not supported' not in patch_result.stderr) and ('shrinking is not supported' not in patch_result.stdout)"
+
+- name: Ensure it is impossible to set a negative loopDelay
+  shell: "kubectl patch SoftwareFactory my-sf --type=merge -p '{\"spec\": {\"logserver\": {\"loopDelay\": -1}}}'"
+  register: ld_patch_result
+  failed_when: "('must be a positive integer' not in ld_patch_result.stderr) and ('must be a positive integer' not in ld_patch_result.stdout)"
+
+- name: Ensure it is impossible to set a negative retentionDays
+  shell: "kubectl patch SoftwareFactory my-sf --type=merge -p '{\"spec\": {\"logserver\": {\"retentionDays\": -1}}}'"
+  register: rd_patch_result
+  failed_when: "('must be a positive integer' not in rd_patch_result.stderr) and ('must be a positive integer' not in rd_patch_result.stdout)"
+
+- name: Ensure it is impossible to create an instance with a negative loopDelay
+  shell: |
+    kubectl apply -f - <<EOF
+    ---
+    apiVersion: sf.softwarefactory-project.io/v1
+    kind: SoftwareFactory
+    metadata:
+      name: my-sf-bad-ld
+    spec:
+      storageClassName: "topolvm-provisioner"
+      fqdn: "sftests.com"
+      zuul:
+        gerritconns: []
+      logserver:
+        loopDelay: -3
+        storage:
+          size: 2Gi
+    EOF
+  register: bad_apply_result
+  failed_when: "('must be a positive integer' not in bad_apply_result.stderr) and ('must be a positive integer' not in bad_apply_result.stdout)"
+
+- name: Ensure it is impossible to create an instance with a negative retentionDays
+  shell: |
+    kubectl apply -f - <<EOF
+    ---
+    apiVersion: sf.softwarefactory-project.io/v1
+    kind: SoftwareFactory
+    metadata:
+      name: my-sf-bad-rd
+    spec:
+      storageClassName: "topolvm-provisioner"
+      fqdn: "sftests.com"
+      zuul:
+        gerritconns: []
+      logserver:
+        retentionDays: -3
+        storage:
+          size: 2Gi
+    EOF
+  register: bad_apply_result
+  failed_when: "('must be a positive integer' not in bad_apply_result.stderr) and ('must be a positive integer' not in bad_apply_result.stdout)"

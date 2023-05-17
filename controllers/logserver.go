@@ -162,7 +162,7 @@ func (r *SFController) DeployLogserver() bool {
 		SecurityContext: create_security_context(false),
 	})
 
-	// PurgeLog container
+	// Add PurgeLog container
 	loopdelay := 3600
 	if r.cr.Spec.Logserver.LoopDelay > 0 {
 		loopdelay = r.cr.Spec.Logserver.LoopDelay
