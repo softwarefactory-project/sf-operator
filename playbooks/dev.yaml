@@ -1,0 +1,10 @@
+---
+# This play simulates the "dev" process (start with 'go run' the operator) that we describe in the CONTRIBUTING doc
+- hosts: "{{ hostname | default('all') }}"
+  vars:
+    create_test_bundle_ns: false
+  roles:
+    - setup-env
+    - sanity-check
+    - setup-namespaces
+    - run-operator-dev

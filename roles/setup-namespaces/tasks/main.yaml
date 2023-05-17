@@ -4,6 +4,7 @@
   shell: |
     kubectl create namespace bundle-catalog-ns
     oc adm policy add-scc-to-user privileged system:serviceaccount:bundle-catalog-ns:default
+  when: create_test_bundle_ns
 
 # Where sf instance will be reclaimed
 - name: Create namespace
