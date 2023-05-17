@@ -1,8 +1,26 @@
 - name: "Sync sf-operator to {{ microshift_host }} instance"
   when: remote_os_host
-  command: "rsync -av ../../sf-operator/ {{ microshift_host }}:{{ src_dir }} --exclude=.git --delete"
+  ansible.posix.synchronize:
+    src: "../../sf-operator/"
+    dest: "{{ src_dir }}"
+    archive: true
+    rsync_opts:
+      - "--delete"
+      - "--exclude=.git"
   tags:
     - skip_ansible_lint
+
+
+- name: "Installing Operator Tools"
+  delegate_to: "{{ os_host }}"
+  community.general.make:
+        target: "{{ item }}"
+        chdir: "{{ src_dir }}"
+  loop:
+    - kustomize
+    - install-cmctl
+    - controller-gen
+    - operator-sdk
 
 - name: Setup a local temporary registry
   delegate_to: "{{ os_host }}"
@@ -10,6 +28,8 @@
     - name: Setup local registry
       ansible.builtin.include_role:
         name: "roles/setup-local-registry"
+  when:
+    - "{{ build_bundle | default(true) }}"
 
 - name: Build and publish operator assets
   delegate_to: "{{ os_host }}"
@@ -36,3 +56,5 @@
     # operator-sdk run commands requires the bundle image to be available on registry
     - name: Push the OLM bundle image in the local registry
       ansible.builtin.command: podman push --tls-verify=false localhost:5000/sf-operator-bundle:latest
+  when:
+    - "{{ build_bundle | default(true) }}"

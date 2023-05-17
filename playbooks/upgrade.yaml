@@ -1,0 +1,42 @@
+---
+- hosts: "{{ hostname | default('all') }}"
+  vars:
+    src_dir: "{{ zuul.project.src_dir }}"
+    remote_os_host: false
+    os_host: controller
+    build_bundle: false
+    mode: 'ci'
+  roles:
+    - setup-env
+    - sanity-check
+    - setup-namespaces
+    - role: build-operator-assets
+      vars:
+        build_bundle: false
+        remote_os_host: false
+    - clean-installations
+    - role: install-operator
+      vars:
+        ci_bundle_img: quay.io/software-factory/sf-operator-bundle:latest
+    - apply-custom-resources
+
+- hosts: "{{ hostname | default('all') }}"
+  vars:
+    src_dir: "{{ zuul.project.src_dir }}"
+    remote_os_host: false
+    os_host: controller
+    build_bundle: true
+    mode: 'ci'
+  roles:
+    - build-operator-assets
+    - upgrade-operator
+    - apply-custom-resources
+  tasks:
+    - name: Run tests
+      ansible.builtin.include_role:
+        name: run-tests
+        apply:
+          tags:
+            - test_only
+      tags:
+        - always

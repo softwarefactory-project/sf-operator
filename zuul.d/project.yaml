@@ -8,11 +8,13 @@
       jobs:
         - sf-operator-functional-allinone-microshift
         - sf-operator-run-dev
+        - sf-operator-upgrade-allinone-microshift
         - ansible-lint
     gate:
       jobs:
         - sf-operator-functional-allinone-microshift
         - sf-operator-run-dev
+        - sf-operator-upgrade-allinone-microshift
         - ansible-lint
     post:
       jobs:

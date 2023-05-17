@@ -1,0 +1,57 @@
+# Generate a random number to be used on the bundle versoning
+# The current version must be always higher than the previous,
+# otherwise the command fails.
+# "date +%s" avoids collision
+- name: Generate Random Number
+  ansible.builtin.command: date +%s
+  register: gen_bundle_version
+
+- name: Setting Variables
+  ansible.builtin.set_fact:
+    version: "{{ gen_bundle_version.stdout }}"
+    imagename: "localhost:5000/sf-operator:{{ gen_bundle_version.stdout }}"
+    bundlename: "localhost:5000/sf-operator-bundle:{{ gen_bundle_version.stdout }}"
+    # bundleflags must have Major.Minor.Patch format
+    bundleflags: "--version {{ gen_bundle_version.stdout }}.0.0"
+
+- name: Build and publish operator assets
+  delegate_to: "{{ os_host }}"
+  block:
+    # Image will be available in crio and Microshift will find it
+    - name: Build the operator's images
+      community.general.make:
+        target: "{{ item }}"
+        chdir: "{{ src_dir }}"
+        params:
+          VERSION: "{{ version }}"
+          IMG: "{{ imagename }}"
+          BUNDLE_IMG: "{{ bundlename }}"
+          BUNDLE_GEN_FLAGS: "{{ bundleflags }}"
+      loop:
+        - operator-build
+        - bundle
+        - bundle-build
+
+    # operator-sdk run commands requires the bundle image to be available on registry
+    - name: Push the Operator and Bundle images into the local registry
+      ansible.builtin.shell: >
+        podman push
+        --tls-verify=false
+        {{ item }}
+      loop:
+        - "{{ imagename }}"
+        - "{{ bundlename }}"
+
+- name: Upgrade the operator via the OLM bundle
+  delegate_to: "{{ os_host }}"
+  command: |
+    bin/operator-sdk run
+    bundle-upgrade
+    --skip-tls
+    --skip-tls-verify
+    {{ bundlename }}
+    --namespace bundle-catalog-ns
+    --security-context-config restricted
+    --use-http
+  args:
+    chdir: "{{ src_dir }}"

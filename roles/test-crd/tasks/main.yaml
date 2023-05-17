@@ -1,9 +1,20 @@
 ---
+- name: Get current volume size
+  ansible.builtin.shell: >
+    kubectl get pvc logserver
+    --output custom-columns=CAPACITY:.status.capacity.storage
+    --no-headers | sed 's/[^0-9]\+//'
+  register: logserver_capacity
+
+- name: Set volume size
+  ansible.builtin.set_fact:
+    volume_size: "{{ logserver_capacity.stdout | int }}"
+
 - name: Ensure LogServer was spawned with custom storage size
   ansible.builtin.command: |
     kubectl get pvc logserver --output custom-columns=CAPACITY:.status.capacity.storage --no-headers
   register: logserver_capacity
-  failed_when: logserver_capacity.stdout != '2Gi'
+  failed_when: logserver_capacity.stdout == '1Gi'
 
 - name: Ensure it is impossible to shrink storage size in sf CR
   ansible.builtin.command: |
@@ -37,7 +48,7 @@
       logserver:
         loopDelay: -3
         storage:
-          size: 2Gi
+          size: {{ volume_size }}Gi
     EOF
   register: bad_apply_result
   failed_when: "('must be a positive integer' not in bad_apply_result.stderr) and ('must be a positive integer' not in bad_apply_result.stdout)"
@@ -58,7 +69,7 @@
       logserver:
         retentionDays: -3
         storage:
-          size: 2Gi
+          size: {{ volume_size }}Gi
     EOF
   register: bad_apply_result
   failed_when: "('must be a positive integer' not in bad_apply_result.stderr) and ('must be a positive integer' not in bad_apply_result.stdout)"

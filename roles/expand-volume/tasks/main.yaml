@@ -1,4 +1,15 @@
 ---
+- name: Get current volume size
+  ansible.builtin.shell: >
+    kubectl get pvc logserver
+    --output custom-columns=CAPACITY:.status.capacity.storage
+    --no-headers | sed 's/[^0-9]\+//'
+  register: logserver_capacity
+
+- name: Increase volume size
+  ansible.builtin.set_fact:
+    volume_size: "{{ logserver_capacity.stdout | int + 2 }}"
+
 - name: Expand logserver volume
   k8s:
     kubeconfig: "{{ kubeconfig }}"
@@ -12,7 +23,7 @@
       spec:
         logserver:
           storage:
-            size: 5Gi
+            size: "{{ volume_size }}Gi"
 
 - name: Wait until resize is effective
   shell: |
@@ -25,8 +36,8 @@
 - ansible.builtin.include_role:
     name: "roles/health-check/check-sf-resource-ready"
 
-- name: Ensure volume expansion to 5Gi
+- name: Ensure volume expansion to {{ volume_size }}Gi
   command: |
     kubectl get pvc logserver --output custom-columns=CAPACITY:.status.capacity.storage --no-headers
   register: logserver_capacity
-  failed_when: logserver_capacity.stdout != '5Gi'
+  failed_when: logserver_capacity.stdout != '{{ volume_size }}Gi'

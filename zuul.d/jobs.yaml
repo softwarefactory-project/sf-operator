@@ -82,3 +82,9 @@
     parent: base-sf-operator
     vars:
       mode: "dev"
+
+- job:
+    name: sf-operator-upgrade-allinone-microshift
+    parent: sf-operator-functional-allinone-microshift
+    run: playbooks/upgrade.yaml
+    timeout: 2200

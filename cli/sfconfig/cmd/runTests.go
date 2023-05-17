@@ -21,16 +21,18 @@ var runTestsCmd = &cobra.Command{
 	Use:   "runTests",
 	Short: "Run playbook/main.yaml",
 	Long: `Run playbook/main.yaml playbook, it used for CI job
-    and can be used locally
+and can be used locally
 
-    The variables used are config/default/local_ci.yaml
-    with --zuul, variables are config/default/zuul_ci.yaml
-    Run test_only tag
-    ./tools/sfconfig runTests --test-only
+The variables used are config/default/local_ci.yaml
+with --zuul, variables are config/default/zuul_ci.yaml
+Run test_only tag
+
+./tools/sfconfig runTests --test-only
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 		zuul, _ := cmd.Flags().GetBool("zuul")
 		test_only, _ := cmd.Flags().GetBool("test-only")
+		upgrade, _ := cmd.Flags().GetBool("upgrade")
 
 		vars, _ := varListToMap(extravars)
 		ansiblePlaybookOptions := &playbook.AnsiblePlaybookOptions{}
@@ -52,8 +54,15 @@ var runTestsCmd = &cobra.Command{
 			ansiblePlaybookOptions.AddExtraVar(keyVar, valueVar)
 		}
 
+		var playbook_yaml string
+		if upgrade {
+			playbook_yaml = "playbooks/upgrade.yaml"
+		} else {
+			playbook_yaml = "playbooks/main.yaml"
+		}
+
 		playbook := &playbook.AnsiblePlaybookCmd{
-			Playbooks:         []string{"playbooks/main.yaml"},
+			Playbooks:         []string{playbook_yaml},
 			ConnectionOptions: ansiblePlaybookConnectionOptions,
 			Options:           ansiblePlaybookOptions,
 		}
@@ -89,4 +98,5 @@ func init() {
 	runTestsCmd.Flags().StringSliceVarP(&extravars, "extra-var", "e", []string{}, "Set extra variables, the format of each variable must be <key>=<value>")
 	runTestsCmd.Flags().BoolP("zuul", "l", false, "use config/default/zuul_ci.yaml")
 	runTestsCmd.Flags().BoolP("test-only", "t", false, "run test_only")
+	runTestsCmd.Flags().BoolP("upgrade", "u", false, "run upgrade test")
 }
