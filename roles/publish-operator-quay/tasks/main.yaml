@@ -14,7 +14,7 @@
 
 - name: "Set Version"
   ansible.builtin.set_fact:
-    bundle_version: "{{ _command_results.stdout }}"
+    bundle_version: "v{{ _command_results.stdout }}"
 
 - name: Create the operator OLM bundle
   community.general.make:
@@ -23,16 +23,16 @@
 
 - name: Build the operator's images
   community.general.make:
-    target: "{{ item.target }}"
+    target: "{{ item }}"
     chdir: "{{ zuul.project.src_dir }}"
     params:
-      BUNDLE_IMG: "{{ item.IMG_NAME }}"
-      IMG: "{{ item.IMG_NAME }}"
+      BUNDLE_IMG: "{{ ci_bundle_img_registry }}:{{ bundle_version }}"
+      IMG: "{{ ci_operator_img_registry }}:{{ bundle_version }}"
+      CATALOG_IMG: "{{ ci_catalog_img_registry }}:{{ bundle_version }}"
   loop:
-    - target: bundle-build
-      IMG_NAME: "{{ ci_bundle_img_registry }}:{{ bundle_version }}"
-    - target: operator-build
-      IMG_NAME: "{{ ci_operator_img_registry }}:{{ bundle_version }}"
+    - bundle-build
+    - operator-build
+    - opm-build
 
 - name: "Podman Tag"
   ansible.builtin.shell: >
@@ -42,6 +42,7 @@
   loop:
     - "{{ ci_bundle_img_registry }}"
     - "{{ ci_operator_img_registry }}"
+    - "{{ ci_catalog_img_registry }}"
 
 - name: "Podman Login to {{ registry_address }}"
   ansible.builtin.shell: >
@@ -55,7 +56,7 @@
   ansible.builtin.shell: >
     podman push
     {{ item[0] }}:{{ item[1] }}
-  loop: "{{ ['{{ ci_bundle_img_registry }}', '{{ ci_operator_img_registry }}'] | product(['{{ bundle_version }}', 'latest']) | list }}"
+  loop: "{{ ['{{ ci_bundle_img_registry }}', '{{ ci_operator_img_registry }}', '{{ ci_catalog_img_registry }}'] | product(['{{ bundle_version }}', 'latest']) | list }}"
   register: _podman_push
   retries: 3
   delay: 3

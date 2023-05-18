@@ -9,3 +9,6 @@ ci_operator_img_registry: "{{ registry_project }}/{{ ci_operator_image_name }}"
 
 ci_bundle_image_name: sf-operator-bundle
 ci_bundle_img_registry: "{{ registry_project }}/{{ ci_bundle_image_name }}"
+
+ci_catalog_image_name: sf-operator-catalog
+ci_catalog_img_registry: "{{ registry_project }}/{{ ci_catalog_image_name }}"

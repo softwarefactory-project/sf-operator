@@ -168,3 +168,48 @@ $(ENVTEST): $(LOCALBIN)
 operator-sdk: $(OPERATOR_SDK)
 $(OPERATOR_SDK): $(LOCALBIN)
 	(test -f $(LOCALBIN)/operator-sdk && [[ "$(shell $(LOCALBIN)/operator-sdk version)" =~ "$(OPERATOR_SDK_VERSION)" ]] ) || (curl -o $(LOCALBIN)/operator-sdk -sSL https://github.com/operator-framework/operator-sdk/releases/download/v${OPERATOR_SDK_VERSION}/operator-sdk_linux_amd64 && chmod +x $(LOCALBIN)/operator-sdk )
+
+# Cataloge
+CATALOG_DIR=sf-operator-catalog
+OPM=$(LOCALBIN)/opm
+CHANNEL=preview
+CATALOG_IMG ?= quay.io/software-factory/sf-operator-catalog:v$(VERSION)
+
+.PHONY: install-opm
+install-opm: ## Install the cert-manager cmctl CLI
+	@bash -c "mkdir -p $(LOCALBIN); test -f $(OPM) || (curl -sSL https://github.com/operator-framework/operator-registry/releases/download/v1.27.0/linux-amd64-opm -o $(OPM) && chmod +x $(OPM) )"
+
+.PHONY: opm-dir-gen
+opm-dir-gen: install-opm
+	@bash -c "mkdir -p $(CATALOG_DIR)"
+
+opm-files-gen: opm-dir-gen
+	test -f $(CATALOG_DIR).Dockerfile || $(OPM) generate dockerfile $(CATALOG_DIR)
+	$(OPM) init sf-operator --default-channel=$(CHANNEL) --description=./README.md --output yaml > $(CATALOG_DIR)/operator.yaml
+	$(OPM) render $(BUNDLE_IMG) --output=yaml >> $(CATALOG_DIR)/operator.yaml
+	sed -Ei "s/^(name: sf-operator.v)0.0.0/\10.0.1/" $(CATALOG_DIR)/operator.yaml
+
+.PHONY: schema-operator
+schema-operator: opm-files-gen
+	@printf "\n\
+	---\n\
+	schema: olm.channel\n\
+	package: sf-operator\n\
+	name: $(CHANNEL)\n\
+	entries:\n\
+    - name: sf-operator.v$(VERSION)\n\
+	">> $(CATALOG_DIR)/operator.yaml
+
+.PHONY: opm
+opm: schema-operator
+	$(OPM) validate $(CATALOG_DIR)
+
+opm-build:
+	podman build -f $(CATALOG_DIR).Dockerfile -t $(CATALOG_IMG)
+
+opm-push:
+	podman push $(CATALOG_IMG)
+
+.PHONY: opm-clean
+clean-opm:
+	@bash -c "rm -r $(CATALOG_DIR) $(CATALOG_DIR).Dockerfile"
