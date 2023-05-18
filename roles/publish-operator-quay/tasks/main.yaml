@@ -21,6 +21,11 @@
     target: bundle
     chdir: "{{ zuul.project.src_dir }}"
 
+- name: Create the operator Catalog bundle
+  community.general.make:
+    target: opm
+    chdir: "{{ zuul.project.src_dir }}"
+
 - name: Build the operator's images
   community.general.make:
     target: "{{ item }}"
