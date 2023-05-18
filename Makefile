@@ -20,7 +20,7 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 .PHONY: all
-all: build
+all: build test
 
 ##@ General
 
@@ -76,7 +76,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 .PHONY: operator-build
-operator-build: test ## Build podman image with the manager.
+operator-build: ## Build podman image with the manager.
 	podman build -t ${IMG} .
 
 .PHONY: operator-push
