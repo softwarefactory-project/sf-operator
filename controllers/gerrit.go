@@ -156,7 +156,8 @@ func (r *SFController) DeployGerrit() bool {
 	}
 
 	// Create the deployment
-	dep := r.create_statefulset(GERRIT_IDENT, GERRIT_IMAGE, r.getStorageConfOrDefault(r.cr.Spec.Gerrit.Storage))
+	replicas := int32(1)
+	dep := r.create_statefulset(GERRIT_IDENT, GERRIT_IMAGE, r.getStorageConfOrDefault(r.cr.Spec.Gerrit.Storage), replicas)
 
 	cm_data := make(map[string]string)
 	cm_data["ready.sh"] = gerritReadyScript

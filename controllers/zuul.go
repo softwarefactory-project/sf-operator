@@ -7,6 +7,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"strconv"
 
 	ini "gopkg.in/ini.v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -198,7 +199,8 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	r.EnsureConfigMap("zuul-scheduler-tooling", scheduler_tooling_data)
 
 	zs_volumes := create_zuul_volumes("zuul-scheduler")
-	zs := r.create_statefulset("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage))
+	zs_replicas := int32(1)
+	zs := r.create_statefulset("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), zs_replicas)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = append(init_containers, r.init_scheduler_config())
 	zs.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
@@ -229,7 +231,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-component-config": IniSectionsChecksum(cfg, sections),
 	}
 
-	ze := r.create_headless_statefulset("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage))
+	ze := r.create_headless_statefulset("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), int32(r.cr.Spec.Zuul.Executor.Replicas))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	ze.Spec.Template.Spec.Containers = create_zuul_container(r.cr.Spec.FQDN, "zuul-executor")
@@ -246,6 +248,13 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 
 	r.GetOrCreate(&ze)
 	ze_dirty := false
+
+	if *ze.Spec.Replicas != r.cr.Spec.Zuul.Executor.Replicas && r.cr.Spec.Zuul.Executor.Replicas != 0 {
+		r.log.V(1).Info("Updating replicas for zuul executor to: " + strconv.Itoa(int(r.cr.Spec.Zuul.Executor.Replicas)))
+		ze.Spec.Replicas = int32Ptr(r.cr.Spec.Zuul.Executor.Replicas)
+		ze_dirty = true
+	}
+
 	if !map_equals(&ze.Spec.Template.ObjectMeta.Annotations, &annotations) {
 		ze.Spec.Template.ObjectMeta.Annotations = annotations
 		ze_dirty = true

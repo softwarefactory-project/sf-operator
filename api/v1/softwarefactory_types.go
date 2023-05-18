@@ -37,7 +37,8 @@ type GerritConnection struct {
 }
 
 type ZuulExecutorSpec struct {
-	Storage StorageSpec `json:"storage,omitempty"`
+	Storage  StorageSpec `json:"storage,omitempty"`
+	Replicas int32       `json:"replicas,omitempty"`
 }
 
 type ZuulSchedulerSpec struct {

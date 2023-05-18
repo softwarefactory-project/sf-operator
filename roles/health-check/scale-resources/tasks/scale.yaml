@@ -1,0 +1,17 @@
+---
+- name: "Scale {{ operation }} on statefulset {{ service.name }}"
+  ansible.builtin.include_role:
+    name: "roles/update-custom-resource"
+  vars:
+    cr_spec: "{{ service['scale_' + operation + '_resources'] }}"
+
+- name: "Get replica count for {{ service.name }} to operation {{ operation }}"
+  ansible.builtin.command: >
+    kubectl get statefulsets {{ service.name }}
+    -o jsonpath='{.status.readyReplicas}'
+  register: _scale_ready
+
+- name: Check if replica count is correct
+  fail:
+    msg: "The replica count for service {{ service.name }} is not {{ vars['scale_' + operation + '_replicas'] }}"
+  when: _scale_ready.stdout | int != vars['scale_' + operation + '_replicas']
