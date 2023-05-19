@@ -5,7 +5,7 @@
 
 - name: Save logserver content before changing the date
   ansible.builtin.shell: |
-    kubectl exec {{ _logserver_pod_name.stdout }} -c {{ sshd_container_name }} -- cp -Rf /home/data/rsync  /tmp/rsync-back;
+    kubectl exec {{ _logserver_pod_name.stdout }} -c {{ sshd_container_name }} -- rsync -r /home/data/rsync/  /tmp/rsync-back/ ;
 
 - name: Changing Logs modified time
   ansible.builtin.shell: |
