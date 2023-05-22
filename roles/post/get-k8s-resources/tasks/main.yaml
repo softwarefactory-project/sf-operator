@@ -44,9 +44,14 @@
   tags:
     - skip_ansible_lint
 
+- name: Create Pods Logs directory
+  ansible.builtin.file:
+    path: "{{ dest_dir }}/pod"
+    state: directory
+    mode: '0755'
+
 - name: Collect namespace pods logs
   ansible.builtin.shell: |
-    mkdir -p {{ dest_dir }}/pod
     for pod in $(kubectl {{ namespace_opt }} get pods -o name); do
       for container in $(kubectl {{ namespace_opt }} get $pod -o jsonpath='{.spec.containers[*].name}'); do
         kubectl {{ namespace_opt }} logs $pod -c $container > {{ dest_dir }}/${pod}-${container}-logs.txt
