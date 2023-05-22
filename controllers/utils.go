@@ -1027,3 +1027,54 @@ func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) Sto
 		Size:             size,
 	}
 }
+
+func (r *SFController) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv1.StorageSpec) bool {
+	new_qty := newStorageSpec.Size
+
+	found_pvc := &apiv1.PersistentVolumeClaim{}
+	if !r.GetM(pvc_name, found_pvc) {
+		r.log.V(1).Info("PVC " + pvc_name + " not found")
+		return false
+	}
+	r.log.V(1).Info("Inspecting volume " + found_pvc.Name)
+
+	// Is a resize in progress?
+	for _, condition := range found_pvc.Status.Conditions {
+		switch condition.Type {
+		case
+			apiv1.PersistentVolumeClaimResizing,
+			apiv1.PersistentVolumeClaimFileSystemResizePending:
+			r.log.V(1).Info("Volume resizing in progress, not ready")
+			return false
+		}
+	}
+	current_qty := found_pvc.Spec.Resources.Requests.Storage()
+
+	switch new_qty.Cmp(*current_qty) {
+	case -1:
+		r.log.V(1).Info("Cannot downsize volume " + pvc_name)
+		return true
+	case 0:
+		r.log.V(1).Info("Volume " + pvc_name + " at expected size, nothing to do")
+		return true
+	case 1:
+		r.log.V(1).Info("Volume expansion required for  " + pvc_name)
+		new_resources := apiv1.ResourceRequirements{
+			Requests: apiv1.ResourceList{
+				"storage": new_qty,
+			},
+		}
+		found_pvc.Spec.Resources = new_resources
+		if err := r.Update(r.ctx, found_pvc); err != nil {
+			r.log.V(1).Error(err, "Updating PVC failed for volume  "+pvc_name)
+			return false
+		}
+		// We return false to notify that a volume expansion was just
+		// requested. Technically we could consider the reconcile is
+		// over as most storage classes support hot resizing without
+		// service interruption.
+		r.log.V(1).Info("Expansion started for volume " + pvc_name)
+		return false
+	}
+	return true
+}

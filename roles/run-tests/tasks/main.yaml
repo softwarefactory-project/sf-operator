@@ -14,7 +14,7 @@
   ansible.builtin.set_fact:
     random: "{{ lookup('community.general.random_string', special=false, length=8) }}"
 
-- name: Create vars to generatel and submit resources addition
+- name: Create vars to generate and submit resources addition
   ansible.builtin.set_fact:
     config_file_path: "resources/myfile-{{ random }}.yaml"
     repository_name: "ichiban-config-{{ random }}"
@@ -56,14 +56,23 @@
   retries: 10
   loop: "{{ zuul_job_result.json | list }}"
 
-- name: Validate purgelogs
-  ansible.builtin.include_role:
-    name: "roles/health-check/validate-purgelogs"
-
 - name: Miscellaneous testing
   include_role:
     name: "roles/{{ role }}"
   loop:
     - test-crd
+    - expand-volume
   loop_control:
     loop_var: role
+
+- name: Ensure data is still present after volume expansion
+  ansible.builtin.uri:
+    url: "{{ item.log_url }}/job-output.txt.gz"
+    validate_certs: "{{ validate_certs }}"
+    method: GET
+  retries: 10
+  loop: "{{ zuul_job_result.json | list }}"
+
+- name: Validate purgelogs
+  ansible.builtin.include_role:
+    name: "roles/health-check/validate-purgelogs"

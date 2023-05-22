@@ -6,17 +6,10 @@
   failed_when: logserver_capacity.stdout != '2Gi'
 
 - name: Ensure it is impossible to shrink storage size in sf CR
-  block:
-    - name: Change storage size
-      ansible.builtin.command: |
-        kubectl patch SoftwareFactory my-sf --type=merge -p '{"spec": {"logserver": {"storage": {"size": "1Gi"}}}}'
-      register: patch_result
-      ignore_errors: true
-
-    - name: Check if shrink is working
-      ansible.builtin.fail:
-        msg: "Shrinking storage should have failed"
-      when: "('shrinking is not supported' not in patch_result.stderr) and ('shrinking is not supported' not in patch_result.stdout)"
+  ansible.builtin.command: |
+    kubectl patch SoftwareFactory my-sf --type=merge -p '{"spec": {"logserver": {"storage": {"size": "1Gi"}}}}'
+  register: patch_result
+  failed_when: "('shrinking is not supported' not in patch_result.stderr) and ('shrinking is not supported' not in patch_result.stdout)"
 
 - name: Ensure it is impossible to set a negative loopDelay
   shell: "kubectl patch SoftwareFactory my-sf --type=merge -p '{\"spec\": {\"logserver\": {\"loopDelay\": -1}}}'"

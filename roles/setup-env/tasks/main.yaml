@@ -17,6 +17,8 @@
         name:
           - git-review
           - websocket-client==1.5.1
+          - kubernetes
+          - oauthlib>=3.2.2
 
 - name: Set project source path (running on Zuul)
   when: zuul.build is defined

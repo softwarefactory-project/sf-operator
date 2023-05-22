@@ -1,0 +1,37 @@
+---
+- name: Expand logserver volume
+  k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    definition:
+      # apiVersion: sf.softwarefactory-project.io/v1
+      kind: SoftwareFactory
+      namespace: sf
+      metadata:
+        name: my-sf
+        namespace: sf
+      spec:
+        logserver:
+          storage:
+            size: 5Gi
+
+- name: Wait until resize is effective
+  shell: |
+    kubectl describe pvc logserver
+  register: pvc_events
+  until: "'MountVolume.NodeExpandVolume succeeded for volume' in pvc_events.stdout"
+  delay: 10
+  retries: 20
+
+- name: Check my-sf status
+  command: |
+    kubectl get softwarefactory my-sf -o custom-columns=STATUS:.status.ready
+  register: mysf_status
+  until: "'true' in mysf_status.stdout"
+  delay: 10
+  retries: 20
+
+- name: Ensure volume expansion to 5Gi
+  command: |
+    kubectl get pvc logserver --output custom-columns=CAPACITY:.status.capacity.storage --no-headers
+  register: logserver_capacity
+  failed_when: logserver_capacity.stdout != '5Gi'
