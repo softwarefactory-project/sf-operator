@@ -13,9 +13,14 @@
   ansible.builtin.shell: |
     kubectl describe nodes > {{ output_dir }}/nodes.txt
 
+- name: Create CRDs directory
+  ansible.builtin.file:
+    path: "{{ output_dir }}/CRDs"
+    state: directory
+    mode: '0755'
+
 - name: Describe CRDs
   ansible.builtin.shell: |
-    mkdir -p {{ output_dir }}/CRDs
     for item in $(kubectl get crd -o name); do
       mkdir -p {{ output_dir }}/CRDs/$(dirname $item)
       oc describe $item > {{ output_dir }}/CRDs/${item}.txt
