@@ -13,10 +13,15 @@
   retries: 10
   delay: 2
 
-- name: Run the operator in devel mode
-  ansible.builtin.command: "{{ item }}"
-  loop:
-    - make install
-    - go run ./main.go --namespace sf --cr config/samples/sf_v1_softwarefactory.yaml --oneshot
+- name: Install CRDs
+  ansible.builtin.command: make install
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Run the operator in devel mode (in background)
+  async: 3600
+  poll: 0
+  ansible.builtin.shell: |
+    go run ./main.go --namespace sf > ~/zuul-output/logs/sf-operator.log 2>&1
   args:
     chdir: "{{ zuul.project.src_dir }}"

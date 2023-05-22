@@ -4,13 +4,9 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/yaml"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -67,8 +63,6 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var ns string
-	var oneshot bool
-	var crPath string
 	var debugService string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -77,8 +71,6 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	// Since we are developing sf-operator on a shared host, we required a dedicated namespace
 	flag.StringVar(&ns, "namespace", "", "The namespace to listen to.")
-	flag.BoolVar(&oneshot, "oneshot", false, "Stop once resources is ready.")
-	flag.StringVar(&crPath, "cr", "", "The custom resource (CR) to deploy.")
 	flag.StringVar(&debugService, "debug-service", "", "The service to be restarted in debug mode.")
 	opts := zap.Options{
 		Development: true,
@@ -99,12 +91,6 @@ func main() {
 				"the manager will watch and manage resources in " + ns + " namespace")
 
 		}
-	}
-
-	// The dev/standalone running mode require a namespace name to run
-	if ns == "" && crPath != "" {
-		setupLog.Error(nil, "When running standalone, a namespace must be specified")
-		os.Exit(1)
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -136,45 +122,25 @@ func main() {
 		Scheme:     mgr.GetScheme(),
 		RESTClient: restClient,
 		RESTConfig: mgr.GetConfig(),
-		Oneshot:    oneshot,
 	}
 
 	//+kubebuilder:scaffold:builder
 
 	ctx := ctrl.SetupSignalHandler()
 
-	if crPath != "" {
-		var sf sfv1.SoftwareFactory
-		dat, err := os.ReadFile(crPath)
-		if err != nil {
-			panic(err.Error())
-		}
-		if err := yaml.Unmarshal([]byte(dat), &sf); err != nil {
-			panic(err.Error())
-		}
-		fmt.Printf("Deploying standalone %#v\n", sf)
-		err = mgr.Add(manager.RunnableFunc(func(context.Context) error {
-			sfr.Standalone(ctx, ns, sf, debugService)
-			return nil
-		}))
-		if err != nil {
-			setupLog.Error(err, "unable add a runnable to the manager")
-			os.Exit(1)
-		}
-	} else {
-		if err = sfr.SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "SoftwareFactory")
-			os.Exit(1)
-		}
-		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-			setupLog.Error(err, "unable to set up health check")
-			os.Exit(1)
-		}
-		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-			setupLog.Error(err, "unable to set up ready check")
-			os.Exit(1)
-		}
+	if err = sfr.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SoftwareFactory")
+		os.Exit(1)
 	}
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")

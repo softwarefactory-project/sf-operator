@@ -31,6 +31,7 @@ You need to install the following dependencies on your dev machine:
 - jq
 - python-tox
 - git-review
+- python-kubernetes
 
 Furthermore the `operator-sdk` is needed when you need to generate/update the OLM bundle or
 when a new `CRD` needs to be added to the operator. Here is the installation process:
@@ -84,7 +85,13 @@ kubectl config current-context
 4. Start the operator:
 
    ```sh
-   go run ./main.go --namespace sf --cr ./my-sf.yaml
+   go run ./main.go --namespace sf
+   ```
+
+5. Apply the SoftwareFactory Custom Resource:
+
+   ```sh
+   kubectl apply -f ./my-sf.yaml
    ```
 
 ### Access services with the browser

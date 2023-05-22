@@ -1,2 +1,2 @@
 ---
-kubeconfig: "~{{ ansible_user }}/.kube/config"
+kubeconfig: "~/.kube/config"

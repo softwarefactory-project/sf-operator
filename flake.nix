@@ -24,6 +24,8 @@
           pkgs.k9s
           # 1.4.1 in nixpkgs 22.11
           pkgs.python39Packages.websocket-client
+          # 25.3.0 in nixpkgs 22.11
+          pkgs.python39Packages.kubernetes
         ];
         shellHook = ''
           echo "Welcome in $name"

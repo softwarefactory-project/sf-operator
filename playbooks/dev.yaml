@@ -8,3 +8,11 @@
     - sanity-check
     - setup-namespaces
     - run-operator-dev
+    - apply-custom-resources
+  tasks:
+    - name: Run tests
+      ansible.builtin.include_role:
+        name: run-tests
+        apply:
+          tags:
+            - test_only

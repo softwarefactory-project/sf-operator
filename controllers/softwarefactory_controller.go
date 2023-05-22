@@ -8,7 +8,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 	"time"
 
@@ -31,7 +30,6 @@ type SoftwareFactoryReconciler struct {
 	Scheme     *runtime.Scheme
 	RESTClient rest.Interface
 	RESTConfig *rest.Config
-	Oneshot    bool
 }
 
 // Run `make manifests` to apply rbac change
@@ -160,52 +158,6 @@ func (r *SFController) DebugService(debugService string) {
 	}
 }
 
-// Run reconcille loop manually
-func (r *SoftwareFactoryReconciler) Standalone(ctx context.Context, ns string, sf sfv1.SoftwareFactory, debugService string) {
-	log := log.FromContext(ctx)
-	sf.SetNamespace(ns)
-	// Ensure the CR name is created
-	err := r.Create(ctx, &sf)
-	if err != nil {
-		log.Error(err, "Unable to create the sf instance")
-		panic(err.Error())
-	}
-	// Then get's its metadata
-	var current_sf sfv1.SoftwareFactory
-	if err := r.Get(ctx, client.ObjectKey{
-		Name:      sf.GetName(),
-		Namespace: ns,
-	}, &current_sf); err != nil {
-		panic(err.Error())
-	}
-	// And update the provided metadata so that the reference works out
-	sf.ObjectMeta = current_sf.ObjectMeta
-	sfc := &SFController{
-		SoftwareFactoryReconciler: r,
-		cr:                        &sf,
-		ns:                        ns,
-		log:                       log,
-		ctx:                       ctx,
-	}
-
-	if debugService != "" {
-		sfc.DebugService(debugService)
-		os.Exit(0)
-	}
-
-	// Manually loop until the step function produces a ready status
-	for !sf.Status.Ready {
-		sf.Status = sfc.Step()
-		r.Status().Update(ctx, &sf)
-		fmt.Printf("Step result: %#v\n", sf.Status)
-		if sf.Status.Ready {
-			break
-		}
-		time.Sleep(5 * time.Second)
-	}
-	os.Exit(0)
-}
-
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 //
@@ -242,9 +194,6 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{RequeueAfter: delay}, nil
 	} else {
 		log.V(1).Info("Reconcile completed!", "sf", sf)
-		if r.Oneshot {
-			os.Exit(0)
-		}
 		return ctrl.Result{}, nil
 	}
 }
