@@ -7,6 +7,7 @@ spec:
   gerrit:
     sshd_max_connections_per_user: "64"
   logserver:
+    loopDelay: 5
     storage:
       size: 2Gi
   zuul:

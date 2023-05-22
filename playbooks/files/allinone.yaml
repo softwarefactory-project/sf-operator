@@ -1,14 +1,1 @@
----
-apiVersion: sf.softwarefactory-project.io/v1
-kind: SoftwareFactory
-metadata:
-  name: my-sf
-spec:
-  storageClassName: "topolvm-provisioner"
-  fqdn: "sftests.com"
-  zuul:
-    gerritconns: []
-  logserver:
-    loopDelay: 5
-    storage:
-      size: 2Gi
+../../config/samples/sf_v1_softwarefactory.yaml
