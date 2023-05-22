@@ -16,7 +16,7 @@
       pip:
         name:
           - git-review
-          - websocket-client
+          - websocket-client==1.5.1
 
 - name: Set project source path (running on Zuul)
   when: zuul.build is defined
