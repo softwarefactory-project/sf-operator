@@ -8,14 +8,12 @@
       jobs:
         - sf-operator-functional-allinone-microshift
         - sf-operator-run-dev
-        - ansible-lint:
-            voting: false
+        - ansible-lint
     gate:
       jobs:
         - sf-operator-functional-allinone-microshift
         - sf-operator-run-dev
-        - ansible-lint:
-            voting: false
+        - ansible-lint
     post:
       jobs:
         - sf-operator-publish-olm-bundle-image
