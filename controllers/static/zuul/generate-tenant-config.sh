@@ -9,7 +9,7 @@ if [ "${HOME}" == "/" ]; then
     exit 1
 fi
 
-export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+export GIT_SSH_COMMAND="ssh -i /var/lib/admin-ssh/..data/priv -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 if [ -d "${HOME}/config/.git" ]; then
   pushd "${HOME}/config"

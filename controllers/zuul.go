@@ -24,14 +24,8 @@ const ZUUL_EXECUTOR_PORT = 7900
 //go:embed static/zuul/zuul.conf
 var zuul_dot_conf string
 
-//go:embed static/zuul/init-tenant-config.sh
-var zuul_init_tenant_config string
-
 //go:embed static/zuul/generate-tenant-config.sh
 var zuul_generate_tenant_config string
-
-//go:embed static/zuul/scheduler-sidecar-entrypoint.sh
-var zuul_scheduler_sidecar_entrypoint string
 
 func is_statefulset(service string) bool {
 	return service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger"
@@ -93,13 +87,21 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 	volumes := []apiv1.Volume{
 		create_volume_secret("ca-cert"),
 		create_volume_secret("zuul-config"),
-		create_volume_secret("zuul-tenant-yaml"),
 		create_volume_secret("zookeeper-client-tls"),
 		{
 			Name: "zuul-ssh-key",
 			VolumeSource: apiv1.VolumeSource{
 				Secret: &apiv1.SecretVolumeSource{
 					SecretName:  "zuul-ssh-key",
+					DefaultMode: &mod,
+				},
+			},
+		},
+		{
+			Name: "admin-ssh-key",
+			VolumeSource: apiv1.VolumeSource{
+				Secret: &apiv1.SecretVolumeSource{
+					SecretName:  "admin-ssh-key",
 					DefaultMode: &mod,
 				},
 			},
@@ -138,37 +140,46 @@ func (r *SFController) create_zuul_host_alias() []apiv1.HostAlias {
 	}
 }
 
-func init_scheduler_config() apiv1.Container {
+func (r *SFController) get_scheduler_init_and_sidecar_envs() []apiv1.EnvVar {
+	config_url, config_user := r.getConfigRepoCNXInfo()
+	return []apiv1.EnvVar{
+		create_env("CONFIG_REPO_URL", config_url),
+		create_env("CONFIG_REPO_USER", config_user),
+		create_env("HOME", "/var/lib/zuul"),
+	}
+}
+
+var scheduler_init_and_sidecar_vols = []apiv1.VolumeMount{
+	{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
+	{
+		Name:      "tooling-vol",
+		SubPath:   "generate-zuul-tenant-yaml.sh",
+		MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
+	{
+		Name:      "admin-ssh-key",
+		MountPath: "/var/lib/admin-ssh",
+		ReadOnly:  true,
+	},
+}
+
+func (r *SFController) init_scheduler_config() apiv1.Container {
 	return apiv1.Container{
-		Name:    "init-scheduler-config",
-		Image:   BUSYBOX_IMAGE,
-		Command: []string{"sh", "-c", zuul_init_tenant_config},
-		VolumeMounts: []apiv1.VolumeMount{
-			{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
-		},
+		Name:            "init-scheduler-config",
+		Image:           BUSYBOX_IMAGE,
+		Command:         []string{"/usr/local/bin/generate-zuul-tenant-yaml.sh"},
+		Env:             r.get_scheduler_init_and_sidecar_envs(),
+		VolumeMounts:    scheduler_init_and_sidecar_vols,
 		SecurityContext: create_security_context(false),
 	}
 }
 
 func (r *SFController) scheduler_sidecar_container() apiv1.Container {
-	config_url, config_user := r.getConfigRepoCNXInfo()
 	container := apiv1.Container{
-		Name:    "scheduler-sidecar",
-		Image:   BUSYBOX_IMAGE,
-		Command: []string{"sh", "-c", zuul_scheduler_sidecar_entrypoint},
-		Env: []apiv1.EnvVar{
-			create_secret_env("SF_ADMIN_SSH", "admin-ssh-key", "priv"),
-			create_env("CONFIG_REPO_URL", config_url),
-			create_env("CONFIG_REPO_USER", config_user),
-			create_env("HOME", "/var/lib/zuul"),
-		},
-		VolumeMounts: []apiv1.VolumeMount{
-			{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
-			{
-				Name:      "tooling-vol",
-				SubPath:   "generate-zuul-tenant-yaml.sh",
-				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
-		},
+		Name:            "scheduler-sidecar",
+		Image:           BUSYBOX_IMAGE,
+		Command:         []string{"sh", "-c", "touch /tmp/healthy && sleep inf"},
+		Env:             r.get_scheduler_init_and_sidecar_envs(),
+		VolumeMounts:    scheduler_init_and_sidecar_vols,
 		ReadinessProbe:  create_readiness_cmd_probe([]string{"cat", "/tmp/healthy"}),
 		SecurityContext: create_security_context(false),
 	}
@@ -189,7 +200,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zs_volumes := create_zuul_volumes("zuul-scheduler")
 	zs := r.create_statefulset("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage))
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
-	zs.Spec.Template.Spec.InitContainers = append(init_containers, init_scheduler_config())
+	zs.Spec.Template.Spec.InitContainers = append(init_containers, r.init_scheduler_config())
 	zs.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	zs.Spec.Template.Spec.Containers = append(
 		create_zuul_container(fqdn, "zuul-scheduler"), r.scheduler_sidecar_container())
@@ -371,14 +382,10 @@ func (r *SFController) DeployZuul() bool {
 	return r.EnsureZuulServices(init_containers, config)
 }
 
-func (r *SFController) runZuulTenantConfigUpdate() bool {
-	err1 := r.PodExec("zuul-scheduler-0", "scheduler-sidecar", []string{"generate-zuul-tenant-yaml.sh"})
-	if err1 == nil {
-		err2 := r.PodExec("zuul-scheduler-0", "zuul-scheduler", []string{"zuul-scheduler", "full-reconfigure"})
-		if err2 == nil {
-			return true
-		}
-
+func (r *SFController) runZuulFullReconfigure() bool {
+	err := r.PodExec("zuul-scheduler-0", "zuul-scheduler", []string{"zuul-scheduler", "full-reconfigure"})
+	if err == nil {
+		return true
 	}
 	return false
 }
