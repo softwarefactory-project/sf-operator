@@ -803,10 +803,6 @@ func (r *SFController) ensure_route(route apiroutev1.Route, name string) {
 	found := r.GetM(name, &route)
 	if !found {
 		r.CreateR(&route)
-	} else {
-		if err := r.Update(r.ctx, &route); err != nil {
-			panic(err.Error())
-		}
 	}
 }
 
