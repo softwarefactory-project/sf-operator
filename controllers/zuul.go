@@ -71,8 +71,6 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 			create_secret_env("ZUUL_DB_URI", "zuul-db-uri", "dburi"),
 			create_secret_env("ZUUL_KEYSTORE_PASSWORD", "zuul-keystore-password", ""),
 			create_secret_env("ZUUL_ZK_HOSTS", "zk-hosts", ""),
-			create_secret_env("ZUUL_AUTH_SECRET", "zuul-auth-secret", ""),
-			create_env("ZUUL_FQDN", fqdn),
 			create_env("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
 			create_env("HOME", "/var/lib/zuul"),
 		},
