@@ -346,6 +346,21 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	}
 }
 
+func AddGitConnection(cfg *ini.File, name string, baseurl string) {
+	section := "connection " + name
+	cfg.NewSection(section)
+	cfg.Section(section).NewKey("driver", "git")
+	cfg.Section(section).NewKey("baseurl", baseurl)
+}
+
+func (r *SFController) AddDefaultConnections(cfg *ini.File) {
+	// Internal git-server for system config
+	AddGitConnection(cfg, "git-server", "git://git-server/")
+
+	// Git connection to opendev.org
+	AddGitConnection(cfg, "opendev.org", "https://opendev.org/")
+}
+
 func LoadConfigINI(zuul_conf string) *ini.File {
 	cfg, err := ini.Load([]byte(zuul_conf))
 	if err != nil {
@@ -389,6 +404,9 @@ func (r *SFController) DeployZuul() bool {
 	for _, conn := range gerrit_conns {
 		r.AddGerritConnection(cfg_ini, conn)
 	}
+	// Add default connections
+	r.AddDefaultConnections(cfg_ini)
+
 	// Set Zuul web public URL
 	cfg_ini.Section("web").NewKey("root", "https://zuul."+r.cr.Spec.FQDN)
 
