@@ -186,13 +186,7 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 	return container
 }
 
-func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, config string) bool {
-	annotations := map[string]string{
-		"zuul-config": checksum([]byte(config)),
-	}
-
-	fqdn := r.cr.Spec.FQDN
-
+func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, annotations map[string]string) bool {
 	scheduler_tooling_data := make(map[string]string)
 	scheduler_tooling_data["generate-zuul-tenant-yaml.sh"] = zuul_generate_tenant_config
 	r.EnsureConfigMap("zuul-scheduler-tooling", scheduler_tooling_data)
@@ -203,7 +197,7 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	zs.Spec.Template.Spec.InitContainers = append(init_containers, r.init_scheduler_config())
 	zs.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	zs.Spec.Template.Spec.Containers = append(
-		create_zuul_container(fqdn, "zuul-scheduler"), r.scheduler_sidecar_container())
+		create_zuul_container(r.cr.Spec.FQDN, "zuul-scheduler"), r.scheduler_sidecar_container())
 	zs.Spec.Template.Spec.Volumes = zs_volumes
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
@@ -218,11 +212,14 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	if zs_dirty {
 		r.UpdateR(&zs)
 	}
+	return r.IsStatefulSetReady(&zs)
+}
 
+func (r *SFController) EnsureZuulExecutor(annotations map[string]string) bool {
 	ze := r.create_headless_statefulset("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
-	ze.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-executor")
+	ze.Spec.Template.Spec.Containers = create_zuul_container(r.cr.Spec.FQDN, "zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	ze.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
@@ -243,11 +240,14 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	if ze_dirty {
 		r.UpdateR(&ze)
 	}
+	return r.IsStatefulSetReady(&ze)
+}
 
+func (r *SFController) EnsureZuulWeb(annotations map[string]string) bool {
 	zw := r.create_deployment("zuul-web", "")
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
 	zw.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
-	zw.Spec.Template.Spec.Containers = create_zuul_container(fqdn, "zuul-web")
+	zw.Spec.Template.Spec.Containers = create_zuul_container(r.cr.Spec.FQDN, "zuul-web")
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
@@ -261,7 +261,10 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	if zw_dirty {
 		r.UpdateR(&zw)
 	}
+	return r.IsDeploymentReady(&zw)
+}
 
+func (r *SFController) EnsureZuulComponentsFrontServices() {
 	service_ports := []int32{ZUUL_WEB_PORT}
 	srv := r.create_service("zuul-web", "zuul-web", service_ports, "zuul-web")
 	r.GetOrCreate(&srv)
@@ -270,7 +273,20 @@ func (r *SFController) EnsureZuulServices(init_containers []apiv1.Container, con
 	srv_ze := r.create_headless_service("zuul-executor", "zuul-executor", headless_ports, "zuul-executor")
 	r.GetOrCreate(&srv_ze)
 
-	return r.IsStatefulSetReady(&zs) && r.IsStatefulSetReady(&ze) && r.IsDeploymentReady(&zw)
+}
+
+func (r *SFController) EnsureZuulComponents(init_containers []apiv1.Container, config string) bool {
+
+	annotations := map[string]string{
+		"zuul-config": checksum([]byte(config)),
+	}
+
+	zuul_services := map[string]bool{}
+	zuul_services["scheduler"] = r.EnsureZuulScheduler(init_containers, annotations)
+	zuul_services["executor"] = r.EnsureZuulExecutor(annotations)
+	zuul_services["web"] = r.EnsureZuulWeb(annotations)
+
+	return zuul_services["scheduler"] && zuul_services["executor"] && zuul_services["web"]
 }
 
 func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret, config string) {
@@ -330,7 +346,7 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	}
 }
 
-func (r *SFController) LoadConfigINI(zuul_conf string) *ini.File {
+func LoadConfigINI(zuul_conf string) *ini.File {
 	cfg, err := ini.Load([]byte(zuul_conf))
 	if err != nil {
 		panic(err.Error())
@@ -338,7 +354,7 @@ func (r *SFController) LoadConfigINI(zuul_conf string) *ini.File {
 	return cfg
 }
 
-func (r *SFController) DumpConfigINI(cfg *ini.File) string {
+func DumpConfigINI(cfg *ini.File) string {
 	writer := bytes.NewBufferString("")
 	cfg.WriteTo(writer)
 	return writer.String()
@@ -369,17 +385,18 @@ func (r *SFController) DeployZuul() bool {
 	gerrit_conns = append(gerrit_conns, gerrit_conn)
 
 	// Update base config to add connections
-	cfg_ini := r.LoadConfigINI(zuul_dot_conf)
+	cfg_ini := LoadConfigINI(zuul_dot_conf)
 	for _, conn := range gerrit_conns {
 		r.AddGerritConnection(cfg_ini, conn)
 	}
 	// Set Zuul web public URL
 	cfg_ini.Section("web").NewKey("root", "https://zuul."+r.cr.Spec.FQDN)
 
-	config := r.DumpConfigINI(cfg_ini)
+	config := DumpConfigINI(cfg_ini)
 
 	r.EnsureZuulSecrets(&db_password, config)
-	return r.EnsureZuulServices(init_containers, config)
+	r.EnsureZuulComponentsFrontServices()
+	return r.EnsureZuulComponents(init_containers, config)
 }
 
 func (r *SFController) runZuulFullReconfigure() bool {
