@@ -14,14 +14,18 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 	"text/template"
 
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/ssh"
+	ini "gopkg.in/ini.v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	"k8s.io/client-go/rest"
@@ -44,7 +48,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -130,6 +133,28 @@ func parse_string(text string, data any) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+func IniSectionsChecksum(cfg *ini.File, names []string) string {
+	var GetSectionBody = func(name string) string {
+		data, err := cfg.GetSection(name)
+		if err != nil {
+			panic(err)
+		}
+		var s string = ""
+		keys := data.KeyStrings()
+		sort.Strings(keys)
+		for _, k := range keys {
+			s = s + k + data.Key(k).String()
+		}
+		return s
+	}
+
+	var data string = ""
+	for _, name := range names {
+		data = data + GetSectionBody(name)
+	}
+	return checksum([]byte(data))
 }
 
 func create_ssh_key() SSHKey {

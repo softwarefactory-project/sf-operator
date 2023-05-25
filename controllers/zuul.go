@@ -27,6 +27,9 @@ var zuul_dot_conf string
 //go:embed static/zuul/generate-tenant-config.sh
 var zuul_generate_tenant_config string
 
+// Common config sections for all Zuul components
+var commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
+
 func is_statefulset(service string) bool {
 	return service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger"
 }
@@ -73,6 +76,7 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 			create_secret_env("ZUUL_ZK_HOSTS", "zk-hosts", ""),
 			create_env("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
 			create_env("HOME", "/var/lib/zuul"),
+			create_env("ZUUL_WEB_ROOT", "https://zuul."+fqdn),
 		},
 		VolumeMounts: volumes,
 	}
@@ -184,7 +188,12 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 	return container
 }
 
-func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, annotations map[string]string) bool {
+func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cfg *ini.File) bool {
+	annotations := map[string]string{
+		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config": IniSectionsChecksum(cfg, []string{"scheduler"}),
+	}
+
 	scheduler_tooling_data := make(map[string]string)
 	scheduler_tooling_data["generate-zuul-tenant-yaml.sh"] = zuul_generate_tenant_config
 	r.EnsureConfigMap("zuul-scheduler-tooling", scheduler_tooling_data)
@@ -213,7 +222,12 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, an
 	return r.IsStatefulSetReady(&zs)
 }
 
-func (r *SFController) EnsureZuulExecutor(annotations map[string]string) bool {
+func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
+	annotations := map[string]string{
+		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config": IniSectionsChecksum(cfg, []string{"executor"}),
+	}
+
 	ze := r.create_headless_statefulset("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
@@ -241,7 +255,12 @@ func (r *SFController) EnsureZuulExecutor(annotations map[string]string) bool {
 	return r.IsStatefulSetReady(&ze)
 }
 
-func (r *SFController) EnsureZuulWeb(annotations map[string]string) bool {
+func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
+	annotations := map[string]string{
+		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config": IniSectionsChecksum(cfg, []string{"web"}),
+	}
+
 	zw := r.create_deployment("zuul-web", "")
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
 	zw.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
@@ -273,21 +292,17 @@ func (r *SFController) EnsureZuulComponentsFrontServices() {
 
 }
 
-func (r *SFController) EnsureZuulComponents(init_containers []apiv1.Container, config string) bool {
-
-	annotations := map[string]string{
-		"zuul-config": checksum([]byte(config)),
-	}
+func (r *SFController) EnsureZuulComponents(init_containers []apiv1.Container, cfg *ini.File) bool {
 
 	zuul_services := map[string]bool{}
-	zuul_services["scheduler"] = r.EnsureZuulScheduler(init_containers, annotations)
-	zuul_services["executor"] = r.EnsureZuulExecutor(annotations)
-	zuul_services["web"] = r.EnsureZuulWeb(annotations)
+	zuul_services["scheduler"] = r.EnsureZuulScheduler(init_containers, cfg)
+	zuul_services["executor"] = r.EnsureZuulExecutor(cfg)
+	zuul_services["web"] = r.EnsureZuulWeb(cfg)
 
 	return zuul_services["scheduler"] && zuul_services["executor"] && zuul_services["web"]
 }
 
-func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret, config string) {
+func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret, cfg *ini.File) {
 	r.EnsureSecret(&apiv1.Secret{
 		Data: map[string][]byte{
 			"dburi": []byte(fmt.Sprintf("mysql+pymysql://zuul:%s@mariadb/zuul", db_password.Data["zuul-db-password"])),
@@ -296,7 +311,7 @@ func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret, config strin
 	})
 	r.EnsureSecret(&apiv1.Secret{
 		Data: map[string][]byte{
-			"zuul.conf": []byte(config),
+			"zuul.conf": []byte(DumpConfigINI(cfg)),
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "zuul-config", Namespace: r.ns},
 	})
@@ -405,14 +420,9 @@ func (r *SFController) DeployZuul() bool {
 	// Add default connections
 	r.AddDefaultConnections(cfg_ini)
 
-	// Set Zuul web public URL
-	cfg_ini.Section("web").NewKey("root", "https://zuul."+r.cr.Spec.FQDN)
-
-	config := DumpConfigINI(cfg_ini)
-
-	r.EnsureZuulSecrets(&db_password, config)
+	r.EnsureZuulSecrets(&db_password, cfg_ini)
 	r.EnsureZuulComponentsFrontServices()
-	return r.EnsureZuulComponents(init_containers, config)
+	return r.EnsureZuulComponents(init_containers, cfg_ini)
 }
 
 func (r *SFController) runZuulFullReconfigure() bool {
