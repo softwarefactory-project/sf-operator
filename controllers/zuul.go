@@ -71,9 +71,6 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 		Image:   "quay.io/software-factory/" + service + ":8.3.1-2",
 		Command: command,
 		Env: []apiv1.EnvVar{
-			create_secret_env("ZUUL_DB_URI", "zuul-db-uri", "dburi"),
-			create_secret_env("ZUUL_KEYSTORE_PASSWORD", "zuul-keystore-password", ""),
-			create_secret_env("ZUUL_ZK_HOSTS", "zk-hosts", ""),
 			create_env("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
 			create_env("HOME", "/var/lib/zuul"),
 			create_env("ZUUL_WEB_ROOT", "https://zuul."+fqdn),
@@ -302,24 +299,12 @@ func (r *SFController) EnsureZuulComponents(init_containers []apiv1.Container, c
 	return zuul_services["scheduler"] && zuul_services["executor"] && zuul_services["web"]
 }
 
-func (r *SFController) EnsureZuulSecrets(db_password *apiv1.Secret, cfg *ini.File) {
-	r.EnsureSecret(&apiv1.Secret{
-		Data: map[string][]byte{
-			"dburi": []byte(fmt.Sprintf("mysql+pymysql://zuul:%s@mariadb/zuul", db_password.Data["zuul-db-password"])),
-		},
-		ObjectMeta: metav1.ObjectMeta{Name: "zuul-db-uri", Namespace: r.ns},
-	})
+func (r *SFController) EnsureZuulConfigSecret(cfg *ini.File) {
 	r.EnsureSecret(&apiv1.Secret{
 		Data: map[string][]byte{
 			"zuul.conf": []byte(DumpConfigINI(cfg)),
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "zuul-config", Namespace: r.ns},
-	})
-	r.EnsureSecret(&apiv1.Secret{
-		Data: map[string][]byte{
-			"zk-hosts": []byte(`zookeeper.` + r.ns + `:2281`),
-		},
-		ObjectMeta: metav1.ObjectMeta{Name: "zk-hosts", Namespace: r.ns},
 	})
 }
 
@@ -420,7 +405,24 @@ func (r *SFController) DeployZuul() bool {
 	// Add default connections
 	r.AddDefaultConnections(cfg_ini)
 
-	r.EnsureZuulSecrets(&db_password, cfg_ini)
+	// Set Zuul web public URL
+	cfg_ini.Section("web").NewKey("root", "https://zuul."+r.cr.Spec.FQDN)
+
+	// Set Database DB URI
+	cfg_ini.Section("database").NewKey("dburi", fmt.Sprintf("mysql+pymysql://zuul:%s@mariadb/zuul", db_password.Data["zuul-db-password"]))
+
+	// Set Zookeeper hosts
+	cfg_ini.Section("zookeeper").NewKey("hosts", "zookeeper."+r.ns+":2281")
+
+	// Set Keystore secret
+	keystore_pass, err := r.getSecretData("zuul-keystore-password")
+	if err != nil {
+		r.log.Info("Waiting for zuul-keystore-password secret")
+		return false
+	}
+	cfg_ini.Section("keystore").NewKey("password", string(keystore_pass))
+
+	r.EnsureZuulConfigSecret(cfg_ini)
 	r.EnsureZuulComponentsFrontServices()
 	return r.EnsureZuulComponents(init_containers, cfg_ini)
 }
