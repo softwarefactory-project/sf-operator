@@ -1,0 +1,13 @@
+---
+microshift_ip: "{{ hostvars.microshift.ansible_host }}"
+microshift_fqdn: microshift.dev
+sf_fqdn: sftests.com
+disk_file_sparsed: true
+standard_user: false
+create_pv: false
+disk_file_size: 30G
+setup_olm: true
+microshift_additional_addresses:
+  - "{{ microshift_fqdn }}"
+  - "{{ sf_fqdn }}"
+microshift_role_path: "~/src/github.com/openstack-k8s-operators/ansible-microshift-role"

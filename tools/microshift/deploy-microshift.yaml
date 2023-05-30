@@ -1,19 +1,39 @@
-- hosts: microshift.dev
-  vars:
-    fqdn: microshift.dev
-    disk_file_sparsed: true
-    standard_user: false
-    create_pv: false
-    disk_file_size: 30G
-    setup_olm: true
-    microshift_additional_addresses:
-      - "{{ fqdn }}"
-      - "sftests.com"
-  roles:
-    - ansible-microshift-role
+- hosts: microshift
+  # roles:
+  #   - "{{ microshift_role_path }}"
   tasks:
-    - fetch:
-        src: /var/lib/microshift/resources/kubeadmin/microshift.dev/kubeconfig
-        dest: "./microshift-config"
-        flat: true
+    - name: Install rpms
+      ansible.builtin.package:
+        name: podman
       become: yes
+
+    - name: Get kubeconfig
+      ansible.builtin.fetch:
+        src: /var/lib/microshift/resources/kubeadmin/microshift.dev/kubeconfig
+        dest: /tmp/fetched
+      become: yes
+
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Get kubeconfig when microshift is remote
+      block:
+        - name: Ensure ~/.kube
+          ansible.builtin.file:
+            path: ~/.kube
+            mode: 0700
+            state: directory
+
+        - name: Copy kubeconfig to ~.kube/config
+          ansible.builtin.copy:
+            src: /tmp/fetched/microshift/var/lib/microshift/resources/kubeadmin/microshift.dev/kubeconfig
+            dest: ~/.kube/microshift-config
+            mode: 0600
+
+        - name: remove unused data
+          ansible.builtin.file:
+            path: /tmp/fetched
+            state: absent
+
+        - name: Validate kubectl works
+          ansible.builtin.command: kubectl --kubeconfig="$HOME/.kube/microshift-config" get pods

@@ -1,4 +1,9 @@
 all:
   hosts:
-    microshift.dev:
+    microshift:
       ansible_user: '{{ microshift_user | default("cloud-user") }}'
+      ansible_host: '{{ microshfit_ip | default("localhost")}}'
+      ansible_connection: local
+  # vars:
+  #   should be set to deploy microshift
+  #   openshift_pull_secret:
