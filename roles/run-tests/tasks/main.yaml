@@ -7,6 +7,7 @@
     - utils/get-gerrit-admin-user-api-key
     - health-check/check-service-uri
     - health-check/config-repo-get-or-reset
+    - health-check/zuul-connections
   loop_control:
     loop_var: role
 

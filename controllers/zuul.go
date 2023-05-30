@@ -186,9 +186,11 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 }
 
 func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cfg *ini.File) bool {
+	sections := IniGetSectionNamesByPrefix(cfg, "connection")
+	sections = append(sections, "scheduler")
 	annotations := map[string]string{
 		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": IniSectionsChecksum(cfg, []string{"scheduler"}),
+		"zuul-component-config": IniSectionsChecksum(cfg, sections),
 	}
 
 	scheduler_tooling_data := make(map[string]string)
@@ -216,13 +218,15 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	if zs_dirty {
 		r.UpdateR(&zs)
 	}
-	return r.IsStatefulSetReady(&zs)
+	return r.IsStatefulSetReady(&zs) && r.IsStatefulSetRolloutDone(&zs)
 }
 
 func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
+	sections := IniGetSectionNamesByPrefix(cfg, "connection")
+	sections = append(sections, "executor")
 	annotations := map[string]string{
 		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": IniSectionsChecksum(cfg, []string{"executor"}),
+		"zuul-component-config": IniSectionsChecksum(cfg, sections),
 	}
 
 	ze := r.create_headless_statefulset("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage))
@@ -249,13 +253,15 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	if ze_dirty {
 		r.UpdateR(&ze)
 	}
-	return r.IsStatefulSetReady(&ze)
+	return r.IsStatefulSetReady(&ze) && r.IsStatefulSetRolloutDone(&ze)
 }
 
 func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
+	sections := IniGetSectionNamesByPrefix(cfg, "connection")
+	sections = append(sections, "scheduler")
 	annotations := map[string]string{
 		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": IniSectionsChecksum(cfg, []string{"web"}),
+		"zuul-component-config": IniSectionsChecksum(cfg, sections),
 	}
 
 	zw := r.create_deployment("zuul-web", "")
@@ -275,7 +281,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	if zw_dirty {
 		r.UpdateR(&zw)
 	}
-	return r.IsDeploymentReady(&zw)
+	return r.IsDeploymentReady(&zw) && r.IsDeploymentRolloutDone(&zw)
 }
 
 func (r *SFController) EnsureZuulComponentsFrontServices() {
