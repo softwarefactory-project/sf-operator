@@ -34,8 +34,8 @@ const ZK_IDENT = "zookeeper"
 const ZK_PI_MOUNT_PATH = "/config-scripts"
 
 func (r *SFController) DeployZookeeper() bool {
-	cert := r.create_client_certificate("zookeeper-server", "ca-issuer", "zookeeper-server-tls", ZK_IDENT)
-	cert_client := r.create_client_certificate("zookeeper-client", "ca-issuer", "zookeeper-client-tls", ZK_IDENT)
+	cert := r.create_client_certificate("zookeeper-server", "ca-issuer", "zookeeper-server-tls", ZK_IDENT, r.cr.Spec.FQDN)
+	cert_client := r.create_client_certificate("zookeeper-client", "ca-issuer", "zookeeper-client-tls", ZK_IDENT, r.cr.Spec.FQDN)
 	r.GetOrCreate(&cert)
 	r.GetOrCreate(&cert_client)
 
@@ -92,10 +92,10 @@ func (r *SFController) DeployZookeeper() bool {
 	srv_zk := r.create_headless_service(ZK_IDENT, ZK_IDENT, headless_ports, ZK_IDENT)
 	r.GetOrCreate(&srv_zk)
 
-	zk := r.create_headless_statefulset(ZK_IDENT, "", r.cr.Spec.Zookeeper.Storage)
+	zk := r.create_headless_statefulset(ZK_IDENT, "", r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage))
 	zk.Spec.VolumeClaimTemplates = append(
 		zk.Spec.VolumeClaimTemplates,
-		r.create_pvc(ZK_IDENT+"-data", r.cr.Spec.Zookeeper.Storage))
+		r.create_pvc(ZK_IDENT+"-data", r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage)))
 	zk.Spec.Template.Spec.Containers = []apiv1.Container{container}
 	zk.Spec.Template.ObjectMeta.Annotations = annotations
 	zk.Spec.Template.Spec.Volumes = []apiv1.Volume{

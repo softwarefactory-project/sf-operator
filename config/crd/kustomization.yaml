@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/sf.softwarefactory-project.io_softwarefactories.yaml
+- bases/sf.softwarefactory-project.io_logservers.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

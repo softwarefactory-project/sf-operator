@@ -124,12 +124,23 @@ func main() {
 		RESTConfig: mgr.GetConfig(),
 	}
 
+	lgr := &controllers.LogServerReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		RESTClient: restClient,
+		RESTConfig: mgr.GetConfig(),
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	ctx := ctrl.SetupSignalHandler()
 
 	if err = sfr.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SoftwareFactory")
+		os.Exit(1)
+	}
+	if err = lgr.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LogServer")
 		os.Exit(1)
 	}
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

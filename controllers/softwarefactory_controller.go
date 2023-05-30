@@ -7,15 +7,16 @@ package controllers
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"sort"
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/go-logr/logr"
 
 	"k8s.io/client-go/rest"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,7 +25,6 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
-// SoftwareFactoryReconciler reconciles a SoftwareFactory object
 type SoftwareFactoryReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
@@ -42,11 +42,8 @@ type SoftwareFactoryReconciler struct {
 //+kubebuilder:rbac:groups=cert-manager.io,resources=*,verbs=get;list;watch;create;update;patch;delete
 
 type SFController struct {
-	*SoftwareFactoryReconciler
-	cr  *sfv1.SoftwareFactory
-	ns  string
-	log logr.Logger
-	ctx context.Context
+	SFUtilContext
+	cr sfv1.SoftwareFactory
 }
 
 func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
@@ -57,9 +54,7 @@ func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
 }
 
 func messageInfo(r *SFController, services map[string]bool) string {
-
 	msg := ""
-
 	servicesSorted := []string{}
 	for servicename := range services {
 		servicesSorted = append(servicesSorted, servicename)
@@ -91,7 +86,37 @@ func isOperatorReady(services map[string]bool) bool {
 func (r *SFController) SetupIngress() {
 	r.setupGerritIngress()
 	r.setupZuulIngress()
-	r.setupLogserverIngress()
+}
+
+func (r *SFController) DeployLogserverResource() bool {
+
+	resource := sfv1.LogServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      LOGSERVER_IDENT,
+			Namespace: r.ns,
+		},
+	}
+
+	exists := r.GetM(LOGSERVER_IDENT, &resource)
+
+	if exists {
+		resource.Spec.Settings = r.cr.Spec.Logserver
+		r.UpdateR(&resource)
+	} else {
+		pub_key, err := r.getSecretDataFromKey("zuul-ssh-key", "pub")
+		if err != nil {
+			return false
+		}
+		pub_key_b64 := base64.StdEncoding.EncodeToString(pub_key)
+		resource.Spec = sfv1.LogServerSpec{
+			FQDN:             r.cr.Spec.FQDN,
+			StorageClassName: r.cr.Spec.StorageClassName,
+			AuthorizedSSHKey: pub_key_b64,
+			Settings:         r.cr.Spec.Logserver,
+		}
+		r.CreateR(&resource)
+	}
+	return resource.Status.Ready
 }
 
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
@@ -113,8 +138,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	services["Gerrit"] = r.DeployGerrit()
 
-	services["Logserver"] = r.DeployLogserver()
-
 	if services["Gerrit"] {
 		services["ConfigRepo"] = r.SetupConfigRepo()
 	}
@@ -122,6 +145,8 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] && services["Gerrit"] && services["ConfigRepo"] {
 		services["Zuul"] = r.DeployZuul()
 	}
+
+	services["Logserver"] = r.DeployLogserverResource()
 
 	if services["Zookeeper"] {
 		services["NodePool"] = r.DeployNodepool()
@@ -174,15 +199,24 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	var sfc = &SFController{
-		SoftwareFactoryReconciler: r,
-		cr:                        &sf,
-		ns:                        req.NamespacedName.Namespace,
-		log:                       log,
-		ctx:                       ctx,
+
+	var utils = &SFUtilContext{
+		Client:     r.Client,
+		Scheme:     r.Scheme,
+		RESTClient: r.RESTClient,
+		RESTConfig: r.RESTConfig,
+		ns:         req.NamespacedName.Namespace,
+		log:        log,
+		ctx:        ctx,
+		owner:      &sf,
 	}
 
-	sf.Status = sfc.Step()
+	var controller = SFController{
+		SFUtilContext: *utils,
+		cr:            sf,
+	}
+
+	sf.Status = controller.Step()
 
 	if err := r.Status().Update(ctx, &sf); err != nil {
 		log.Error(err, "unable to update Software Factory status")

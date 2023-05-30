@@ -1,0 +1,99 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: logservers.sf.softwarefactory-project.io
+spec:
+  group: sf.softwarefactory-project.io
+  names:
+    kind: LogServer
+    listKind: LogServerList
+    plural: logservers
+    shortNames:
+    - logss
+    singular: logserver
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.ready
+      name: Ready
+      type: boolean
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: LogServer is the Schema for the LogServers API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: LogServerSpec defines the desired state of LogServer
+            properties:
+              authorizedSSHKey:
+                description: SSH authorized key as base64 data
+                type: string
+              fqdn:
+                type: string
+              settings:
+                properties:
+                  loopDelay:
+                    description: Logs Check. Log will be checked every "X" seconds
+                      ( default 3600 s ~= 1 hour )
+                    type: integer
+                  retentionDays:
+                    description: Logs Older that "x" days will be purge ( default
+                      60 days )
+                    type: integer
+                  storage:
+                    properties:
+                      className:
+                        type: string
+                      size:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                        x-kubernetes-validations:
+                        - message: Storage shrinking is not supported
+                          rule: self >= oldSelf
+                    required:
+                    - size
+                    type: object
+                type: object
+                x-kubernetes-validations:
+                - message: retentionDays must be a positive integer if set
+                  rule: '!has(self.retentionDays) || self.retentionDays > 0'
+                - message: loopDelay must be a positive integer if set
+                  rule: '!has(self.loopDelay) || self.loopDelay > 0'
+              storageClassName:
+                description: Default storage class to use by Persistent Volume Claims
+                type: string
+            required:
+            - authorizedSSHKey
+            - fqdn
+            type: object
+          status:
+            description: LogServerStatus defines the observed state of LogServer
+            properties:
+              ready:
+                description: The deployment status.
+                type: boolean
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

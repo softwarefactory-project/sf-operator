@@ -1,17 +1,30 @@
 // Copyright (C) 2022 Red Hat
 // SPDX-License-Identifier: Apache-2.0
 //
-// This package contains the logserver configuration.
+// This package contains the main Reconcile loop.
 
 package controllers
 
 import (
+	"context"
 	_ "embed"
-	"encoding/base64"
 	"strconv"
+	"time"
 
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
+
+//+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=logservers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=logservers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=logservers/finalizers,verbs=update
 
 const LOGSERVER_IDENT = "logserver"
 const LOGSERVER_HTTPD_PORT = 8080
@@ -37,7 +50,19 @@ const PURGELOG_LOGS_DIR = "/home/logs"
 //go:embed static/logserver/logserver.conf.tmpl
 var logserverconf string
 
-func (r *SFController) DeployLogserver() bool {
+type LogServerReconciler struct {
+	Client     client.Client
+	Scheme     *runtime.Scheme
+	RESTClient rest.Interface
+	RESTConfig *rest.Config
+}
+
+type LogServerController struct {
+	SFUtilContext
+	cr sfv1.LogServer
+}
+
+func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	r.EnsureSSHKey(LOGSERVER_IDENT + "-keys")
 
@@ -81,9 +106,9 @@ func (r *SFController) DeployLogserver() bool {
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
-	data_pvc := r.create_pvc(LOGSERVER_IDENT, r.cr.Spec.Logserver.Storage)
+	data_pvc := r.create_pvc(LOGSERVER_IDENT, r.baseGetStorageConfOrDefault(
+		r.cr.Spec.Settings.Storage, r.cr.Spec.StorageClassName))
 	r.GetOrCreate(&data_pvc)
-
 	var mod int32 = 256 // decimal for 0400 octal
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		create_volume_cm(LOGSERVER_IDENT+"-config-vol", LOGSERVER_IDENT+"-config-map"),
@@ -139,16 +164,8 @@ func (r *SFController) DeployLogserver() bool {
 		create_container_port(LOGSERVER_SSHD_PORT, LOGSERVER_SSHD_PORT_NAME),
 	}
 
-	pub_key, err := r.getSecretDataFromKey("zuul-ssh-key", "pub")
-	if err != nil {
-		r.log.V(1).Error(err, "Unable to find the secret for the logserver ssh sidecar")
-		return false
-	}
-	pub_key_b64 := base64.StdEncoding.EncodeToString(pub_key)
-
 	env_sidecar := []apiv1.EnvVar{
-		create_env("FQDN", r.cr.Spec.FQDN),
-		create_env("AUTHORIZED_KEY", pub_key_b64),
+		create_env("AUTHORIZED_KEY", r.cr.Spec.AuthorizedSSHKey),
 	}
 
 	// Setup the sidecar container for sshd
@@ -164,19 +181,26 @@ func (r *SFController) DeployLogserver() bool {
 
 	// Add PurgeLog container
 	loopdelay := 3600
-	if r.cr.Spec.Logserver.LoopDelay > 0 {
-		loopdelay = r.cr.Spec.Logserver.LoopDelay
+	if r.cr.Spec.Settings.LoopDelay > 0 {
+		loopdelay = r.cr.Spec.Settings.LoopDelay
 	}
 
 	retentiondays := 60
-	if r.cr.Spec.Logserver.RetentionDays > 0 {
-		retentiondays = r.cr.Spec.Logserver.RetentionDays
+	if r.cr.Spec.Settings.RetentionDays > 0 {
+		retentiondays = r.cr.Spec.Settings.RetentionDays
 	}
 
 	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
-		Name:    PURGELOG_IDENT,
-		Image:   PURGELOG_IMAGE,
-		Command: []string{"/usr/local/bin/purgelogs", "--retention-days", strconv.Itoa(retentiondays), "--loop", strconv.Itoa(loopdelay), "--log-path-dir", PURGELOG_LOGS_DIR, "--debug"},
+		Name:  PURGELOG_IDENT,
+		Image: PURGELOG_IMAGE,
+		Command: []string{
+			"/usr/local/bin/purgelogs",
+			"--retention-days",
+			strconv.Itoa(retentiondays),
+			"--loop", strconv.Itoa(loopdelay),
+			"--log-path-dir",
+			PURGELOG_LOGS_DIR,
+			"--debug"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				Name:      LOGSERVER_IDENT,
@@ -192,16 +216,73 @@ func (r *SFController) DeployLogserver() bool {
 	sshd_service := r.create_service(LOGSERVER_SSHD_PORT_NAME, LOGSERVER_IDENT, sshd_service_ports, LOGSERVER_SSHD_PORT_NAME)
 	r.GetOrCreate(&sshd_service)
 
-	pvc_readiness := r.reconcile_expand_pvc(LOGSERVER_IDENT, r.cr.Spec.Logserver.Storage)
+	pvc_readiness := r.reconcile_expand_pvc(LOGSERVER_IDENT, r.cr.Spec.Settings.Storage)
 
-	ready := r.IsDeploymentReady(&dep)
-	if ready && pvc_readiness {
-		return true
+	return sfv1.LogServerStatus{Ready: r.IsDeploymentReady(&dep) && pvc_readiness}
+}
+
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
+func (r *LogServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
+
+	log.V(1).Info("Reconcile loop")
+
+	var cr sfv1.LogServer
+
+	if err := r.Client.Get(ctx, req.NamespacedName, &cr); err != nil && errors.IsNotFound(err) {
+		log.Error(err, "unable to fetch LogServer resource")
+		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	var utils = &SFUtilContext{
+		Client:     r.Client,
+		Scheme:     r.Scheme,
+		RESTClient: r.RESTClient,
+		RESTConfig: r.RESTConfig,
+		ns:         req.NamespacedName.Namespace,
+		log:        log,
+		ctx:        ctx,
+		owner:      &cr,
+	}
+
+	var controller = LogServerController{
+		SFUtilContext: *utils,
+		cr:            cr,
+	}
+
+	cr.Status = controller.DeployLogserver()
+
+	if err := r.Client.Status().Update(ctx, &cr); err != nil {
+		log.Error(err, "unable to update LogServer status")
+		return ctrl.Result{}, err
+	}
+	if !cr.Status.Ready {
+		log.V(1).Info("Reconcile running...")
+		delay, _ := time.ParseDuration("20s")
+		return ctrl.Result{RequeueAfter: delay}, nil
 	} else {
-		return false
+		log.V(1).Info("Reconcile completed!", "logs", cr)
+		controller.setupLogserverIngress()
+		return ctrl.Result{}, nil
 	}
 }
 
-func (r *SFController) setupLogserverIngress() {
-	r.ensureHTTPSRoute(r.cr.Name+"-logserver", LOGSERVER_IDENT, LOGSERVER_HTTPD_PORT_NAME, "/", LOGSERVER_HTTPD_PORT, map[string]string{})
+// SetupWithManager sets up the controller with the Manager.
+func (r *LogServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&sfv1.LogServer{}).
+		Complete(r)
+}
+
+func (r *LogServerController) setupLogserverIngress() {
+	r.ensureHTTPSRoute(
+		r.cr.Name+"-logserver", LOGSERVER_IDENT,
+		LOGSERVER_HTTPD_PORT_NAME, "/", LOGSERVER_HTTPD_PORT, map[string]string{}, r.cr.Spec.FQDN)
 }

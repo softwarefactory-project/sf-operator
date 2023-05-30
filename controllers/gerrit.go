@@ -141,7 +141,7 @@ func (r *SFController) DeployGerrit() bool {
 	r.GenerateSecretUUID("gerrit-admin-api-key")
 
 	// Create a certificate for Gerrit
-	cert := r.create_client_certificate(GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit")
+	cert := r.create_client_certificate(GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit", r.cr.Spec.FQDN)
 	r.GetOrCreate(&cert)
 
 	volumeMounts := []apiv1.VolumeMount{
@@ -156,7 +156,7 @@ func (r *SFController) DeployGerrit() bool {
 	}
 
 	// Create the deployment
-	dep := r.create_statefulset(GERRIT_IDENT, GERRIT_IMAGE, r.cr.Spec.Gerrit.Storage)
+	dep := r.create_statefulset(GERRIT_IDENT, GERRIT_IMAGE, r.getStorageConfOrDefault(r.cr.Spec.Gerrit.Storage))
 
 	cm_data := make(map[string]string)
 	cm_data["ready.sh"] = gerritReadyScript
@@ -261,5 +261,5 @@ func (r *SFController) DeployGerrit() bool {
 }
 
 func (r *SFController) setupGerritIngress() {
-	r.ensureHTTPSRoute(r.cr.Name+"-gerrit", "gerrit", GERRIT_HTTPD_PORT_NAME, "/", GERRIT_HTTPD_PORT, map[string]string{})
+	r.ensureHTTPSRoute(r.cr.Name+"-gerrit", "gerrit", GERRIT_HTTPD_PORT_NAME, "/", GERRIT_HTTPD_PORT, map[string]string{}, r.cr.Spec.FQDN)
 }
