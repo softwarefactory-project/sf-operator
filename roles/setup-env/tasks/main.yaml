@@ -1,19 +1,64 @@
+---
 - name: Install dependencies
   become: true
   when: install_requirements | bool
   block:
+    - name: Get microshift bits for CentOS
+      block:
+        - ansible.builtin.include_tasks:
+            file: clone-microshift-role.yaml
+
+        - name: Install microshift repos
+          ansible.builtin.include_role:
+            name: "{{ microshift_role_path }}"
+            tasks_from: repo
+      when:
+        - ansible_distribution == "CentOS"
+        - os_host != 'controller'
+
+    - name: Install epel to get collections (ansible package)
+      ansible.builtin.package:
+        name: epel-release
+      when: ansible_distribution == "CentOS"
+
     - name: Install packages
-      package:
+      ansible.builtin.package:
         name:
+          - ansible
+          - git-review
           - golang
+          - jq
           - make
           - podman
-          # for testing
-          - jq
+
+    - name: Install openshift-client and python3
+      block:
+        - name: Install packages
+          ansible.builtin.package:
+            name:
+              - openshift-clients
+              - python3.11-pip
+              - python3.11-setuptools
+            enablerepo: microshift-deps-rpms
+
+        - name: Ensure python3
+          community.general.alternatives:
+            name: python
+            path: /usr/bin/python3.11
+            link: /usr/bin/python3
+            state: selected
+      when: ansible_distribution == "CentOS"
+
+    - name: Install kubernetes-client and python3
+      ansible.builtin.package:
+        name:
+          - kubernetes-client
           - python3-pip
+          - python3-setuptools
+      when: ansible_distribution == "Fedora"
 
     - name: Install pip packages
-      pip:
+      ansible.builtin.pip:
         name:
           - git-review
           - kubernetes

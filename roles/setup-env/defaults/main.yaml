@@ -1,2 +1,4 @@
 ---
+microshift_role_path: "{{ ansible_user_dir }}/src/github.com/openstack-k8s-operators/ansible-microshift-role"
 install_requirements: true
+os_host: ''

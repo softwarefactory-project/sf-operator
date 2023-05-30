@@ -1,6 +1,6 @@
 ---
 - name: "Update SoftwareFactory resource {{ cr_name }}"
-  k8s:
+  kubernetes.core.k8s:
     kubeconfig: "{{ kubeconfig }}"
     definition:
       kind: "{{ cr_kind }}"
