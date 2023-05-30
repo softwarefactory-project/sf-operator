@@ -1,6 +1,6 @@
 - hosts: microshift
-  # roles:
-  #   - "{{ microshift_role_path }}"
+  roles:
+    - "{{ microshift_role_path }}"
   tasks:
     - name: Install rpms
       ansible.builtin.package:
