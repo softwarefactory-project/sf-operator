@@ -9,7 +9,7 @@ The deployment will be performed via Ansible, by using the
 
 ## Requirements
 
-### Target Host (Microshift)
+### Setup the target Host (Microshift)
 
 The dedicated Virtual Machine should be a CentOS Stream 9 virtual machine
 (min 2 vCPUs, 2 GB Ram, 40 GB Disk) with the TCP/6443 and TCP/22 (SSH) ports exposed.
@@ -34,13 +34,15 @@ to be loaded.
 
 You will also need the Host's public IP, or at least an IP you can reach from your development machine.
 
-### Pull Secret
+### Get the Pull Request secret for Microshift
 
-Generate a **pull secret** [here](https://cloud.redhat.com/openshift/create/local) and download it to your development machine. We will assume it was downloaded to `$HOME/Downloads/pull-secret`.
+Generate a **pull secret** [here](https://cloud.redhat.com/openshift/create/local) and download it to your development machine.
 
 ### Development Machine
 
-Install the following dependencies, for RPM-based systems:
+First, ensure to have the **microshift.dev** to resolve the microshift machine in */etc/hosts*.
+
+Then, install the following dependencies, for RPM-based systems:
 
 ```sh
 sudo dnf install -y ansible-core golang
@@ -52,13 +54,23 @@ Installing Microshift is straightforward with the [ansible-microshift-role](http
 We provide a cli tool sfconfig, that prepares, downloads and runs the role
 on the target host.
 
-You have to create your own inventory based on ./tools/microshift/inventory.yaml. You have to add the secret on the inventory.
+You have to create your own inventory based on ./tools/microshift/inventory.yaml to set:
+
+- the *openshift_pull_secret*: copy the content from the *pull-secret* file previously downloaded
+- the *ansible_user* and *ansible_host* (to enable ansible connection via ssh to the microshift host)
+
+```sh
+cp ./tools/microshift/inventory.yaml ./tools/microshift/my-inventory.yaml
+# Edit my-inventory.yaml and set the variables as explained above
+```
 
 Then from sf-operator directory, run
 
 ```sh
-./tools/sfconfig microshfit -i ~/inventory.yaml
+./tools/sfconfig microshift ./tools/microshift/my-inventory.yaml
 ```
+
+Use the *--skip-local-setup* option to skip the setup phase on you local (dev) machine.
 
 Once the deployment has ended successfully, you can configure kubectl to
 use Microshift:
