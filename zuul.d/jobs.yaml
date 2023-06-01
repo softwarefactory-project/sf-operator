@@ -24,7 +24,7 @@
 - job:
     name: base-sf-operator
     parent: base-microshift
-    timeout: 1200
+    timeout: 2200
     post-run: playbooks/post.yaml
     run: playbooks/run.yaml
     nodeset:
