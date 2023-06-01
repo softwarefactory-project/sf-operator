@@ -113,7 +113,26 @@ func (r *SFController) InstallTooling() {
 
 func (r *SFController) SetupConfigJob() bool {
 	r.InstallTooling()
-	return r.SetupBaseSecrets()
+	if r.SetupBaseSecrets() {
+		// We run zuul full-reconfigure once to ensure that the zuul scheduler loaded the provisionned config
+		var zs_bootstrap_full_reconfigure apiv1.ConfigMap
+		var cm_name = "zs-bootstrap-full-reconfigure"
+		if !r.GetM(cm_name, &zs_bootstrap_full_reconfigure) {
+			r.log.Info("Running the initial zuul-scheduler full-reconfigure")
+			if r.runZuulFullReconfigure() {
+				// Create an empty ConfigMap to keep note the reconfigure has been already done
+				zs_bootstrap_full_reconfigure.ObjectMeta = metav1.ObjectMeta{
+					Name:      cm_name,
+					Namespace: r.ns,
+				}
+				zs_bootstrap_full_reconfigure.Data = map[string]string{}
+				r.CreateR(&zs_bootstrap_full_reconfigure)
+			}
+		} else {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *SFController) getProvidedCR() string {
