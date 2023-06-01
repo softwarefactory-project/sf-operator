@@ -1,9 +1,10 @@
 all:
   hosts:
     microshift:
-      ansible_user: ""
-      ansible_host: ""
+      ansible_user: "cloud-user"
+      ansible_host: "microshift.dev"
       ansible_connection: ssh
   vars:
     # should be set to deploy microshift
-    openshift_pull_secret: ""
+    openshift_pull_secret: |
+      PULL_SECRET
