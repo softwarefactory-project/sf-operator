@@ -1,0 +1,7 @@
+- hosts: localhost
+  tasks:
+    - name: Clone microshift role
+      ansible.builtin.git:
+        repo: https://github.com/openstack-k8s-operators/ansible-microshift-role
+        dest: "{{ microshift_role_path }}"
+        update: yes
