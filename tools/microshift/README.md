@@ -67,7 +67,7 @@ cp ./tools/microshift/inventory.yaml ./tools/microshift/my-inventory.yaml
 Then from sf-operator directory, run
 
 ```sh
-./tools/sfconfig microshift ./tools/microshift/my-inventory.yaml
+./tools/sfconfig microshift -i ./tools/microshift/my-inventory.yaml
 ```
 
 Use the *--skip-local-setup* option to skip the setup phase on you local (dev) machine.

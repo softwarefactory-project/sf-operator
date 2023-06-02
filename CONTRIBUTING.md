@@ -82,16 +82,16 @@ kubectl config current-context
    cp config/samples/sf_v1_softwarefactory.yaml my-sf.yaml
    ```
 
-4. Start the operator:
-
-   ```sh
-   go run ./main.go --namespace sf
-   ```
-
-5. Apply the SoftwareFactory Custom Resource:
+4. Apply the SoftwareFactory Custom Resource:
 
    ```sh
    kubectl apply -f ./my-sf.yaml
+   ```
+
+5. Start the operator:
+
+   ```sh
+   go run ./main.go --namespace sf
    ```
 
 ### Access services with the browser
