@@ -229,7 +229,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 func (r *LogServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	log.V(1).Info("Reconcile loop")
+	log.V(1).Info("Logserver CR - Entering reconcile loop")
 
 	var cr sfv1.LogServer
 
@@ -264,11 +264,11 @@ func (r *LogServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 	if !cr.Status.Ready {
-		log.V(1).Info("Reconcile running...")
+		log.V(1).Info("Logserver CR - Reconcile running...")
 		delay, _ := time.ParseDuration("20s")
 		return ctrl.Result{RequeueAfter: delay}, nil
 	} else {
-		log.V(1).Info("Reconcile completed!", "logs", cr)
+		log.V(1).Info("Logserver CR - Reconcile completed!")
 		controller.setupLogserverIngress()
 		return ctrl.Result{}, nil
 	}
