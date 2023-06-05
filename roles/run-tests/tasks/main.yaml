@@ -73,6 +73,7 @@
     name: "roles/{{ role }}"
   loop:
     - test-crd
+    - test-volumestats-sidecar
     - expand-volume
   loop_control:
     loop_var: role

@@ -214,11 +214,42 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		SecurityContext: create_security_context(false),
 	})
 
-	r.GetOrCreate(&dep)
+	// add volumestats exporter
+	volumeMounts_stats_exporter := []apiv1.VolumeMount{
+		{
+			Name:      LOGSERVER_IDENT,
+			MountPath: "/home/data/rsync",
+		},
+	}
+
+	stats_exporter := createNodeExporterSideCarContainer(LOGSERVER_IDENT, volumeMounts_stats_exporter)
+	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, stats_exporter)
+
+	// Increase serial each time you need to enforce a deployment change/pod restart
+	annotations := map[string]string{
+		"fqdn":   r.cr.Spec.FQDN,
+		"serial": "1",
+	}
+	if r.GetM(dep.GetName(), &dep) {
+		// Are annotations in sync?
+		if !map_equals(&dep.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			dep.Spec.Template.ObjectMeta.Annotations = annotations
+			stats_exporter := createNodeExporterSideCarContainer(LOGSERVER_IDENT, volumeMounts_stats_exporter)
+			dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, stats_exporter)
+			r.log.V(1).Info("Metrics sidecar added, pod restarting ...")
+			r.UpdateR(&dep)
+		}
+	} else {
+		dep.Spec.Template.ObjectMeta.Annotations = annotations
+		r.log.V(1).Info("Creating object", "name", dep.GetName())
+		r.CreateR(&dep)
+	}
 
 	sshd_service_ports := []int32{LOGSERVER_SSHD_PORT}
 	sshd_service := r.create_service(LOGSERVER_SSHD_PORT_NAME, LOGSERVER_IDENT, sshd_service_ports, LOGSERVER_SSHD_PORT_NAME)
 	r.GetOrCreate(&sshd_service)
+
+	r.getOrCreateNodeExporterSideCarService(LOGSERVER_IDENT)
 
 	pvc_readiness := r.reconcile_expand_pvc(LOGSERVER_IDENT, r.cr.Spec.Settings.Storage)
 
@@ -293,4 +324,5 @@ func (r *LogServerController) setupLogserverIngress() {
 	r.ensureHTTPSRoute(
 		r.cr.Name+"-logserver", LOGSERVER_IDENT,
 		LOGSERVER_HTTPD_PORT_NAME, "/", LOGSERVER_HTTPD_PORT, map[string]string{}, r.cr.Spec.FQDN)
+	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
 }
