@@ -22,13 +22,8 @@
   delay: 10
   retries: 20
 
-- name: Check my-sf status
-  command: |
-    kubectl get softwarefactory my-sf -o custom-columns=STATUS:.status.ready
-  register: mysf_status
-  until: "'true' in mysf_status.stdout"
-  delay: 10
-  retries: 20
+- ansible.builtin.include_role:
+    name: "roles/health-check/check-sf-resource-ready"
 
 - name: Ensure volume expansion to 5Gi
   command: |

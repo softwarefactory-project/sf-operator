@@ -1,0 +1,7 @@
+---
+- name: Wait for the custom resources to be ready
+  ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.status.ready}'
+  register: sf_ready
+  until: "'true' in sf_ready.stdout"
+  retries: "{{ retries }}"
+  delay: "{{ delay }}"

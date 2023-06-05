@@ -135,26 +135,41 @@ func parse_string(text string, data any) (string, error) {
 	return buf.String(), nil
 }
 
+// Take one or more section name and compute a checkum
 func IniSectionsChecksum(cfg *ini.File, names []string) string {
-	var GetSectionBody = func(name string) string {
-		data, err := cfg.GetSection(name)
-		if err != nil {
-			panic(err)
-		}
+
+	var IniGetSectionBody = func(cfg *ini.File, section *ini.Section) string {
 		var s string = ""
-		keys := data.KeyStrings()
+		keys := section.KeyStrings()
 		sort.Strings(keys)
 		for _, k := range keys {
-			s = s + k + data.Key(k).String()
+			s = s + k + section.Key(k).String()
 		}
 		return s
 	}
 
 	var data string = ""
 	for _, name := range names {
-		data = data + GetSectionBody(name)
+		section, err := cfg.GetSection(name)
+		if err != nil {
+			panic("No such ini section: " + name)
+		}
+		data += IniGetSectionBody(cfg, section)
 	}
+
 	return checksum([]byte(data))
+}
+
+// Get Ini section names filtered by prefix
+func IniGetSectionNamesByPrefix(cfg *ini.File, prefix string) []string {
+	filteredNames := []string{}
+	names := cfg.SectionStrings()
+	for _, n := range names {
+		if strings.HasPrefix(n, prefix) {
+			filteredNames = append(filteredNames, n)
+		}
+	}
+	return filteredNames
 }
 
 func create_ssh_key() SSHKey {
@@ -581,6 +596,18 @@ func (r *SFUtilContext) DeleteR(obj client.Object) {
 	if err := r.Client.Delete(r.ctx, obj); err != nil {
 		panic(err.Error())
 	}
+}
+
+func (r *SFUtilContext) IsStatefulSetRolloutDone(obj *appsv1.StatefulSet) bool {
+	return obj.Status.ObservedGeneration >= obj.Generation &&
+		obj.Status.Replicas == obj.Status.ReadyReplicas &&
+		obj.Status.Replicas == obj.Status.CurrentReplicas
+}
+
+func (r *SFUtilContext) IsDeploymentRolloutDone(obj *appsv1.Deployment) bool {
+	return obj.Status.ObservedGeneration >= obj.Generation &&
+		obj.Status.Replicas == obj.Status.ReadyReplicas &&
+		obj.Status.Replicas == obj.Status.AvailableReplicas
 }
 
 func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {

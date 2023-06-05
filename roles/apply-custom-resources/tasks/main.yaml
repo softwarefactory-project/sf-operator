@@ -4,9 +4,5 @@
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
-- name: Wait for the custom resources to be ready
-  ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.status.ready}'
-  register: sf_ready
-  until: "'true' in sf_ready.stdout"
-  retries: 60
-  delay: 10
+- ansible.builtin.include_role:
+    name: "roles/health-check/check-sf-resource-ready"
