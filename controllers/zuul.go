@@ -166,7 +166,7 @@ func (r *SFController) init_scheduler_config() apiv1.Container {
 		Name:            "init-scheduler-config",
 		Image:           BUSYBOX_IMAGE,
 		Command:         []string{"/usr/local/bin/generate-zuul-tenant-yaml.sh"},
-		Env:             r.get_scheduler_init_and_sidecar_envs(),
+		Env:             append(r.get_scheduler_init_and_sidecar_envs(), create_env("ZUUL_STARTUP", "true")),
 		VolumeMounts:    scheduler_init_and_sidecar_vols,
 		SecurityContext: create_security_context(false),
 	}
@@ -177,7 +177,7 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 		Name:            "scheduler-sidecar",
 		Image:           BUSYBOX_IMAGE,
 		Command:         []string{"sh", "-c", "touch /tmp/healthy && sleep inf"},
-		Env:             r.get_scheduler_init_and_sidecar_envs(),
+		Env:             append(r.get_scheduler_init_and_sidecar_envs(), create_env("ZUUL_STARTUP", "false")),
 		VolumeMounts:    scheduler_init_and_sidecar_vols,
 		ReadinessProbe:  create_readiness_cmd_probe([]string{"cat", "/tmp/healthy"}),
 		SecurityContext: create_security_context(false),
