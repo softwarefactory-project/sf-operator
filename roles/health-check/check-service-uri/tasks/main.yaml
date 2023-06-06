@@ -1,13 +1,18 @@
 ---
-# no_log is set to avoid full content on ansible output
+# The ingress/route can take some time to set-up and may return 503 thus
+# we accept HTTP status code 200 and 503 but success only on 200
+
 - name: Attempt to access Gerrit
   ansible.builtin.uri:
     url: "https://{{ gerrit_host }}"
     method: GET
     return_content: true
     validate_certs: "{{ validate_certs }}"
+    status_code: [200, 503]
   register: this
-  until: "'PolyGerrit' in this.content"
+  until:
+    - this.status == 200
+    - "'PolyGerrit' in this.content"
   retries: "{{ retries }}"
 
 - name: Attempt to access Zuul info via API
@@ -16,8 +21,11 @@
     method: GET
     return_content: true
     validate_certs: "{{ validate_certs }}"
+    status_code: [200, 503]
   register: this
-  until: "'info' in this.content"
+  until:
+    - this.status == 200
+    - "'info' in this.content"
   retries: "{{ retries }}"
 
 - name: Attempt to access Zuul pipelines for internal tenant via API
@@ -26,8 +34,11 @@
     method: GET
     return_content: true
     validate_certs: "{{ validate_certs }}"
+    status_code: [200, 503]
   register: this
-  until: "'check' in this.content"
+  until:
+    - this.status == 200
+    - "'check' in this.content"
   retries: "{{ retries }}"
 
 - name: Attempt to access Zuul web status page
@@ -35,7 +46,10 @@
     url: "https://{{ zuul_host }}/status"
     method: GET
     validate_certs: "{{ validate_certs }}"
-    status_code: 200
+    status_code: [200, 503]
+  register: this
+  until:
+    - this.status == 200
   retries: "{{ retries }}"
 
 - name: Attempt to access Zuul web internal tenant status page
@@ -43,7 +57,10 @@
     url: "https://{{ zuul_host }}/internal/status"
     method: GET
     validate_certs: "{{ validate_certs }}"
-    status_code: 200
+    status_code: [200, 503]
+  register: this
+  until:
+    - this.status == 200
   retries: "{{ retries }}"
 
 - name: Attempt to access Logserver web
@@ -51,5 +68,8 @@
     url: "https://{{ logserver_host }}/logs/"
     method: GET
     validate_certs: "{{ validate_certs }}"
-    status_code: 200
+    status_code: [200, 503]
+  register: this
+  until:
+    - this.status == 200
   retries: "{{ retries }}"
