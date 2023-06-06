@@ -26,7 +26,7 @@ USER_EXISTS=$(ssh gerrit gerrit ls-members \"Service Users\" | awk '{ print $2 }
 if [ -z "$USER_EXISTS" ]; then
     echo "$USER_SSHKEY" | ssh gerrit gerrit create-account ${USER_NAME} \
         -g \"Service Users\"                \
-        --email "${USER_MAIL}"              \
         --full-name \"${USER_FULLNAME}\"    \
         --ssh-key -
+    ssh gerrit gerrit set-account --add-email "${USER_MAIL}" ${USER_NAME}
 fi
