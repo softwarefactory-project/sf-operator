@@ -270,7 +270,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	zw.Spec.Template.Spec.Containers = create_zuul_container(r.cr.Spec.FQDN, "zuul-web")
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/api/info", ZUUL_WEB_PORT)
-	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
+	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/api/info", ZUUL_WEB_PORT)
 
 	r.GetOrCreate(&zw)
 	zw_dirty := false
