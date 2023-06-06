@@ -38,7 +38,8 @@
     - configmaps
     - jobs
     - pvc
-    - cvs
+    - csvs
+    - installplans
     - sub
     - catalogsources
     - logservers

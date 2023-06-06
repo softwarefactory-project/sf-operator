@@ -1,0 +1,14 @@
+---
+- name: "Update SoftwareFactory resource {{ cr_name }}"
+  k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    definition:
+      kind: "{{ cr_kind }}"
+      namespace: "{{ cr_namespace }}"
+      metadata:
+        name: "{{ cr_name }}"
+        namespace: sf
+      spec: "{{ cr_spec }}"
+
+- ansible.builtin.include_role:
+    name: "roles/health-check/check-sf-resource-ready"

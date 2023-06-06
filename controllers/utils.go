@@ -1081,7 +1081,7 @@ func (r *SFUtilContext) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv
 			return false
 		}
 	}
-	current_qty := found_pvc.Spec.Resources.Requests.Storage()
+	current_qty := found_pvc.Status.Capacity.Storage()
 
 	switch new_qty.Cmp(*current_qty) {
 	case -1:

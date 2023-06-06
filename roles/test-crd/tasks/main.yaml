@@ -14,6 +14,7 @@
   ansible.builtin.command: |
     kubectl get pvc logserver --output custom-columns=CAPACITY:.status.capacity.storage --no-headers
   register: logserver_capacity
+  # The default storage size asked by the SF controller is 1GB
   failed_when: logserver_capacity.stdout == '1Gi'
 
 - name: Ensure it is impossible to shrink storage size in sf CR
@@ -23,12 +24,14 @@
   failed_when: "('shrinking is not supported' not in patch_result.stderr) and ('shrinking is not supported' not in patch_result.stdout)"
 
 - name: Ensure it is impossible to set a negative loopDelay
-  shell: "kubectl patch SoftwareFactory my-sf --type=merge -p '{\"spec\": {\"logserver\": {\"loopDelay\": -1}}}'"
+  ansible.builtin.command: |
+    kubectl patch SoftwareFactory my-sf --type=merge -p '{"spec": {"logserver": {"loopDelay": -1}}}'
   register: ld_patch_result
   failed_when: "('must be a positive integer' not in ld_patch_result.stderr) and ('must be a positive integer' not in ld_patch_result.stdout)"
 
 - name: Ensure it is impossible to set a negative retentionDays
-  shell: "kubectl patch SoftwareFactory my-sf --type=merge -p '{\"spec\": {\"logserver\": {\"retentionDays\": -1}}}'"
+  ansible.builtin.command: |
+    kubectl patch SoftwareFactory my-sf --type=merge -p '{"spec": {"logserver": {"retentionDays": -1}}}'
   register: rd_patch_result
   failed_when: "('must be a positive integer' not in rd_patch_result.stderr) and ('must be a positive integer' not in rd_patch_result.stdout)"
 

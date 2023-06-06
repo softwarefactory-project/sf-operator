@@ -1,25 +1,14 @@
 ---
 - name: Add a dummy Zuul Gerrit connection
-  k8s:
-    kubeconfig: "{{ kubeconfig }}"
-    definition:
-      kind: SoftwareFactory
-      namespace: sf
-      metadata:
-        name: my-sf
-        namespace: sf
-      spec:
-        zuul:
-          gerritconns:
-            - name: dummy-gerrit-conn
-              hostname: dummy-gerrit.local
-              username: zuul
-
-- name: "Wait few seconds after the CR update"
-  ansible.builtin.command: sleep 3
-
-- ansible.builtin.include_role:
-    name: "roles/health-check/check-sf-resource-ready"
+  ansible.builtin.include_role:
+    name: "roles/update-custom-resource"
+  vars:
+    cr_spec:
+      zuul:
+        gerritconns:
+          - name: dummy-gerrit-conn
+            hostname: dummy-gerrit.local
+            username: zuul
 
 - name: Wait for the new Zuul connection to appear in the Zuul API
   ansible.builtin.uri:
@@ -33,23 +22,12 @@
   delay: "{{ delay }}"
 
 - name: Delete the dummy Zuul Gerrit connection
-  k8s:
-    kubeconfig: "{{ kubeconfig }}"
-    definition:
-      kind: SoftwareFactory
-      namespace: sf
-      metadata:
-        name: my-sf
-        namespace: sf
-      spec:
-        zuul:
-          gerritconns: []
-
-- name: "Wait few seconds after the CR update"
-  ansible.builtin.command: sleep 3
-
-- ansible.builtin.include_role:
-    name: "roles/health-check/check-sf-resource-ready"
+  ansible.builtin.include_role:
+    name: "roles/update-custom-resource"
+  vars:
+    cr_spec:
+      zuul:
+        gerritconns: []
 
 - name: Wait for the dummy Zuul connection to be removed from the API
   ansible.builtin.uri:

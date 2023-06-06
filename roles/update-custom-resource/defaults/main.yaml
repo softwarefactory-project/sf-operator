@@ -1,0 +1,6 @@
+---
+kubeconfig: "~/.kube/config"
+cr_kind: "SoftwareFactory"
+cr_namespace: "sf"
+cr_name: "my-sf"
+cr_spec: {}

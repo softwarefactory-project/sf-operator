@@ -99,10 +99,14 @@ func (r *SFController) DeployLogserverResource() bool {
 
 	exists := r.GetM(LOGSERVER_IDENT, &resource)
 
-	if exists {
+	if exists && (resource.Spec.Settings != r.cr.Spec.Logserver) {
 		resource.Spec.Settings = r.cr.Spec.Logserver
+		r.log.Info("Updating the logserver resource")
 		r.UpdateR(&resource)
-	} else {
+		return false
+	}
+
+	if !exists {
 		pub_key, err := r.getSecretDataFromKey("zuul-ssh-key", "pub")
 		if err != nil {
 			return false
@@ -115,8 +119,10 @@ func (r *SFController) DeployLogserverResource() bool {
 			Settings:         r.cr.Spec.Logserver,
 		}
 		r.CreateR(&resource)
+		return false
 	}
-	return resource.Status.Ready
+
+	return isLogserverReady(resource)
 }
 
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
@@ -167,7 +173,8 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	}
 
 	return sfv1.SoftwareFactoryStatus{
-		Ready: ready,
+		Ready:              ready,
+		ObservedGeneration: r.cr.Generation,
 	}
 }
 

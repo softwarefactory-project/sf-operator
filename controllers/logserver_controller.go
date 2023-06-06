@@ -62,6 +62,10 @@ type LogServerController struct {
 	cr sfv1.LogServer
 }
 
+func isLogserverReady(logserver sfv1.LogServer) bool {
+	return logserver.Status.ObservedGeneration == logserver.Generation && logserver.Status.Ready
+}
+
 func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	r.EnsureSSHKey(LOGSERVER_IDENT + "-keys")
@@ -218,7 +222,10 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	pvc_readiness := r.reconcile_expand_pvc(LOGSERVER_IDENT, r.cr.Spec.Settings.Storage)
 
-	return sfv1.LogServerStatus{Ready: r.IsDeploymentReady(&dep) && pvc_readiness}
+	return sfv1.LogServerStatus{
+		Ready:              r.IsDeploymentReady(&dep) && pvc_readiness,
+		ObservedGeneration: r.cr.Generation,
+	}
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to

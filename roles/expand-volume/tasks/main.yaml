@@ -11,30 +11,13 @@
     volume_size: "{{ logserver_capacity.stdout | int + 2 }}"
 
 - name: Expand logserver volume
-  k8s:
-    kubeconfig: "{{ kubeconfig }}"
-    definition:
-      # apiVersion: sf.softwarefactory-project.io/v1
-      kind: SoftwareFactory
-      namespace: sf
-      metadata:
-        name: my-sf
-        namespace: sf
-      spec:
-        logserver:
-          storage:
-            size: "{{ volume_size }}Gi"
-
-- name: Wait until resize is effective
-  shell: |
-    kubectl describe pvc logserver
-  register: pvc_events
-  until: "'MountVolume.NodeExpandVolume succeeded for volume' in pvc_events.stdout"
-  delay: 10
-  retries: 20
-
-- ansible.builtin.include_role:
-    name: "roles/health-check/check-sf-resource-ready"
+  ansible.builtin.include_role:
+    name: "roles/update-custom-resource"
+  vars:
+    cr_spec:
+      logserver:
+        storage:
+          size: "{{ volume_size }}Gi"
 
 - name: Ensure volume expansion to {{ volume_size }}Gi
   command: |
