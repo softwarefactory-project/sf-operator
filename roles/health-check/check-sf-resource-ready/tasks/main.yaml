@@ -12,26 +12,6 @@
   retries: "{{ retries }}"
   delay: "{{ delay }}"
 
-# This is a temporary workaround to pass the upgrade test (we can remove via a followup patch)
-# Previous version of the operator (published on quay.io) does not provide the observedGeneration status field
-# Thus for the upgrade test we need to detect that situation.
-# We should think later about the right way to discover the version of the CR deployed by the sf-operator
-- name: Wait for ready status
-  ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.status}'
-  register: sf_ready
-  until:
-    - sf_ready.stdout != ""
-    - '"ready" in (sf_ready.stdout | from_json)'
-    - (sf_ready.stdout | from_json).ready == true
-  retries: "{{ retries }}"
-  delay: "{{ delay }}"
-
-- name: Check for observedGeneration status field
-  set_fact:
-    observedGenField: true
-  when:
-    - '"observedGeneration" in (sf_ready.stdout | from_json)'
-
 - name: Wait for the custom resources to be ready
   ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.status}'
   register: sf_ready
@@ -43,6 +23,3 @@
     - (sf_ready.stdout | from_json).ready == true
   retries: "{{ retries }}"
   delay: "{{ delay }}"
-  when:
-    - observedGenField is defined
-    - observedGenField
