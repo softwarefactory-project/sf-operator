@@ -188,6 +188,8 @@ func (r *SFController) DebugService(debugService string) {
 func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
+	log.V(1).Info("SoftwareFactory CR - Entering reconcile loop")
+
 	var sf sfv1.SoftwareFactory
 	if err := r.Get(ctx, req.NamespacedName, &sf); err != nil {
 		log.Error(err, "unable to fetch SoftwareFactory resource")
@@ -220,11 +222,11 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 	if !sf.Status.Ready {
-		log.V(1).Info("Reconcile running...")
+		log.V(1).Info("SoftwareFactory CR - Reconcile running...")
 		delay, _ := time.ParseDuration("20s")
 		return ctrl.Result{RequeueAfter: delay}, nil
 	} else {
-		log.V(1).Info("Reconcile completed!", "sf", sf)
+		log.V(1).Info("SoftwareFactory CR - Reconcile completed!")
 		return ctrl.Result{}, nil
 	}
 }
