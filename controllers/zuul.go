@@ -220,7 +220,7 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	if zs_dirty {
 		r.UpdateR(&zs)
 	}
-	return r.IsStatefulSetReady(&zs) && r.IsStatefulSetRolloutDone(&zs)
+	return r.IsStatefulSetReady(&zs)
 }
 
 func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
@@ -262,7 +262,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	if ze_dirty {
 		r.UpdateR(&ze)
 	}
-	return r.IsStatefulSetReady(&ze) && r.IsStatefulSetRolloutDone(&ze)
+	return r.IsStatefulSetReady(&ze)
 }
 
 func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
@@ -290,7 +290,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	if zw_dirty {
 		r.UpdateR(&zw)
 	}
-	return r.IsDeploymentReady(&zw) && r.IsDeploymentRolloutDone(&zw)
+	return r.IsDeploymentReady(&zw)
 }
 
 func (r *SFController) EnsureZuulComponentsFrontServices() {

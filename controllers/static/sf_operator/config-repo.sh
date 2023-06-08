@@ -57,24 +57,6 @@ fi
 mkdir -p system
 cat /sf-provided-cr/sf.yaml > system/sf.yaml
 
-# Initialize gerrit tree
-if [ ! -d gerrit ] && [ "${GERRIT_ENABLED}" == "true" ]; then
-  mkdir gerrit && pushd gerrit
-  cat << EOF > replication.config
-[gerrit]
-    defaultForceUpdate = true
-    replicateOnStartup = true
-    autoReload = true
-EOF
-  cat << EOF > commentlinks.yaml
----
-# Note: '\' character needs to be escapped twice ('\\')
-# Double quote needs to be escaped too
-commentlinks: []
-EOF
-  popd
-fi
-
 # Initialize CI
 mkdir -p zuul.d
 cat << EOF > zuul.d/config.yaml

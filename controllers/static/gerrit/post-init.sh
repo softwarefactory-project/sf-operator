@@ -1,17 +1,34 @@
 #!/bin/bash
 
 set -ex
-export HOME=/tmp
-env
-cd "${HOME}"
 
-mkdir .ssh
-chmod 0700 .ssh
+create_ci_user () {
+  local user_name="${1}"
+  local user_sshkey="${2}"
+  local user_mail="${3}"
+  # Capitalize user_name, e.g. "Zuul CI"
+  local user_fullname="$(tr '[:lower:]' '[:upper:]' <<< ${user_name:0:1})${user_name:1} CI"
 
-echo "${GERRIT_ADMIN_SSH}" > .ssh/gerrit_admin
-chmod 0400 .ssh/gerrit_admin
+  # Check if user does not exist yet
+  local user_exists=$(ssh gerrit gerrit ls-members \"Service Users\" | awk '{ print $2 }' | { grep ${user_name} || true; })
 
-cat << EOF > .ssh/config
+  if [ -z "$user_exists" ]; then
+    echo "$user_sshkey" | ssh gerrit gerrit create-account ${user_name} \
+        -g \"Service Users\"                \
+        --full-name \"${user_fullname}\"    \
+        --ssh-key -
+    ssh gerrit gerrit set-account --add-email "${user_mail}" ${user_name}
+  fi
+}
+
+
+mkdir ~/.ssh
+chmod 0700 ~/.ssh
+
+echo "${GERRIT_ADMIN_SSH}" > ~/.ssh/gerrit_admin
+chmod 0400 ~/.ssh/gerrit_admin
+
+cat << EOF > ~/.ssh/config
 Host gerrit
 User admin
 Hostname ${GERRIT_SSHD_PORT_29418_TCP_ADDR}
@@ -23,7 +40,7 @@ EOF
 echo "Ensure we can connect to Gerrit ssh port"
 ssh gerrit gerrit version
 
-cat << EOF > .gitconfig
+cat << EOF > ~/.gitconfig
 [user]
     name = SF initial configurator
     email = admin@${FQDN}
@@ -37,7 +54,8 @@ echo "Set admin account API key (HTTP password)"
 ssh gerrit gerrit set-account admin --http-password "${GERRIT_ADMIN_API_KEY}"
 
 echo "Apply ACLs to All-projects"
-mkdir All-projects && cd All-projects
+mkdir ~/All-projects
+pushd ~/All-projects
 git init .
 git remote add origin ssh://gerrit/All-Projects
 git fetch origin refs/meta/config:refs/remotes/origin/meta/config
@@ -100,23 +118,16 @@ ${gitConfig} plugin.reviewers-by-blame.ignoreDrafts "true" ".*"
 ${gitConfig} plugin.reviewers-by-blame.ignoreSubjectRegEx "'(WIP|DNM)(.*)'" ".*"
 git add project.config
 git commit -m"Set SF default Gerrit ACLs" && git push origin meta/config:meta/config || true
-cd -
+popd
 
-echo "Ensure CI user accounts added into Gerrit"
-for CI_USER_ENV in $(env | grep CI_USER_SSH_ | cut -d "=" -f1); do
-  name=$(echo ${CI_USER_ENV} | sed 's/CI_USER_SSH_//')
-  /bin/bash /entry/set-ci-user.sh $name "${!CI_USER_ENV}" "${name}@${FQDN}"
-done
+echo "Ensure Zuul user accounts added into Gerrit"
+create_ci_user zuul "${ZUUL_SSH_PUB_KEY}" "zuul@${FQDN}"
 
-echo "Ensure CI user accounts API Key added into Gerrit"
-for CI_USER_ENV in $(env | grep CI_USER_API_ | cut -d "=" -f1); do
-  name=$(echo ${CI_USER_ENV} | sed 's/CI_USER_API_//')
-  ssh gerrit gerrit set-account ${name} --http-password "${!CI_USER_ENV}"
-done
+echo "Ensure Zuul user accounts API Key added into Gerrit"
+ssh gerrit gerrit set-account zuul --http-password "${ZUUL_HTTP_PASSWORD}"
 
-if [ "${HAS_CONFIG_REPOSITORY}" == "true" ]; then
-  echo "Setup managesf config file"
-  cat << EOF > $HOME/config.py
+echo "Setup managesf config file"
+cat << EOF > ~/config.py
 gerrit = {
     'url': 'http://gerrit-httpd:${GERRIT_HTTPD_SERVICE_PORT}/a/',
     'password': '${GERRIT_ADMIN_API_KEY}',
@@ -136,21 +147,64 @@ admin = {
 }
 EOF
 
-  # Ensure HTTP access via basic auth for further provisioning
-  curl --fail -i -u admin:${GERRIT_ADMIN_API_KEY} http://gerrit-httpd:${GERRIT_HTTPD_SERVICE_PORT}/a/accounts/admin
+# Ensure HTTP access via basic auth for further provisioning
+curl --fail -i -u admin:${GERRIT_ADMIN_API_KEY} http://gerrit-httpd:${GERRIT_HTTPD_SERVICE_PORT}/a/accounts/admin
 
-  if ! $(ssh gerrit gerrit ls-projects | grep -q "^config$"); then
-    echo "Create config repository and related groups"
-    cat << EOF > prev.yaml
+if ! $(ssh gerrit gerrit ls-projects | grep -q "^config$"); then
+  echo "Create config repository and related groups"
+  cat << EOF > ~/prev.yaml
 resources: {}
 EOF
-    dhall-to-yaml --output \
-      new.yaml <<< "(/entry/resources.dhall).renderInternalResources \"${FQDN}\" False"
-    managesf-resources --managesf-config $HOME/config.py \
-      --cache-dir $HOME direct-apply --new-yaml new.yaml --prev-yaml prev.yaml
-  else
-    echo "config repository already exists"
-  fi
+  cat << EOF > ~/new.yaml
+resources:
+  acls:
+    config-acl:
+      file: |
+        [access "refs/*"]
+          read = group config-core
+          owner = group config-ptl
+        [access "refs/heads/*"]
+          label-Code-Review = -2..+2 group config-core
+          label-Code-Review = -2..+2 group config-ptl
+          label-Verified = -2..+2 group config-ptl
+          label-Workflow = -1..+1 group config-core
+          label-Workflow = -1..+1 group config-ptl
+          label-Workflow = -1..+0 group Registered Users
+          rebase = group config-core
+          abandon = group config-core
+          submit = group config-ptl
+          read = group config-core
+          read = group Registered Users
+        [access "refs/meta/config"]
+          read = group config-core
+          read = group Registered Users
+        [receive]
+          requireChangeId = true
+        [submit]
+          mergeContent = false
+          action = fast forward only
+      groups:
+        - config-core
+        - config-ptl
+      name: config-acl
+  groups:
+    config-core:
+      description: Team core for the config repo
+      members: []
+      name: config-core
+    config-ptl:
+      description: Team lead for the config repo
+      members:
+        - "admin@${FQDN}"
+      name: config-ptl
+  repos:
+    config:
+      acl: config-acl
+      description: Config repository
+      name: config
+EOF
+  managesf-resources --managesf-config ~/config.py \
+    --cache-dir ~/ direct-apply --new-yaml ~/new.yaml --prev-yaml ~/prev.yaml
 else
-  echo "config repository not hosted on Gerrit"
+  echo "config repository already exists"
 fi

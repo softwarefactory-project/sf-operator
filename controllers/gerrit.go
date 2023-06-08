@@ -7,16 +7,13 @@ package controllers
 
 import (
 	_ "embed"
-	"encoding/json"
 	"fmt"
-	"strconv"
 
+	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
 const GERRIT_IDENT = "gerrit"
@@ -29,13 +26,9 @@ const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
 const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.6.4-4"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_SITE_MOUNT_PATH = "/gerrit"
-const GERRIT_CERT_MOUNT_PATH = "/gerrit-cert"
 
 //go:embed static/gerrit/post-init.sh
 var postInitScript string
-
-//go:embed static/gerrit/set-ci-user.sh
-var setCIUser string
 
 //go:embed static/gerrit/entrypoint.sh
 var entrypoint string
@@ -43,81 +36,45 @@ var entrypoint string
 //go:embed static/gerrit/init.sh
 var gerritInitScript string
 
-//go:embed static/gerrit/ready.sh
-var gerritReadyScript string
-
-func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount, spec sfv1.GerritSpec) []apiv1.Container {
-	var sshd_max_conns_per_user string
-	if spec.SshdMaxConnectionsPerUser == "" {
-		sshd_max_conns_per_user = "64"
-	} else {
-		sshd_max_conns_per_user = spec.SshdMaxConnectionsPerUser
-	}
-	certVolume := apiv1.VolumeMount{
-		Name:      GERRIT_IDENT + "-client-tls",
-		MountPath: GERRIT_CERT_MOUNT_PATH,
-		ReadOnly:  true,
-	}
+func (r *SFController) GerritInitContainers(volumeMounts []apiv1.VolumeMount) []apiv1.Container {
 
 	container := apiv1.Container{
 		Name:    "gerrit-init",
 		Image:   GERRIT_IMAGE,
 		Command: []string{"sh", "-c", gerritInitScript},
 		Env: []apiv1.EnvVar{
-			create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
 			create_secret_env("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
-			create_env("SSHD_MAX_CONNECTIONS_PER_USER", sshd_max_conns_per_user),
 			create_env("FQDN", r.cr.Spec.FQDN),
 		},
-		VolumeMounts:    append(volumeMounts, certVolume),
+		VolumeMounts:    volumeMounts,
 		SecurityContext: create_security_context(false),
 	}
 	return []apiv1.Container{container}
 }
 
-func (r *SFController) GerritPostInitJob(name string, has_config_repo bool) bool {
+func (r *SFController) GerritPostInitJob(name string) bool {
 	var job batchv1.Job
 	job_name := GERRIT_IDENT + "-" + name
 	found := r.GetM(job_name, &job)
 
 	if !found {
-		cm_data := make(map[string]string)
-		cm_data["set-ci-user.sh"] = setCIUser
-		cm_data["sf.dhall"] = sfDhall
-		cm_data["resources.dhall"] = resourcesDhall
-		r.EnsureConfigMap("gerrit-pi", cm_data)
-
 		env := []apiv1.EnvVar{
 			create_env("HOME", "/tmp"),
 			create_env("FQDN", r.cr.Spec.FQDN),
-			create_env("HAS_CONFIG_REPOSITORY", strconv.FormatBool(has_config_repo)),
 			create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
 			create_secret_env("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
+			create_secret_env("ZUUL_SSH_PUB_KEY", "zuul-ssh-key", "pub"),
+			create_secret_env("ZUUL_HTTP_PASSWORD", "zuul-gerrit-api-key", "zuul-gerrit-api-key"),
 		}
-		ci_users := []apiv1.EnvVar{}
-
-		ci_users = append(
-			ci_users,
-			create_secret_env("CI_USER_SSH_zuul", "zuul-ssh-key", "pub"),
-			create_secret_env("CI_USER_API_zuul", "zuul-gerrit-api-key", "zuul-gerrit-api-key"))
 
 		container := apiv1.Container{
 			Name:            fmt.Sprintf("%s-container", job_name),
 			Image:           BUSYBOX_IMAGE,
 			Command:         []string{"sh", "-c", postInitScript},
-			Env:             append(env, ci_users...),
+			Env:             env,
 			SecurityContext: create_security_context(false),
-			VolumeMounts: []apiv1.VolumeMount{
-				{
-					Name:      GERRIT_IDENT + "-pi",
-					MountPath: "/entry",
-				},
-			},
 		}
 		job := r.create_job(job_name, container)
-		job.Spec.Template.Spec.Volumes = []apiv1.Volume{
-			create_volume_cm(GERRIT_IDENT+"-pi", GERRIT_IDENT+"-pi-config-map"),
-		}
 		r.log.V(1).Info("Creating Gerrit post init job", "name", name)
 		r.CreateR(&job)
 		return false
@@ -131,37 +88,20 @@ func (r *SFController) GerritPostInitJob(name string, has_config_repo bool) bool
 
 func (r *SFController) DeployGerrit() bool {
 
-	spec := r.cr.Spec.Gerrit
-
-	has_config_repo := r.cr.Spec.ConfigLocations.ConfigRepo == ""
-
-	// Ensure Gerrit Keystore password
-	r.GenerateSecretUUID("gerrit-keystore-password")
 	// Ensure Gerrit Admin API password
 	r.GenerateSecretUUID("gerrit-admin-api-key")
-
-	// Create a certificate for Gerrit
-	cert := r.create_client_certificate(GERRIT_IDENT+"-client", "ca-issuer", GERRIT_IDENT+"-client-tls", "gerrit", r.cr.Spec.FQDN)
-	r.GetOrCreate(&cert)
 
 	volumeMounts := []apiv1.VolumeMount{
 		{
 			Name:      GERRIT_IDENT,
 			MountPath: GERRIT_SITE_MOUNT_PATH,
 		},
-		{
-			Name:      "gerrit-pi",
-			MountPath: "/config-scripts",
-		},
 	}
 
 	// Create the deployment
 	replicas := int32(1)
-	dep := r.create_statefulset(GERRIT_IDENT, GERRIT_IMAGE, r.getStorageConfOrDefault(r.cr.Spec.Gerrit.Storage), replicas)
-
-	cm_data := make(map[string]string)
-	cm_data["ready.sh"] = gerritReadyScript
-	r.EnsureConfigMap("gerrit-pi", cm_data)
+	storage_config := r.baseGetStorageConfOrDefault(v1.StorageSpec{}, "")
+	dep := r.create_statefulset(GERRIT_IDENT, GERRIT_IMAGE, storage_config, replicas)
 
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
@@ -172,25 +112,15 @@ func (r *SFController) DeployGerrit() bool {
 	}
 	dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 		create_env("HOME", "/gerrit"),
-		create_secret_env("GERRIT_KEYSTORE_PASSWORD", "gerrit-keystore-password", "gerrit-keystore-password"),
 		create_env("FQDN", r.cr.Spec.FQDN),
 		create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
-		create_secret_env("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
 	}
-	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_cmd_probe([]string{"bash", "/config-scripts/ready.sh"})
-	dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
-
-	// Expose a volume that contain certmanager certs for Gerrit
-	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		create_volume_secret(GERRIT_IDENT + "-client-tls"),
-		create_volume_cm("gerrit-pi", "gerrit-pi-config-map"),
-	}
+	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_cmd_probe([]string{"bash", "/gerrit/ready.sh"})
+	dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts)
 
 	// Create annotations based on Gerrit parameters
-	jsonSpec, _ := json.Marshal(spec)
 	annotations := map[string]string{
 		"fqdn": r.cr.Spec.FQDN,
-		"spec": string(jsonSpec),
 	}
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	r.GetOrCreate(&dep)
@@ -198,7 +128,7 @@ func (r *SFController) DeployGerrit() bool {
 		// Update the annotation - this force the statefulset controler to respawn the container
 		dep.Spec.Template.ObjectMeta.Annotations = annotations
 		// ReInit initContainers to ensure new spec is used
-		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts, spec)
+		dep.Spec.Template.Spec.InitContainers = r.GerritInitContainers(volumeMounts)
 		r.log.V(1).Info("Gerrit configuration changed, restarting ...")
 		// Update the deployment resource
 		r.UpdateR(&dep)
@@ -255,7 +185,7 @@ func (r *SFController) DeployGerrit() bool {
 
 	ready := r.IsStatefulSetReady(&dep)
 	if ready {
-		return r.GerritPostInitJob("post-init", has_config_repo)
+		return r.GerritPostInitJob("post-init")
 	} else {
 		return false
 	}

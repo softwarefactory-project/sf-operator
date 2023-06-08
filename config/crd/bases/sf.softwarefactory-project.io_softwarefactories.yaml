@@ -51,28 +51,6 @@ spec:
                 type: object
               fqdn:
                 type: string
-              gerrit:
-                description: Gerrit service spec
-                properties:
-                  sshd_max_connections_per_user:
-                    type: string
-                  storage:
-                    properties:
-                      className:
-                        type: string
-                      size:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                        x-kubernetes-validations:
-                        - message: Storage shrinking is not supported
-                          rule: self >= oldSelf
-                    required:
-                    - size
-                    type: object
-                type: object
               gitserver:
                 description: Git server spec
                 properties:
