@@ -55,3 +55,9 @@
     --use-http
   args:
     chdir: "{{ src_dir }}"
+
+- name: Ensure operator expected version ready
+  ansible.builtin.include_role:
+    name: roles/check-operator-version
+  vars:
+    upgrade_version: "v{{ gen_bundle_version.stdout }}.0.0"
