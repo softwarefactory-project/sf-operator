@@ -43,6 +43,7 @@
     - sub
     - catalogsources
     - logservers
+    - softwarefactories
   tags:
     - skip_ansible_lint
 
