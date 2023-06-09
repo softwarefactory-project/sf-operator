@@ -368,12 +368,12 @@ func get_storage_classname(storageClassName string) string {
 	}
 }
 
-func (r *SFUtilContext) create_pvc(name string, storageParams StorageConfig) apiv1.PersistentVolumeClaim {
+func MkPVC(name string, ns string, storageParams StorageConfig) apiv1.PersistentVolumeClaim {
 	qty := storageParams.Size
 	return apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: r.ns,
+			Namespace: ns,
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
 			StorageClassName: &storageParams.StorageClassName,
@@ -387,28 +387,17 @@ func (r *SFUtilContext) create_pvc(name string, storageParams StorageConfig) api
 	}
 }
 
-// Create a default statefulset.
-func (r *SFUtilContext) create_statefulset(name string, image string, storageConfig StorageConfig, replicas int32, nameSuffix ...string) appsv1.StatefulSet {
-	service_name := name
-	if nameSuffix != nil {
-		service_name = name + "-" + nameSuffix[0]
-	}
+func (r *SFUtilContext) create_pvc(name string, storageParams StorageConfig) apiv1.PersistentVolumeClaim {
+	return MkPVC(name, r.ns, storageParams)
+}
 
-	if replicas == 0 {
-		replicas = 1
-	}
-
-	container := apiv1.Container{
-		Name:            name,
-		Image:           image,
-		ImagePullPolicy: "IfNotPresent",
-		SecurityContext: create_security_context(false),
-	}
-	pvc := r.create_pvc(name, storageConfig)
+func MkStatefulset(
+	name string, ns string, replicas int32, service_name string,
+	container apiv1.Container, pvc apiv1.PersistentVolumeClaim) appsv1.StatefulSet {
 	return appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: r.ns,
+			Namespace: ns,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas:    int32Ptr(replicas),
@@ -439,6 +428,31 @@ func (r *SFUtilContext) create_statefulset(name string, image string, storageCon
 			},
 		},
 	}
+}
+
+func MkContainer(name string, image string) apiv1.Container {
+	return apiv1.Container{
+		Name:            name,
+		Image:           image,
+		ImagePullPolicy: "IfNotPresent",
+		SecurityContext: create_security_context(false),
+	}
+}
+
+// Create a default statefulset.
+func (r *SFUtilContext) create_statefulset(name string, image string, storageConfig StorageConfig, replicas int32, nameSuffix ...string) appsv1.StatefulSet {
+	service_name := name
+	if nameSuffix != nil {
+		service_name = name + "-" + nameSuffix[0]
+	}
+
+	if replicas == 0 {
+		replicas = 1
+	}
+
+	container := MkContainer(name, image)
+	pvc := r.create_pvc(name, storageConfig)
+	return MkStatefulset(name, r.ns, replicas, service_name, container, pvc)
 }
 
 // Create a default headless statefulset.
@@ -616,13 +630,13 @@ func (r *SFUtilContext) DeleteR(obj client.Object) {
 	}
 }
 
-func (r *SFUtilContext) IsStatefulSetRolloutDone(obj *appsv1.StatefulSet) bool {
+func IsStatefulSetRolloutDone(obj *appsv1.StatefulSet) bool {
 	return obj.Status.ObservedGeneration >= obj.Generation &&
 		obj.Status.Replicas == obj.Status.ReadyReplicas &&
 		obj.Status.Replicas == obj.Status.CurrentReplicas
 }
 
-func (r *SFUtilContext) IsDeploymentRolloutDone(obj *appsv1.Deployment) bool {
+func IsDeploymentRolloutDone(obj *appsv1.Deployment) bool {
 	return obj.Status.ObservedGeneration >= obj.Generation &&
 		obj.Status.Replicas == obj.Status.ReadyReplicas &&
 		obj.Status.Replicas == obj.Status.AvailableReplicas
@@ -659,7 +673,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 			}
 		}
 		// All containers in Ready state
-		return true && r.IsStatefulSetRolloutDone(dep)
+		return true && IsStatefulSetRolloutDone(dep)
 	}
 	// No Replica available
 	return false
@@ -667,7 +681,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 
 func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 	if dep.Status.ReadyReplicas > 0 {
-		return true && r.IsDeploymentRolloutDone(dep)
+		return true && IsDeploymentRolloutDone(dep)
 	}
 	r.log.V(1).Info("Waiting for deployment", "name", dep.GetName())
 	return false
@@ -765,35 +779,50 @@ func (r *SFUtilContext) CreateYAMLs(ys string) {
 	}
 }
 
+func CreateSecretFromFunc(name string, namespace string, getData func() string) apiv1.Secret {
+	var secret apiv1.Secret
+	secret = apiv1.Secret{
+		Data:       map[string][]byte{name: []byte(getData())},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+	return secret
+}
+
 func (r *SFUtilContext) GenerateSecret(name string, getData func() string) apiv1.Secret {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
 		r.log.V(1).Info("Creating secret", "name", name)
-		secret = apiv1.Secret{
-			Data:       map[string][]byte{name: []byte(getData())},
-			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns},
-		}
+		secret = CreateSecretFromFunc(name, r.ns, getData)
 		r.CreateR(&secret)
 	}
 	return secret
 }
 
+func NewUUIDString() string {
+	return uuid.New().String()
+}
+
 // generate a secret if needed using a uuid4 value.
 func (r *SFUtilContext) GenerateSecretUUID(name string) apiv1.Secret {
-	return r.GenerateSecret(name, func() string { return uuid.New().String() })
+	return r.GenerateSecret(name, NewUUIDString)
+}
+
+func CreateSSHKeySecret(name string, namespace string) apiv1.Secret {
+	var secret apiv1.Secret
+	sshkey := create_ssh_key()
+	secret = apiv1.Secret{
+		Data: map[string][]byte{
+			"priv": sshkey.Priv,
+			"pub":  sshkey.Pub,
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+	return secret
 }
 
 func (r *SFUtilContext) EnsureSSHKey(name string) {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
 		r.log.V(1).Info("Creating ssh key", "name", name)
-		sshkey := create_ssh_key()
-		secret = apiv1.Secret{
-			Data: map[string][]byte{
-				"priv": sshkey.Priv,
-				"pub":  sshkey.Pub,
-			},
-			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns}}
+		secret := CreateSSHKeySecret(name, r.ns)
 		r.CreateR(&secret)
 	}
 }
@@ -857,11 +886,11 @@ func (r *SFUtilContext) EnsureCA() {
 	r.CreateYAMLs(ca_objs)
 }
 
-func (r *SFUtilContext) create_job(name string, container apiv1.Container) batchv1.Job {
+func MkJob(name string, ns string, container apiv1.Container) batchv1.Job {
 	return batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: r.ns,
+			Namespace: ns,
 		},
 		Spec: batchv1.JobSpec{
 			Template: apiv1.PodTemplateSpec{
@@ -876,6 +905,10 @@ func (r *SFUtilContext) create_job(name string, container apiv1.Container) batch
 		}}
 }
 
+func (r *SFUtilContext) create_job(name string, container apiv1.Container) batchv1.Job {
+	return MkJob(name, r.ns, container)
+}
+
 func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) {
 	found := r.GetM(name, &route)
 	if !found {
@@ -884,13 +917,13 @@ func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) {
 	}
 }
 
-func (r *SFUtilContext) ensureHTTPSRoute(
-	name string, host string, serviceName string, path string,
-	port int, annotations map[string]string, fqdn string) {
-	route := apiroutev1.Route{
+func MkHTTSRoute(
+	name string, ns string, host string, serviceName string, path string,
+	port int, annotations map[string]string, fqdn string) apiroutev1.Route {
+	return apiroutev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Namespace:   r.ns,
+			Namespace:   ns,
 			Annotations: annotations,
 		},
 		Spec: apiroutev1.RouteSpec{
@@ -909,6 +942,12 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 			Path: path,
 		},
 	}
+}
+
+func (r *SFUtilContext) ensureHTTPSRoute(
+	name string, host string, serviceName string, path string,
+	port int, annotations map[string]string, fqdn string) {
+	route := MkHTTSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn)
 	r.ensure_route(route, name)
 }
 
@@ -1064,7 +1103,7 @@ func (r *SFUtilContext) ImageToBase64(imagepath string) (string, error) {
 	return encodedimage, nil
 }
 
-func (r *SFUtilContext) baseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName string) StorageConfig {
+func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName string) StorageConfig {
 	var size = DEFAULT_QTY_1Gi()
 	var className = get_storage_classname(storageClassName)
 	if !storageSpec.Size.IsZero() {
@@ -1133,7 +1172,7 @@ func (r *SFUtilContext) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv
 // SFController struct-context scoped utils //
 
 func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) StorageConfig {
-	return r.baseGetStorageConfOrDefault(storageSpec, r.cr.Spec.StorageClassName)
+	return BaseGetStorageConfOrDefault(storageSpec, r.cr.Spec.StorageClassName)
 }
 
 func (r *SFController) getConfigRepoCNXInfo() (string, string) {

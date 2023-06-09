@@ -171,7 +171,7 @@ go install github.com/spf13/cobra-cli@latest
 
 ``` bash
 cd cli/sfconfig
-cobra-cli add myCommand
+~/go/bin/cobra-cli add myCommand
 cd -
 ```
 
