@@ -94,6 +94,8 @@ spec:
               ready:
                 description: The deployment status.
                 type: boolean
+              reconciledBy:
+                type: string
             type: object
         type: object
     served: true

@@ -225,6 +225,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	return sfv1.LogServerStatus{
 		Ready:              r.IsDeploymentReady(&dep) && pvc_readiness,
 		ObservedGeneration: r.cr.Generation,
+		ReconciledBy:       getOperatorConditionName(),
 	}
 }
 

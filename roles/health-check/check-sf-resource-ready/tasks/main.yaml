@@ -1,4 +1,17 @@
 ---
+- name: Wait for the custom resources to be reconciledBy {{ reconciledBy }}
+  ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.status}'
+  register: sf_ready
+  until:
+    - sf_ready.stdout != ""
+    - '"reconciledBy" in (sf_ready.stdout | from_json)'
+    - (sf_ready.stdout | from_json).reconciledBy == reconciledBy
+  retries: "{{ retries }}"
+  delay: "{{ delay }}"
+  when:
+    - reconciledBy is defined
+    - reconciledBy != ""
+
 # This task is there by safety. From my understanding the generation field is updated
 # by k8s right after any object change
 # https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata

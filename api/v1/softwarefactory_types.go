@@ -117,8 +117,9 @@ type SoftwareFactorySpec struct {
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory
 type SoftwareFactoryStatus struct {
 	// The deployment status.
-	Ready              bool  `json:"ready,omitempty"`
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	Ready              bool   `json:"ready,omitempty"`
+	ObservedGeneration int64  `json:"observedGeneration,omitempty"`
+	ReconciledBy       string `json:"reconciledBy,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -90,6 +90,20 @@ type StorageConfig struct {
 	Size             resource.Quantity
 }
 
+// GetEnvVarValue returns the value of the named env var. Return an empty string when not found.
+func GetEnvVarValue(varName string) (string, error) {
+	ns, found := os.LookupEnv(varName)
+	if !found {
+		return "", fmt.Errorf("%s unable to find env var", varName)
+	}
+	return ns, nil
+}
+
+func getOperatorConditionName() string {
+	value, _ := GetEnvVarValue("OPERATOR_CONDITION_NAME")
+	return value
+}
+
 // Function to easilly use templates files.
 //
 // Pass the template path relative to the root of the project.

@@ -175,6 +175,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	return sfv1.SoftwareFactoryStatus{
 		Ready:              ready,
 		ObservedGeneration: r.cr.Generation,
+		ReconciledBy:       getOperatorConditionName(),
 	}
 }
 

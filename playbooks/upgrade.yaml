@@ -5,7 +5,7 @@
     remote_os_host: false
     os_host: controller
     build_bundle: false
-    mode: 'ci'
+    mode: "ci"
   roles:
     - setup-env
     - sanity-check
@@ -26,11 +26,10 @@
     remote_os_host: false
     os_host: controller
     build_bundle: true
-    mode: 'ci'
+    mode: "ci"
   roles:
     - build-operator-assets
     - upgrade-operator
-    - apply-custom-resources
   tasks:
     - name: Run tests
       ansible.builtin.include_role:
