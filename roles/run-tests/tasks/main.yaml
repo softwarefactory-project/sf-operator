@@ -1,4 +1,15 @@
 ---
+# NOTE: By checking scale-up and scale down before other tests will be running,
+# we will make sure, that the services are working correctly.
+- name: Check scaling
+  ansible.builtin.include_role:
+    name: roles/health-check/scale-resources
+  loop:
+    - up
+    - down
+  loop_control:
+    loop_var: operation
+
 - name: Iterate on tests
   ansible.builtin.include_role:
     name: "roles/{{ role }}"
@@ -58,7 +69,7 @@
   loop: "{{ zuul_job_result.json | list }}"
 
 - name: Miscellaneous testing
-  include_role:
+  ansible.builtin.include_role:
     name: "roles/{{ role }}"
   loop:
     - test-crd

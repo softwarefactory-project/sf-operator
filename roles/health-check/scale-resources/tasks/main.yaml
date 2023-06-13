@@ -1,0 +1,8 @@
+---
+- name: "Checking operation {{ operation }}"
+  ansible.builtin.include_tasks:
+    file: scale.yaml
+  loop:
+    "{{ scaling_services }}"
+  loop_control:
+    loop_var: service

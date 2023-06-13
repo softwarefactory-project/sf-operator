@@ -195,6 +195,9 @@ spec:
                 properties:
                   executor:
                     properties:
+                      replicas:
+                        format: int32
+                        type: integer
                       storage:
                         properties:
                           className:

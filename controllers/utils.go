@@ -374,10 +374,14 @@ func (r *SFUtilContext) create_pvc(name string, storageParams StorageConfig) api
 }
 
 // Create a default statefulset.
-func (r *SFUtilContext) create_statefulset(name string, image string, storageConfig StorageConfig, nameSuffix ...string) appsv1.StatefulSet {
+func (r *SFUtilContext) create_statefulset(name string, image string, storageConfig StorageConfig, replicas int32, nameSuffix ...string) appsv1.StatefulSet {
 	service_name := name
 	if nameSuffix != nil {
 		service_name = name + "-" + nameSuffix[0]
+	}
+
+	if replicas == 0 {
+		replicas = 1
 	}
 
 	container := apiv1.Container{
@@ -393,7 +397,7 @@ func (r *SFUtilContext) create_statefulset(name string, image string, storageCon
 			Namespace: r.ns,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas:    int32Ptr(1),
+			Replicas:    int32Ptr(replicas),
 			ServiceName: service_name,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -424,8 +428,8 @@ func (r *SFUtilContext) create_statefulset(name string, image string, storageCon
 }
 
 // Create a default headless statefulset.
-func (r *SFUtilContext) create_headless_statefulset(name string, image string, storageConfig StorageConfig) appsv1.StatefulSet {
-	return r.create_statefulset(name, image, storageConfig, "headless")
+func (r *SFUtilContext) create_headless_statefulset(name string, image string, storageConfig StorageConfig, replicas int32) appsv1.StatefulSet {
+	return r.create_statefulset(name, image, storageConfig, replicas, "headless")
 }
 
 // Create a default deployment.
