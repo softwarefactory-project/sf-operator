@@ -1,0 +1,13 @@
+---
+- name: Ensure prometheus instance exists
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    kind: Prometheus
+    name: prometheus
+    namespace: sf
+
+- name: Ensure instance is reachable via route
+  ansible.builtin.uri:
+    url: https://{{ prometheus_host }}
+    status_code: [302, 200]
+    validate_certs: "{{ validate_certs }}"

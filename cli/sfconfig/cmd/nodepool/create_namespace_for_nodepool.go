@@ -33,14 +33,6 @@ func ensureNamespace(env *utils.ENV, name string) {
 	}
 }
 
-func ensureServiceAccount(env *utils.ENV, name string) {
-	var sa apiv1.ServiceAccount
-	if !utils.GetM(env, name, &sa) {
-		sa.Name = name
-		utils.CreateR(env, &sa)
-	}
-}
-
 func ensureRole(env *utils.ENV, sa string) {
 	var role rbacv1.Role
 	if !utils.GetM(env, "nodepool-role", &role) {
@@ -155,7 +147,7 @@ func CreateNamespaceForNodepool(sfEnv *utils.ENV, nodepoolContext string, nodepo
 
 	// Ensure resources exists
 	ensureNamespace(&nodepoolEnv, nodepoolNamespace)
-	ensureServiceAccount(&nodepoolEnv, sa)
+	utils.EnsureServiceAccount(&nodepoolEnv, sa)
 	ensureRole(&nodepoolEnv, sa)
 	token := ensureServiceAccountSecret(&nodepoolEnv, sa)
 	nodepoolConfig := createKubeConfig(nodepoolContext, nodepoolNamespace, sa, token)

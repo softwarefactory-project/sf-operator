@@ -22,6 +22,9 @@ spec:
     - kind: Certificate
       name: certificates.cert-manager.io
       version: v1
+    - kind: Prometheus
+      name: prometheuses.monitoring.coreos.com
+      version: v1
   description: The Software Factory operator.
   displayName: sf-operator
   icon:

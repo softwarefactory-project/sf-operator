@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
@@ -61,7 +62,14 @@ func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection 
 		Version: "v1",
 		Kind:    "Pod",
 	}
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()))
+
+	httpCli, err := rest.HTTPClientFor(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to get HTTP client")
+		os.Exit(1)
+	}
+
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()), httpCli)
 	if err != nil {
 		setupLog.Error(err, "unable to create REST client")
 	}

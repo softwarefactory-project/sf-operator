@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"text/template"
 
@@ -21,6 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/yaml"
 
+	monitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	opv1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
@@ -29,6 +32,28 @@ type ENV struct {
 	Cli client.Client
 	Ns  string
 	Ctx context.Context
+}
+
+// temporary hack until make target are implemented natively
+func RunMake(arg string) {
+	RunCmd("make", arg)
+}
+
+func RunCmd(cmdName string, args ...string) {
+	cmd := exec.Command(cmdName, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		panic(fmt.Errorf("%s failed: %w", args, err))
+	}
+}
+
+func EnsureServiceAccount(env *ENV, name string) {
+	var sa apiv1.ServiceAccount
+	if !GetM(env, name, &sa) {
+		sa.Name = name
+		CreateR(env, &sa)
+	}
 }
 
 func RenderYAML(o interface{}) string {
@@ -50,6 +75,7 @@ func GetConfigContextOrDie(contextName string) *rest.Config {
 
 func CreateKubernetesClient(contextName string) (client.Client, error) {
 	scheme := runtime.NewScheme()
+	monitoring.AddToScheme(scheme)
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(apiroutev1.AddToScheme(scheme))
 	utilruntime.Must(opv1.AddToScheme(scheme))
@@ -159,7 +185,9 @@ func GetSF(env *ENV, name string) (sfv1.SoftwareFactory, error) {
 
 func IsCRDMissing(err error) bool {
 	// FIXME: replace stringly check with something more solid?
-	return strings.Contains(err.Error(), `no matches for kind "SoftwareFactory"`)
+	return strings.Contains(err.Error(), `no matches for kind "SoftwareFactory"`) ||
+		// This case is encountered when make install has not been run prior
+		strings.Contains(err.Error(), `sf.softwarefactory-project.io/v1: the server could not find the requested resource`)
 }
 
 func IsCertManagerRunning(env *ENV) bool {

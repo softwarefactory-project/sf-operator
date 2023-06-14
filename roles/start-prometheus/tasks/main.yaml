@@ -1,0 +1,5 @@
+---
+- name: Deploy companion Prometheus
+  command: "tools/sfconfig prometheus --fqdn {{ fqdn }}"
+  args:
+    chdir: "{{ zuul.project.src_dir | default(src_dir) }}"
