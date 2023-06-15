@@ -115,21 +115,71 @@ firefox https://logserver.sftests.com/logs
 
 ### Delete a deployment
 
+The sfconfig cli command provides several levels of deletion.
+
+
+#### Delete Software Factory instance
+
+```sh
+./tools/sfconfig sf delete [OPTIONS]
+
+OPTIONS
+  --instance, -i - deletes Software Factory Instance
+  --pvcs, -p - deletes Software Factory including PVCs and PVs
+  --all, -a - executes --instance and --pvcs options in sequence
+  --verbose, -v - verbose
+```
+
 This removes the `my-sf` Custom Resource instance.
 
 ```sh
-kubectl delete softwarefactory my-sf
+./tools/sfconfig sf delete -i
 ```
 
 However:
 
-- **Persistent Volumes Claims** and not cleaned after the deletion of the softwarefactory instance
+- **Persistent Volumes Claims** are not cleaned after the deletion of the softwarefactory instance
 - `tools/run-ci-tests.sh` deploys resources via OLM into the `bundle-catalog-ns` namespace
 
-To fully wipe such resources run the following command:
+To delete the softwarefactory instance including the PVCs and PVs run the following command:
 
 ```sh
-./tools/wipe-deployment.sh
+./tools/sfconfig sf delete -p
+```
+
+Or to delete everything in one go just run the following command:
+
+```sh
+./tools/sfconfig sf delete -i -p
+OR
+./tools/sfconfig sf delete -a
+```
+
+#### Delete Software Factory Operator related resources
+
+sfconfig command offers the following option:
+
+./tools/sfconfig operator delete [OPTIONS]
+
+OPTIONS
+  --subscription, -s - deletes Software Factory Operator's Subscription
+  --catalogsource, -S - deletes Software Factory Catalog Source
+  --clusterserviceversion, -c - deletes Software Factory Cluster Service Version
+  --all, -a - executes all options in sequence
+  --verbose, -v - verbose
+
+To completly remove any resource related to softwarefactory run the following command:
+```sh
+./tools/sfconfig operator delete -a
+OR
+./tools/sfconfig operator delete -s -S -c
+```
+
+All the commands related to `sfconfig` with the operator option can be executed with the verbose option.
+
+```sh
+./tools/sfconfig sf delete [OPTIONS] -v
+./tools/sfconfig operator delete [OPTIONS] -v
 ```
 
 ### Run test suites locally

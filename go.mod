@@ -3,6 +3,7 @@ module github.com/softwarefactory-project/sf-operator
 go 1.19
 
 require (
+	github.com/apenella/go-ansible v1.1.7
 	github.com/cert-manager/cert-manager v1.11.0
 	github.com/fatih/color v1.15.0
 	github.com/go-logr/logr v1.2.3
@@ -10,6 +11,8 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.24.2
 	github.com/openshift/api v0.0.0-20230320192226-1fc631efd341
+	github.com/spf13/cobra v1.7.0
+	github.com/spf13/viper v1.15.0
 	golang.org/x/crypto v0.7.0
 	gopkg.in/ini.v1 v1.67.0
 	k8s.io/api v0.26.3
@@ -21,7 +24,6 @@ require (
 )
 
 require (
-	github.com/apenella/go-ansible v1.1.7 // indirect
 	github.com/apenella/go-common-utils/data v0.0.0-20210528133155-34ba915e28c8 // indirect
 	github.com/apenella/go-common-utils/error v0.0.0-20210528133155-34ba915e28c8 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -65,10 +67,8 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/spf13/afero v1.9.3 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
-	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/spf13/viper v1.15.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/stretchr/testify v1.8.2 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
