@@ -1047,7 +1047,7 @@ func (r *SFUtilContext) getSecretbyNameRef(name string) (apiv1.Secret, error) {
 }
 
 // Gets the Value of the Keyname from a Secret
-func (r *SFUtilContext) getValueFromKeySecret(secret apiv1.Secret, keyname string) ([]byte, error) {
+func GetValueFromKeySecret(secret apiv1.Secret, keyname string) ([]byte, error) {
 	keyvalue := secret.Data[keyname]
 	if len(keyvalue) == 0 {
 		return []byte{}, fmt.Errorf("key named %s not found in Secret %s at namespace %s", keyname, secret.Name, secret.Namespace)
@@ -1067,7 +1067,7 @@ func (r *SFUtilContext) getSecretDataFromKey(name string, key string) ([]byte, e
 	} else {
 		subkey = key
 	}
-	data, err := r.getValueFromKeySecret(secret, subkey)
+	data, err := GetValueFromKeySecret(secret, subkey)
 	if err != nil {
 		return []byte{}, err
 	}

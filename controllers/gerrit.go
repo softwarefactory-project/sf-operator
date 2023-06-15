@@ -45,13 +45,7 @@ var managesf_entrypoint string
 //go:embed static/managesf-resources/config.py.tmpl
 var managesf_conf string
 
-func (r *SFController) GenerateManageSFConfig() (string, error) {
-
-	// Getting Gerrit Admin password from secret
-	gerritadminpassword, err := r.getSecretData("gerrit-admin-api-key")
-	if err != nil {
-		return "", err
-	}
+func GenerateManageSFConfig(gerritadminpassword string, fqdn string) string {
 
 	// Structure for config.py file template
 	type ConfigPy struct {
@@ -61,8 +55,8 @@ func (r *SFController) GenerateManageSFConfig() (string, error) {
 
 	// Initializing Template Structure
 	configpy := ConfigPy{
-		r.cr.Spec.FQDN,
-		string(gerritadminpassword),
+		fqdn,
+		gerritadminpassword,
 	}
 
 	template, err := parse_string(managesf_conf, configpy)
@@ -70,7 +64,7 @@ func (r *SFController) GenerateManageSFConfig() (string, error) {
 		panic("Template parsing failed")
 	}
 
-	return template, nil
+	return template
 }
 
 func GerritInitContainers(volumeMounts []apiv1.VolumeMount, fqdn string) apiv1.Container {
@@ -218,7 +212,9 @@ func SetGerritMSFRContainer(sts *appsv1.StatefulSet) {
 func (r *SFController) DeployGerrit() bool {
 
 	// Ensure Gerrit Admin API password
-	r.GenerateSecretUUID("gerrit-admin-api-key")
+	adminKeyName := "gerrit-admin-api-key"
+	adminApiKeySecret := r.GenerateSecretUUID(adminKeyName)
+	adminApiKey, _ := GetValueFromKeySecret(adminApiKeySecret, adminKeyName)
 
 	volumeMounts := []apiv1.VolumeMount{
 		{
@@ -229,12 +225,7 @@ func (r *SFController) DeployGerrit() bool {
 
 	// Creating managesf config.py file
 	config_data := make(map[string]string)
-	var err error
-	config_data["config.py"], err = r.GenerateManageSFConfig()
-	if err != nil {
-		r.log.V(1).Error(err, "Unable to generate managesf config file")
-		return false
-	}
+	config_data["config.py"] = GenerateManageSFConfig(string(adminApiKey), r.cr.Spec.FQDN)
 	r.EnsureConfigMap(MANAGESF_RESOURCES_IDENT, config_data)
 
 	// Create the deployment

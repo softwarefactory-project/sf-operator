@@ -49,13 +49,15 @@ func createAPIKeySecret(name string, ns string) apiv1.Secret {
 }
 
 func (g *GerritCMDContext) ensureSecret(
-	name string, secretGen func(string, string) apiv1.Secret) {
-	err := g.cl.Get(g.ctx, client.ObjectKey{Name: name, Namespace: g.ns}, &apiv1.Secret{})
+	name string, secretGen func(string, string) apiv1.Secret) apiv1.Secret {
+	secret := apiv1.Secret{}
+	err := g.cl.Get(g.ctx, client.ObjectKey{Name: name, Namespace: g.ns}, &secret)
 	if err != nil && errors.IsNotFound(err) {
-		secret := secretGen(name, g.ns)
+		secret = secretGen(name, g.ns)
 		err = g.cl.Create(g.ctx, &secret)
 		notifByError(err, "secret", name)
 	}
+	return secret
 }
 
 func (g *GerritCMDContext) ensureService(name string, service apiv1.Service) {
@@ -79,6 +81,19 @@ func (g *GerritCMDContext) ensureRoute(name string, route apiroutev1.Route) {
 	if err != nil && errors.IsNotFound(err) {
 		err = g.cl.Create(g.ctx, &route)
 		notifByError(err, "route", name)
+	}
+}
+
+func (g *GerritCMDContext) ensureCM(name string, data map[string]string) {
+	cmName := name + "-config-map"
+	err := g.cl.Get(g.ctx, client.ObjectKey{Name: cmName, Namespace: g.ns}, &apiv1.ConfigMap{})
+	if err != nil && errors.IsNotFound(err) {
+		cm := apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: g.ns},
+			Data:       data,
+		}
+		err = g.cl.Create(g.ctx, &cm)
+		notifByError(err, "cm", name)
 	}
 }
 
@@ -121,6 +136,9 @@ func (g *GerritCMDContext) ensureGerritSTS() {
 		sts.Spec.Template.Spec.InitContainers = []apiv1.Container{
 			controllers.GerritInitContainers(volumeMounts, fqdn),
 		}
+
+		controllers.SetGerritMSFRContainer(&sts)
+
 		err = g.cl.Create(g.ctx, &sts)
 		notifByError(err, "sts", name)
 	}
@@ -191,7 +209,9 @@ var gerritCmd = &cobra.Command{
 			g.ensureSecret("zuul-ssh-key", controllers.CreateSSHKeySecret)
 
 			// Ensure the admin API key secret
-			g.ensureSecret("gerrit-admin-api-key", createAPIKeySecret)
+			adminApiKeyName := "gerrit-admin-api-key"
+			adminApiKeySecret := g.ensureSecret(adminApiKeyName, createAPIKeySecret)
+			adminApiKey, _ := controllers.GetValueFromKeySecret(adminApiKeySecret, adminApiKeyName)
 
 			// Ensure the zuul API key secret
 			g.ensureSecret("zuul-gerrit-api-key", createAPIKeySecret)
@@ -201,6 +221,11 @@ var gerritCmd = &cobra.Command{
 
 			// Ensure sshd Service
 			g.ensureService(controllers.GERRIT_SSHD_PORT_NAME, controllers.GerritSshdService(ns))
+
+			// Ensure configMap for managesf-resources
+			cm_data := make(map[string]string)
+			cm_data["config.py"] = controllers.GenerateManageSFConfig(string(adminApiKey), fqdn)
+			g.ensureCM(controllers.MANAGESF_RESOURCES_IDENT, cm_data)
 
 			// Ensure gerrit statefulset
 			g.ensureGerritSTS()
@@ -250,6 +275,10 @@ var gerritCmd = &cobra.Command{
 					PropagationPolicy: &backgroundDeletion,
 				},
 			)
+
+			// Delete managesf-resources ConfigMap
+			cl.Delete(ctx,
+				&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: controllers.MANAGESF_RESOURCES_IDENT + "-config-map", Namespace: ns}})
 
 			// Delete Gerrit route
 			cl.Delete(ctx,
