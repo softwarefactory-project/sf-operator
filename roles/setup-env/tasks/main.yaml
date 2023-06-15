@@ -18,4 +18,4 @@
           - git-review
           - kubernetes
           - oauthlib>=3.2.2
-          - websocket-client==1.5.1
+          - websocket-client
