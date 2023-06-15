@@ -13,6 +13,8 @@
       ansible.builtin.include_role:
         name: "{{ item }}"
       loop:
+        - create-nodepool-image
+        - create-nodepool-config
         - run-operator-dev
       vars:
         create_test_bundle_ns: false
@@ -23,6 +25,8 @@
         name: "{{ item }}"
       loop:
         - build-operator-assets
+        - create-nodepool-image
+        - create-nodepool-config
         - clean-installations
         - install-operator
       when: mode == 'olm'

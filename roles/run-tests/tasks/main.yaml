@@ -53,3 +53,7 @@
 - name: Validate purgelogs
   ansible.builtin.include_role:
     name: "roles/health-check/validate-purgelogs"
+
+- name: Test job are starting on Microshift
+  ansible.builtin.include_role:
+    name: roles/health-check/pod-spawning

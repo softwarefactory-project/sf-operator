@@ -94,7 +94,13 @@ kubectl config current-context
    kubectl apply -f ./my-sf.yaml
    ```
 
-5. Start the operator:
+5. Create Nodepool serviceAccount and secret
+
+    ```sh
+    ./tools/create-nodepool-sa.sh
+    ```
+
+6. Start the operator:
 
    ```sh
    go run ./main.go --namespace sf
@@ -454,6 +460,27 @@ To change the default names for the namespaces, run the command with the followi
 
 ```sh
 ./tools/sfconfig operator -a --bundlenamespace <catalog namespace name> --namespacename < Software Factory namespace name>
+
+# hold node
+
+```sh
+kubectl get secrets zuul-config -o jsonpath="{ .data.zuul\.conf }" | base64 -d > ~/zuul.conf
+
+cat << 'EOF' > autohold.sh
+#!/bin/bash
+podman run \
+    -v $HOME/zuul.conf:/etc/zuul/zuul.conf:z \
+    --network host \
+    --rm \
+    --name zc_container \
+    quay.io/software-factory/zuul-client:0.1.0-f96ddd00fc69d8a4d51eb207ef322b99983d1fe8-1 \
+    --zuul-url https://zuul.sftests.com \
+    --use-config /etc/zuul/zuul.conf \
+    $*
+EOF
+
+chmod 0755 ~/autohold.sh
+~/autohold.sh --use-config /etc/zuul/zuul.conf autohold --tenant internal --project config --change 1 --job test  --reason dpawlik --node-hold-expiration 86400
 ```
 
 #### hold node

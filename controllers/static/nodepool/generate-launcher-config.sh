@@ -16,6 +16,22 @@ zookeeper-tls:
   ca: /tls/client/ca.crt
   cert: /tls/client/tls.crt
   key: /tls/client/tls.key
+labels:
+  - name: f38-nonroot
+providers:
+  - name: microshiftLocal
+    driver: openshiftpods
+    context: microshift
+    pools:
+      # NOTE: name is a name of the namespace
+      # https://github.com/softwarefactory-project/sf-config/blob/master/ansible/roles/sf-repos/files/config/nodepool/openshift.yaml#L30
+      # https://zuul-ci.org/docs/nodepool/latest/openshift-pods.html
+      - name: nodepool
+        labels:
+          # FIXME: move the image to quay.io
+          - name: f38-nonroot
+            image: localhost/local:f38-nonroot
+            python-path: /bin/python3
 EOF
 
 if [ "$CONFIG_REPO_SET" == "TRUE" ]; then

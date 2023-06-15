@@ -196,7 +196,19 @@ cat << EOF > playbooks/base/pre.yaml
 
 - hosts: all
   tasks:
-    - zuul_console:
+    - include_role: name=start-zuul-console
+    - block:
+        - include_role: name=validate-host
+        - include_role: name=prepare-workspace
+        - include_role: name=add-build-sshkey
+      when: "ansible_connection != 'kubectl'"
+    - block:
+        - include_role: name=prepare-workspace-openshift
+        - include_role: name=remove-zuul-sshkey
+      run_once: true
+      when: "ansible_connection == 'kubectl'"
+    - import_role: name=ensure-output-dirs
+      when: ansible_user_dir is defined
 EOF
 
 cat << EOF > playbooks/base/post.yaml

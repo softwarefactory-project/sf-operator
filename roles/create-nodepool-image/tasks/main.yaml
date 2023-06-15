@@ -1,0 +1,21 @@
+---
+- name: Create non root container image
+  delegate_to: "{{ os_host }}"
+  block:
+    - name: Create non-root image
+      become: true
+      ansible.builtin.command: |
+        buildah build -t localhost/local:f38-nonroot -f FedoraDockerfile
+      args:
+        chdir: "{{ src_dir }}"
+
+    - name: Check if the image is available in cri-o
+      become: true
+      ansible.builtin.command: |
+        crictl image -q localhost/local:f38-nonroot
+      register: _crio_nonroot_image
+
+    - name: Check if image is available
+      ansible.builtin.assert:
+        that:
+          - _crio_nonroot_image.stdout != ''

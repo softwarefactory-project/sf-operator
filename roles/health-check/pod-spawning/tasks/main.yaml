@@ -1,0 +1,145 @@
+---
+- name: Get admin token
+  ansible.builtin.include_role:
+    name: utils/get-gerrit-admin-user-api-key
+  when: gerrit_admin_api_key is not defined
+
+- name: Reset config dir to HEAD
+  ansible.builtin.command: "{{ item }}"
+  loop:
+    - "git remote update"
+    - "git checkout origin/master"
+  args:
+    chdir: "{{ config_path }}"
+
+- name: Ensure playbooks and zuul.d dir exists
+  ansible.builtin.file:
+    path: "{{ config_path }}/{{ item }}"
+    state: directory
+  loop:
+    - "playbooks"
+    - "zuul.d"
+
+- name: Create new zuul config
+  ansible.builtin.copy:
+    content: |
+      ---
+      - job:
+          name: microshift-pod
+          run: playbooks/microshift-pod.yml
+          nodeset:
+            nodes:
+              - name: container
+                label: f38-nonroot
+
+      - project:
+          check:
+            jobs:
+              - config-check
+              - microshift-pod
+          gate:
+            jobs:
+              - config-check
+              - microshift-pod
+          post:
+            jobs:
+              - config-update
+    dest: "{{ config_path }}/zuul.d/config.yaml"
+
+- name: Create simple playbook
+  ansible.builtin.copy:
+    content: |
+      ---
+      - hosts: localhost,all
+        tasks:
+          - name: Doing command
+            command: sleep 2
+    dest: "{{ config_path }}/playbooks/microshift-pod.yml"
+
+- name: Add random file so tests can be executed more times
+  ansible.builtin.file:
+    path: "{{ config_path }}/{{ lookup('community.general.random_string', special=false) }}"
+    state: touch
+
+- name: Create git commit message
+  ansible.builtin.command: "{{ item }}"
+  args:
+    chdir: "{{ config_path }}"
+  loop:
+    - "git add ."
+    - "git commit -m 'Add simple label and playbook'"
+
+- name: Submit change
+  ansible.builtin.include_role:
+    name: health-check/config-repo-submit-change
+    tasks_from: submit-change.yaml
+
+- name: Ensure change is SUCCESS
+  ansible.builtin.include_role:
+    name: health-check/config-repo-submit-change
+    tasks_from: ensure-config-update-success.yaml
+
+- name: Checkout to the last commit
+  ansible.builtin.shell: "{{ item }}"
+  args:
+    chdir: "{{ config_path }}"
+  loop:
+    - "git remote update"
+    - "git checkout origin/master"
+
+- name: Add random file to config repo to trigger microshift-pod job
+  ansible.builtin.file:
+    path: "{{ config_path }}/{{ lookup('community.general.random_string', special=false) }}"
+    state: touch
+
+- name: Create new patchset in config repo to trigger microshift-pod job
+  ansible.builtin.shell: "{{ item }}"
+  args:
+    chdir: "{{ config_path }}"
+  loop:
+    - "git add ."
+    - "git commit -m 'Add testfile to trigger microshift-pod'"
+
+- name: Submit change to verify microshift-pod
+  ansible.builtin.include_role:
+    name: health-check/config-repo-submit-change
+    tasks_from: submit-change.yaml
+
+- name: Ensure, that the microshift-pod job pod is started
+  ansible.builtin.shell: |
+    kubectl -n nodepool get event -o custom-columns=NAME:.metadata.name | cut -d "." -f1 | grep f38-nonroot
+  register: _f38_nodepool_pods
+  until:
+    - _f38_nodepool_pods.stdout != ""
+  retries: 30
+  delay: 10
+
+- name: Ensure, that the pod list is not empty
+  ansible.builtin.assert:
+    that:
+      - "_f38_nodepool_pods.stdout != ''"
+
+- name: Wait for microshift-pod job
+  ansible.builtin.shell: |
+    curl -sk https://{{ zuul_host }}/api/tenant/internal/status | jq -r '.pipelines[].change_queues[].heads[][].jobs[]' | jq -rc 'select(.name == "microshift-pod")' | jq -r '.uuid'
+  register: _job_uuid
+  until: _job_uuid.stdout != "" and "null" not in _job_uuid.stdout
+  retries: 60
+  delay: 1
+  tags:
+    - skip_ansible_lint
+
+- name: Wait for last result for microshift-pod using zuul-web API
+  ansible.builtin.uri:
+    url: "{{ zuul_web_url }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=microshift-pod"
+    return_content: true
+    body_format: json
+    validate_certs: false
+  register: zuul_job_result
+  until:
+    - "'json' in zuul_job_result"
+    - zuul_job_result.json != []
+    - "'result' in zuul_job_result.json[0]"
+    - zuul_job_result.json[0]["result"] == 'SUCCESS'
+  retries: 60
+  delay: 30

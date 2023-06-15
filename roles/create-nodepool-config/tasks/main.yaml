@@ -1,0 +1,47 @@
+---
+- name: Create Nodepool SA and add secret
+  delegate_to: "{{ os_host }}"
+  block:
+    - name: Create nodepool serviceAccount
+      ansible.builtin.command: >
+        kubectl apply -f {{ src_dir }}/tools/nodepool-microshift-service-account.yaml
+
+    - name: Fetch the generated token from
+      ansible.builtin.shell: >
+        kubectl --namespace nodepool get secrets nodepool-sa-secret
+        -o jsonpath="{ .data.token }" | base64 -d
+      register: _nodepool_sa_token
+
+    - name: Get certificate-authority-data
+      ansible.builtin.shell: >
+        grep certificate-authority-data $(realpath ~/.kube/config) | awk '{print $2}'
+      register: _kubeconfig_ca_data
+
+    - name: Generate kube.config
+      ansible.builtin.copy:
+        content: |
+          apiVersion: v1
+          clusters:
+          - cluster:
+              certificate-authority-data: {{ _kubeconfig_ca_data.stdout }}
+              server: https://{{ ansible_default_ipv4.address }}:6443
+            name: microshift
+          contexts:
+          - context:
+              cluster: microshift
+              namespace: nodepool
+              user: nodepool
+            name: microshift
+          current-context: microshift
+          kind: Config
+          preferences: {}
+          users:
+          - name: nodepool
+            user:
+              token: {{ _nodepool_sa_token.stdout }}
+        dest: ~/.kube/nodepool.config
+
+    - name: Create nodepool-kubeconfig secret
+      ansible.builtin.shell: >
+        /usr/bin/kubectl create secret generic nodepool-kubeconfig
+        --from-file=config=$(realpath ~/.kube/nodepool.config)

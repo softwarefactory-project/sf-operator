@@ -8,6 +8,7 @@ import (
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //go:embed static/nodepool/generate-launcher-config.sh
@@ -15,6 +16,9 @@ var generateConfigScript string
 
 //go:embed static/nodepool/logging.yaml.tmpl
 var loggingConfigTemplate string
+
+//go:embed static/nodepool/kubeconfig
+var kubeconfig string
 
 const NL_IDENT = "nodepool-launcher"
 const NL_WEBAPP_PORT_NAME = "nlwebapp"
@@ -80,8 +84,19 @@ func (r *SFController) DeployNodepool() bool {
 	launcher_extra_config_data["logging.yaml"] = loggingConfig
 	r.EnsureConfigMap("nodepool-launcher-extra-config", launcher_extra_config_data)
 
+	if len(kubeconfig) != 0 {
+		r.log.V(1).Info("Static nodepool kubeconfig is not empty! Updating secret...")
+		r.EnsureSecret(&apiv1.Secret{
+			Data: map[string][]byte{
+				"config": []byte(kubeconfig),
+			},
+			ObjectMeta: metav1.ObjectMeta{Name: "nodepool-kubeconfig", Namespace: r.ns},
+		})
+	}
+
 	volumes := []apiv1.Volume{
 		create_volume_secret("zookeeper-client-tls"),
+		create_volume_secret("nodepool-kubeconfig", "nodepool-kubeconfig"),
 		create_empty_dir("nodepool-config"),
 		{
 			Name: "nodepool-launcher-tooling-vol",
@@ -113,6 +128,11 @@ func (r *SFController) DeployNodepool() bool {
 			SubPath:   "logging.yaml",
 			MountPath: "/etc/nodepool-logging/logging.yaml",
 		},
+		{
+			Name:      "nodepool-kubeconfig",
+			MountPath: ".kube/config",
+			SubPath:   "config",
+		},
 	}
 
 	_, err := r.getSecretbyNameRef("nodepool-providers-secrets")
@@ -137,6 +157,7 @@ func (r *SFController) DeployNodepool() bool {
 		"nodepool.yaml":         checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml": checksum([]byte(loggingConfig)),
 		"serial":                "3",
+		"nodepool-kubeconfig":   checksum([]byte(kubeconfig)),
 	}
 
 	if r.isConfigRepoSet() {

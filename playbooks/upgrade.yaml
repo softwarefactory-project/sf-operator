@@ -13,6 +13,8 @@
     - role: install-operator
       vars:
         ci_bundle_img: quay.io/software-factory/sf-operator-bundle:latest
+    - create-nodepool-image
+    - create-nodepool-config
     - apply-custom-resources
     - role: build-operator-assets
       vars:
