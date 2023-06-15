@@ -28,6 +28,8 @@ const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.6.4-4"
 const GERRIT_EP_MOUNT_PATH = "/entry"
 const GERRIT_SITE_MOUNT_PATH = "/gerrit"
 
+const MANAGESF_RESOURCES_IDENT string = "managesf-resources"
+
 //go:embed static/gerrit/post-init.sh
 var postInitScript string
 
@@ -36,6 +38,40 @@ var entrypoint string
 
 //go:embed static/gerrit/init.sh
 var gerritInitScript string
+
+//go:embed static/managesf-resources/entrypoint.sh
+var managesf_entrypoint string
+
+//go:embed static/managesf-resources/config.py.tmpl
+var managesf_conf string
+
+func (r *SFController) GenerateManageSFConfig() (string, error) {
+
+	// Getting Gerrit Admin password from secret
+	gerritadminpassword, err := r.getSecretData("gerrit-admin-api-key")
+	if err != nil {
+		return "", err
+	}
+
+	// Structure for config.py file template
+	type ConfigPy struct {
+		Fqdn                string
+		GerritAdminPassword string
+	}
+
+	// Initializing Template Structure
+	configpy := ConfigPy{
+		r.cr.Spec.FQDN,
+		string(gerritadminpassword),
+	}
+
+	template, err := parse_string(managesf_conf, configpy)
+	if err != nil {
+		panic("Template parsing failed")
+	}
+
+	return template, nil
+}
 
 func GerritInitContainers(volumeMounts []apiv1.VolumeMount, fqdn string) apiv1.Container {
 	container := MkContainer("gerrit-init", GERRIT_IMAGE)
@@ -148,6 +184,37 @@ func SetGerritSTSContainer(sts *appsv1.StatefulSet, volumeMounts []apiv1.VolumeM
 	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_cmd_probe([]string{"bash", "/gerrit/ready.sh"})
 }
 
+func SetGerritMSFRContainer(sts *appsv1.StatefulSet) {
+	container := MkContainer(MANAGESF_RESOURCES_IDENT, BUSYBOX_IMAGE)
+	container.Command = []string{"sh", "-c", managesf_entrypoint}
+	container.Env = []apiv1.EnvVar{
+		create_env("HOME", "/var/lib/managesf"),
+		// managesf-resources need an admin ssh access to the local Gerrit
+		create_secret_env("SF_ADMIN_SSH", "admin-ssh-key", "priv"),
+	}
+	container.VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      MANAGESF_RESOURCES_IDENT + "-config-vol",
+			MountPath: "/etc/managesf",
+		},
+		// managesf-resources command uses (by default) this directory for its cache
+		{
+			Name:      MANAGESF_RESOURCES_IDENT + "-cache",
+			MountPath: "/var/lib/software-factory",
+		},
+		{
+			Name:      MANAGESF_RESOURCES_IDENT + "-home",
+			MountPath: "/var/lib/managesf",
+		},
+	}
+	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, container)
+	sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes,
+		create_empty_dir(MANAGESF_RESOURCES_IDENT+"-home"),
+		create_empty_dir(MANAGESF_RESOURCES_IDENT+"-cache"),
+		create_volume_cm(MANAGESF_RESOURCES_IDENT+"-config-vol", MANAGESF_RESOURCES_IDENT+"-config-map"),
+	)
+}
+
 func (r *SFController) DeployGerrit() bool {
 
 	// Ensure Gerrit Admin API password
@@ -160,18 +227,37 @@ func (r *SFController) DeployGerrit() bool {
 		},
 	}
 
+	// Creating managesf config.py file
+	config_data := make(map[string]string)
+	var err error
+	config_data["config.py"], err = r.GenerateManageSFConfig()
+	if err != nil {
+		r.log.V(1).Error(err, "Unable to generate managesf config file")
+		return false
+	}
+	r.EnsureConfigMap(MANAGESF_RESOURCES_IDENT, config_data)
+
 	// Create the deployment
-	replicas := int32(1)
-	storage_config := BaseGetStorageConfOrDefault(v1.StorageSpec{}, "")
-	dep := r.create_statefulset(GERRIT_IDENT, GERRIT_IMAGE, storage_config, replicas)
+	dep := r.create_statefulset(
+		GERRIT_IDENT,
+		GERRIT_IMAGE,
+		BaseGetStorageConfOrDefault(v1.StorageSpec{}, ""),
+		int32(1))
 
 	// Setup the main container
 	SetGerritSTSContainer(&dep, volumeMounts, r.cr.Spec.FQDN)
+
+	// Setup the init container
 	dep.Spec.Template.Spec.InitContainers = []apiv1.Container{GerritInitContainers(volumeMounts, r.cr.Spec.FQDN)}
+
+	// Setup the managesf-resources sidecar container
+	SetGerritMSFRContainer(&dep)
 
 	// Create annotations based on Gerrit parameters
 	annotations := map[string]string{
 		"fqdn": r.cr.Spec.FQDN,
+		// The serial is a just a way to trigger rollout
+		"serial": "1",
 	}
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	r.GetOrCreate(&dep)
@@ -180,6 +266,8 @@ func (r *SFController) DeployGerrit() bool {
 		dep.Spec.Template.ObjectMeta.Annotations = annotations
 		// ReInit initContainers to ensure new spec is used
 		dep.Spec.Template.Spec.InitContainers = []apiv1.Container{GerritInitContainers(volumeMounts, r.cr.Spec.FQDN)}
+		// Ensure the managesf-ressource container
+		SetGerritMSFRContainer(&dep)
 		r.log.V(1).Info("Gerrit configuration changed, restarting ...")
 		// Update the deployment resource
 		r.UpdateR(&dep)

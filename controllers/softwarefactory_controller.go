@@ -162,8 +162,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		services["Config"] = r.SetupConfigJob()
 	}
 
-	services["ManagesfResources"] = r.DeployManagesfResources()
-
 	r.log.V(1).Info(messageInfo(r, services))
 
 	ready := isOperatorReady(services)

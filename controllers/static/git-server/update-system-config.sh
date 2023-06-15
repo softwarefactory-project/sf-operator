@@ -265,19 +265,11 @@ cat << EOF > roles/add-k8s-hosts/tasks/main.yaml
     ansible_kubectl_container: zuul-scheduler
     ansible_kubectl_pod: "zuul-scheduler-0"
 
-- name: Fetch managesf-resources Pod info
-  # https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_info_module.html
-  kubernetes.core.k8s_info:
-    kind: Pod
-    label_selectors:
-      - "run = managesf-resources"
-    namespace: "{{ k8s_config['namespace'] }}"
-  register: managesf_resources_info
-
 - add_host:
     name: "managesf-resources"
     ansible_connection: kubectl
-    ansible_kubectl_pod: "{{ managesf_resources_info.resources[0].metadata.name }}"
+    ansible_kubectl_container: managesf-resources
+    ansible_kubectl_pod: "gerrit-0"
 
 EOF
 
