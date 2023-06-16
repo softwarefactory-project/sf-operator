@@ -1200,3 +1200,5 @@ func (r *SFController) getConfigRepoCNXInfo() (string, string) {
 func int32Ptr(i int32) *int32 { return &i }
 func boolPtr(b bool) *bool    { return &b }
 func strPtr(s string) *string { return &s }
+
+var execmod int32 = 493 // decimal for 0755 octal

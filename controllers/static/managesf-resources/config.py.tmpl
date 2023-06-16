@@ -4,7 +4,6 @@ admin = {
 }
 
 resources = {
-    'workdir': '/var/lib/managesf',
     'subdir': 'resources',
     'master_repo': 'http://gerrit-httpd:8080/config',
     'tenant_name': 'local',
@@ -18,5 +17,5 @@ gerrit = {
     'host': 'gerrit-sshd',
     'top_domain': '{{ .Fqdn }}',
     'ssh_port': 29418,
-    'sshkey_priv_path': '/var/lib/managesf/.ssh/id_rsa',
+    'sshkey_priv_path': '~/.ssh/id_rsa',
 }

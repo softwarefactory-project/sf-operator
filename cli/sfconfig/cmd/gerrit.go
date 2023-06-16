@@ -37,7 +37,7 @@ var fqdn = "sf.dev"
 
 func notifByError(err error, oType string, name string) {
 	if err != nil {
-		fmt.Println("failed to create", oType, name)
+		fmt.Println("failed to create", oType, name, err)
 		os.Exit(1)
 	} else {
 		fmt.Println("created", oType, name)
@@ -103,6 +103,7 @@ func (g *GerritCMDContext) ensureGerritPostInitJob() {
 		job_name, g.ns,
 		controllers.GerritPostInitContainer(job_name, fqdn),
 	)
+	job.Spec.Template.Spec.Volumes = controllers.ManageSFVolumes
 	g.ensureJob(job_name, job)
 }
 
@@ -137,7 +138,9 @@ func (g *GerritCMDContext) ensureGerritSTS() {
 			controllers.GerritInitContainers(volumeMounts, fqdn),
 		}
 
-		controllers.SetGerritMSFRContainer(&sts)
+		controllers.SetGerritMSFRContainer(&sts, fqdn)
+
+		controllers.SetGerritSTSVolumes(&sts)
 
 		err = g.cl.Create(g.ctx, &sts)
 		notifByError(err, "sts", name)
@@ -222,10 +225,13 @@ var gerritCmd = &cobra.Command{
 			// Ensure sshd Service
 			g.ensureService(controllers.GERRIT_SSHD_PORT_NAME, controllers.GerritSshdService(ns))
 
-			// Ensure configMap for managesf-resources
+			// Ensure configMaps for managesf-resources
 			cm_data := make(map[string]string)
 			cm_data["config.py"] = controllers.GenerateManageSFConfig(string(adminApiKey), fqdn)
 			g.ensureCM(controllers.MANAGESF_RESOURCES_IDENT, cm_data)
+			tooling_data := make(map[string]string)
+			tooling_data["create-repo.sh"] = controllers.CreateRepoScript
+			g.ensureCM(controllers.MANAGESF_RESOURCES_IDENT+"-tooling", tooling_data)
 
 			// Ensure gerrit statefulset
 			g.ensureGerritSTS()
@@ -279,6 +285,8 @@ var gerritCmd = &cobra.Command{
 			// Delete managesf-resources ConfigMap
 			cl.Delete(ctx,
 				&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: controllers.MANAGESF_RESOURCES_IDENT + "-config-map", Namespace: ns}})
+			cl.Delete(ctx,
+				&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: controllers.MANAGESF_RESOURCES_IDENT + "-tooling-config-map", Namespace: ns}})
 
 			// Delete Gerrit route
 			cl.Delete(ctx,

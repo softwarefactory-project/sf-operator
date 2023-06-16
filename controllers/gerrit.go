@@ -45,6 +45,9 @@ var managesf_entrypoint string
 //go:embed static/managesf-resources/config.py.tmpl
 var managesf_conf string
 
+//go:embed static/sf_operator/create-repo.sh
+var CreateRepoScript string
+
 func GenerateManageSFConfig(gerritadminpassword string, fqdn string) string {
 
 	// Structure for config.py file template
@@ -91,7 +94,33 @@ func GerritPostInitContainer(job_name string, fqdn string) apiv1.Container {
 	container := MkContainer(fmt.Sprintf("%s-container", job_name), BUSYBOX_IMAGE)
 	container.Command = []string{"sh", "-c", postInitScript}
 	container.Env = env
+	container.VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      MANAGESF_RESOURCES_IDENT + "-config-vol",
+			MountPath: "/etc/managesf",
+		},
+		{
+			Name:      MANAGESF_RESOURCES_IDENT + "-tooling-vol",
+			MountPath: "/usr/share/managesf",
+		},
+	}
 	return container
+}
+
+var ManageSFVolumes = []apiv1.Volume{
+	create_volume_cm(MANAGESF_RESOURCES_IDENT+"-config-vol",
+		MANAGESF_RESOURCES_IDENT+"-config-map"),
+	{
+		Name: MANAGESF_RESOURCES_IDENT + "-tooling-vol",
+		VolumeSource: apiv1.VolumeSource{
+			ConfigMap: &apiv1.ConfigMapVolumeSource{
+				LocalObjectReference: apiv1.LocalObjectReference{
+					Name: MANAGESF_RESOURCES_IDENT + "-tooling-config-map",
+				},
+				DefaultMode: &execmod,
+			},
+		},
+	},
 }
 
 func (r *SFController) GerritPostInitJob(name string) bool {
@@ -102,6 +131,7 @@ func (r *SFController) GerritPostInitJob(name string) bool {
 	if !found {
 		container := GerritPostInitContainer(job_name, r.cr.Spec.FQDN)
 		job := MkJob(job_name, r.ns, container)
+		job.Spec.Template.Spec.Volumes = ManageSFVolumes
 		r.log.V(1).Info("Creating Gerrit post init job", "name", name)
 		r.CreateR(&job)
 		return false
@@ -178,11 +208,12 @@ func SetGerritSTSContainer(sts *appsv1.StatefulSet, volumeMounts []apiv1.VolumeM
 	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_cmd_probe([]string{"bash", "/gerrit/ready.sh"})
 }
 
-func SetGerritMSFRContainer(sts *appsv1.StatefulSet) {
+func SetGerritMSFRContainer(sts *appsv1.StatefulSet, fqdn string) {
 	container := MkContainer(MANAGESF_RESOURCES_IDENT, BUSYBOX_IMAGE)
 	container.Command = []string{"sh", "-c", managesf_entrypoint}
 	container.Env = []apiv1.EnvVar{
-		create_env("HOME", "/var/lib/managesf"),
+		create_env("HOME", "/tmp"),
+		create_env("FQDN", fqdn),
 		// managesf-resources need an admin ssh access to the local Gerrit
 		create_secret_env("SF_ADMIN_SSH", "admin-ssh-key", "priv"),
 	}
@@ -191,21 +222,17 @@ func SetGerritMSFRContainer(sts *appsv1.StatefulSet) {
 			Name:      MANAGESF_RESOURCES_IDENT + "-config-vol",
 			MountPath: "/etc/managesf",
 		},
-		// managesf-resources command uses (by default) this directory for its cache
 		{
-			Name:      MANAGESF_RESOURCES_IDENT + "-cache",
-			MountPath: "/var/lib/software-factory",
-		},
-		{
-			Name:      MANAGESF_RESOURCES_IDENT + "-home",
-			MountPath: "/var/lib/managesf",
+			Name:      MANAGESF_RESOURCES_IDENT + "-tooling-vol",
+			MountPath: "/usr/share/managesf",
 		},
 	}
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, container)
+}
+
+func SetGerritSTSVolumes(sts *appsv1.StatefulSet) {
 	sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes,
-		create_empty_dir(MANAGESF_RESOURCES_IDENT+"-home"),
-		create_empty_dir(MANAGESF_RESOURCES_IDENT+"-cache"),
-		create_volume_cm(MANAGESF_RESOURCES_IDENT+"-config-vol", MANAGESF_RESOURCES_IDENT+"-config-map"),
+		ManageSFVolumes...,
 	)
 }
 
@@ -228,6 +255,11 @@ func (r *SFController) DeployGerrit() bool {
 	config_data["config.py"] = GenerateManageSFConfig(string(adminApiKey), r.cr.Spec.FQDN)
 	r.EnsureConfigMap(MANAGESF_RESOURCES_IDENT, config_data)
 
+	// Tooling for managesf
+	tooling_data := make(map[string]string)
+	tooling_data["create-repo.sh"] = CreateRepoScript
+	r.EnsureConfigMap(MANAGESF_RESOURCES_IDENT+"-tooling", tooling_data)
+
 	// Create the deployment
 	dep := r.create_statefulset(
 		GERRIT_IDENT,
@@ -242,13 +274,16 @@ func (r *SFController) DeployGerrit() bool {
 	dep.Spec.Template.Spec.InitContainers = []apiv1.Container{GerritInitContainers(volumeMounts, r.cr.Spec.FQDN)}
 
 	// Setup the managesf-resources sidecar container
-	SetGerritMSFRContainer(&dep)
+	SetGerritMSFRContainer(&dep, r.cr.Spec.FQDN)
+
+	// Set volumes
+	SetGerritSTSVolumes(&dep)
 
 	// Create annotations based on Gerrit parameters
 	annotations := map[string]string{
 		"fqdn": r.cr.Spec.FQDN,
 		// The serial is a just a way to trigger rollout
-		"serial": "1",
+		"serial": "2",
 	}
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	r.GetOrCreate(&dep)
@@ -257,8 +292,9 @@ func (r *SFController) DeployGerrit() bool {
 		dep.Spec.Template.ObjectMeta.Annotations = annotations
 		// ReInit initContainers to ensure new spec is used
 		dep.Spec.Template.Spec.InitContainers = []apiv1.Container{GerritInitContainers(volumeMounts, r.cr.Spec.FQDN)}
+		SetGerritSTSVolumes(&dep)
 		// Ensure the managesf-ressource container
-		SetGerritMSFRContainer(&dep)
+		SetGerritMSFRContainer(&dep, r.cr.Spec.FQDN)
 		r.log.V(1).Info("Gerrit configuration changed, restarting ...")
 		// Update the deployment resource
 		r.UpdateR(&dep)

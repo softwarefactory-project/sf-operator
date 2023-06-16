@@ -25,15 +25,15 @@ create_ci_user () {
 mkdir ~/.ssh
 chmod 0700 ~/.ssh
 
-echo "${GERRIT_ADMIN_SSH}" > ~/.ssh/gerrit_admin
-chmod 0400 ~/.ssh/gerrit_admin
+echo "${GERRIT_ADMIN_SSH}" > ~/.ssh/id_rsa
+chmod 0400 ~/.ssh/id_rsa
 
 cat << EOF > ~/.ssh/config
 Host gerrit
 User admin
 Hostname ${GERRIT_SSHD_PORT_29418_TCP_ADDR}
 Port ${GERRIT_SSHD_SERVICE_PORT_GERRIT_SSHD}
-IdentityFile ~/.ssh/gerrit_admin
+IdentityFile ~/.ssh/id_rsa
 StrictHostKeyChecking no
 EOF
 
@@ -126,85 +126,12 @@ create_ci_user zuul "${ZUUL_SSH_PUB_KEY}" "zuul@${FQDN}"
 echo "Ensure Zuul user accounts API Key added into Gerrit"
 ssh gerrit gerrit set-account zuul --http-password "${ZUUL_HTTP_PASSWORD}"
 
-echo "Setup managesf config file"
-cat << EOF > ~/config.py
-gerrit = {
-    'url': 'http://gerrit-httpd:${GERRIT_HTTPD_SERVICE_PORT}/a/',
-    'password': '${GERRIT_ADMIN_API_KEY}',
-    'host': '${GERRIT_SSHD_SERVICE_HOST}',
-    'top_domain': '${FQDN}',
-    'ssh_port': 29418,
-    'sshkey_priv_path': '~/.ssh/gerrit_admin',
-}
-
-resources = {
-    'subdir': 'resources',
-}
-
-admin = {
-    'name': 'admin',
-    'email': 'admin@${FQDN}',
-}
-EOF
-
 # Ensure HTTP access via basic auth for further provisioning
 curl --fail -i -u admin:${GERRIT_ADMIN_API_KEY} http://gerrit-httpd:${GERRIT_HTTPD_SERVICE_PORT}/a/accounts/admin
 
 if ! $(ssh gerrit gerrit ls-projects | grep -q "^config$"); then
   echo "Create config repository and related groups"
-  cat << EOF > ~/prev.yaml
-resources: {}
-EOF
-  cat << EOF > ~/new.yaml
-resources:
-  acls:
-    config-acl:
-      file: |
-        [access "refs/*"]
-          read = group config-core
-          owner = group config-ptl
-        [access "refs/heads/*"]
-          label-Code-Review = -2..+2 group config-core
-          label-Code-Review = -2..+2 group config-ptl
-          label-Verified = -2..+2 group config-ptl
-          label-Workflow = -1..+1 group config-core
-          label-Workflow = -1..+1 group config-ptl
-          label-Workflow = -1..+0 group Registered Users
-          rebase = group config-core
-          abandon = group config-core
-          submit = group config-ptl
-          read = group config-core
-          read = group Registered Users
-        [access "refs/meta/config"]
-          read = group config-core
-          read = group Registered Users
-        [receive]
-          requireChangeId = true
-        [submit]
-          mergeContent = false
-          action = fast forward only
-      groups:
-        - config-core
-        - config-ptl
-      name: config-acl
-  groups:
-    config-core:
-      description: Team core for the config repo
-      members: []
-      name: config-core
-    config-ptl:
-      description: Team lead for the config repo
-      members:
-        - "admin@${FQDN}"
-      name: config-ptl
-  repos:
-    config:
-      acl: config-acl
-      description: Config repository
-      name: config
-EOF
-  managesf-resources --managesf-config ~/config.py \
-    --cache-dir ~/ direct-apply --new-yaml ~/new.yaml --prev-yaml ~/prev.yaml
+  /usr/share/managesf/create-repo.sh config
 else
   echo "config repository already exists"
 fi

@@ -85,8 +85,7 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 }
 
 func create_zuul_volumes(service string) []apiv1.Volume {
-	var mod int32 = 256     // decimal for 0400 octal
-	var execmod int32 = 493 // decimal for 0755 octal
+	var mod int32 = 256 // decimal for 0400 octal
 	volumes := []apiv1.Volume{
 		create_volume_secret("ca-cert"),
 		create_volume_secret("zuul-config"),
