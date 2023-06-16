@@ -231,6 +231,7 @@ var gerritCmd = &cobra.Command{
 			g.ensureCM(controllers.MANAGESF_RESOURCES_IDENT, cm_data)
 			tooling_data := make(map[string]string)
 			tooling_data["create-repo.sh"] = controllers.CreateRepoScript
+			tooling_data["create-ci-user.sh"] = controllers.CreateCIUserScript
 			g.ensureCM(controllers.MANAGESF_RESOURCES_IDENT+"-tooling", tooling_data)
 
 			// Ensure gerrit statefulset

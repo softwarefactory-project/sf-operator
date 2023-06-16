@@ -39,14 +39,17 @@ var entrypoint string
 //go:embed static/gerrit/init.sh
 var gerritInitScript string
 
-//go:embed static/managesf-resources/entrypoint.sh
+//go:embed static/gerrit/msf-entrypoint.sh
 var managesf_entrypoint string
 
-//go:embed static/managesf-resources/config.py.tmpl
+//go:embed static/gerrit/config.py.tmpl
 var managesf_conf string
 
-//go:embed static/sf_operator/create-repo.sh
+//go:embed static/gerrit/create-repo.sh
 var CreateRepoScript string
+
+//go:embed static/gerrit/create-ci-user.sh
+var CreateCIUserScript string
 
 func GenerateManageSFConfig(gerritadminpassword string, fqdn string) string {
 
@@ -227,13 +230,14 @@ func SetGerritMSFRContainer(sts *appsv1.StatefulSet, fqdn string) {
 			MountPath: "/usr/share/managesf",
 		},
 	}
-	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, container)
+
+	if len(sts.Spec.Template.Spec.Containers) < 2 {
+		sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, container)
+	}
 }
 
 func SetGerritSTSVolumes(sts *appsv1.StatefulSet) {
-	sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes,
-		ManageSFVolumes...,
-	)
+	sts.Spec.Template.Spec.Volumes = ManageSFVolumes
 }
 
 func (r *SFController) DeployGerrit() bool {
@@ -255,9 +259,10 @@ func (r *SFController) DeployGerrit() bool {
 	config_data["config.py"] = GenerateManageSFConfig(string(adminApiKey), r.cr.Spec.FQDN)
 	r.EnsureConfigMap(MANAGESF_RESOURCES_IDENT, config_data)
 
-	// Tooling for managesf
+	// Tooling
 	tooling_data := make(map[string]string)
 	tooling_data["create-repo.sh"] = CreateRepoScript
+	tooling_data["create-ci-user.sh"] = CreateCIUserScript
 	r.EnsureConfigMap(MANAGESF_RESOURCES_IDENT+"-tooling", tooling_data)
 
 	// Create the deployment
@@ -283,7 +288,7 @@ func (r *SFController) DeployGerrit() bool {
 	annotations := map[string]string{
 		"fqdn": r.cr.Spec.FQDN,
 		// The serial is a just a way to trigger rollout
-		"serial": "2",
+		"serial": "3",
 	}
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	r.GetOrCreate(&dep)

@@ -2,26 +2,6 @@
 
 set -ex
 
-create_ci_user () {
-  local user_name="${1}"
-  local user_sshkey="${2}"
-  local user_mail="${3}"
-  # Capitalize user_name, e.g. "Zuul CI"
-  local user_fullname="$(tr '[:lower:]' '[:upper:]' <<< ${user_name:0:1})${user_name:1} CI"
-
-  # Check if user does not exist yet
-  local user_exists=$(ssh gerrit gerrit ls-members \"Service Users\" | awk '{ print $2 }' | { grep ${user_name} || true; })
-
-  if [ -z "$user_exists" ]; then
-    echo "$user_sshkey" | ssh gerrit gerrit create-account ${user_name} \
-        -g \"Service Users\"                \
-        --full-name \"${user_fullname}\"    \
-        --ssh-key -
-    ssh gerrit gerrit set-account --add-email "${user_mail}" ${user_name}
-  fi
-}
-
-
 mkdir ~/.ssh
 chmod 0700 ~/.ssh
 
@@ -121,10 +101,7 @@ git commit -m"Set SF default Gerrit ACLs" && git push origin meta/config:meta/co
 popd
 
 echo "Ensure Zuul user accounts added into Gerrit"
-create_ci_user zuul "${ZUUL_SSH_PUB_KEY}" "zuul@${FQDN}"
-
-echo "Ensure Zuul user accounts API Key added into Gerrit"
-ssh gerrit gerrit set-account zuul --http-password "${ZUUL_HTTP_PASSWORD}"
+/usr/share/managesf/create-ci-user.sh zuul "${ZUUL_SSH_PUB_KEY}" "zuul@${FQDN}" "${ZUUL_HTTP_PASSWORD}"
 
 # Ensure HTTP access via basic auth for further provisioning
 curl --fail -i -u admin:${GERRIT_ADMIN_API_KEY} http://gerrit-httpd:${GERRIT_HTTPD_SERVICE_PORT}/a/accounts/admin
