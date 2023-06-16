@@ -187,7 +187,6 @@ opm-files-gen: opm-dir-gen
 	test -f $(CATALOG_DIR).Dockerfile || $(OPM) generate dockerfile $(CATALOG_DIR)
 	$(OPM) init sf-operator --default-channel=$(CHANNEL) --description=./README.md --output yaml > $(CATALOG_DIR)/operator.yaml
 	$(OPM) render $(BUNDLE_IMG) --output=yaml >> $(CATALOG_DIR)/operator.yaml
-	sed -Ei "s/^(name: sf-operator.v)0.0.0/\10.0.1/" $(CATALOG_DIR)/operator.yaml
 
 .PHONY: schema-operator
 schema-operator: opm-files-gen

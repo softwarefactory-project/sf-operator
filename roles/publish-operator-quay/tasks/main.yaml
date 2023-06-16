@@ -20,6 +20,8 @@
   community.general.make:
     target: bundle
     chdir: "{{ zuul.project.src_dir }}"
+    params:
+      BUNDLE_GEN_FLAGS: "--version {{ _command_results.stdout }}"
 
 - name: Create the operator Catalog bundle
   community.general.make:
