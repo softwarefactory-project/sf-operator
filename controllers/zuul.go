@@ -22,6 +22,9 @@ const ZUUL_WEB_PORT = 9000
 const ZUUL_EXECUTOR_PORT_NAME = "finger"
 const ZUUL_EXECUTOR_PORT = 7900
 
+const ZUUL_PROMETHEUS_PORT = 9090
+const ZUUL_PROMETHEUS_PORT_NAME = "zuul-metrics"
+
 //go:embed static/zuul/zuul.conf
 var zuul_dot_conf string
 
@@ -207,8 +210,11 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	zs.Spec.Template.Spec.Containers = append(
 		create_zuul_container(r.cr.Spec.FQDN, "zuul-scheduler"), r.scheduler_sidecar_container())
 	zs.Spec.Template.Spec.Volumes = zs_volumes
-	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
-	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
+	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", ZUUL_PROMETHEUS_PORT)
+	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", ZUUL_PROMETHEUS_PORT)
+	zs.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+		create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
+	}
 
 	r.GetOrCreate(&zs)
 	zs_dirty := false
@@ -236,10 +242,11 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	ze.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	ze.Spec.Template.Spec.Containers = create_zuul_container(r.cr.Spec.FQDN, "zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")
-	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
-	ze.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
+	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", ZUUL_PROMETHEUS_PORT)
+	ze.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", ZUUL_PROMETHEUS_PORT)
 	ze.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		create_container_port(ZUUL_EXECUTOR_PORT, ZUUL_EXECUTOR_PORT_NAME),
+		create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
 	}
 	// NOTE(dpawlik): Zuul Executor needs to privileged pod, due error in the console log:
 	// "bwrap: Can't bind mount /oldroot/etc/resolv.conf on /newroot/etc/resolv.conf: Permission denied""
@@ -280,6 +287,9 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/api/info", ZUUL_WEB_PORT)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/api/info", ZUUL_WEB_PORT)
+	zw.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+		create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
+	}
 
 	r.GetOrCreate(&zw)
 	zw_dirty := false
@@ -420,6 +430,10 @@ func (r *SFController) DeployZuul() bool {
 	// Add default connections
 	r.AddDefaultConnections(cfg_ini)
 
+	// Enable prometheus metrics
+	for _, srv := range []string{"web", "executor", "scheduler"} {
+		cfg_ini.Section(srv).NewKey("prometheus_port", strconv.Itoa(ZUUL_PROMETHEUS_PORT))
+	}
 	// Set Zuul web public URL
 	cfg_ini.Section("web").NewKey("root", "https://zuul."+r.cr.Spec.FQDN)
 
@@ -444,10 +458,7 @@ func (r *SFController) DeployZuul() bool {
 
 func (r *SFController) runZuulFullReconfigure() bool {
 	err := r.PodExec("zuul-scheduler-0", "zuul-scheduler", []string{"zuul-scheduler", "full-reconfigure"})
-	if err == nil {
-		return true
-	}
-	return false
+	return err == nil
 }
 
 func (r *SFController) setupZuulIngress() {
