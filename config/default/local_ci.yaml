@@ -1,6 +1,0 @@
-hostname: localhost
-install_requirements: false
-"zuul": {"project":{"src_dir": ".."}}
-src_dir: "/tmp/sf-operator"
-remote_os_host: true
-os_host: "{{ microshift_host }}"

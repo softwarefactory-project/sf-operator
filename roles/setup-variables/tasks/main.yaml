@@ -1,0 +1,8 @@
+- name: Include global variables
+  ansible.builtin.include_vars:
+    file: "global.yaml"
+
+- name: Include zuul variables if zuul.executor is defined
+  ansible.builtin.include_vars:
+    file: "zuul_ci.yaml"
+  when: zuul.executor is defined | default(false)

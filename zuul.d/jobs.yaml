@@ -26,7 +26,7 @@
     parent: base-microshift
     timeout: 2200
     post-run: playbooks/post.yaml
-    run: playbooks/run.yaml
+    run: playbooks/main.yaml
     nodeset:
       nodes:
         name: controller
