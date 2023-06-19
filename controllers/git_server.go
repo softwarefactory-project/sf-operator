@@ -28,8 +28,11 @@ func (r *SFController) DeployGitServer() bool {
 	cm_data["pre-init.sh"] = preInitScript
 	r.EnsureConfigMap(GS_IDENT+"-pi", cm_data)
 
+	_, config_repo_name, _ := r.getConfigRepoCNXInfo()
+
 	annotations := map[string]string{
-		"system-config": checksum([]byte(preInitScript)),
+		"system-config":    checksum([]byte(preInitScript)),
+		"config-repo-name": config_repo_name,
 	}
 
 	// Create the deployment
@@ -60,6 +63,7 @@ func (r *SFController) DeployGitServer() bool {
 			Command:         []string{"/bin/bash", "/entry/pre-init.sh"},
 			Env: []apiv1.EnvVar{
 				create_env("FQDN", r.cr.Spec.FQDN),
+				create_env("CONFIG_REPO_NAME", config_repo_name),
 				create_env("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(LOGSERVER_SSHD_PORT)),
 			},
 			VolumeMounts: []apiv1.VolumeMount{

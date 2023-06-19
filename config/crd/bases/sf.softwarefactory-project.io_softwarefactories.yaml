@@ -44,9 +44,11 @@ spec:
               config-locations:
                 description: Config repositories spec
                 properties:
-                  config-repo:
+                  base-url:
                     type: string
-                  user:
+                  name:
+                    type: string
+                  zuul-connection-name:
                     type: string
                 type: object
               fqdn:

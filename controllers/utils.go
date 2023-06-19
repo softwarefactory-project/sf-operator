@@ -1175,26 +1175,20 @@ func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) Sto
 	return BaseGetStorageConfOrDefault(storageSpec, r.cr.Spec.StorageClassName)
 }
 
-func (r *SFController) getConfigRepoCNXInfo() (string, string) {
-	var config_repo_url string
-	var config_repo_user string
-	if r.cr.Spec.ConfigLocations.ConfigRepo == "" {
-		config_repo_url = "gerrit-sshd:29418/config"
-		config_repo_user = "admin"
-	} else if r.cr.Spec.ConfigLocations.ConfigRepo != "" {
-		var user string
-		if r.cr.Spec.ConfigLocations.User != "" {
-			user = r.cr.Spec.ConfigLocations.User
-		} else {
-			user = "git"
-		}
-		config_repo_url = r.cr.Spec.ConfigLocations.ConfigRepo
-		config_repo_user = user
-	} else {
-		// TODO: uncomment the panic once the config repo is actually working
-		// panic("ConfigRepo settings not supported !")
+func (r *SFController) getConfigRepoCNXInfo() (string, string, string) {
+	var base_url string
+	var repo_name string
+	var zuul_connection_name string
+	if r.cr.Spec.ConfigLocations.BaseURL == "" {
+		base_url = "http://gerrit-httpd/"
 	}
-	return config_repo_url, config_repo_user
+	if r.cr.Spec.ConfigLocations.Name == "" {
+		repo_name = "config"
+	}
+	if r.cr.Spec.ConfigLocations.ZuulConnectionName == "" {
+		zuul_connection_name = "gerrit"
+	}
+	return base_url, repo_name, zuul_connection_name
 }
 
 func int32Ptr(i int32) *int32 { return &i }
