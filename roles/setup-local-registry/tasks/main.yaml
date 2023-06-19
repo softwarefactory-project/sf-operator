@@ -12,7 +12,7 @@
     - name: Delete registry contrainer
       command: podman rm registry
 
-- name: Is registry volume exists
+- name: Does registry volume exist
   command: podman volume exists registry
   register: is_registry_volume_exists
   failed_when: is_registry_volume_exists.rc >= 2
