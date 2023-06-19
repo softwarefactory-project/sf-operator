@@ -52,11 +52,6 @@ type ZuulSpec struct {
 	Scheduler   ZuulSchedulerSpec  `json:"scheduler,omitempty"`
 }
 
-type GerritSpec struct {
-	SshdMaxConnectionsPerUser string      `json:"sshd_max_connections_per_user,omitempty"`
-	Storage                   StorageSpec `json:"storage,omitempty"`
-}
-
 type ZookeeperSpec struct {
 	Storage StorageSpec `json:"storage"`
 }
@@ -94,9 +89,6 @@ type SoftwareFactorySpec struct {
 
 	// Config repositories spec
 	ConfigLocations ConfigLocationsSpec `json:"config-locations,omitempty"`
-
-	// Gerrit service spec
-	Gerrit GerritSpec `json:"gerrit,omitempty"`
 
 	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`

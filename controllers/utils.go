@@ -659,7 +659,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 			}
 		}
 		// All containers in Ready state
-		return true
+		return true && r.IsStatefulSetRolloutDone(dep)
 	}
 	// No Replica available
 	return false
@@ -667,7 +667,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 
 func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 	if dep.Status.ReadyReplicas > 0 {
-		return true
+		return true && r.IsDeploymentRolloutDone(dep)
 	}
 	r.log.V(1).Info("Waiting for deployment", "name", dep.GetName())
 	return false
