@@ -216,7 +216,7 @@ cat << EOF > playbooks/config/check.yaml
         config_root: "{{ zuul.executor.src_root }}/{{ zuul.project.canonical_name }}"
 
     - name: "Access config repo"
-      command: "ls -al ./resources"
+      command: "ls -al ./"
       args:
         chdir: '{{ config_root }}'
 EOF
@@ -227,14 +227,6 @@ cat << EOF > playbooks/config/update.yaml
     - setup-k8s-config
     - apply-k8s-resource
     - add-k8s-hosts
-
-- hosts: managesf-resources
-  tasks:
-    - name: "Applying resources changes"
-      command: >
-        managesf-resources --cache-dir ~/ apply
-        --zuul-commit {{ zuul.newrev }}
-        --zuul-prev-commit {{ zuul.oldrev }}
 
 - hosts: zuul-scheduler-sidecar
   vars:
@@ -264,12 +256,6 @@ cat << EOF > roles/add-k8s-hosts/tasks/main.yaml
     ansible_connection: kubectl
     ansible_kubectl_container: zuul-scheduler
     ansible_kubectl_pod: "zuul-scheduler-0"
-
-- add_host:
-    name: "managesf-resources"
-    ansible_connection: kubectl
-    ansible_kubectl_container: managesf-resources
-    ansible_kubectl_pod: "gerrit-0"
 
 EOF
 
