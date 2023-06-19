@@ -44,20 +44,9 @@ touch zuul/main.yaml
 mkdir -p system
 cat /sf-provided-cr/sf.yaml > system/sf.yaml
 
-# Initialize CI
+# Initialize zuul.d
 mkdir -p zuul.d
-cat << EOF > zuul.d/config.yaml
-- project:
-    check:
-      jobs:
-        - config-check
-    gate:
-      jobs:
-        - config-check
-    post:
-      jobs:
-        - config-update
-EOF
+touch zuul.d/jobs.yaml
 
 git add -A
 git commit -m"Populate config repository" && git push origin master || true

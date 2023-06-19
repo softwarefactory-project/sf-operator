@@ -152,6 +152,18 @@ cat << EOF > zuul.d/jobs-base.yaml
     window-increase-factor: 2
 
 - project:
+    name: config
+    check:
+      jobs:
+        - config-check
+    gate:
+      jobs:
+        - config-check
+    post:
+      jobs:
+        - config-update
+
+- project:
     post:
       jobs:
         - sleeper
