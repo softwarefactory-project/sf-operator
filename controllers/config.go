@@ -19,9 +19,6 @@ var pymod_secret string
 //go:embed static/sf_operator/main.py
 var pymod_main string
 
-//go:embed static/sf_operator/config-repo.sh
-var config_repo string
-
 //go:embed static/sf_operator/config-updater-sa.yaml
 var config_updater_sa string
 
@@ -95,9 +92,8 @@ func (r *SFController) RunCommand(name string, args []string, extra_vars []apiv1
 
 func (r *SFController) InstallTooling() {
 	r.EnsureConfigMap("pymod-sf-operator", map[string]string{
-		"secret.py":      pymod_secret,
-		"main.py":        pymod_main,
-		"config-repo.sh": config_repo,
+		"secret.py": pymod_secret,
+		"main.py":   pymod_main,
 	})
 }
 
@@ -123,45 +119,4 @@ func (r *SFController) SetupConfigJob() bool {
 		}
 	}
 	return false
-}
-
-func (r *SFController) SetupConfigRepo() bool {
-	r.InstallTooling()
-	var job batchv1.Job
-	job_name := "setup-config-repo"
-	found := r.GetM(job_name, &job)
-
-	if !found {
-		config_url, config_user := r.getConfigRepoCNXInfo()
-		job := r.create_job(
-			job_name,
-			apiv1.Container{
-				Name:    "sf-operator",
-				Image:   BUSYBOX_IMAGE,
-				Command: append([]string{"bash", "/sf_operator/config-repo.sh"}),
-				Env: []apiv1.EnvVar{
-					create_secret_env("SF_ADMIN_SSH", "admin-ssh-key", "priv"),
-					create_env("FQDN", r.cr.Spec.FQDN),
-					create_env("CONFIG_REPO_URL", config_url),
-					create_env("CONFIG_REPO_USER", config_user),
-					create_env("HOME", "/tmp"),
-				},
-				VolumeMounts: []apiv1.VolumeMount{
-					{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
-				},
-				SecurityContext: create_security_context(false),
-			},
-		)
-		job.Spec.Template.Spec.Volumes = []apiv1.Volume{
-			create_volume_cm("pymod-sf-operator", "pymod-sf-operator-config-map"),
-		}
-		r.log.V(1).Info("Populating config-repo")
-		r.CreateR(&job)
-		return false
-	} else if job.Status.Succeeded >= 1 {
-		return true
-	} else {
-		r.log.V(1).Info("Waiting for the setup-config-repo job result")
-		return false
-	}
 }

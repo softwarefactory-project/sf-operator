@@ -144,11 +144,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	services["Gerrit"] = r.DeployGerrit()
 
-	if services["Gerrit"] {
-		services["ConfigRepo"] = r.SetupConfigRepo()
-	}
-
-	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] && services["Gerrit"] && services["ConfigRepo"] {
+	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] && services["Gerrit"] {
 		services["Zuul"] = r.DeployZuul()
 	}
 
