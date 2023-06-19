@@ -8,11 +8,9 @@ package controllers
 import (
 	_ "embed"
 
-	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
 )
 
 //go:embed static/sf_operator/secret.py
@@ -127,32 +125,11 @@ func (r *SFController) SetupConfigJob() bool {
 	return false
 }
 
-func (r *SFController) getProvidedCR() string {
-	data, err := yaml.Marshal(sfv1.SoftwareFactory{
-		TypeMeta: r.cr.TypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			CreationTimestamp: r.cr.ObjectMeta.CreationTimestamp,
-			Name:              r.cr.ObjectMeta.Name,
-			Namespace:         r.ns,
-		},
-		Spec: r.cr.Spec,
-	})
-	if err != nil {
-		panic(err)
-	}
-	return "# The software factory system resources\n# The config-update job applies change to this file.\n" + string(data)
-}
-
 func (r *SFController) SetupConfigRepo() bool {
 	r.InstallTooling()
 	var job batchv1.Job
 	job_name := "setup-config-repo"
 	found := r.GetM(job_name, &job)
-
-	// Write the provided cr to a config map for config repo system resource
-	r.EnsureConfigMap("sf-provided-cr", map[string]string{
-		"sf.yaml": r.getProvidedCR(),
-	})
 
 	if !found {
 		config_url, config_user := r.getConfigRepoCNXInfo()
@@ -171,14 +148,12 @@ func (r *SFController) SetupConfigRepo() bool {
 				},
 				VolumeMounts: []apiv1.VolumeMount{
 					{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
-					{Name: "sf-provided-cr", MountPath: "/sf-provided-cr"},
 				},
 				SecurityContext: create_security_context(false),
 			},
 		)
 		job.Spec.Template.Spec.Volumes = []apiv1.Volume{
 			create_volume_cm("pymod-sf-operator", "pymod-sf-operator-config-map"),
-			create_volume_cm("sf-provided-cr", "sf-provided-cr-config-map"),
 		}
 		r.log.V(1).Info("Populating config-repo")
 		r.CreateR(&job)
