@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -80,6 +81,7 @@ func getLogserverSettingsOrDefault(settings sfv1.LogServerSpecSettings) (int, in
 }
 
 func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
+	log := log.FromContext(r.ctx)
 
 	r.EnsureSSHKey(LOGSERVER_IDENT + "-keys")
 
@@ -229,20 +231,24 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	stats_exporter := createNodeExporterSideCarContainer(LOGSERVER_IDENT, volumeMounts_stats_exporter)
 	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, stats_exporter)
 
-	// Increase serial each time you need to enforce a deployment change/pod restart
+	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
 	annotations := map[string]string{
-		"fqdn":   r.cr.Spec.FQDN,
-		"serial": "1",
+		"fqdn":           r.cr.Spec.FQDN,
+		"serial":         "1",
+		"purgeLogConfig": "retentionDays:" + strconv.Itoa(retentiondays) + " loopDelay:" + strconv.Itoa(loopdelay),
 	}
-	if r.GetM(dep.GetName(), &dep) {
+
+	// do we have an existing deployment?
+	currentDep := v1.Deployment{}
+	if r.GetM(dep.GetName(), &currentDep) {
 		// Are annotations in sync?
-		if !map_equals(&dep.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			dep.Spec.Template.ObjectMeta.Annotations = annotations
-			stats_exporter := createNodeExporterSideCarContainer(LOGSERVER_IDENT, volumeMounts_stats_exporter)
-			dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, stats_exporter)
-			r.log.V(1).Info("Metrics sidecar added, pod restarting ...")
-			r.UpdateR(&dep)
+		if !map_equals(&currentDep.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			currentDep.Spec.Template.Spec = dep.Spec.Template.Spec
+			currentDep.Spec.Template.ObjectMeta.Annotations = annotations
+			log.V(1).Info("Logserver pod restarting to apply changes ...")
+			r.UpdateR(&currentDep)
 		}
+
 	} else {
 		dep.Spec.Template.ObjectMeta.Annotations = annotations
 		r.log.V(1).Info("Creating object", "name", dep.GetName())
@@ -257,8 +263,11 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	pvc_readiness := r.reconcile_expand_pvc(LOGSERVER_IDENT, r.cr.Spec.Settings.Storage)
 
+	// refresh current deployment
+	r.GetM(dep.GetName(), &currentDep)
+
 	return sfv1.LogServerStatus{
-		Ready:              r.IsDeploymentReady(&dep) && pvc_readiness,
+		Ready:              r.IsDeploymentReady(&currentDep) && pvc_readiness,
 		ObservedGeneration: r.cr.Generation,
 		ReconciledBy:       getOperatorConditionName(),
 	}

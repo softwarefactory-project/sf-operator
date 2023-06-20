@@ -68,8 +68,8 @@
   ansible.builtin.include_role:
     name: "roles/{{ role }}"
   loop:
-    - test-crd
     - test-volumestats-sidecar
+    - test-crd
     - expand-volume
   loop_control:
     loop_var: role

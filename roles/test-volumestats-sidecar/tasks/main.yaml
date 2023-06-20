@@ -1,4 +1,12 @@
 ---
+- name: ensure logserver deployment is ready
+  ansible.builtin.command: kubectl get deployment logserver -o=jsonpath='{.status.readyReplicas}'
+  register: logserver_ready
+  until:
+    - logserver_ready.stdout == "1"
+  retries: 60
+  delay: 10
+
 - name: Start port forwarding to logserver sidecar
   shell: |
     kubectl port-forward service/logserver-ne 9100 -n sf
@@ -7,7 +15,7 @@
 
 - name: Pause to ensure the port forwarding is up
   ansible.builtin.pause:
-    seconds: 15
+    seconds: 20
 
 - name: Ensure volume info is exposed by metrics
   uri:
