@@ -1,10 +1,12 @@
 ---
 # Where the operator will be installed via the OLM bundle
-- name: Create the bundle-catalog-ns namespace
+- name: Create the {{ bundlenamspace }} namespace
   shell: |
-    kubectl create namespace bundle-catalog-ns
-    oc adm policy add-scc-to-user privileged system:serviceaccount:bundle-catalog-ns:default
+    kubectl create namespace {{ bundlenamspace }}
+    oc adm policy add-scc-to-user privileged system:serviceaccount:{{ bundlenamspace }}:default
   when: create_test_bundle_ns
+  tags:
+    - operator_bundle_namespace
 
 # Where sf instance will be reclaimed
 - name: Create namespace
@@ -14,3 +16,5 @@
     kubectl label --overwrite ns {{ namespace }} pod-security.kubernetes.io/enforce=privileged
     kubectl label --overwrite ns {{ namespace }} pod-security.kubernetes.io/enforce-version=v{{ k8s_version }}
     oc adm policy add-scc-to-user privileged -z default
+  tags:
+    - operator_sf_namespace

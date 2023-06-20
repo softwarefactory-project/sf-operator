@@ -421,3 +421,24 @@ const BUSYBOX_IMAGE = "localhost/sf-op-busybox:1.4-4"
 ```
 
 Then you can do the deployment to use the newly built image.
+
+
+## Installing Software Factory
+
+### Set up the cluster
+
+Start by setting the namespaces.
+
+```sh
+./tools/sfconfig operator create -a
+```
+
+This command will create the **bundle-catalog-ns** and **sf** namespace, with the right security contexts.
+The Catalog Source for Software Factory will be installed in bundle-catalog-ns by default.
+The Software Factory Instance will be installed in sf by default.
+
+To change the default names for the namespaces, run the command with the following options:
+
+```sh
+./tools/sfconfig operator -a --bundlenamespace <catalog namespace name> --namespacename < Software Factory namespace name>
+```

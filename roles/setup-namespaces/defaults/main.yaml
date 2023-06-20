@@ -1,4 +1,5 @@
 ---
+bundlenamspace: bundle-catalog-ns
 namespace: sf
 context: microshift
 k8s_version: 1.24

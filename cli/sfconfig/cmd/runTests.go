@@ -59,8 +59,8 @@ Run test_only tag
 			ConnectionOptions: ansiblePlaybookConnectionOptions,
 			Options:           ansiblePlaybookOptions,
 		}
-		// TODO add option to get color locally
-		// options.AnsibleForceColor()
+
+		options.AnsibleForceColor()
 		fmt.Println(playbook)
 		err := playbook.Run(context.TODO())
 		if err != nil {

@@ -6,6 +6,7 @@ package operator
 import (
 	"os"
 
+	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/operator/create"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/operator/delete"
 	"github.com/spf13/cobra"
 )
@@ -23,4 +24,5 @@ var OperatorCmd = &cobra.Command{
 
 func init() {
 	OperatorCmd.AddCommand(delete.DeleteCmd)
+	OperatorCmd.AddCommand(create.CreateCmd)
 }
