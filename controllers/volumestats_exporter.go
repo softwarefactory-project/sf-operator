@@ -43,7 +43,7 @@ func createNodeExporterSideCarContainer(serviceName string, volumeMounts []apiv1
 
 	NODE_EXPORTER_ARGS := getNodeExporterArgs(volumeMounts)
 	ports := []apiv1.ContainerPort{
-		create_container_port(NODE_EXPORTER_PORT, exporter_port_name),
+		Create_container_port(NODE_EXPORTER_PORT, exporter_port_name),
 	}
 	return apiv1.Container{
 		Name:            serviceName + NODE_EXPORTER_NAME_SUFFIX,

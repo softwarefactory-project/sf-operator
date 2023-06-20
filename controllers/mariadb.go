@@ -35,8 +35,8 @@ while ! mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "`
 done
 `},
 		Env: []apiv1.EnvVar{
-			create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
-			create_secret_env("USER_PASSWORD", name+"-db-password", name+"-db-password"),
+			Create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
+			Create_secret_env("USER_PASSWORD", name+"-db-password", name+"-db-password"),
 		},
 	}
 	return []apiv1.Container{container}, db_password
@@ -68,11 +68,11 @@ func (r *SFController) DeployMariadb() bool {
 		},
 	}
 	dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
-		create_env("HOME", "/var/lib/mysql"),
-		create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
+		Create_env("HOME", "/var/lib/mysql"),
+		Create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
 	}
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		create_container_port(MARIADB_PORT, MARIADB_PORT_NAME),
+		Create_container_port(MARIADB_PORT, MARIADB_PORT_NAME),
 	}
 
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(MARIADB_PORT)

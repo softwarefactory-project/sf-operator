@@ -130,7 +130,7 @@ func parse_template(templatePath string, data any) (string, error) {
 //
 // Pass the template text.
 // And the data structure to be applied to the template
-func parse_string(text string, data any) (string, error) {
+func Parse_string(text string, data any) (string, error) {
 
 	template.New("StringtoParse").Parse(text)
 	// Opening Template file
@@ -249,7 +249,7 @@ func create_ssh_key() SSHKey {
 	}
 }
 
-func create_secret_env(env string, secret string, key string) apiv1.EnvVar {
+func Create_secret_env(env string, secret string, key string) apiv1.EnvVar {
 	if key == "" {
 		key = secret
 	}
@@ -285,14 +285,14 @@ func create_security_context(privileged bool) *apiv1.SecurityContext {
 	}
 }
 
-func create_env(env string, value string) apiv1.EnvVar {
+func Create_env(env string, value string) apiv1.EnvVar {
 	return apiv1.EnvVar{
 		Name:  env,
 		Value: value,
 	}
 }
 
-func create_container_port(port int, name string) apiv1.ContainerPort {
+func Create_container_port(port int, name string) apiv1.ContainerPort {
 	return apiv1.ContainerPort{
 		Name:          name,
 		Protocol:      apiv1.ProtocolTCP,
@@ -300,7 +300,7 @@ func create_container_port(port int, name string) apiv1.ContainerPort {
 	}
 }
 
-func create_volume_cm(volume_name string, config_map_ref string) apiv1.Volume {
+func Create_volume_cm(volume_name string, config_map_ref string) apiv1.Volume {
 	return apiv1.Volume{
 		Name: volume_name,
 		VolumeSource: apiv1.VolumeSource{
@@ -565,7 +565,7 @@ func create_readiness_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
 	}
 }
 
-func create_readiness_cmd_probe(cmd []string) *apiv1.Probe {
+func Create_readiness_cmd_probe(cmd []string) *apiv1.Probe {
 	handler := apiv1.ProbeHandler{
 		Exec: &apiv1.ExecAction{
 			Command: cmd,
@@ -1176,16 +1176,16 @@ func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) Sto
 }
 
 func (r *SFController) getConfigRepoCNXInfo() (string, string, string) {
-	var base_url string
-	var repo_name string
-	var zuul_connection_name string
-	if r.cr.Spec.ConfigLocations.BaseURL == "" {
+	base_url := r.cr.Spec.ConfigLocation.BaseURL
+	repo_name := r.cr.Spec.ConfigLocation.Name
+	zuul_connection_name := r.cr.Spec.ConfigLocation.ZuulConnectionName
+	if base_url == "" {
 		base_url = "http://gerrit-httpd/"
 	}
-	if r.cr.Spec.ConfigLocations.Name == "" {
+	if repo_name == "" {
 		repo_name = "config"
 	}
-	if r.cr.Spec.ConfigLocations.ZuulConnectionName == "" {
+	if zuul_connection_name == "" {
 		zuul_connection_name = "gerrit"
 	}
 	return base_url, repo_name, zuul_connection_name
@@ -1195,4 +1195,4 @@ func int32Ptr(i int32) *int32 { return &i }
 func boolPtr(b bool) *bool    { return &b }
 func strPtr(s string) *string { return &s }
 
-var execmod int32 = 493 // decimal for 0755 octal
+var Execmod int32 = 493 // decimal for 0755 octal

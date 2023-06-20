@@ -1,6 +1,6 @@
 ---
 - name: Apply the custom resources
-  ansible.builtin.command: kubectl apply -f playbooks/files/allinone.yaml
+  ansible.builtin.command: kubectl apply -f playbooks/files/sf.yaml
   args:
     chdir: "{{ zuul.project.src_dir }}"
 

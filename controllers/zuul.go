@@ -76,9 +76,9 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 		Image:   "quay.io/software-factory/" + service + ":8.3.1-2",
 		Command: command,
 		Env: []apiv1.EnvVar{
-			create_env("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
-			create_env("HOME", "/var/lib/zuul"),
-			create_env("ZUUL_WEB_ROOT", "https://zuul."+fqdn),
+			Create_env("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
+			Create_env("HOME", "/var/lib/zuul"),
+			Create_env("ZUUL_WEB_ROOT", "https://zuul."+fqdn),
 		},
 		VolumeMounts: volumes,
 	}
@@ -123,7 +123,7 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 					LocalObjectReference: apiv1.LocalObjectReference{
 						Name: "zuul-scheduler-tooling-config-map",
 					},
-					DefaultMode: &execmod,
+					DefaultMode: &Execmod,
 				},
 			},
 		}
@@ -135,10 +135,10 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 func (r *SFController) get_scheduler_init_and_sidecar_envs() []apiv1.EnvVar {
 	base_url, name, zuul_connection_name := r.getConfigRepoCNXInfo()
 	return []apiv1.EnvVar{
-		create_env("CONFIG_REPO_BASE_URL", base_url),
-		create_env("CONFIG_REPO_NAME", name),
-		create_env("CONFIG_REPO_CONNECTION_NAME", zuul_connection_name),
-		create_env("HOME", "/var/lib/zuul"),
+		Create_env("CONFIG_REPO_BASE_URL", base_url),
+		Create_env("CONFIG_REPO_NAME", name),
+		Create_env("CONFIG_REPO_CONNECTION_NAME", zuul_connection_name),
+		Create_env("HOME", "/var/lib/zuul"),
 	}
 }
 
@@ -160,7 +160,7 @@ func (r *SFController) init_scheduler_config() apiv1.Container {
 		Name:            "init-scheduler-config",
 		Image:           BUSYBOX_IMAGE,
 		Command:         []string{"/usr/local/bin/generate-zuul-tenant-yaml.sh"},
-		Env:             append(r.get_scheduler_init_and_sidecar_envs(), create_env("ZUUL_STARTUP", "true")),
+		Env:             append(r.get_scheduler_init_and_sidecar_envs(), Create_env("ZUUL_STARTUP", "true")),
 		VolumeMounts:    scheduler_init_and_sidecar_vols,
 		SecurityContext: create_security_context(false),
 	}
@@ -171,9 +171,9 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 		Name:            "scheduler-sidecar",
 		Image:           BUSYBOX_IMAGE,
 		Command:         []string{"sh", "-c", "touch /tmp/healthy && sleep inf"},
-		Env:             append(r.get_scheduler_init_and_sidecar_envs(), create_env("ZUUL_STARTUP", "false")),
+		Env:             append(r.get_scheduler_init_and_sidecar_envs(), Create_env("ZUUL_STARTUP", "false")),
 		VolumeMounts:    scheduler_init_and_sidecar_vols,
-		ReadinessProbe:  create_readiness_cmd_probe([]string{"cat", "/tmp/healthy"}),
+		ReadinessProbe:  Create_readiness_cmd_probe([]string{"cat", "/tmp/healthy"}),
 		SecurityContext: create_security_context(false),
 	}
 	return container
@@ -210,7 +210,7 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", ZUUL_PROMETHEUS_PORT)
 	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", ZUUL_PROMETHEUS_PORT)
 	zs.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
+		Create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
 	}
 
 	r.GetOrCreate(&zs)
@@ -246,8 +246,8 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", ZUUL_PROMETHEUS_PORT)
 	ze.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", ZUUL_PROMETHEUS_PORT)
 	ze.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		create_container_port(ZUUL_EXECUTOR_PORT, ZUUL_EXECUTOR_PORT_NAME),
-		create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
+		Create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
+		Create_container_port(ZUUL_EXECUTOR_PORT, ZUUL_EXECUTOR_PORT_NAME),
 	}
 	// NOTE(dpawlik): Zuul Executor needs to privileged pod, due error in the console log:
 	// "bwrap: Can't bind mount /oldroot/etc/resolv.conf on /newroot/etc/resolv.conf: Permission denied""
@@ -292,7 +292,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/api/info", ZUUL_WEB_PORT)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/api/info", ZUUL_WEB_PORT)
 	zw.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
+		Create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
 	}
 
 	r.GetOrCreate(&zw)
@@ -356,9 +356,13 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	cfg.Section(section).NewKey("driver", "gerrit")
 	cfg.Section(section).NewKey("server", conn.Hostname)
 	cfg.Section(section).NewKey("sshkey", "/var/lib/zuul-ssh/..data/priv")
-	cfg.Section(section).NewKey("user", conn.Username)
 	cfg.Section(section).NewKey("gitweb_url_template", "{baseurl}/plugins/gitiles/{project.name}/+/{sha}^!/")
 	// Optional fields (set as omitempty in GerritConnection struct defintion)
+	var username = "zuul"
+	if conn.Username != "" {
+		username = conn.Username
+	}
+	cfg.Section(section).NewKey("user", username)
 	if conn.Port != "" {
 		cfg.Section(section).NewKey("port", conn.Port)
 	}
@@ -407,7 +411,6 @@ func DumpConfigINI(cfg *ini.File) string {
 
 func (r *SFController) DeployZuulSecrets() {
 	r.EnsureSSHKey("zuul-ssh-key")
-	r.GenerateSecretUUID("zuul-gerrit-api-key")
 	r.GenerateSecretUUID("zuul-keystore-password")
 	r.GenerateSecretUUID("zuul-auth-secret")
 }
@@ -415,25 +418,9 @@ func (r *SFController) DeployZuulSecrets() {
 func (r *SFController) DeployZuul() bool {
 	init_containers, db_password := r.EnsureDBInit("zuul")
 
-	gerrit_conns := r.cr.Spec.Zuul.GerritConns
-
-	// Add local gerrit connection if needed
-	gerrit_conn := sfv1.GerritConnection{
-		Name:              "gerrit",
-		Hostname:          GERRIT_SSHD_PORT_NAME,
-		Port:              "29418",
-		Puburl:            "https://" + "gerrit." + r.cr.Spec.FQDN,
-		Username:          "zuul",
-		Canonicalhostname: "gerrit." + r.cr.Spec.FQDN,
-		Password:          "zuul-gerrit-api-key",
-		VerifySSL:         false,
-		GitOverSSH:        true,
-	}
-	gerrit_conns = append(gerrit_conns, gerrit_conn)
-
 	// Update base config to add connections
 	cfg_ini := LoadConfigINI(zuul_dot_conf)
-	for _, conn := range gerrit_conns {
+	for _, conn := range r.cr.Spec.Zuul.GerritConns {
 		r.AddGerritConnection(cfg_ini, conn)
 	}
 	// Add default connections

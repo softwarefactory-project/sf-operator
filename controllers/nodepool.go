@@ -61,7 +61,7 @@ func (r *SFController) DeployNodepool() bool {
 	//nl.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
 	//nl.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
 	nl.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		create_container_port(NL_WEBAPP_PORT, NL_WEBAPP_PORT_NAME),
+		Create_container_port(NL_WEBAPP_PORT, NL_WEBAPP_PORT_NAME),
 	}
 
 	r.GetOrCreate(&nl)

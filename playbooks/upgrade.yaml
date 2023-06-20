@@ -5,6 +5,7 @@
     - setup-env
     - sanity-check
     - setup-namespaces
+    - start-gerrit
     - role: build-operator-assets
       vars:
         build_bundle: false

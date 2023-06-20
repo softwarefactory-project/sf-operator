@@ -76,6 +76,12 @@ kubectl config current-context
    make install
    ```
 
+3. Deploy a Gerrit companion
+
+   ```sh
+   ./tools/sfconfig gerrit --deploy
+   ```
+
 3. Create your own copy the CR sample, for example:
 
    ```sh

@@ -100,18 +100,18 @@ func (r *SFController) DeployZookeeper() bool {
 	zk.Spec.Template.Spec.Containers = []apiv1.Container{container}
 	zk.Spec.Template.ObjectMeta.Annotations = annotations
 	zk.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		create_volume_cm(ZK_IDENT+"-pi", ZK_IDENT+"-pi-config-map"),
+		Create_volume_cm(ZK_IDENT+"-pi", ZK_IDENT+"-pi-config-map"),
 		create_volume_secret("zookeeper-client-tls"),
 		create_volume_secret("zookeeper-server-tls"),
 		create_empty_dir(ZK_IDENT + "-conf"),
 	}
-	zk.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_cmd_probe([]string{"/bin/bash", "/config-scripts/ready.sh"})
-	zk.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_cmd_probe([]string{"/bin/bash", "/config-scripts/ok.sh"})
+	zk.Spec.Template.Spec.Containers[0].ReadinessProbe = Create_readiness_cmd_probe([]string{"/bin/bash", "/config-scripts/ready.sh"})
+	zk.Spec.Template.Spec.Containers[0].LivenessProbe = Create_readiness_cmd_probe([]string{"/bin/bash", "/config-scripts/ok.sh"})
 	zk.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		create_container_port(ZOOKEEPER_PORT, ZOOKEEPER_PORT_NAME),
-		create_container_port(ZOOKEEPER_SSL_PORT, ZOOKEEPER_SSL_PORT_NAME),
-		create_container_port(ZOOKEEPER_ELECTION_PORT, ZOOKEEPER_ELECTION_PORT_NAME),
-		create_container_port(ZOOKEEPER_SERVER_PORT, ZOOKEEPER_SERVER_PORT_NAME),
+		Create_container_port(ZOOKEEPER_PORT, ZOOKEEPER_PORT_NAME),
+		Create_container_port(ZOOKEEPER_SSL_PORT, ZOOKEEPER_SSL_PORT_NAME),
+		Create_container_port(ZOOKEEPER_ELECTION_PORT, ZOOKEEPER_ELECTION_PORT_NAME),
+		Create_container_port(ZOOKEEPER_SERVER_PORT, ZOOKEEPER_SERVER_PORT_NAME),
 	}
 
 	r.GetOrCreate(&zk)

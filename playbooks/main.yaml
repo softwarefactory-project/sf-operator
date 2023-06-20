@@ -5,6 +5,7 @@
     - setup-env
     - sanity-check
     - setup-namespaces
+    - start-gerrit
   tasks:
     - name: >-
         Simulates the "dev" process (start with 'go run' the operator)

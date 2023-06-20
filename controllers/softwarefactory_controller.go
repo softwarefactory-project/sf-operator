@@ -84,7 +84,6 @@ func isOperatorReady(services map[string]bool) bool {
 }
 
 func (r *SFController) SetupIngress() {
-	r.setupGerritIngress()
 	r.setupZuulIngress()
 }
 
@@ -142,9 +141,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	services["Zookeeper"] = r.DeployZookeeper()
 
-	services["Gerrit"] = r.DeployGerrit()
-
-	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] && services["Gerrit"] {
+	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] {
 		services["Zuul"] = r.DeployZuul()
 	}
 

@@ -37,7 +37,8 @@
         - skip_ansible_lint
 
     - name: Release PVCs in sf namespace
-      ansible.builtin.command: kubectl -n sf delete pvc --all
+      ansible.builtin.shell: |
+        kubectl -n sf get pvc --no-headers=true -o name | grep -v gerrit | xargs kubectl -n sf delete
       ignore_errors: true
       tags:
         - skip_ansible_lint
