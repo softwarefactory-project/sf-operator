@@ -132,17 +132,6 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 	return volumes
 }
 
-func (r *SFController) create_zuul_host_alias() []apiv1.HostAlias {
-	return []apiv1.HostAlias{
-		{
-			IP: r.get_service_ip(GERRIT_HTTPD_PORT_NAME),
-			Hostnames: []string{
-				"gerrit." + r.cr.Spec.FQDN,
-			},
-		},
-	}
-}
-
 func (r *SFController) get_scheduler_init_and_sidecar_envs() []apiv1.EnvVar {
 	base_url, name, zuul_connection_name := r.getConfigRepoCNXInfo()
 	return []apiv1.EnvVar{
@@ -216,7 +205,6 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	zs_replicas := int32(1)
 	zs := r.create_statefulset("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), zs_replicas)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
-	zs.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	setAdditionalContainers(&zs)
 	zs.Spec.Template.Spec.Volumes = zs_volumes
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", ZUUL_PROMETHEUS_PORT)
@@ -232,6 +220,10 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 		setAdditionalContainers(&zs)
 		zs_dirty = true
 		r.log.V(1).Info("Zuul configuration changed, restarting the services...")
+	}
+	if zs.Spec.Template.Spec.HostAliases != nil {
+		zs.Spec.Template.Spec.HostAliases = nil
+		zs_dirty = true
 	}
 	if zs_dirty {
 		r.UpdateR(&zs)
@@ -249,7 +241,6 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 
 	ze := r.create_headless_statefulset("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), int32(r.cr.Spec.Zuul.Executor.Replicas))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
-	ze.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	ze.Spec.Template.Spec.Containers = create_zuul_container(r.cr.Spec.FQDN, "zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", ZUUL_PROMETHEUS_PORT)
@@ -276,6 +267,10 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		ze.Spec.Template.ObjectMeta.Annotations = annotations
 		ze_dirty = true
 	}
+	if ze.Spec.Template.Spec.HostAliases != nil {
+		ze.Spec.Template.Spec.HostAliases = nil
+		ze_dirty = true
+	}
 	if ze_dirty {
 		r.UpdateR(&ze)
 	}
@@ -292,7 +287,6 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 
 	zw := r.create_deployment("zuul-web", "")
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
-	zw.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
 	zw.Spec.Template.Spec.Containers = create_zuul_container(r.cr.Spec.FQDN, "zuul-web")
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/api/info", ZUUL_WEB_PORT)
@@ -305,6 +299,10 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	zw_dirty := false
 	if !map_equals(&zw.Spec.Template.ObjectMeta.Annotations, &annotations) {
 		zw.Spec.Template.ObjectMeta.Annotations = annotations
+		zw_dirty = true
+	}
+	if zw.Spec.Template.Spec.HostAliases != nil {
+		zw.Spec.Template.Spec.HostAliases = nil
 		zw_dirty = true
 	}
 	if zw_dirty {
@@ -374,9 +372,8 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	if conn.Canonicalhostname != "" {
 		cfg.Section(section).NewKey("canonical_hostname", conn.Canonicalhostname)
 	}
-	if conn.VerifySSL != "" {
-		cfg.Section(section).NewKey("verify_ssl", conn.VerifySSL)
-	}
+	cfg.Section(section).NewKey("verify_ssl", strconv.FormatBool(conn.VerifySSL))
+	cfg.Section(section).NewKey("git_over_ssh", strconv.FormatBool(conn.GitOverSSH))
 }
 
 func AddGitConnection(cfg *ini.File, name string, baseurl string) {
@@ -425,10 +422,12 @@ func (r *SFController) DeployZuul() bool {
 		Name:              "gerrit",
 		Hostname:          GERRIT_SSHD_PORT_NAME,
 		Port:              "29418",
-		Puburl:            "http://" + "gerrit." + r.cr.Spec.FQDN,
+		Puburl:            "https://" + "gerrit." + r.cr.Spec.FQDN,
 		Username:          "zuul",
 		Canonicalhostname: "gerrit." + r.cr.Spec.FQDN,
 		Password:          "zuul-gerrit-api-key",
+		VerifySSL:         false,
+		GitOverSSH:        true,
 	}
 	gerrit_conns = append(gerrit_conns, gerrit_conn)
 

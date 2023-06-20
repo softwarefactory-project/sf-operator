@@ -34,7 +34,12 @@ type GerritConnection struct {
 	Username          string `json:"username"`
 	Canonicalhostname string `json:"canonicalhostname,omitempty"`
 	Password          string `json:"password,omitempty"` // API Password secret name
-	VerifySSL         string `json:"verifyssl,omitempty"`
+	// This forces git operation over SSH even if the password attribute is set.
+	// +kubebuilder:default:=false
+	GitOverSSH bool `json:"git-over-ssh,omitempty"`
+	// Disable SSL certificate verification when set to false.
+	// +kubebuilder:default:=true
+	VerifySSL bool `json:"verifyssl,omitempty"`
 }
 
 type ZuulExecutorSpec struct {
