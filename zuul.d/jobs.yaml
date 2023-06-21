@@ -68,14 +68,14 @@
 
 # Deploy sf-operator on microshift
 - job:
-    name: sf-operator-functional-allinone-microshift
+    name: sf-operator-olm
     description: This test validates a sf-operator deployment via OLM
     parent: base-sf-operator
     vars:
-      mode: "ci"
+      mode: "olm"
 
 - job:
-    name: sf-operator-run-dev
+    name: sf-operator-dev
     description: >
       This test validates a sf-operator deployment via the dev mode described
       in the contributor doc
@@ -84,7 +84,7 @@
       mode: "dev"
 
 - job:
-    name: sf-operator-upgrade-allinone-microshift
-    parent: sf-operator-functional-allinone-microshift
+    name: sf-operator-upgrade
+    parent: base-sf-operator
     run: playbooks/upgrade.yaml
     timeout: 2200

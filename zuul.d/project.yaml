@@ -6,20 +6,20 @@
       ansible_lint_check_all: false
     check:
       jobs:
-        - sf-operator-functional-allinone-microshift
-        - sf-operator-run-dev
-        - sf-operator-upgrade-allinone-microshift
+        - sf-operator-olm
+        - sf-operator-dev
+        - sf-operator-upgrade
         - ansible-lint
     gate:
       jobs:
-        - sf-operator-functional-allinone-microshift
-        - sf-operator-run-dev
-        - sf-operator-upgrade-allinone-microshift
+        - sf-operator-olm
+        - sf-operator-dev
+        - sf-operator-upgrade
         - ansible-lint
     post:
       jobs:
         - sf-operator-publish-olm-bundle-image
     periodic:
       jobs:
-        - sf-operator-functional-allinone-microshift
-        - sf-operator-run-dev
+        - sf-operator-olm
+        - sf-operator-dev

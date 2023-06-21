@@ -25,7 +25,7 @@
         - clean-installations
         - install-operator
         - apply-custom-resources
-      when: mode == 'ci'
+      when: mode == 'olm'
 
     - name: Apply custom resources
       ansible.builtin.include_role:
