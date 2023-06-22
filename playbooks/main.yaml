@@ -17,14 +17,13 @@
         create_test_bundle_ns: false
       when: mode == 'dev'
 
-    - name: CI process
+    - name: CI process(OLM install)
       ansible.builtin.include_role:
         name: "{{ item }}"
       loop:
         - build-operator-assets
         - clean-installations
         - install-operator
-        - apply-custom-resources
       when: mode == 'olm'
 
     - name: Apply custom resources
