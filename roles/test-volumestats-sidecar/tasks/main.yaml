@@ -1,0 +1,19 @@
+---
+- name: Start port forwarding to logserver sidecar
+  shell: |
+    kubectl port-forward service/logserver-ne 9100 -n sf
+  async: 60
+  poll: 0
+
+- name: Pause to ensure the port forwarding is up
+  ansible.builtin.pause:
+    seconds: 15
+
+- name: Ensure volume info is exposed by metrics
+  uri:
+    url: http://localhost:9100/metrics
+    return_content: yes
+  register: logserver_metrics
+  delay: 5
+  retries: 10
+  until: "logserver_metrics.status == 200 and 'data/rsync' in logserver_metrics.content"
