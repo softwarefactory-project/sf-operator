@@ -36,22 +36,9 @@ git clone ssh://${CONFIG_REPO_USER}@${CONFIG_REPO_URL}
 
 cd config
 
-# Initialize resources tree
-if [ ! -d resources ]; then
-  mkdir resources
-  dhall-to-yaml --output \
-    resources/resources.yaml <<< "(/sf_operator/resources.dhall).renderEmptyResources"
-fi
-
-# Update the _internal.yaml resources file
-dhall-to-yaml --output \
-  resources/_internal.yaml <<< "(/sf_operator/resources.dhall).renderInternalResources \"${FQDN}\" True"
-
 # Initialize zuul directory
-if [ ! -d zuul ]; then
-  mkdir zuul
-  touch zuul/jobs.yaml
-fi
+mkdir -p zuul
+touch zuul/main.yaml
 
 # Initialize system resource
 mkdir -p system

@@ -1,0 +1,20 @@
+---
+- name: Set Zuul tenant config
+  ansible.builtin.blockinfile:
+    content: |
+      - tenant:
+          name: {{ tenant_name }}
+          source:
+            gerrit:
+              config-projects:
+                - {{ repository_name }}
+    path: "{{ config_path }}/zuul/main.yaml"
+    create: true
+
+- name: Commit file in the config repo
+  ansible.builtin.command: "{{ item }}"
+  args:
+    chdir: "{{ config_path }}"
+  loop:
+    - "git add {{ config_path }}/zuul/main.yaml"
+    - "git commit -m 'Add {{ config_path }}/zuul/main.yaml'"

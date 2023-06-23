@@ -24,12 +24,6 @@ var pymod_main string
 //go:embed static/sf_operator/config-repo.sh
 var config_repo string
 
-//go:embed static/sf_operator/resources.dhall
-var resourcesDhall string
-
-//go:embed static/sf_operator/sf.dhall
-var sfDhall string
-
 //go:embed static/sf_operator/config-updater-sa.yaml
 var config_updater_sa string
 
@@ -103,11 +97,9 @@ func (r *SFController) RunCommand(name string, args []string, extra_vars []apiv1
 
 func (r *SFController) InstallTooling() {
 	r.EnsureConfigMap("pymod-sf-operator", map[string]string{
-		"secret.py":       pymod_secret,
-		"main.py":         pymod_main,
-		"config-repo.sh":  config_repo,
-		"resources.dhall": resourcesDhall,
-		"sf.dhall":        sfDhall,
+		"secret.py":      pymod_secret,
+		"main.py":        pymod_main,
+		"config-repo.sh": config_repo,
 	})
 }
 

@@ -1,0 +1,11 @@
+---
+- name: "Create gerrit repository named {{ repository_name }}"
+  ansible.builtin.command: |
+    kubectl exec gerrit-0 -c managesf-resources -- /usr/share/managesf/create-repo.sh {{ repository_name }}
+
+- name: Ensure repository exists in Gerrit
+  ansible.builtin.uri:
+    url: "https://{{ gerrit_host }}/projects/{{ repository_name }}"
+    validate_certs: "{{ validate_certs }}"
+    method: GET
+  retries: 10
