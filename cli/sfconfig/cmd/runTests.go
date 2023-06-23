@@ -37,10 +37,6 @@ Run test_only tag
 
 		ansiblePlaybookOptions.AddExtraVar("hostname", "localhost")
 
-		if test_only {
-			ansiblePlaybookOptions.Tags = "test_only"
-		}
-
 		for keyVar, valueVar := range vars {
 			ansiblePlaybookOptions.AddExtraVar(keyVar, valueVar)
 		}
@@ -50,6 +46,12 @@ Run test_only tag
 			playbook_yaml = "playbooks/upgrade.yaml"
 		} else {
 			playbook_yaml = "playbooks/main.yaml"
+			if test_only {
+				ansiblePlaybookOptions.Tags = "test_only"
+				ansiblePlaybookOptions.AddExtraVar("mode", "dev")
+			} else {
+				ansiblePlaybookOptions.AddExtraVar("mode", "olm")
+			}
 		}
 
 		playbook := &playbook.AnsiblePlaybookCmd{
