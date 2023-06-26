@@ -21,9 +21,9 @@ type StorageSpec struct {
 }
 
 type ConfigLocationSpec struct {
-	BaseURL            string `json:"base-url"`
-	Name               string `json:"name"`
-	ZuulConnectionName string `json:"zuul-connection-name"`
+	BaseURL            string `json:"base-url,omitempty"`
+	Name               string `json:"name,omitempty"`
+	ZuulConnectionName string `json:"zuul-connection-name,omitempty"`
 }
 
 type GerritConnection struct {

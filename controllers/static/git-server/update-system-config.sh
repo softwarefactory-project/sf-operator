@@ -152,6 +152,15 @@ cat << EOF > zuul.d/jobs-base.yaml
     window-increase-factor: 2
 
 - project:
+    post:
+      jobs:
+        - sleeper
+EOF
+
+if [ ! -z "${CONFIG_REPO_NAME}" ]; then
+  cat << EOF > zuul.d/config-project.yaml
+---
+- project:
     name: ${CONFIG_REPO_NAME}
     check:
       jobs:
@@ -162,13 +171,10 @@ cat << EOF > zuul.d/jobs-base.yaml
     post:
       jobs:
         - config-update
-
-- project:
-    post:
-      jobs:
-        - sleeper
 EOF
-
+else
+  echo "---" > zuul.d/config-project.yaml
+fi
 
 cat << EOF > playbooks/sleeper.yaml
 - hosts: localhost

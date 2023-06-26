@@ -1175,22 +1175,6 @@ func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) Sto
 	return BaseGetStorageConfOrDefault(storageSpec, r.cr.Spec.StorageClassName)
 }
 
-func (r *SFController) getConfigRepoCNXInfo() (string, string, string) {
-	base_url := r.cr.Spec.ConfigLocation.BaseURL
-	repo_name := r.cr.Spec.ConfigLocation.Name
-	zuul_connection_name := r.cr.Spec.ConfigLocation.ZuulConnectionName
-	if base_url == "" {
-		base_url = "http://gerrit-httpd/"
-	}
-	if repo_name == "" {
-		repo_name = "config"
-	}
-	if zuul_connection_name == "" {
-		zuul_connection_name = "gerrit"
-	}
-	return base_url, repo_name, zuul_connection_name
-}
-
 func int32Ptr(i int32) *int32 { return &i }
 func boolPtr(b bool) *bool    { return &b }
 func strPtr(s string) *string { return &s }
