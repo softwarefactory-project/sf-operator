@@ -190,6 +190,7 @@ cat << EOF > playbooks/base/post.yaml
   roles:
     -  role: add-fileserver
        fileserver: "{{ site_sflogs }}"
+    -  role: generate-zuul-manifest
 
 - hosts: logserver-sshd
   vars:
