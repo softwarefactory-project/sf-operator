@@ -40,10 +40,6 @@ cd config
 mkdir -p zuul
 touch zuul/main.yaml
 
-# Initialize system resource
-mkdir -p system
-cat /sf-provided-cr/sf.yaml > system/sf.yaml
-
 # Initialize zuul.d
 mkdir -p zuul.d
 touch zuul.d/jobs.yaml
