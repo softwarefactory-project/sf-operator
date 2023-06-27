@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	ini "gopkg.in/ini.v1"
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -143,10 +144,11 @@ func (r *SFController) create_zuul_host_alias() []apiv1.HostAlias {
 }
 
 func (r *SFController) get_scheduler_init_and_sidecar_envs() []apiv1.EnvVar {
-	config_url, config_user := r.getConfigRepoCNXInfo()
+	base_url, name, zuul_connection_name := r.getConfigRepoCNXInfo()
 	return []apiv1.EnvVar{
-		create_env("CONFIG_REPO_URL", config_url),
-		create_env("CONFIG_REPO_USER", config_user),
+		create_env("CONFIG_REPO_BASE_URL", base_url),
+		create_env("CONFIG_REPO_NAME", name),
+		create_env("CONFIG_REPO_CONNECTION_NAME", zuul_connection_name),
 		create_env("HOME", "/var/lib/zuul"),
 	}
 }
@@ -191,9 +193,19 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cfg *ini.File) bool {
 	sections := IniGetSectionNamesByPrefix(cfg, "connection")
 	sections = append(sections, "scheduler")
+
+	base_url, repo_name, connection_name := r.getConfigRepoCNXInfo()
+
 	annotations := map[string]string{
 		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": IniSectionsChecksum(cfg, sections),
+		"config-repo-info-hash": checksum([]byte(base_url + repo_name + connection_name)),
+	}
+
+	var setAdditionalContainers = func(sts *appsv1.StatefulSet) {
+		sts.Spec.Template.Spec.InitContainers = append(init_containers, r.init_scheduler_config())
+		sts.Spec.Template.Spec.Containers = append(
+			create_zuul_container(r.cr.Spec.FQDN, "zuul-scheduler"), r.scheduler_sidecar_container())
 	}
 
 	scheduler_tooling_data := make(map[string]string)
@@ -204,10 +216,8 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	zs_replicas := int32(1)
 	zs := r.create_statefulset("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), zs_replicas)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
-	zs.Spec.Template.Spec.InitContainers = append(init_containers, r.init_scheduler_config())
 	zs.Spec.Template.Spec.HostAliases = r.create_zuul_host_alias()
-	zs.Spec.Template.Spec.Containers = append(
-		create_zuul_container(r.cr.Spec.FQDN, "zuul-scheduler"), r.scheduler_sidecar_container())
+	setAdditionalContainers(&zs)
 	zs.Spec.Template.Spec.Volumes = zs_volumes
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", ZUUL_PROMETHEUS_PORT)
 	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", ZUUL_PROMETHEUS_PORT)
@@ -219,6 +229,7 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	zs_dirty := false
 	if !map_equals(&zs.Spec.Template.ObjectMeta.Annotations, &annotations) {
 		zs.Spec.Template.ObjectMeta.Annotations = annotations
+		setAdditionalContainers(&zs)
 		zs_dirty = true
 		r.log.V(1).Info("Zuul configuration changed, restarting the services...")
 	}

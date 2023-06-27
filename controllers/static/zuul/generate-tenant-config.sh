@@ -9,17 +9,17 @@ if [ "${ZUUL_STARTUP}" == "true" -a ! -f /var/lib/zuul/main.yaml ] || [ "${ZUUL_
   REF=$1
   REF=${REF:-origin/master}
 
-  export GIT_SSH_COMMAND="ssh -i /var/lib/admin-ssh/..data/priv -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-
   # Clone or fetch config repository
-  if [ -d ~/config/.git ]; then
-    pushd ~/config
+  if [ -d ~/${CONFIG_REPO_NAME}/.git ]; then
+    pushd ~/${CONFIG_REPO_NAME}
+    git remote remove origin
+    git remote add origin ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME}
     git fetch origin
     git reset --hard $REF
     popd
   else
     pushd ~/
-    git clone ssh://${CONFIG_REPO_USER}@${CONFIG_REPO_URL}
+    git clone ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME}
     popd
   fi
 
@@ -41,19 +41,19 @@ if [ "${ZUUL_STARTUP}" == "true" -a ! -f /var/lib/zuul/main.yaml ] || [ "${ZUUL_
     name: internal
     report-build-page: true
     source:
-      gerrit:
+      ${CONFIG_REPO_CONNECTION_NAME}:
         config-projects:
-        - config: {}
+        - ${CONFIG_REPO_NAME}
       git-server:
         config-projects:
-        - system-config: {}
+        - system-config
       opendev.org:
         untrusted-projects:
-        - zuul/zuul-jobs: {}
+        - zuul/zuul-jobs
 EOF
 
-if [ -f ~/config/zuul/main.yaml ]; then
-  cat ~/config/zuul/main.yaml >> ~/main.yaml
+if [ -f ~/${CONFIG_REPO_NAME}/zuul/main.yaml ]; then
+  cat ~/${CONFIG_REPO_NAME}/zuul/main.yaml >> ~/main.yaml
 fi
 
 else

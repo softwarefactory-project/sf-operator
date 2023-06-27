@@ -152,7 +152,7 @@ cat << EOF > zuul.d/jobs-base.yaml
     window-increase-factor: 2
 
 - project:
-    name: config
+    name: ${CONFIG_REPO_NAME}
     check:
       jobs:
         - config-check
