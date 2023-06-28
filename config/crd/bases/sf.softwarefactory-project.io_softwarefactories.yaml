@@ -200,6 +200,11 @@ spec:
                       properties:
                         canonicalhostname:
                           type: string
+                        git-over-ssh:
+                          default: false
+                          description: This forces git operation over SSH even if
+                            the password attribute is set.
+                          type: boolean
                         hostname:
                           type: string
                         name:
@@ -213,7 +218,10 @@ spec:
                         username:
                           type: string
                         verifyssl:
-                          type: string
+                          default: true
+                          description: Disable SSL certificate verification when set
+                            to false.
+                          type: boolean
                       required:
                       - hostname
                       - name
