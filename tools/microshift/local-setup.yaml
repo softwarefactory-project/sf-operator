@@ -1,38 +1,8 @@
 - hosts: localhost
   tasks:
-    - name: Install microshift repos
+    - name: Install required packages
       ansible.builtin.include_role:
-        name: "{{ microshift_role_path }}"
-        tasks_from: repo
-      when: ansible_distribution == "CentOS"
-
-    - name: Install rpms
-      block:
-        - name: Install epel
-          ansible.builtin.package:
-            name: epel-release
-          when: ansible_distribution == "CentOS"
-
-        - name: Install packages
-          ansible.builtin.package:
-            name:
-              - ansible
-              - ansible-core
-              - git-review
-              - golang
-              - jq
-
-        - name: Install openshift-client
-          ansible.builtin.package:
-            name: openshift-clients
-            enablerepo: microshift-deps-rpms
-          when: ansible_distribution == "CentOS"
-
-        - name: Install kubernetes-client
-          ansible.builtin.package:
-            name: kubernetes-client
-          when: ansible_distribution == "Fedora"
-      become: yes
+        name: "roles/setup-env"
 
     - name: Populate /etc/hosts
       ansible.builtin.blockinfile:
