@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"fmt"
 	"strconv"
+	"strings"
 
 	ini "gopkg.in/ini.v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -141,7 +142,7 @@ func (r *SFController) get_generate_tenants_envs() []apiv1.EnvVar {
 	}
 	return []apiv1.EnvVar{
 		Create_env("CONFIG_REPO_SET", configRepoSet),
-		Create_env("CONFIG_REPO_BASE_URL", r.cr.Spec.ConfigLocation.BaseURL),
+		Create_env("CONFIG_REPO_BASE_URL", strings.TrimSuffix(r.cr.Spec.ConfigLocation.BaseURL, "/")),
 		Create_env("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
 		Create_env("CONFIG_REPO_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName),
 	}
@@ -360,15 +361,9 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	cfg.Section(section).NewKey("server", conn.Hostname)
 	cfg.Section(section).NewKey("sshkey", "/var/lib/zuul-ssh/..data/priv")
 	cfg.Section(section).NewKey("gitweb_url_template", "{baseurl}/plugins/gitiles/{project.name}/+/{sha}^!/")
-	// Optional fields (set as omitempty in GerritConnection struct defintion)
-	var username = "zuul"
-	if conn.Username != "" {
-		username = conn.Username
-	}
-	cfg.Section(section).NewKey("user", username)
-	if conn.Port != "" {
-		cfg.Section(section).NewKey("port", conn.Port)
-	}
+	// Optional fields (set as omitempty in GerritConnection struct definition)
+	cfg.Section(section).NewKey("user", conn.Username)
+	cfg.Section(section).NewKey("port", strconv.Itoa(int(conn.Port)))
 	if conn.Puburl != "" {
 		cfg.Section(section).NewKey("baseurl", conn.Puburl)
 	}

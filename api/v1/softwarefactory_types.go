@@ -21,19 +21,32 @@ type StorageSpec struct {
 }
 
 type ConfigLocationSpec struct {
-	BaseURL            string `json:"base-url,omitempty"`
-	Name               string `json:"name,omitempty"`
+	// Base URL of the code-review provider where the `Name` can be fetch by Git
+	// +kubebuilder:validation:Pattern:=`^https?:\/\/.+$`
+	BaseURL string `json:"base-url,omitempty"`
+	// Name of the `config` repository where the SF config workflow is applied
+	// +kubebuilder:default:=config
+	Name string `json:"name,omitempty"`
+	// Name of the Zuul connection where the `config` exists
 	ZuulConnectionName string `json:"zuul-connection-name,omitempty"`
 }
 
 type GerritConnection struct {
-	Name              string `json:"name"`
-	Hostname          string `json:"hostname"`
-	Port              string `json:"port,omitempty"`
-	Puburl            string `json:"puburl,omitempty"`
-	Username          string `json:"username,omitempty"`
+	Name     string `json:"name"`
+	Hostname string `json:"hostname"`
+	// SSH port number to connect on the Gerrit instance
+	// +kubebuilder:default:=29418
+	Port uint16 `json:"port,omitempty"`
+	// URL to Gerrit web interface
+	// +kubebuilder:validation:Pattern:=`^https?:\/\/.+$`
+	Puburl string `json:"puburl,omitempty"`
+	// Username to authenticate on the Gerrit instance
+	// +kubebuilder:default:=zuul
+	Username string `json:"username,omitempty"`
+	// The canonical hostname associated with the git repos on the Gerrit server.
 	Canonicalhostname string `json:"canonicalhostname,omitempty"`
-	Password          string `json:"password,omitempty"` // API Password secret name
+	// API Password secret name
+	Password string `json:"password,omitempty"`
 	// This forces git operation over SSH even if the password attribute is set.
 	// +kubebuilder:default:=false
 	GitOverSSH bool `json:"git-over-ssh,omitempty"`
