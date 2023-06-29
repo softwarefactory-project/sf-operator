@@ -98,8 +98,19 @@ func (r *SFController) DeployLogserverResource() bool {
 
 	exists := r.GetM(LOGSERVER_IDENT, &resource)
 
-	if exists && (resource.Spec.Settings != r.cr.Spec.Logserver) {
-		resource.Spec.Settings = r.cr.Spec.Logserver
+	loopdelay, retentiondays := getLogserverSettingsOrDefault(r.cr.Spec.Logserver)
+	storage := r.cr.Spec.Logserver.Storage
+	if storage.Size.IsZero() {
+		storage.Size = DEFAULT_QTY_1Gi()
+	}
+	logServerSpecSettings := sfv1.LogServerSpecSettings{
+		LoopDelay:     loopdelay,
+		RetentionDays: retentiondays,
+		Storage:       storage,
+	}
+
+	if exists && (resource.Spec.Settings != logServerSpecSettings) {
+		resource.Spec.Settings = logServerSpecSettings
 		r.log.Info("Updating the logserver resource")
 		r.UpdateR(&resource)
 		return false
@@ -115,7 +126,7 @@ func (r *SFController) DeployLogserverResource() bool {
 			FQDN:             r.cr.Spec.FQDN,
 			StorageClassName: r.cr.Spec.StorageClassName,
 			AuthorizedSSHKey: pub_key_b64,
-			Settings:         r.cr.Spec.Logserver,
+			Settings:         logServerSpecSettings,
 		}
 		r.CreateR(&resource)
 		return false

@@ -66,6 +66,19 @@ func isLogserverReady(logserver sfv1.LogServer) bool {
 	return logserver.Status.ObservedGeneration == logserver.Generation && logserver.Status.Ready
 }
 
+func getLogserverSettingsOrDefault(settings sfv1.LogServerSpecSettings) (int, int) {
+	loopdelay := 3600
+	if settings.LoopDelay > 0 {
+		loopdelay = settings.LoopDelay
+	}
+
+	retentiondays := 60
+	if settings.RetentionDays > 0 {
+		retentiondays = settings.RetentionDays
+	}
+	return loopdelay, retentiondays
+}
+
 func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	r.EnsureSSHKey(LOGSERVER_IDENT + "-keys")
@@ -183,16 +196,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		SecurityContext: create_security_context(false),
 	})
 
-	// Add PurgeLog container
-	loopdelay := 3600
-	if r.cr.Spec.Settings.LoopDelay > 0 {
-		loopdelay = r.cr.Spec.Settings.LoopDelay
-	}
-
-	retentiondays := 60
-	if r.cr.Spec.Settings.RetentionDays > 0 {
-		retentiondays = r.cr.Spec.Settings.RetentionDays
-	}
+	loopdelay, retentiondays := getLogserverSettingsOrDefault(r.cr.Spec.Settings)
 
 	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
 		Name:  PURGELOG_IDENT,
