@@ -32,21 +32,12 @@
           - podman
 
     - name: Install openshift-client and python3
-      block:
-        - name: Install packages
-          ansible.builtin.package:
-            name:
-              - openshift-clients
-              - python3.11-pip
-              - python3.11-setuptools
-            enablerepo: microshift-deps-rpms
-
-        - name: Ensure python3
-          community.general.alternatives:
-            name: python
-            path: /usr/bin/python3.11
-            link: /usr/bin/python3
-            state: selected
+      ansible.builtin.package:
+        name:
+          - openshift-clients
+          - python3.11-pip
+          - python3.11-setuptools
+        enablerepo: microshift-deps-rpms
       when: ansible_distribution == "CentOS"
 
     - name: Install kubernetes-client and python3
