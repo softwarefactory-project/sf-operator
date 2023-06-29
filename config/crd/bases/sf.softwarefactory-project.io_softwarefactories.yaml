@@ -41,8 +41,8 @@ spec:
           spec:
             description: SoftwareFactorySpec defines the desired state of SoftwareFactory
             properties:
-              config-locations:
-                description: Config repositories spec
+              config-location:
+                description: Config repository spec
                 properties:
                   base-url:
                     type: string
@@ -50,6 +50,10 @@ spec:
                     type: string
                   zuul-connection-name:
                     type: string
+                required:
+                - base-url
+                - name
+                - zuul-connection-name
                 type: object
               fqdn:
                 type: string
@@ -225,7 +229,6 @@ spec:
                       required:
                       - hostname
                       - name
-                      - username
                       type: object
                     type: array
                   scheduler:

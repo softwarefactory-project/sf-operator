@@ -47,11 +47,11 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		create_volume_cm(GS_IDENT+"-pi", GS_IDENT+"-pi-config-map"),
+		Create_volume_cm(GS_IDENT+"-pi", GS_IDENT+"-pi-config-map"),
 	}
 
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		create_container_port(GS_GIT_PORT, GS_GIT_PORT_NAME),
+		Create_container_port(GS_GIT_PORT, GS_GIT_PORT_NAME),
 	}
 
 	// Define initContainer
@@ -62,9 +62,9 @@ func (r *SFController) DeployGitServer() bool {
 			SecurityContext: create_security_context(false),
 			Command:         []string{"/bin/bash", "/entry/pre-init.sh"},
 			Env: []apiv1.EnvVar{
-				create_env("FQDN", r.cr.Spec.FQDN),
-				create_env("CONFIG_REPO_NAME", config_repo_name),
-				create_env("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(LOGSERVER_SSHD_PORT)),
+				Create_env("FQDN", r.cr.Spec.FQDN),
+				Create_env("CONFIG_REPO_NAME", config_repo_name),
+				Create_env("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(LOGSERVER_SSHD_PORT)),
 			},
 			VolumeMounts: []apiv1.VolumeMount{
 				{

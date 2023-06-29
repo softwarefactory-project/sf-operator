@@ -20,10 +20,10 @@ type StorageSpec struct {
 	ClassName string            `json:"className,omitempty"`
 }
 
-type ConfigLocationsSpec struct {
-	BaseURL            string `json:"base-url,omitempty"`
-	Name               string `json:"name,omitempty"`
-	ZuulConnectionName string `json:"zuul-connection-name,omitempty"`
+type ConfigLocationSpec struct {
+	BaseURL            string `json:"base-url"`
+	Name               string `json:"name"`
+	ZuulConnectionName string `json:"zuul-connection-name"`
 }
 
 type GerritConnection struct {
@@ -31,7 +31,7 @@ type GerritConnection struct {
 	Hostname          string `json:"hostname"`
 	Port              string `json:"port,omitempty"`
 	Puburl            string `json:"puburl,omitempty"`
-	Username          string `json:"username"`
+	Username          string `json:"username,omitempty"`
 	Canonicalhostname string `json:"canonicalhostname,omitempty"`
 	Password          string `json:"password,omitempty"` // API Password secret name
 	// This forces git operation over SSH even if the password attribute is set.
@@ -93,8 +93,8 @@ type SoftwareFactorySpec struct {
 	// Default storage class to use by Persistent Volume Claims
 	StorageClassName string `json:"storageClassName,omitempty"`
 
-	// Config repositories spec
-	ConfigLocations ConfigLocationsSpec `json:"config-locations,omitempty"`
+	// Config repository spec
+	ConfigLocation ConfigLocationSpec `json:"config-location,omitempty"`
 
 	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`

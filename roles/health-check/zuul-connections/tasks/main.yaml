@@ -1,14 +1,22 @@
 ---
+- name: Get current Zuul gerrit connections
+  command: kubectl get sf my-sf -o jsonpath='{.spec.zuul.gerritconns}'
+  register: gerritconns
+
+- set_fact:
+    gerritconns_orig: "{{ gerritconns.stdout | from_json }}"
+    dummy_gerritconn:
+      - name: dummy-gerrit-conn
+        hostname: dummy-gerrit.local
+        username: zuul
+
 - name: Add a dummy Zuul Gerrit connection
   ansible.builtin.include_role:
     name: "roles/update-custom-resource"
   vars:
     cr_spec:
       zuul:
-        gerritconns:
-          - name: dummy-gerrit-conn
-            hostname: dummy-gerrit.local
-            username: zuul
+        gerritconns: "{{ gerritconns_orig + dummy_gerritconn }}"
 
 - name: Wait for the new Zuul connection to appear in the Zuul API
   ansible.builtin.uri:
@@ -27,7 +35,7 @@
   vars:
     cr_spec:
       zuul:
-        gerritconns: []
+        gerritconns: "{{ gerritconns_orig }}"
 
 - name: Wait for the dummy Zuul connection to be removed from the API
   ansible.builtin.uri:

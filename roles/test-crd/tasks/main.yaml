@@ -44,10 +44,7 @@
     metadata:
       name: my-sf-bad-ld
     spec:
-      storageClassName: "topolvm-provisioner"
       fqdn: "sftests.com"
-      zuul:
-        gerritconns: []
       logserver:
         loopDelay: -3
         storage:
@@ -65,10 +62,7 @@
     metadata:
       name: my-sf-bad-rd
     spec:
-      storageClassName: "topolvm-provisioner"
       fqdn: "sftests.com"
-      zuul:
-        gerritconns: []
       logserver:
         retentionDays: -3
         storage:

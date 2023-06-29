@@ -50,9 +50,9 @@ func (r *SFController) SetupBaseSecrets() bool {
 	found := r.GetM(job_name, &job)
 
 	extra_cmd_vars := []apiv1.EnvVar{
-		create_env("HOME", "/tmp"),
-		create_secret_env("SERVICE_ACCOUNT_TOKEN", secret_name, "token"),
-		create_secret_env("ZUUL_LOGSERVER_PRIVATE_KEY", "zuul-ssh-key", "priv"),
+		Create_env("HOME", "/tmp"),
+		Create_secret_env("SERVICE_ACCOUNT_TOKEN", secret_name, "token"),
+		Create_secret_env("ZUUL_LOGSERVER_PRIVATE_KEY", "zuul-ssh-key", "priv"),
 	}
 
 	if !found {
@@ -75,8 +75,8 @@ func (r *SFController) RunCommand(name string, args []string, extra_vars []apiv1
 			Image:   BUSYBOX_IMAGE,
 			Command: append([]string{"python3", "/sf_operator/main.py"}, args...),
 			Env: append([]apiv1.EnvVar{
-				create_env("PYTHONPATH", "/"),
-				create_env("FQDN", r.cr.Spec.FQDN),
+				Create_env("PYTHONPATH", "/"),
+				Create_env("FQDN", r.cr.Spec.FQDN),
 			}, extra_vars...),
 			VolumeMounts: []apiv1.VolumeMount{
 				{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
@@ -85,7 +85,7 @@ func (r *SFController) RunCommand(name string, args []string, extra_vars []apiv1
 		},
 	)
 	job.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		create_volume_cm("pymod-sf-operator", "pymod-sf-operator-config-map"),
+		Create_volume_cm("pymod-sf-operator", "pymod-sf-operator-config-map"),
 	}
 	return &job
 }

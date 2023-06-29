@@ -71,7 +71,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	r.EnsureSSHKey(LOGSERVER_IDENT + "-keys")
 
 	cm_data := make(map[string]string)
-	cm_data["logserver.conf"], _ = parse_string(logserverconf, struct {
+	cm_data["logserver.conf"], _ = Parse_string(logserverconf, struct {
 		ServerPort    int
 		ServerRoot    string
 		LogserverRoot string
@@ -115,7 +115,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	r.GetOrCreate(&data_pvc)
 	var mod int32 = 256 // decimal for 0400 octal
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		create_volume_cm(LOGSERVER_IDENT+"-config-vol", LOGSERVER_IDENT+"-config-map"),
+		Create_volume_cm(LOGSERVER_IDENT+"-config-vol", LOGSERVER_IDENT+"-config-map"),
 		{
 			Name: LOGSERVER_IDENT + "-keys",
 			VolumeSource: apiv1.VolumeSource{
@@ -136,7 +136,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		create_container_port(LOGSERVER_HTTPD_PORT, LOGSERVER_HTTPD_PORT_NAME),
+		Create_container_port(LOGSERVER_HTTPD_PORT, LOGSERVER_HTTPD_PORT_NAME),
 	}
 
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", LOGSERVER_HTTPD_PORT)
@@ -165,11 +165,11 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	ports_sidecar := []apiv1.ContainerPort{
-		create_container_port(LOGSERVER_SSHD_PORT, LOGSERVER_SSHD_PORT_NAME),
+		Create_container_port(LOGSERVER_SSHD_PORT, LOGSERVER_SSHD_PORT_NAME),
 	}
 
 	env_sidecar := []apiv1.EnvVar{
-		create_env("AUTHORIZED_KEY", r.cr.Spec.AuthorizedSSHKey),
+		Create_env("AUTHORIZED_KEY", r.cr.Spec.AuthorizedSSHKey),
 	}
 
 	// Setup the sidecar container for sshd

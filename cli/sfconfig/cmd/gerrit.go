@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	_ "embed"
+
 	apiroutev1 "github.com/openshift/api/route/v1"
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers"
@@ -21,19 +23,52 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
+const MANAGESF_RESOURCES_IDENT string = "managesf-resources"
+const GERRIT_HTTPD_PORT = 8080
+const GERRIT_HTTPD_HTTP_PORT = 80
+const GERRIT_HTTPD_PORT_NAME = "gerrit-httpd"
+const GERRIT_SSHD_PORT = 29418
+const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
+const GERRIT_SITE_MOUNT_PATH = "/gerrit"
+const GERRIT_IDENT = "gerrit"
+const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.6.4-4"
+
+//go:embed static/gerrit/entrypoint.sh
+var entrypoint string
+
+//go:embed static/gerrit/post-init.sh
+var postInitScript string
+
+//go:embed static/gerrit/msf-entrypoint.sh
+var managesf_entrypoint string
+
+//go:embed static/gerrit/init.sh
+var gerritInitScript string
+
+//go:embed static/gerrit/config.py.tmpl
+var managesf_conf string
+
+//go:embed static/gerrit/create-repo.sh
+var CreateRepoScript string
+
+//go:embed static/gerrit/create-ci-user.sh
+var CreateCIUserScript string
+
 type GerritCMDContext struct {
-	cl  client.Client
-	ns  string
-	ctx context.Context
+	cl   client.Client
+	ns   string
+	fqdn string
+	ctx  context.Context
 }
 
-var fqdn = "sf.dev"
+var ns = "sf"
 
 func notifByError(err error, oType string, name string) {
 	if err != nil {
@@ -97,13 +132,181 @@ func (g *GerritCMDContext) ensureCM(name string, data map[string]string) {
 	}
 }
 
+func GerritHttpdService(ns string) apiv1.Service {
+	return apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      GERRIT_HTTPD_PORT_NAME,
+			Namespace: ns,
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: []apiv1.ServicePort{
+				{
+					Name:       GERRIT_HTTPD_PORT_NAME,
+					Protocol:   apiv1.ProtocolTCP,
+					Port:       GERRIT_HTTPD_PORT,
+					TargetPort: intstr.FromString(GERRIT_HTTPD_PORT_NAME),
+				},
+				{
+					Name:       GERRIT_HTTPD_PORT_NAME + "-internal-http",
+					Protocol:   apiv1.ProtocolTCP,
+					Port:       GERRIT_HTTPD_HTTP_PORT,
+					TargetPort: intstr.FromString(GERRIT_HTTPD_PORT_NAME),
+				},
+			},
+			Selector: map[string]string{
+				"app": "sf",
+				"run": GERRIT_IDENT,
+			},
+		}}
+}
+
+func GerritSshdService(ns string) apiv1.Service {
+	return apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      GERRIT_SSHD_PORT_NAME,
+			Namespace: ns,
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: []apiv1.ServicePort{
+				{
+					Name:     GERRIT_SSHD_PORT_NAME,
+					Protocol: apiv1.ProtocolTCP,
+					Port:     GERRIT_SSHD_PORT,
+				},
+			},
+			Type: apiv1.ServiceTypeNodePort,
+			Selector: map[string]string{
+				"app": "sf",
+				"run": GERRIT_IDENT,
+			},
+		}}
+}
+
+func GenerateManageSFConfig(gerritadminpassword string, fqdn string) string {
+
+	// Structure for config.py file template
+	type ConfigPy struct {
+		Fqdn                string
+		GerritAdminPassword string
+	}
+
+	// Initializing Template Structure
+	configpy := ConfigPy{
+		fqdn,
+		gerritadminpassword,
+	}
+
+	template, err := controllers.Parse_string(managesf_conf, configpy)
+	if err != nil {
+		panic("Template parsing failed")
+	}
+
+	return template
+}
+
+var ManageSFVolumes = []apiv1.Volume{
+	controllers.Create_volume_cm(MANAGESF_RESOURCES_IDENT+"-config-vol",
+		MANAGESF_RESOURCES_IDENT+"-config-map"),
+	{
+		Name: MANAGESF_RESOURCES_IDENT + "-tooling-vol",
+		VolumeSource: apiv1.VolumeSource{
+			ConfigMap: &apiv1.ConfigMapVolumeSource{
+				LocalObjectReference: apiv1.LocalObjectReference{
+					Name: MANAGESF_RESOURCES_IDENT + "-tooling-config-map",
+				},
+				DefaultMode: &controllers.Execmod,
+			},
+		},
+	},
+}
+
+func SetGerritSTSContainer(sts *appsv1.StatefulSet, volumeMounts []apiv1.VolumeMount, fqdn string) {
+	sts.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
+	sts.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
+	sts.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+		controllers.Create_container_port(GERRIT_HTTPD_PORT, GERRIT_HTTPD_PORT_NAME),
+		controllers.Create_container_port(GERRIT_SSHD_PORT, GERRIT_SSHD_PORT_NAME),
+	}
+	sts.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
+		controllers.Create_env("HOME", "/gerrit"),
+		controllers.Create_env("FQDN", fqdn),
+		controllers.Create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
+	}
+	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = controllers.Create_readiness_cmd_probe([]string{"bash", "/gerrit/ready.sh"})
+}
+
+func SetGerritMSFRContainer(sts *appsv1.StatefulSet, fqdn string) {
+	container := controllers.MkContainer(MANAGESF_RESOURCES_IDENT, controllers.BUSYBOX_IMAGE)
+	container.Command = []string{"sh", "-c", managesf_entrypoint}
+	container.Env = []apiv1.EnvVar{
+		controllers.Create_env("HOME", "/tmp"),
+		controllers.Create_env("FQDN", fqdn),
+		// managesf-resources need an admin ssh access to the local Gerrit
+		controllers.Create_secret_env("SF_ADMIN_SSH", "admin-ssh-key", "priv"),
+	}
+	container.VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      MANAGESF_RESOURCES_IDENT + "-config-vol",
+			MountPath: "/etc/managesf",
+		},
+		{
+			Name:      MANAGESF_RESOURCES_IDENT + "-tooling-vol",
+			MountPath: "/usr/share/managesf",
+		},
+	}
+	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, container)
+}
+
+func SetGerritSTSVolumes(sts *appsv1.StatefulSet) {
+	sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes,
+		ManageSFVolumes...,
+	)
+}
+
+func GerritPostInitContainer(job_name string, fqdn string) apiv1.Container {
+	env := []apiv1.EnvVar{
+		controllers.Create_env("HOME", "/tmp"),
+		controllers.Create_env("FQDN", fqdn),
+		controllers.Create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
+		controllers.Create_secret_env("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
+		controllers.Create_secret_env("ZUUL_SSH_PUB_KEY", "zuul-ssh-key", "pub"),
+		controllers.Create_secret_env("ZUUL_HTTP_PASSWORD", "zuul-gerrit-api-key", "zuul-gerrit-api-key"),
+	}
+
+	container := controllers.MkContainer(fmt.Sprintf("%s-container", job_name), controllers.BUSYBOX_IMAGE)
+	container.Command = []string{"sh", "-c", postInitScript}
+	container.Env = env
+	container.VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      MANAGESF_RESOURCES_IDENT + "-config-vol",
+			MountPath: "/etc/managesf",
+		},
+		{
+			Name:      MANAGESF_RESOURCES_IDENT + "-tooling-vol",
+			MountPath: "/usr/share/managesf",
+		},
+	}
+	return container
+}
+
+func GerritInitContainers(volumeMounts []apiv1.VolumeMount, fqdn string) apiv1.Container {
+	container := controllers.MkContainer("gerrit-init", GERRIT_IMAGE)
+	container.Command = []string{"sh", "-c", gerritInitScript}
+	container.Env = []apiv1.EnvVar{
+		controllers.Create_secret_env("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
+		controllers.Create_env("FQDN", fqdn),
+	}
+	container.VolumeMounts = volumeMounts
+	return container
+}
+
 func (g *GerritCMDContext) ensureGerritPostInitJob() {
 	job_name := "post-init"
 	job := controllers.MkJob(
 		job_name, g.ns,
-		controllers.GerritPostInitContainer(job_name, fqdn),
+		GerritPostInitContainer(job_name, g.fqdn),
 	)
-	job.Spec.Template.Spec.Volumes = controllers.ManageSFVolumes
+	job.Spec.Template.Spec.Volumes = ManageSFVolumes
 	g.ensureJob(job_name, job)
 }
 
@@ -119,10 +322,10 @@ func (g *GerritCMDContext) isSTSReady(name string) bool {
 }
 
 func (g *GerritCMDContext) ensureGerritSTS() {
-	name := controllers.GERRIT_IDENT
+	name := GERRIT_IDENT
 	_, err := g.getSTS(name)
 	if err != nil && errors.IsNotFound(err) {
-		container := controllers.MkContainer(name, controllers.GERRIT_IMAGE)
+		container := controllers.MkContainer(name, GERRIT_IMAGE)
 		storage_config := controllers.BaseGetStorageConfOrDefault(v1.StorageSpec{}, "")
 		pvc := controllers.MkPVC(name, g.ns, storage_config)
 		sts := controllers.MkStatefulset(
@@ -130,17 +333,17 @@ func (g *GerritCMDContext) ensureGerritSTS() {
 		volumeMounts := []apiv1.VolumeMount{
 			{
 				Name:      name,
-				MountPath: controllers.GERRIT_SITE_MOUNT_PATH,
+				MountPath: GERRIT_SITE_MOUNT_PATH,
 			},
 		}
-		controllers.SetGerritSTSContainer(&sts, volumeMounts, fqdn)
+		SetGerritSTSContainer(&sts, volumeMounts, g.fqdn)
 		sts.Spec.Template.Spec.InitContainers = []apiv1.Container{
-			controllers.GerritInitContainers(volumeMounts, fqdn),
+			GerritInitContainers(volumeMounts, g.fqdn),
 		}
 
-		controllers.SetGerritMSFRContainer(&sts, fqdn)
+		SetGerritMSFRContainer(&sts, g.fqdn)
 
-		controllers.SetGerritSTSVolumes(&sts)
+		SetGerritSTSVolumes(&sts)
 
 		err = g.cl.Create(g.ctx, &sts)
 		notifByError(err, "sts", name)
@@ -150,7 +353,7 @@ func (g *GerritCMDContext) ensureGerritSTS() {
 func (g *GerritCMDContext) ensureGerritIngresses() {
 	name := "gerrit"
 	route := controllers.MkHTTSRoute(name, g.ns, name,
-		controllers.GERRIT_HTTPD_PORT_NAME, "/", controllers.GERRIT_HTTPD_PORT, map[string]string{}, fqdn)
+		GERRIT_HTTPD_PORT_NAME, "/", GERRIT_HTTPD_PORT, map[string]string{}, g.fqdn)
 	g.ensureRoute(name, route)
 }
 
@@ -160,6 +363,7 @@ var gerritCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		deploy, _ := cmd.Flags().GetBool("deploy")
 		wipe, _ := cmd.Flags().GetBool("wipe")
+		fqdn, _ := cmd.Flags().GetString("fqdn")
 
 		if !(deploy || wipe) {
 			println("Select one of deploy or wipe option")
@@ -179,7 +383,6 @@ var gerritCmd = &cobra.Command{
 		}
 
 		ctx := context.Background()
-		ns := "gerrit"
 
 		if deploy {
 			fmt.Println("Ensure Gerrit deployed in namespace", ns)
@@ -200,9 +403,10 @@ var gerritCmd = &cobra.Command{
 			}
 
 			g := GerritCMDContext{
-				cl:  cl,
-				ns:  ns,
-				ctx: ctx,
+				cl:   cl,
+				ns:   ns,
+				fqdn: fqdn,
+				ctx:  ctx,
 			}
 
 			// Ensure the admin SSH key pair secret
@@ -220,25 +424,25 @@ var gerritCmd = &cobra.Command{
 			g.ensureSecret("zuul-gerrit-api-key", createAPIKeySecret)
 
 			// Ensure httpd Service
-			g.ensureService(controllers.GERRIT_HTTPD_PORT_NAME, controllers.GerritHttpdService(ns))
+			g.ensureService(GERRIT_HTTPD_PORT_NAME, GerritHttpdService(ns))
 
 			// Ensure sshd Service
-			g.ensureService(controllers.GERRIT_SSHD_PORT_NAME, controllers.GerritSshdService(ns))
+			g.ensureService(GERRIT_SSHD_PORT_NAME, GerritSshdService(ns))
 
 			// Ensure configMaps for managesf-resources
 			cm_data := make(map[string]string)
-			cm_data["config.py"] = controllers.GenerateManageSFConfig(string(adminApiKey), fqdn)
-			g.ensureCM(controllers.MANAGESF_RESOURCES_IDENT, cm_data)
+			cm_data["config.py"] = GenerateManageSFConfig(string(adminApiKey), fqdn)
+			g.ensureCM(MANAGESF_RESOURCES_IDENT, cm_data)
 			tooling_data := make(map[string]string)
-			tooling_data["create-repo.sh"] = controllers.CreateRepoScript
-			tooling_data["create-ci-user.sh"] = controllers.CreateCIUserScript
-			g.ensureCM(controllers.MANAGESF_RESOURCES_IDENT+"-tooling", tooling_data)
+			tooling_data["create-repo.sh"] = CreateRepoScript
+			tooling_data["create-ci-user.sh"] = CreateCIUserScript
+			g.ensureCM(MANAGESF_RESOURCES_IDENT+"-tooling", tooling_data)
 
 			// Ensure gerrit statefulset
 			g.ensureGerritSTS()
 
 			// Wait for Gerrit statefullSet ready
-			for !g.isSTSReady(controllers.GERRIT_IDENT) {
+			for !g.isSTSReady(GERRIT_IDENT) {
 				fmt.Println("Wait for gerrit sts to be ready ...")
 				time.Sleep(10 * time.Second)
 			}
@@ -264,13 +468,13 @@ var gerritCmd = &cobra.Command{
 
 			// Delete services
 			cl.Delete(ctx,
-				&apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: controllers.GERRIT_HTTPD_PORT_NAME, Namespace: ns}})
+				&apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: GERRIT_HTTPD_PORT_NAME, Namespace: ns}})
 			cl.Delete(ctx,
-				&apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: controllers.GERRIT_SSHD_PORT_NAME, Namespace: ns}})
+				&apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: GERRIT_SSHD_PORT_NAME, Namespace: ns}})
 
 			// Delete Gerrit STS and the associated Statefulset
 			cl.Delete(ctx,
-				&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: controllers.GERRIT_IDENT, Namespace: ns}})
+				&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: GERRIT_IDENT, Namespace: ns}})
 			cl.Delete(ctx,
 				&apiv1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "gerrit-gerrit-0", Namespace: ns}})
 
@@ -285,9 +489,9 @@ var gerritCmd = &cobra.Command{
 
 			// Delete managesf-resources ConfigMap
 			cl.Delete(ctx,
-				&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: controllers.MANAGESF_RESOURCES_IDENT + "-config-map", Namespace: ns}})
+				&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: MANAGESF_RESOURCES_IDENT + "-config-map", Namespace: ns}})
 			cl.Delete(ctx,
-				&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: controllers.MANAGESF_RESOURCES_IDENT + "-tooling-config-map", Namespace: ns}})
+				&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: MANAGESF_RESOURCES_IDENT + "-tooling-config-map", Namespace: ns}})
 
 			// Delete Gerrit route
 			cl.Delete(ctx,
@@ -301,4 +505,5 @@ func init() {
 	rootCmd.AddCommand(gerritCmd)
 	gerritCmd.Flags().BoolP("deploy", "", false, "Deploy Gerrit")
 	gerritCmd.Flags().BoolP("wipe", "", false, "Wipe Gerrit deployment")
+	gerritCmd.PersistentFlags().StringP("fqdn", "f", "sftests.com", "The FQDN of gerrit (gerrit.<FQDN>)")
 }
