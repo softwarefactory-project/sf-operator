@@ -259,22 +259,45 @@ cat << EOF > playbooks/config/update.yaml
     - name: "Reconfigure the scheduler"
       command: zuul-scheduler full-reconfigure
 
+- hosts: nodepool-launcher-sidecar
+  vars:
+    config_ref: "{{ zuul.newrev | default('origin/master') }}"
+    ansible_remote_tmp: "/tmp/ansible/.tmp"
+  tasks:
+    - name: "Update nodepool-launcher config"
+      command: /usr/local/bin/generate-launcher-config.sh "{{ config_ref }}"
+
 EOF
 
 mkdir -p roles/add-k8s-hosts/tasks
 cat << EOF > roles/add-k8s-hosts/tasks/main.yaml
-- add_host:
+- ansible.builtin.add_host:
     name: "zuul-scheduler-sidecar"
     ansible_connection: kubectl
     # https://docs.ansible.com/ansible/latest/collections/kubernetes/core/kubectl_connection.html#ansible-collections-kubernetes-core-kubectl-connection
     ansible_kubectl_container: scheduler-sidecar
     ansible_kubectl_pod: "zuul-scheduler-0"
 
-- add_host:
+- ansible.builtin.add_host:
     name: "zuul-scheduler"
     ansible_connection: kubectl
     ansible_kubectl_container: zuul-scheduler
     ansible_kubectl_pod: "zuul-scheduler-0"
+
+- name: Fetch nodepool-launcher Pod info
+  # https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_info_module.html
+  kubernetes.core.k8s_info:
+    kind: Pod
+    label_selectors:
+      - "run = nodepool-launcher"
+    namespace: "{{ k8s_config['namespace'] }}"
+  register: nodepool_launcher_info
+
+- ansible.builtin.add_host:
+    name: "nodepool-launcher-sidecar"
+    ansible_connection: kubectl
+    ansible_kubectl_pod: "{{ nodepool_launcher_info.resources[0].metadata.name }}"
+    ansible_kubectl_container: nodepool-launcher-sidecar
 
 EOF
 
