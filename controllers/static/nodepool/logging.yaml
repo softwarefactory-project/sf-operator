@@ -1,0 +1,22 @@
+version: 1
+formatters:
+  normal:
+    format: "%(asctime)s %(levelname)s %(name)s: %(message)s"
+  console:
+    format: "%(levelname)7s %(name)s: %(message)s"
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: console
+    level: INFO
+    stream: ext://sys.stdout
+loggers:
+  nodepool:
+    handlers:
+      - console
+    level: INFO
+    propagate: 0
+root:
+  handlers:
+    - console
+  level: INFO
