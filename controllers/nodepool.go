@@ -27,15 +27,11 @@ func (r *SFController) DeployNodepool() bool {
 		ObjectMeta: metav1.ObjectMeta{Name: "nodepool-yaml", Namespace: r.ns},
 	})
 
-	annotations := map[string]string{
-		"nodepool.yaml": checksum([]byte(nodepoolconf)),
-	}
-
-	nl := r.create_deployment("nodepool-launcher", "")
 	volumes := []apiv1.Volume{
 		create_volume_secret("nodepool-config", "nodepool-yaml"),
 		create_volume_secret("zookeeper-client-tls"),
 	}
+
 	volume_mount := []apiv1.VolumeMount{
 		{
 			Name:      "zookeeper-client-tls",
@@ -48,6 +44,30 @@ func (r *SFController) DeployNodepool() bool {
 			SubPath:   "nodepool.yaml",
 		},
 	}
+
+	_, err := r.getSecretbyNameRef("nodepool-providers-secrets")
+
+	if err == nil {
+		volumes = append(volumes, create_volume_secret("nodepool-providers-secrets"))
+		volume_mount = append(volume_mount, apiv1.VolumeMount{
+			Name:      "nodepool-providers-secrets",
+			SubPath:   "kube.config",
+			MountPath: "/.kube/config",
+			ReadOnly:  true,
+		})
+		volume_mount = append(volume_mount, apiv1.VolumeMount{
+			Name:      "nodepool-providers-secrets",
+			SubPath:   "clouds.yaml",
+			MountPath: "/.config/openstack/clouds.yaml",
+			ReadOnly:  true,
+		})
+	}
+
+	annotations := map[string]string{
+		"nodepool.yaml": checksum([]byte(nodepoolconf)),
+	}
+
+	nl := r.create_deployment("nodepool-launcher", "")
 	container := apiv1.Container{
 		Name:            "launcher",
 		Image:           "quay.io/software-factory/" + NL_IDENT + ":8.2.0-2",
