@@ -422,7 +422,6 @@ const BUSYBOX_IMAGE = "localhost/sf-op-busybox:1.4-4"
 
 Then you can do the deployment to use the newly built image.
 
-
 ## Installing Software Factory
 
 ### Set up the cluster
@@ -442,3 +441,172 @@ To change the default names for the namespaces, run the command with the followi
 ```sh
 ./tools/sfconfig operator -a --bundlenamespace <catalog namespace name> --namespacename < Software Factory namespace name>
 ```
+
+#### hold node
+
+```sh
+kubectl get secrets zuul-config -o jsonpath="{ .data.zuul\.conf }" | base64 -d > ~/zuul.conf
+
+cat << 'EOF' > autohold.sh
+#!/bin/bash
+podman run \
+    -v $HOME/zuul.conf:/etc/zuul/zuul.conf:z \
+    --network host \
+    --rm \
+    --name zc_container \
+    quay.io/software-factory/zuul-client:0.1.0-f96ddd00fc69d8a4d51eb207ef322b99983d1fe8-1 \
+    --zuul-url https://zuul.sftests.com \
+    --use-config /etc/zuul/zuul.conf \
+    $*
+EOF
+
+chmod 0755 ~/autohold.sh
+~/autohold.sh autohold --tenant internal --project config --change 1 --job test  --reason dpawlik --node-hold-expiration 86400
+```
+
+#### Edit service code and mount directory into the pod
+
+* Clone required project
+
+NOTE: Do not create directory in HOME dir or other location, where
+SELinux label might be not fine for containers.
+NOTE: That step needs to be done on the Microshift host.
+
+```sh
+sudo mkdir -p /mnt/serviceDev ; sudo chmod 0777 /mnt/serviceDev
+git clone https://opendev.org/zuul/nodepool /mnt/serviceDev/nodepool && cd /mnt/serviceDev/nodepool
+git checkout 8.2.0
+```
+
+* Create local storageclass with name `manual`
+
+```sh
+kubectl apply -f - << EOF
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: manual
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+EOF
+```
+
+* Create PV:
+
+```sh
+kubectl apply -f - << EOF
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: "/mnt/serviceDev/nodepool/nodepool"
+EOF
+```
+
+* Create PVC:
+
+```sh
+kubectl apply -f - << EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc-volume
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: manual
+EOF
+```
+
+* And add the volume into the app:
+
+```sh
+kubectl edit deployment.apps/nodepool-launcher
+```
+
+End edit configuration to follow:
+
+```yaml
+(...)
+spec:
+  containers:
+    ...
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: host-mount
+      mountPath: /usr/local/lib/python3.11/site-packages/nodepool
+  ...
+  securityContext: {}
+  volumes:
+    - name: host-mount
+      persistentVolumeClaim:
+        claimName: my-pvc-volume
+```
+
+For example output:
+
+```yaml
+    spec:
+      ...
+      containers:
+      - image: quay.io/software-factory/nodepool-launcher:8.2.0-2 # E: wrong indentation: expected 8 but found 6
+        name: launcher
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /usr/local/lib/python3.11/site-packages/nodepool
+          name: host-mount
+        # container is using root, so $HOME is /root, where .kube/config does not exists.
+        - mountPath: /root/.kube/config
+          name: nodepool-kubeconfig
+          subPath: config
+      ...
+      securityContext: {}
+      volumes:
+      - name: host-mount
+        persistentVolumeClaim:
+          claimName: my-pvc-volume
+```
+
+Make sure, that `securityContext` are set as in the example!
+
+Helpful [lecture](https://docs.openshift.com/container-platform/4.13/storage/persistent_storage/persistent_storage_local/persistent-storage-hostpath.html)
+Also helpful would be change scc to anyuid with [example](https://examples.openshift.pub/deploy/scc-anyuid/)
+
+#### Get root access inside the container
+
+NOTE: THIS STEP SHOULD BE ONLY USED FOR DEVELOPING PURPOSES!!!
+
+* Edit deployment/statefulset/pod
+
+```sh
+kubectl edit deployment.apps/nodepool-launcher
+```
+
+* Change/replace or remove as following:
+
+```yaml
+    spec:
+      ...
+      containers:
+        securityContext:
+          privileged: true
+      ...
+      securityContext: {}
+```
+
+After pod recreation, after `kubectl exec`, inside the pod you should be UID/GIT 0 (root).
