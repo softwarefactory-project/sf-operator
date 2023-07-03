@@ -137,7 +137,7 @@ func (r *SFController) DeployNodepool() bool {
 		"nodepool.yaml":         checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml": checksum([]byte(loggingConfig)),
 		"config-repo-info-hash": r.cr.Spec.ConfigLocation.BaseURL + r.cr.Spec.ConfigLocation.Name,
-		"serial":                "2",
+		"serial":                "3",
 	}
 
 	nl := r.create_deployment("nodepool-launcher", "")
@@ -153,9 +153,8 @@ func (r *SFController) DeployNodepool() bool {
 	nl.Spec.Template.Spec.InitContainers = []apiv1.Container{r.init_container(volume_mount)}
 	nl.Spec.Template.Spec.Containers = []apiv1.Container{container, r.sidecar_container(volume_mount)}
 	nl.Spec.Template.ObjectMeta.Annotations = annotations
-	// FIXME: Add readiness and liveness probe when they are available.
-	//nl.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", 9090)
-	//nl.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", 9090)
+	nl.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/ready", NL_WEBAPP_PORT)
+	nl.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/ready", NL_WEBAPP_PORT)
 	nl.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		Create_container_port(NL_WEBAPP_PORT, NL_WEBAPP_PORT_NAME),
 	}
