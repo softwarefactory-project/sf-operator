@@ -19,42 +19,10 @@
     - health-check/check-service-uri
     - health-check/config-repo-get-or-reset
     - health-check/zuul-connections
+    - health-check/config-update-zuul
+    - health-check/config-update-nodepool-launcher
   loop_control:
     loop_var: role
-
-- name: Set random value
-  ansible.builtin.set_fact:
-    random: "{{ lookup('community.general.random_string', special=false, length=8) }}"
-
-- name: Create vars to generate and submit resources addition
-  ansible.builtin.set_fact:
-    repository_name: "ichiban-config-{{ random }}"
-    tenant_name: "ichiban-tenant-{{ random }}"
-
-- ansible.builtin.include_role:
-    name: "roles/create-gerrit-repository"
-
-- name: Run tests for config repo
-  ansible.builtin.include_role:
-    name: "roles/{{ role }}"
-  loop:
-    - health-check/config-repo-add-zuul-tenant
-    - health-check/config-repo-submit-change
-  loop_control:
-    loop_var: role
-
-- name: Get Zuul projects list
-  ansible.builtin.uri:
-    url: "https://{{ zuul_host }}/api/tenant/{{ tenant_name }}/projects"
-    validate_certs: "{{ validate_certs }}"
-    method: GET
-  register: zuul_tenant_projects
-  retries: 10
-
-- name: Ensure project exists in Zuul (fail if not)
-  ansible.builtin.fail:
-    msg: "Project not found in Zuul"
-  when: not (zuul_tenant_projects.json | selectattr('name', 'equalto', repository_name) | length == 1)
 
 - name: Ensure job results exists in Logserver
   ansible.builtin.uri:

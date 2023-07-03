@@ -1,0 +1,73 @@
+---
+- name: Set random value
+  ansible.builtin.set_fact:
+    random: "{{ lookup('community.general.random_string', special=false, length=8) }}"
+
+- name: Ensure nodepool directory exists
+  ansible.builtin.file:
+    path: "{{ config_path }}/nodepool"
+    state: directory
+
+- name: Check nodepool.yaml exists
+  ansible.builtin.stat:
+    path: "{{ config_path }}/nodepool/nodepool.yaml"
+  register: _conf
+
+- name: Ensure nodepool.yaml default content
+  ansible.builtin.copy:
+    content: |
+      ---
+      labels: []
+    dest: "{{ config_path }}/nodepool/nodepool.yaml"
+  when: not _conf.stat.exists
+
+- name: Load current nodepool launcher config
+  ansible.builtin.command: |
+    cat {{ config_path }}/nodepool/nodepool.yaml
+  register: launcher_config_raw
+
+- ansible.builtin.set_fact:
+    launcher_config: "{{ launcher_config_raw.stdout | from_yaml }}"
+    new_labels:
+      - name: "{{ random }}"
+
+- ansible.builtin.set_fact:
+    launcher_labels: "{{ launcher_config['labels'] }}"
+  when:
+    - "'labels' in launcher_config"
+
+- ansible.builtin.set_fact:
+    launcher_labels: []
+  when:
+    - "'labels' not in launcher_config"
+
+- ansible.builtin.set_fact:
+    launcher_new_labels: "{{ launcher_labels + new_labels }}"
+
+- ansible.builtin.set_fact:
+    launcher_new_config: "{{ launcher_config | ansible.builtin.combine({'labels': launcher_new_labels}) }}"
+
+- name: Set dummy Nodepool config
+  ansible.builtin.copy:
+    content: "{{ launcher_new_config | to_nice_yaml }}"
+    dest: "{{ config_path }}/nodepool/nodepool.yaml"
+
+- name: Commit file in the config repo
+  ansible.builtin.command: "{{ item }}"
+  args:
+    chdir: "{{ config_path }}"
+  loop:
+    - "git add {{ config_path }}/nodepool/nodepool.yaml"
+    - "git commit -m 'Add {{ config_path }}/nodepool/nodepool.yaml'"
+
+- ansible.builtin.include_role:
+    name: "roles/health-check/config-repo-submit-change"
+
+- name: Get nodepool-launcher pod name
+  ansible.builtin.shell: |
+    kubectl get pods -l "{{ pod_label }}" --no-headers -o custom-columns=":metadata.name"
+  register: _pod_name
+
+- name: "Check that new random label exists in the destination file"
+  ansible.builtin.shell: |
+    kubectl exec {{ _pod_name.stdout }} -c {{ container_name }} -- grep "{{ random }}" /etc/nodepool/nodepool.yaml

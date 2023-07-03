@@ -1,0 +1,3 @@
+---
+pod_label: "run=nodepool-launcher"
+container_name: "launcher"
