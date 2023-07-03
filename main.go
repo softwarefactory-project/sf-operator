@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	//+kubebuilder:scaffold:imports
@@ -124,6 +125,13 @@ func main() {
 		RESTConfig: mgr.GetConfig(),
 	}
 
+	if err = (&controllers.ConfigCheckJobReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ConfigCheckJob")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	ctx := ctrl.SetupSignalHandler()
