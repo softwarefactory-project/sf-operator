@@ -244,7 +244,6 @@ cat << EOF > playbooks/config/update.yaml
 - hosts: localhost
   roles:
     - setup-k8s-config
-    - apply-k8s-resource
     - add-k8s-hosts
 
 - hosts: zuul-scheduler-sidecar
@@ -322,14 +321,6 @@ cat << EOF > roles/setup-k8s-config/tasks/main.yaml
     - "kubectl config set-credentials local-token --token={{ k8s_config['token'] }}"
     - "kubectl config set-context local-context --cluster=local --user=local-token --namespace={{ k8s_config['namespace'] }}"
     - "kubectl config use-context local-context"
-EOF
-
-mkdir -p roles/apply-k8s-resource/tasks
-cat << EOF > roles/apply-k8s-resource/tasks/main.yaml
-- name: Display available resources
-  command: "kubectl api-resources"
-#- name: ensure system config is up-to-date
-#  command: "kubectl apply -f {{ zuul.project.src_dir }}/system/sf.yaml"
 EOF
 
 git add zuul.d playbooks roles
