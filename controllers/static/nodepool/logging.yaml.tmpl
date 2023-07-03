@@ -8,15 +8,15 @@ handlers:
   console:
     class: logging.StreamHandler
     formatter: console
-    level: INFO
+    level: {{.LogLevel}}
     stream: ext://sys.stdout
 loggers:
   nodepool:
     handlers:
       - console
-    level: INFO
+    level: {{.LogLevel}}
     propagate: 0
 root:
   handlers:
     - console
-  level: INFO
+  level: {{.LogLevel}}

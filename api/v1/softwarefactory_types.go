@@ -71,6 +71,35 @@ type ZuulSpec struct {
 	Scheduler   ZuulSchedulerSpec  `json:"scheduler,omitempty"`
 }
 
+// +kubebuilder:validation:Enum=INFO;WARN;DEBUG
+// +kubebuilder:default:=INFO
+type LogLevel string
+
+const (
+	// InfoLogLevel set log level to INFO
+	InfoLogLevel LogLevel = "INFO"
+
+	// WarnLogLevel set log level to WARN
+	WarnLogLevel LogLevel = "WARN"
+
+	// DebugLogLevel set log level to DEBUG
+	DebugLogLevel LogLevel = "DEBUG"
+)
+
+type NodepoolLauncherSpec struct {
+	// Specify the Log Level of the nodepool launcher process.
+	// Valid values are:
+	// - "INFO" (default)
+	// - "WARN"
+	// - "DEBUG"
+	// +optional
+	LogLevel LogLevel `json:"logLevel,omitempty"`
+}
+
+type NodepoolSpec struct {
+	Launcher NodepoolLauncherSpec `json:"launcher,omitempty"`
+}
+
 type ZookeeperSpec struct {
 	Storage StorageSpec `json:"storage"`
 }
@@ -111,6 +140,9 @@ type SoftwareFactorySpec struct {
 
 	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`
+
+	// Nodepool services spec
+	Nodepool NodepoolSpec `json:"nodepool,omitempty"`
 
 	// Zookeeper service spec
 	Zookeeper ZookeeperSpec `json:"zookeeper,omitempty"`

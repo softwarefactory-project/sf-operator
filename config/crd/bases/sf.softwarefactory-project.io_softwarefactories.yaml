@@ -152,6 +152,22 @@ spec:
                 - dbStorage
                 - logStorage
                 type: object
+              nodepool:
+                description: Nodepool services spec
+                properties:
+                  launcher:
+                    properties:
+                      logLevel:
+                        description: 'Specify the Log Level of the nodepool launcher
+                          process. Valid values are: - "INFO" (default) - "WARN" -
+                          "DEBUG"'
+                        enum:
+                        - INFO
+                        - WARN
+                        - DEBUG
+                        type: string
+                    type: object
+                type: object
               storageClassName:
                 description: Default storage class to use by Persistent Volume Claims
                 type: string
