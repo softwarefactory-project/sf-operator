@@ -12,4 +12,5 @@
           {{ microshift_ip }} zuul.{{ sf_fqdn }}
           {{ microshift_ip }} gerrit.{{ sf_fqdn }}
           {{ microshift_ip }} logserver.{{ sf_fqdn }}
+          {{ microshift_ip }} nodepool.{{ sf_fqdn }}
       become: yes

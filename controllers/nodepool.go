@@ -172,5 +172,11 @@ func (r *SFController) DeployNodepool() bool {
 		r.CreateR(&current)
 	}
 
+	srv := r.create_service(NL_IDENT, NL_IDENT, []int32{NL_WEBAPP_PORT}, NL_IDENT)
+	r.GetOrCreate(&srv)
+
+	r.ensureHTTPSRoute(r.cr.Name+"-nodepool-launcher", "nodepool", NL_IDENT, "/",
+		NL_WEBAPP_PORT, map[string]string{}, r.cr.Spec.FQDN)
+
 	return r.IsDeploymentReady(&current)
 }
