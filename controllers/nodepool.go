@@ -5,6 +5,7 @@ package controllers
 import (
 	_ "embed"
 
+	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -12,8 +13,8 @@ import (
 //go:embed static/nodepool/generate-launcher-config.sh
 var generateConfigScript string
 
-//go:embed static/nodepool/logging.yaml
-var loggingConfig string
+//go:embed static/nodepool/logging.yaml.tmpl
+var loggingConfigTemplate string
 
 const NL_IDENT = "nodepool-launcher"
 const NL_WEBAPP_PORT_NAME = "nlwebapp"
@@ -65,6 +66,15 @@ func (r *SFController) DeployNodepool() bool {
 	launcher_tooling_data := make(map[string]string)
 	launcher_tooling_data["generate-launcher-config.sh"] = generateConfigScript
 	r.EnsureConfigMap("nodepool-launcher-tooling", launcher_tooling_data)
+
+	// Unfortunatly I'm unable to leverage default value set at API validation
+	logLevel := v1.InfoLogLevel
+	if r.cr.Spec.Nodepool.Launcher.LogLevel != "" {
+		logLevel = r.cr.Spec.Nodepool.Launcher.LogLevel
+	}
+
+	loggingConfig, _ := Parse_string(
+		loggingConfigTemplate, struct{ LogLevel string }{LogLevel: string(logLevel)})
 
 	launcher_extra_config_data := make(map[string]string)
 	launcher_extra_config_data["logging.yaml"] = loggingConfig
