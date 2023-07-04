@@ -12,6 +12,9 @@ import (
 //go:embed static/nodepool/generate-launcher-config.sh
 var generateConfigScript string
 
+//go:embed static/nodepool/logging.yaml
+var loggingConfig string
+
 const NL_IDENT = "nodepool-launcher"
 const NL_WEBAPP_PORT_NAME = "nlwebapp"
 const NL_WEBAPP_PORT = 8006
@@ -63,6 +66,10 @@ func (r *SFController) DeployNodepool() bool {
 	launcher_tooling_data["generate-launcher-config.sh"] = generateConfigScript
 	r.EnsureConfigMap("nodepool-launcher-tooling", launcher_tooling_data)
 
+	launcher_extra_config_data := make(map[string]string)
+	launcher_extra_config_data["logging.yaml"] = loggingConfig
+	r.EnsureConfigMap("nodepool-launcher-extra-config", launcher_extra_config_data)
+
 	volumes := []apiv1.Volume{
 		create_volume_secret("zookeeper-client-tls"),
 		create_empty_dir("nodepool-config"),
@@ -77,6 +84,8 @@ func (r *SFController) DeployNodepool() bool {
 				},
 			},
 		},
+		Create_volume_cm("nodepool-launcher-extra-config-vol",
+			"nodepool-launcher-extra-config-config-map"),
 	}
 
 	volume_mount := []apiv1.VolumeMount{
@@ -88,6 +97,11 @@ func (r *SFController) DeployNodepool() bool {
 		{
 			Name:      "nodepool-config",
 			MountPath: "/etc/nodepool/",
+		},
+		{
+			Name:      "nodepool-launcher-extra-config-vol",
+			SubPath:   "logging.yaml",
+			MountPath: "/etc/nodepool-logging/logging.yaml",
 		},
 	}
 
@@ -111,8 +125,9 @@ func (r *SFController) DeployNodepool() bool {
 
 	annotations := map[string]string{
 		"nodepool.yaml":         checksum([]byte(generateConfigScript)),
+		"nodepool-logging.yaml": checksum([]byte(loggingConfig)),
 		"config-repo-info-hash": r.cr.Spec.ConfigLocation.BaseURL + r.cr.Spec.ConfigLocation.Name,
-		"serial":                "1",
+		"serial":                "2",
 	}
 
 	nl := r.create_deployment("nodepool-launcher", "")
@@ -121,6 +136,8 @@ func (r *SFController) DeployNodepool() bool {
 		Image:           "quay.io/software-factory/" + NL_IDENT + ":8.2.0-2",
 		SecurityContext: create_security_context(false),
 		VolumeMounts:    volume_mount,
+		Command: []string{"/usr/local/bin/dumb-init", "--",
+			"/usr/local/bin/nodepool-launcher", "-f", "-l", "/etc/nodepool-logging/logging.yaml"},
 	}
 	nl.Spec.Template.Spec.Volumes = volumes
 	nl.Spec.Template.Spec.InitContainers = []apiv1.Container{r.init_container(volume_mount)}
