@@ -32,6 +32,9 @@ const LOGSERVER_HTTPD_PORT = 8080
 const LOGSERVER_HTTPD_PORT_NAME = "logserver-httpd"
 const LOGSERVER_IMAGE = "registry.access.redhat.com/rhscl/httpd-24-rhel7:latest"
 
+//go:embed static/logserver/logserver-entrypoint.sh
+var logserverentrypoint string
+
 const LOGSERVER_SSHD_PORT = 2222
 const LOGSERVER_SSHD_PORT_NAME = "logserver-sshd"
 
@@ -98,6 +101,9 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	cm_data["index.html"] = ""
 	cm_data["run.sh"] = logserver_run
 
+	lgEntryScriptName := LOGSERVER_IDENT + "-entrypoint.sh"
+	cm_data[lgEntryScriptName] = logserverentrypoint
+
 	r.EnsureConfigMap(LOGSERVER_IDENT, cm_data)
 
 	volumeMounts := []apiv1.VolumeMount{
@@ -117,6 +123,11 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 			Name:      LOGSERVER_IDENT,
 			MountPath: CONTAINER_HTTP_BASE_DIR + LOGSERVER_DATA + "/logs",
 		},
+		{
+			Name:      LOGSERVER_IDENT + "-config-vol",
+			MountPath: "/usr/bin/" + lgEntryScriptName,
+			SubPath:   lgEntryScriptName,
+		},
 	}
 
 	// Create the deployment
@@ -130,7 +141,17 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	r.GetOrCreate(&data_pvc)
 	var mod int32 = 256 // decimal for 0400 octal
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		Create_volume_cm(LOGSERVER_IDENT+"-config-vol", LOGSERVER_IDENT+"-config-map"),
+		{
+			Name: LOGSERVER_IDENT + "-config-vol",
+			VolumeSource: apiv1.VolumeSource{
+				ConfigMap: &apiv1.ConfigMapVolumeSource{
+					LocalObjectReference: apiv1.LocalObjectReference{
+						Name: LOGSERVER_IDENT + "-config-map",
+					},
+					DefaultMode: &Execmod,
+				},
+			},
+		},
 		{
 			Name: LOGSERVER_IDENT + "-keys",
 			VolumeSource: apiv1.VolumeSource{
@@ -155,6 +176,9 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", LOGSERVER_HTTPD_PORT)
+	dep.Spec.Template.Spec.Containers[0].Command = []string{
+		"/usr/bin/" + lgEntryScriptName,
+	}
 
 	// Create services exposed by logserver
 	service_ports := []int32{LOGSERVER_HTTPD_PORT}
@@ -234,7 +258,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
 	annotations := map[string]string{
 		"fqdn":           r.cr.Spec.FQDN,
-		"serial":         "1",
+		"serial":         "2",
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(retentiondays) + " loopDelay:" + strconv.Itoa(loopdelay),
 	}
 

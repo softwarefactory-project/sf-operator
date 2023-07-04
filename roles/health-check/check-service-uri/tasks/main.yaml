@@ -65,7 +65,7 @@
 
 - name: Attempt to access Logserver web
   ansible.builtin.uri:
-    url: "https://{{ logserver_host }}/logs/"
+    url: "https://{{ logserver_host }}/"
     method: GET
     validate_certs: "{{ validate_certs }}"
     status_code: [200, 503]

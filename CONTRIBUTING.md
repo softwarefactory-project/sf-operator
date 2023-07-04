@@ -110,7 +110,7 @@ Verify services by running:
 ```sh
 firefox https://zuul.sftests.com
 firefox https://gerrit.sftests.com
-firefox https://logserver.sftests.com/logs
+firefox https://logserver.sftests.com
 ```
 
 ### Delete a deployment

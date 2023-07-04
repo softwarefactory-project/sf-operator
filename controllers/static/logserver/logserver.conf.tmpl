@@ -4,7 +4,7 @@
   AddType text/plain .yaml
   AddType text/plain .yml
 
-  DocumentRoot {{.ServerRoot}}{{.LogserverRoot}}/
+  DocumentRoot {{.ServerRoot}}{{.LogserverRoot}}/logs
 
   <Directory "{{.ServerRoot}}{{.LogserverRoot}}/logs/">
       Options Indexes SymLinksIfOwnerMatch
@@ -60,7 +60,7 @@
       ForceType text/css
   </FilesMatch>
 
-  <LocationMatch "/logs">
+  <LocationMatch "/">
       # Enable zuul-web ui to access logs
       Header set Access-Control-Allow-Origin "*"
 
@@ -71,7 +71,5 @@
       RewriteCond {{.ServerRoot}}{{.LogserverRoot}}/%{REQUEST_URI}.gz -f
       RewriteRule ^(.*)$ $1.gz [L,PT]
   </LocationMatch>
-
-  Alias "/logs-raw" "{{.ServerRoot}}{{.LogserverRoot}}/logs"
 
 </VirtualHost>
