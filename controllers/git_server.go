@@ -30,8 +30,9 @@ func (r *SFController) DeployGitServer() bool {
 	r.EnsureConfigMap(GS_IDENT+"-pi", cm_data)
 
 	annotations := map[string]string{
-		"system-config":    checksum([]byte(preInitScript)),
-		"config-repo-name": r.cr.Spec.ConfigLocation.Name,
+		"system-config":               checksum([]byte(preInitScript)),
+		"config-repo-name":            r.cr.Spec.ConfigLocation.Name,
+		"config-zuul-connection-name": r.cr.Spec.ConfigLocation.ZuulConnectionName,
 	}
 
 	// Create the deployment
@@ -63,6 +64,7 @@ func (r *SFController) DeployGitServer() bool {
 			Env: []apiv1.EnvVar{
 				Create_env("FQDN", r.cr.Spec.FQDN),
 				Create_env("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+				Create_env("CONFIG_ZUUL_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName),
 				Create_env("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(LOGSERVER_SSHD_PORT)),
 			},
 			VolumeMounts: []apiv1.VolumeMount{
