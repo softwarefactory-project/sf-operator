@@ -132,13 +132,18 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 	return volumes
 }
 
-func (r *SFController) get_scheduler_init_and_sidecar_envs() []apiv1.EnvVar {
-	base_url, name, zuul_connection_name := r.getConfigRepoCNXInfo()
+func (r *SFController) get_generate_tenants_envs() []apiv1.EnvVar {
+	configRepoSet := "FALSE"
+	if r.cr.Spec.ConfigLocation.BaseURL != "" &&
+		r.cr.Spec.ConfigLocation.Name != "" &&
+		r.cr.Spec.ConfigLocation.ZuulConnectionName != "" {
+		configRepoSet = "TRUE"
+	}
 	return []apiv1.EnvVar{
-		Create_env("CONFIG_REPO_BASE_URL", base_url),
-		Create_env("CONFIG_REPO_NAME", name),
-		Create_env("CONFIG_REPO_CONNECTION_NAME", zuul_connection_name),
-		Create_env("HOME", "/var/lib/zuul"),
+		Create_env("CONFIG_REPO_SET", configRepoSet),
+		Create_env("CONFIG_REPO_BASE_URL", r.cr.Spec.ConfigLocation.BaseURL),
+		Create_env("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+		Create_env("CONFIG_REPO_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName),
 	}
 }
 
@@ -160,7 +165,7 @@ func (r *SFController) init_scheduler_config() apiv1.Container {
 		Name:            "init-scheduler-config",
 		Image:           BUSYBOX_IMAGE,
 		Command:         []string{"/usr/local/bin/generate-zuul-tenant-yaml.sh"},
-		Env:             append(r.get_scheduler_init_and_sidecar_envs(), Create_env("ZUUL_STARTUP", "true")),
+		Env:             append(r.get_generate_tenants_envs(), Create_env("HOME", "/var/lib/zuul")),
 		VolumeMounts:    scheduler_init_and_sidecar_vols,
 		SecurityContext: create_security_context(false),
 	}
@@ -171,7 +176,7 @@ func (r *SFController) scheduler_sidecar_container() apiv1.Container {
 		Name:            "scheduler-sidecar",
 		Image:           BUSYBOX_IMAGE,
 		Command:         []string{"sh", "-c", "touch /tmp/healthy && sleep inf"},
-		Env:             append(r.get_scheduler_init_and_sidecar_envs(), Create_env("ZUUL_STARTUP", "false")),
+		Env:             append(r.get_generate_tenants_envs(), Create_env("HOME", "/var/lib/zuul")),
 		VolumeMounts:    scheduler_init_and_sidecar_vols,
 		ReadinessProbe:  Create_readiness_cmd_probe([]string{"cat", "/tmp/healthy"}),
 		SecurityContext: create_security_context(false),
@@ -183,12 +188,12 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	sections := IniGetSectionNamesByPrefix(cfg, "connection")
 	sections = append(sections, "scheduler")
 
-	base_url, repo_name, connection_name := r.getConfigRepoCNXInfo()
-
 	annotations := map[string]string{
 		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": IniSectionsChecksum(cfg, sections),
-		"config-repo-info-hash": checksum([]byte(base_url + repo_name + connection_name)),
+		"config-repo-info-hash": r.cr.Spec.ConfigLocation.ZuulConnectionName + ":" +
+			r.cr.Spec.ConfigLocation.BaseURL +
+			r.cr.Spec.ConfigLocation.Name,
 	}
 
 	var setAdditionalContainers = func(sts *appsv1.StatefulSet) {
@@ -213,22 +218,20 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 		Create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
 	}
 
-	r.GetOrCreate(&zs)
-	zs_dirty := false
-	if !map_equals(&zs.Spec.Template.ObjectMeta.Annotations, &annotations) {
-		zs.Spec.Template.ObjectMeta.Annotations = annotations
-		setAdditionalContainers(&zs)
-		zs_dirty = true
-		r.log.V(1).Info("Zuul configuration changed, restarting the services...")
+	current := appsv1.StatefulSet{}
+	if r.GetM("zuul-scheduler", &current) {
+		if !map_equals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("Zuul configuration changed, restarting zuul-scheduler...")
+			current.Spec = zs.DeepCopy().Spec
+			r.UpdateR(&current)
+			return false
+		}
+	} else {
+		current := zs
+		r.CreateR(&current)
 	}
-	if zs.Spec.Template.Spec.HostAliases != nil {
-		zs.Spec.Template.Spec.HostAliases = nil
-		zs_dirty = true
-	}
-	if zs_dirty {
-		r.UpdateR(&zs)
-	}
-	return r.IsStatefulSetReady(&zs)
+
+	return r.IsStatefulSetReady(&current)
 }
 
 func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {

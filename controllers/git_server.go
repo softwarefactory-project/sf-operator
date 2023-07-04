@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"strconv"
 
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,11 +29,9 @@ func (r *SFController) DeployGitServer() bool {
 	cm_data["pre-init.sh"] = preInitScript
 	r.EnsureConfigMap(GS_IDENT+"-pi", cm_data)
 
-	_, config_repo_name, _ := r.getConfigRepoCNXInfo()
-
 	annotations := map[string]string{
 		"system-config":    checksum([]byte(preInitScript)),
-		"config-repo-name": config_repo_name,
+		"config-repo-name": r.cr.Spec.ConfigLocation.Name,
 	}
 
 	// Create the deployment
@@ -63,7 +62,7 @@ func (r *SFController) DeployGitServer() bool {
 			Command:         []string{"/bin/bash", "/entry/pre-init.sh"},
 			Env: []apiv1.EnvVar{
 				Create_env("FQDN", r.cr.Spec.FQDN),
-				Create_env("CONFIG_REPO_NAME", config_repo_name),
+				Create_env("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
 				Create_env("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(LOGSERVER_SSHD_PORT)),
 			},
 			VolumeMounts: []apiv1.VolumeMount{
@@ -83,12 +82,17 @@ func (r *SFController) DeployGitServer() bool {
 	// Note: The probe is causing error message to be logged by the service
 	// dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GS_GIT_PORT)
 
-	r.GetOrCreate(&dep)
-
-	if map_ensure(&dep.Spec.Template.ObjectMeta.Annotations, &annotations) {
-		r.log.V(1).Info("System configuration needs to be updated, restarting git-server...")
-		r.UpdateR(&dep)
-		return false
+	current := appsv1.StatefulSet{}
+	if r.GetM(GS_IDENT, &current) {
+		if !map_equals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("System configuration needs to be updated, restarting git-server...")
+			current.Spec = dep.DeepCopy().Spec
+			r.UpdateR(&current)
+			return false
+		}
+	} else {
+		current := dep
+		r.CreateR(&current)
 	}
 
 	// Create services exposed
@@ -113,5 +117,5 @@ func (r *SFController) DeployGitServer() bool {
 		}}
 	r.GetOrCreate(&git_service)
 
-	return r.IsStatefulSetReady(&dep)
+	return r.IsStatefulSetReady(&current)
 }

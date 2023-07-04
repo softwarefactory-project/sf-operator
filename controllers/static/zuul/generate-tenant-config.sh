@@ -4,7 +4,23 @@ set -ex
 
 export HOME=/var/lib/zuul
 
-if [ "${ZUUL_STARTUP}" == "true" -a ! -f /var/lib/zuul/main.yaml ] || [ "${ZUUL_STARTUP}" == "false" ]; then
+# Generate the default tenants configuration file
+cat << EOF > ~/main.yaml
+- tenant:
+    max-job-timeout: 10800
+    name: internal
+    report-build-page: true
+    source:
+      git-server:
+        config-projects:
+        - system-config
+      opendev.org:
+        untrusted-projects:
+        - zuul/zuul-jobs
+EOF
+
+if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
+  # A config repository has been set
 
   REF=$1
   REF=${REF:-origin/master}
@@ -23,39 +39,16 @@ if [ "${ZUUL_STARTUP}" == "true" -a ! -f /var/lib/zuul/main.yaml ] || [ "${ZUUL_
     popd
   fi
 
-  cat << EOF > ~/main.yaml
-- authorization-rule:
-    conditions:
-    - preferred_username: admin
-    - roles: zuul_admin
-    name: __SF_DEFAULT_ADMIN
-- authorization-rule:
-    conditions:
-    - roles: '{tenant.name}_zuul_admin'
-    name: __SF_TENANT_ZUUL_ADMIN
-- tenant:
-    admin-rules:
-    - __SF_DEFAULT_ADMIN
-    - __SF_TENANT_ZUUL_ADMIN
-    max-job-timeout: 10800
-    name: internal
-    report-build-page: true
-    source:
+  # Ensure the config repo enabled into the tenants config
+  cat << EOF >> ~/main.yaml
       ${CONFIG_REPO_CONNECTION_NAME}:
         config-projects:
         - ${CONFIG_REPO_NAME}
-      git-server:
-        config-projects:
-        - system-config
-      opendev.org:
-        untrusted-projects:
-        - zuul/zuul-jobs
 EOF
 
-if [ -f ~/${CONFIG_REPO_NAME}/zuul/main.yaml ]; then
-  cat ~/${CONFIG_REPO_NAME}/zuul/main.yaml >> ~/main.yaml
-fi
+  # Append the config repo provided tenant file to the default one
+  if [ -f ~/${CONFIG_REPO_NAME}/zuul/main.yaml ]; then
+    cat ~/${CONFIG_REPO_NAME}/zuul/main.yaml >> ~/main.yaml
+  fi
 
-else
-  echo "Conditions to run the tenant config generation did not match."
 fi

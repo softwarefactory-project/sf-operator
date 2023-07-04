@@ -50,10 +50,6 @@ spec:
                     type: string
                   zuul-connection-name:
                     type: string
-                required:
-                - base-url
-                - name
-                - zuul-connection-name
                 type: object
               fqdn:
                 type: string
