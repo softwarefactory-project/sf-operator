@@ -13,6 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/yaml"
+
+	opv1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
 func RenderYAML(o interface{}) string {
@@ -27,6 +30,8 @@ func CreateKubernetesClient() client.Client {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(apiroutev1.AddToScheme(scheme))
+	utilruntime.Must(opv1.AddToScheme(scheme))
+	utilruntime.Must(sfv1.AddToScheme(scheme))
 	client, err := client.New(config.GetConfigOrDie(), client.Options{
 		Scheme: scheme,
 	})
