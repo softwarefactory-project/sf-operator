@@ -1180,3 +1180,9 @@ func boolPtr(b bool) *bool    { return &b }
 func strPtr(s string) *string { return &s }
 
 var Execmod int32 = 493 // decimal for 0755 octal
+
+func (r *SFController) isConfigRepoSet() bool {
+	return r.cr.Spec.ConfigLocation.BaseURL != "" &&
+		r.cr.Spec.ConfigLocation.Name != "" &&
+		r.cr.Spec.ConfigLocation.ZuulConnectionName != ""
+}

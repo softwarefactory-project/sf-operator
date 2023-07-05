@@ -23,12 +23,13 @@ type StorageSpec struct {
 type ConfigLocationSpec struct {
 	// Base URL of the code-review provider where the `Name` can be fetch by Git
 	// +kubebuilder:validation:Pattern:=`^https?:\/\/.+$`
-	BaseURL string `json:"base-url,omitempty"`
+	BaseURL string `json:"base-url"`
 	// Name of the `config` repository where the SF config workflow is applied
-	// +kubebuilder:default:=config
-	Name string `json:"name,omitempty"`
+	// +kubebuilder:validation:MinLength:=1
+	Name string `json:"name"`
 	// Name of the Zuul connection where the `config` exists
-	ZuulConnectionName string `json:"zuul-connection-name,omitempty"`
+	// +kubebuilder:validation:MinLength:=1
+	ZuulConnectionName string `json:"zuul-connection-name"`
 }
 
 type GerritConnection struct {

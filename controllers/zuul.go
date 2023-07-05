@@ -134,17 +134,17 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 }
 
 func (r *SFController) get_generate_tenants_envs() []apiv1.EnvVar {
-	configRepoSet := "FALSE"
-	if r.cr.Spec.ConfigLocation.BaseURL != "" &&
-		r.cr.Spec.ConfigLocation.Name != "" &&
-		r.cr.Spec.ConfigLocation.ZuulConnectionName != "" {
-		configRepoSet = "TRUE"
-	}
-	return []apiv1.EnvVar{
-		Create_env("CONFIG_REPO_SET", configRepoSet),
-		Create_env("CONFIG_REPO_BASE_URL", strings.TrimSuffix(r.cr.Spec.ConfigLocation.BaseURL, "/")),
-		Create_env("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
-		Create_env("CONFIG_REPO_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName),
+	if r.isConfigRepoSet() {
+		return []apiv1.EnvVar{
+			Create_env("CONFIG_REPO_SET", "TRUE"),
+			Create_env("CONFIG_REPO_BASE_URL", strings.TrimSuffix(r.cr.Spec.ConfigLocation.BaseURL, "/")),
+			Create_env("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+			Create_env("CONFIG_REPO_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName),
+		}
+	} else {
+		return []apiv1.EnvVar{
+			Create_env("CONFIG_REPO_SET", "FALSE"),
+		}
 	}
 }
 
@@ -192,9 +192,12 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	annotations := map[string]string{
 		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": IniSectionsChecksum(cfg, sections),
-		"config-repo-info-hash": r.cr.Spec.ConfigLocation.ZuulConnectionName + ":" +
+	}
+
+	if r.isConfigRepoSet() {
+		annotations["config-repo-info-hash"] = r.cr.Spec.ConfigLocation.ZuulConnectionName + ":" +
 			r.cr.Spec.ConfigLocation.BaseURL +
-			r.cr.Spec.ConfigLocation.Name,
+			r.cr.Spec.ConfigLocation.Name
 	}
 
 	var setAdditionalContainers = func(sts *appsv1.StatefulSet) {

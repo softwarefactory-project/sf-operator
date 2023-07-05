@@ -27,16 +27,16 @@ var configScriptVolumeMount = apiv1.VolumeMount{
 }
 
 func (r *SFController) get_generate_nodepool_config_envs() []apiv1.EnvVar {
-	configRepoSet := "FALSE"
-	if r.cr.Spec.ConfigLocation.BaseURL != "" &&
-		r.cr.Spec.ConfigLocation.Name != "" &&
-		r.cr.Spec.ConfigLocation.ZuulConnectionName != "" {
-		configRepoSet = "TRUE"
-	}
-	return []apiv1.EnvVar{
-		Create_env("CONFIG_REPO_SET", configRepoSet),
-		Create_env("CONFIG_REPO_BASE_URL", r.cr.Spec.ConfigLocation.BaseURL),
-		Create_env("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+	if r.isConfigRepoSet() {
+		return []apiv1.EnvVar{
+			Create_env("CONFIG_REPO_SET", "TRUE"),
+			Create_env("CONFIG_REPO_BASE_URL", r.cr.Spec.ConfigLocation.BaseURL),
+			Create_env("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+		}
+	} else {
+		return []apiv1.EnvVar{
+			Create_env("CONFIG_REPO_SET", "FALSE"),
+		}
 	}
 }
 
@@ -136,8 +136,11 @@ func (r *SFController) DeployNodepool() bool {
 	annotations := map[string]string{
 		"nodepool.yaml":         checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml": checksum([]byte(loggingConfig)),
-		"config-repo-info-hash": r.cr.Spec.ConfigLocation.BaseURL + r.cr.Spec.ConfigLocation.Name,
 		"serial":                "3",
+	}
+
+	if r.isConfigRepoSet() {
+		annotations["config-repo-info-hash"] = r.cr.Spec.ConfigLocation.BaseURL + r.cr.Spec.ConfigLocation.Name
 	}
 
 	nl := r.create_deployment("nodepool-launcher", "")

@@ -30,9 +30,12 @@ func (r *SFController) DeployGitServer() bool {
 	r.EnsureConfigMap(GS_IDENT+"-pi", cm_data)
 
 	annotations := map[string]string{
-		"system-config":               checksum([]byte(preInitScript)),
-		"config-repo-name":            r.cr.Spec.ConfigLocation.Name,
-		"config-zuul-connection-name": r.cr.Spec.ConfigLocation.ZuulConnectionName,
+		"system-config": checksum([]byte(preInitScript)),
+	}
+
+	if r.isConfigRepoSet() {
+		annotations["config-repo-name"] = r.cr.Spec.ConfigLocation.Name
+		annotations["config-zuul-connection-name"] = r.cr.Spec.ConfigLocation.ZuulConnectionName
 	}
 
 	// Create the deployment
@@ -55,30 +58,30 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Define initContainer
-	dep.Spec.Template.Spec.InitContainers = []apiv1.Container{
+	initContainer := MkContainer("init-config", GS_IMAGE)
+	initContainer.Command = []string{"/bin/bash", "/entry/pre-init.sh"}
+	initContainer.Env = []apiv1.EnvVar{
+		Create_env("FQDN", r.cr.Spec.FQDN),
+		Create_env("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(LOGSERVER_SSHD_PORT)),
+	}
+	initContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
-			Name:            "init-config",
-			Image:           GS_IMAGE,
-			SecurityContext: create_security_context(false),
-			Command:         []string{"/bin/bash", "/entry/pre-init.sh"},
-			Env: []apiv1.EnvVar{
-				Create_env("FQDN", r.cr.Spec.FQDN),
-				Create_env("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
-				Create_env("CONFIG_ZUUL_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName),
-				Create_env("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(LOGSERVER_SSHD_PORT)),
-			},
-			VolumeMounts: []apiv1.VolumeMount{
-				{
-					Name:      GS_IDENT,
-					MountPath: GS_GIT_MOUNT_PATH,
-				},
-				{
-					Name:      GS_IDENT + "-pi",
-					MountPath: GS_PI_MOUNT_PATH,
-				},
-			},
+			Name:      GS_IDENT,
+			MountPath: GS_GIT_MOUNT_PATH,
+		},
+		{
+			Name:      GS_IDENT + "-pi",
+			MountPath: GS_PI_MOUNT_PATH,
 		},
 	}
+
+	if r.isConfigRepoSet() {
+		initContainer.Env = append(initContainer.Env,
+			Create_env("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+			Create_env("CONFIG_ZUUL_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName))
+	}
+
+	dep.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 
 	// Create readiness probes
 	// Note: The probe is causing error message to be logged by the service

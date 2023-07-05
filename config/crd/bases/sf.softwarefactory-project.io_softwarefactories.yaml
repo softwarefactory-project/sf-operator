@@ -50,13 +50,18 @@ spec:
                     pattern: ^https?:\/\/.+$
                     type: string
                   name:
-                    default: config
                     description: Name of the `config` repository where the SF config
                       workflow is applied
+                    minLength: 1
                     type: string
                   zuul-connection-name:
                     description: Name of the Zuul connection where the `config` exists
+                    minLength: 1
                     type: string
+                required:
+                - base-url
+                - name
+                - zuul-connection-name
                 type: object
               fqdn:
                 type: string
