@@ -38,16 +38,15 @@
         - skip_ansible_lint
         - op_delete_csv
 
-    - name: Remove sf in sf namespace
+    - name: Remove Software Factory operand(s) in the sf namespace
       ansible.builtin.command: kubectl -n sf delete sf --all
       ignore_errors: true
       tags:
         - skip_ansible_lint
         - sf_delete_instance
 
-    - name: Release PVCs in sf namespace
-      ansible.builtin.shell: |
-        kubectl -n sf get pvc --no-headers=true -o name | grep -v gerrit | xargs kubectl -n sf delete
+    - name: Release PVCs created by the Software Factory operator in the sf namespace
+      ansible.builtin.command: kubectl -n sf delete pvc -l app=sf
       ignore_errors: true
       tags:
         - skip_ansible_lint
