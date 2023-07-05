@@ -22,12 +22,10 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
+
+	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 )
 
 const MANAGESF_RESOURCES_IDENT string = "managesf-resources"
@@ -361,7 +359,7 @@ var gerritCmd = &cobra.Command{
 	Use:   "gerrit",
 	Short: "Deploy a demo Gerrit instance to hack on sf-operator",
 	Run: func(cmd *cobra.Command, args []string) {
-		deploy, _ := cmd.Flags().GetBool("deploy")
+		deploy, err := cmd.Flags().GetBool("deploy")
 		wipe, _ := cmd.Flags().GetBool("wipe")
 		fqdn, _ := cmd.Flags().GetString("fqdn")
 
@@ -371,17 +369,7 @@ var gerritCmd = &cobra.Command{
 		}
 
 		// Get the kube client
-		scheme := runtime.NewScheme()
-		utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-		utilruntime.Must(apiroutev1.AddToScheme(scheme))
-		cl, err := client.New(config.GetConfigOrDie(), client.Options{
-			Scheme: scheme,
-		})
-		if err != nil {
-			fmt.Println("failed to create client")
-			os.Exit(1)
-		}
-
+		cl := utils.CreateKubernetesClient()
 		ctx := context.Background()
 
 		if deploy {
