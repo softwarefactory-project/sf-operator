@@ -207,6 +207,13 @@ the default `microshift_host` var:
 ./tools/run-ci-tests.sh --extra-var "microshift_host=my-microshift"
 ```
 
+To get more Ansible output logs, you can use `debug (-d)` or `verbose (-v)` parameter.
+For example:
+
+```sh
+/tools/run-ci-tests.sh -v
+```
+
 To fetch the test suite artifacts locally, run:
 
 ```sh

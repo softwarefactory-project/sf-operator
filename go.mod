@@ -3,7 +3,7 @@ module github.com/softwarefactory-project/sf-operator
 go 1.19
 
 require (
-	github.com/apenella/go-ansible v1.1.7
+	github.com/apenella/go-ansible v1.1.8-0.20221119160419-71c1cdfab120
 	github.com/cert-manager/cert-manager v1.11.0
 	github.com/fatih/color v1.15.0
 	github.com/go-logr/logr v1.2.3
@@ -24,8 +24,8 @@ require (
 )
 
 require (
-	github.com/apenella/go-common-utils/data v0.0.0-20210528133155-34ba915e28c8 // indirect
-	github.com/apenella/go-common-utils/error v0.0.0-20210528133155-34ba915e28c8 // indirect
+	github.com/apenella/go-common-utils/data v0.0.0-20220913191136-86daaa87e7df // indirect
+	github.com/apenella/go-common-utils/error v0.0.0-20220913191136-86daaa87e7df // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
