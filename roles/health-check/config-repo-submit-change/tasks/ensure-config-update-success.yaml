@@ -1,6 +1,6 @@
 ---
 - name: Register commit sha
-  ansible.builtin.command: cat .git/refs/heads/master
+  ansible.builtin.shell: git log -1 --format="%H"
   args:
     chdir: "{{ config_path }}"
   register: commitsha
