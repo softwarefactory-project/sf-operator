@@ -36,7 +36,7 @@ You need to install the following dependencies on your dev machine:
 Furthermore the `operator-sdk` is needed when you need to generate/update the OLM bundle or
 when a new `CRD` needs to be added to the operator. Here is the installation process:
 
-```
+```sh
 make operator-sdk
 ```
 
@@ -169,9 +169,10 @@ OPTIONS
   --verbose, -v - verbose
 
 To completly remove any resource related to softwarefactory run the following command:
+
 ```sh
 ./tools/sfconfig operator delete -a
-OR
+# OR
 ./tools/sfconfig operator delete -s -S -c
 ```
 
@@ -212,6 +213,12 @@ For example:
 
 ```sh
 /tools/run-ci-tests.sh -v
+```
+
+To upgrade the sf-operator, run below command:
+
+```sh
+./tools/run-ci-tests.sh -u
 ```
 
 To fetch the test suite artifacts locally, run:
