@@ -1128,6 +1128,13 @@ func (r *SFUtilContext) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv
 	}
 	r.log.V(1).Info("Inspecting volume " + found_pvc.Name)
 
+	current_qty := found_pvc.Status.Capacity.Storage()
+	if current_qty.IsZero() {
+		// When the PVC is just created but not fully up it might happen that the current
+		// size is 0. So let force a new reconcile.
+		return false
+	}
+
 	// Is a resize in progress?
 	for _, condition := range found_pvc.Status.Conditions {
 		switch condition.Type {
@@ -1138,7 +1145,6 @@ func (r *SFUtilContext) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv
 			return false
 		}
 	}
-	current_qty := found_pvc.Status.Capacity.Storage()
 
 	switch new_qty.Cmp(*current_qty) {
 	case -1:
@@ -1148,7 +1154,8 @@ func (r *SFUtilContext) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv
 		r.log.V(1).Info("Volume " + pvc_name + " at expected size, nothing to do")
 		return true
 	case 1:
-		r.log.V(1).Info("Volume expansion required for  " + pvc_name)
+		r.log.V(1).Info("Volume expansion required for  " + pvc_name +
+			". current size: " + current_qty.String() + " -> new size: " + new_qty.String())
 		new_resources := apiv1.ResourceRequirements{
 			Requests: apiv1.ResourceList{
 				"storage": new_qty,
