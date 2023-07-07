@@ -1,0 +1,18 @@
+---
+- name: "Ensure removal of {{ output_dir }}"
+  ansible.builtin.file:
+    path: "{{ output_dir }}"
+    state: absent
+
+- name: Start port forwarding to git server
+  shell: |
+    kubectl port-forward service/git-server 9418 -n sf
+  async: 60
+  poll: 0
+
+- name: Clone system-config
+  ansible.builtin.git:
+    repo: git://localhost:9418/system-config
+    dest: "{{ output_dir }}"
+  retries: "{{ retries }}"
+  delay: "{{ delay }}"
