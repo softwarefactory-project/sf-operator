@@ -8,6 +8,7 @@ import (
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //go:embed static/nodepool/generate-launcher-config.sh
@@ -19,6 +20,7 @@ var loggingConfigTemplate string
 const NL_IDENT = "nodepool-launcher"
 const NL_WEBAPP_PORT_NAME = "nlwebapp"
 const NL_WEBAPP_PORT = 8006
+const NodepoolProvidersSecretsName = "nodepool-providers-secrets"
 
 var configScriptVolumeMount = apiv1.VolumeMount{
 	Name:      "nodepool-launcher-tooling-vol",
@@ -116,10 +118,18 @@ func (r *SFController) DeployNodepool() bool {
 		},
 	}
 
-	nodepool_providers_secrets, err := r.getSecretbyNameRef("nodepool-providers-secrets")
+	// We set a place holder secret to ensure that the Secret is owned by the SoftwareFactory instance (ControllerReference)
+	if !r.GetM(NodepoolProvidersSecretsName, &apiv1.Secret{}) {
+		r.CreateR(&apiv1.Secret{
+			Data:       map[string][]byte{},
+			ObjectMeta: metav1.ObjectMeta{Name: NodepoolProvidersSecretsName, Namespace: r.ns}})
+	}
+
+	// Fetch the nodepool secret
+	nodepool_providers_secrets, err := r.getSecretbyNameRef(NodepoolProvidersSecretsName)
 
 	if err == nil {
-		volumes = append(volumes, create_volume_secret("nodepool-providers-secrets"))
+		volumes = append(volumes, create_volume_secret(NodepoolProvidersSecretsName))
 		volume_mount = append(volume_mount, apiv1.VolumeMount{
 			Name:      "nodepool-providers-secrets",
 			SubPath:   "kube.config",
@@ -135,9 +145,10 @@ func (r *SFController) DeployNodepool() bool {
 	}
 
 	annotations := map[string]string{
-		"nodepool.yaml":              checksum([]byte(generateConfigScript)),
-		"nodepool-logging.yaml":      checksum([]byte(loggingConfig)),
-		"serial":                     "3",
+		"nodepool.yaml":         checksum([]byte(generateConfigScript)),
+		"nodepool-logging.yaml": checksum([]byte(loggingConfig)),
+		"serial":                "3",
+		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"nodepool-providers-secrets": string(nodepool_providers_secrets.ResourceVersion),
 	}
 

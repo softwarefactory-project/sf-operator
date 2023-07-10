@@ -13,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	sf "github.com/softwarefactory-project/sf-operator/controllers"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -198,7 +199,7 @@ func CreateNamespaceForNodepool(nodepoolContext string, nodepoolNamespace string
 		fmt.Printf("%s\n", bytes)
 	} else {
 		e.cli = utils.CreateKubernetesClient(sfContext)
-		e.ensureKubeConfigSecret(bytes, "nodepool-providers-secrets")
+		e.ensureKubeConfigSecret(bytes, sf.NodepoolProvidersSecretsName)
 	}
 }
 
