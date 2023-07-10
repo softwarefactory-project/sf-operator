@@ -61,8 +61,15 @@ cat << EOF > zuul.d/jobs-base.yaml
     nodeset:
       nodes: []
 
-# TODO: decide where the pipeline should live, e.g. system-config or user config,
-# and how to add the zuul connections.
+- project:
+    post:
+      jobs:
+        - sleeper
+EOF
+
+if [ -n "${CONFIG_REPO_NAME}" -a -n "${CONFIG_ZUUL_CONNECTION_NAME}" ]; then
+  cat << EOF > zuul.d/config-project.yaml
+---
 - pipeline:
     name: post
     post-review: true
@@ -73,12 +80,10 @@ cat << EOF > zuul.d/jobs-base.yaml
       git-server:
         event:
           - ref-updated
-      gerrit:
+      ${CONFIG_ZUUL_CONNECTION_NAME}:
         - event: ref-updated
           ref: ^refs/heads/.*$
 
-# TODO: hardcode for now on the internal Gerrit but must be configured based
-# on the CRD (for the config repo location).
 - pipeline:
     name: check
     description: |
@@ -86,11 +91,11 @@ cat << EOF > zuul.d/jobs-base.yaml
       initial +/-1 Verified vote.
     manager: independent
     require:
-      gerrit:
+      ${CONFIG_ZUUL_CONNECTION_NAME}:
         open: True
         current-patchset: True
     trigger:
-      gerrit:
+      ${CONFIG_ZUUL_CONNECTION_NAME}:
         - event: patchset-created
         - event: change-restored
         - event: comment-added
@@ -102,13 +107,13 @@ cat << EOF > zuul.d/jobs-base.yaml
           approval:
             - Workflow: 1
     start:
-      gerrit:
+      ${CONFIG_ZUUL_CONNECTION_NAME}:
         Verified: 0
     success:
-      gerrit:
+      ${CONFIG_ZUUL_CONNECTION_NAME}:
         Verified: 1
     failure:
-      gerrit:
+      ${CONFIG_ZUUL_CONNECTION_NAME}:
         Verified: -1
 
 - pipeline:
@@ -124,13 +129,13 @@ cat << EOF > zuul.d/jobs-base.yaml
     supercedes: check
     post-review: True
     require:
-      gerrit:
+      ${CONFIG_ZUUL_CONNECTION_NAME}:
         open: True
         current-patchset: True
         approval:
           - Workflow: 1
     trigger:
-      gerrit:
+      ${CONFIG_ZUUL_CONNECTION_NAME}:
         - event: comment-added
           approval:
             - Workflow: 1
@@ -139,27 +144,18 @@ cat << EOF > zuul.d/jobs-base.yaml
             - Verified: 1
           username: zuul
     start:
-      gerrit:
+      ${CONFIG_ZUUL_CONNECTION_NAME}:
         Verified: 0
     success:
-      gerrit:
+      ${CONFIG_ZUUL_CONNECTION_NAME}:
         Verified: 2
         submit: true
     failure:
-      gerrit:
+      ${CONFIG_ZUUL_CONNECTION_NAME}:
         Verified: -2
     window-floor: 20
     window-increase-factor: 2
 
-- project:
-    post:
-      jobs:
-        - sleeper
-EOF
-
-if [ ! -z "${CONFIG_REPO_NAME}" ]; then
-  cat << EOF > zuul.d/config-project.yaml
----
 - project:
     name: ${CONFIG_REPO_NAME}
     check:
