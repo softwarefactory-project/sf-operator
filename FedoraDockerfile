@@ -1,9 +1,0 @@
-FROM registry.fedoraproject.org/fedora:38
-
-RUN useradd -m zuul -d /workspace && \
-    chmod 0777 /workspace && \
-    mkdir -p /zuul-output && \
-    chmod 0777 /zuul-output
-
-USER zuul
-WORKDIR /workspace
