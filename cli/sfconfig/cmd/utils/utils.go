@@ -5,7 +5,37 @@ import (
 	"fmt"
 	"os"
 	"text/template"
+
+	apiroutev1 "github.com/openshift/api/route/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/yaml"
 )
+
+func RenderYAML(o interface{}) string {
+	y, err := yaml.Marshal(o)
+	if err != nil {
+		panic(fmt.Errorf("err: %v\n", err))
+	}
+	return string(y)
+}
+
+func CreateKubernetesClient() client.Client {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(apiroutev1.AddToScheme(scheme))
+	client, err := client.New(config.GetConfigOrDie(), client.Options{
+		Scheme: scheme,
+	})
+	if err != nil {
+		fmt.Println("failed to create client")
+		os.Exit(1)
+	}
+	return client
+}
 
 // Function to easilly use templated string.
 //
