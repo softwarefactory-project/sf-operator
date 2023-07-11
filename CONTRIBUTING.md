@@ -94,10 +94,10 @@ kubectl config current-context
    kubectl apply -f ./my-sf.yaml
    ```
 
-5. Create Nodepool serviceAccount and secret
+5. Create Nodepool serviceAccount and secret to run job on microshift
 
     ```sh
-    ./tools/create-nodepool-sa.sh
+    ./tools/sfconfig create-namespace-for-nodepool
     ```
 
 6. Start the operator:
