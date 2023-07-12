@@ -19,6 +19,67 @@
   loop:
     - "playbooks"
     - "zuul.d"
+    - "nodepool"
+
+# From here we set a new nodepool provider config and nodepool label
+####################################################################
+
+- name: Set the a local openshiftpods provider in nodepool config
+  ansible.builtin.copy:
+    content: |
+      labels:
+        - name: zuul-worker-sf-operator-ci
+      providers:
+        - name: microshiftLocal
+          driver: openshiftpods
+          context: microshift
+          pools:
+            # NOTE: name is a name of the namespace
+            # https://github.com/softwarefactory-project/sf-config/blob/master/ansible/roles/sf-repos/files/config/nodepool/openshift.yaml#L30
+            # https://zuul-ci.org/docs/nodepool/latest/openshift-pods.html
+            - name: nodepool
+              labels:
+                - name: zuul-worker-sf-operator-ci
+                  image: quay.io/software-factory/zuul-worker-sf-operator-ci:latest
+                  python-path: /bin/python3
+    dest: "{{ config_path }}/nodepool/nodepool.yaml"
+
+- ansible.builtin.command: git status --porcelain
+  args:
+    chdir: "{{ config_path }}"
+  register: git_changes
+
+- name: Create git commit message
+  ansible.builtin.command: "{{ item }}"
+  args:
+    chdir: "{{ config_path }}"
+  loop:
+    - "git add ."
+    - "git commit -m 'Add a local openshiftpods provider in nodepool config'"
+  when: git_changes.stdout != ""
+
+- name: Submit change
+  ansible.builtin.include_role:
+    name: health-check/config-repo-submit-change
+    tasks_from: submit-change.yaml
+  when: git_changes.stdout != ""
+
+- name: Ensure change is SUCCESS
+  ansible.builtin.include_role:
+    name: health-check/config-repo-submit-change
+    tasks_from: ensure-config-update-success.yaml
+  when: git_changes.stdout != ""
+
+# From here we create a new job that use the new label
+######################################################
+
+- name: Reset config dir to HEAD
+  ansible.builtin.command: "{{ item }}"
+  loop:
+    - "git remote update"
+    - "git checkout origin/master"
+  args:
+    chdir: "{{ config_path }}"
 
 - name: Create new zuul config
   ansible.builtin.copy:
@@ -30,7 +91,7 @@
           nodeset:
             nodes:
               - name: container
-                label: f38-nonroot
+                label: zuul-worker-sf-operator-ci
 
       - project:
           check:
@@ -79,6 +140,9 @@
     name: health-check/config-repo-submit-change
     tasks_from: ensure-config-update-success.yaml
 
+# From here we trigger the new job via submitting a new review
+##############################################################
+
 - name: Checkout to the last commit
   ansible.builtin.shell: "{{ item }}"
   args:
@@ -107,7 +171,7 @@
 
 - name: Ensure, that the microshift-pod job pod is started
   ansible.builtin.shell: |
-    kubectl -n nodepool get event -o custom-columns=NAME:.metadata.name | cut -d "." -f1 | grep f38-nonroot
+    kubectl -n nodepool get event -o custom-columns=NAME:.metadata.name | cut -d "." -f1 | grep zuul-worker-sf-operator-ci
   register: _f38_nodepool_pods
   until:
     - _f38_nodepool_pods.stdout != ""

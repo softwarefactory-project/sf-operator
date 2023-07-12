@@ -44,7 +44,7 @@ cat << EOF > zuul.d/config.yaml
     nodeset:
       nodes:
         - name: container
-          label: f38-nonroot
+          label: zuul-worker-sf-operator-ci
 
 - project:
     check:
