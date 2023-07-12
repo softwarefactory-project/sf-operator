@@ -7,33 +7,20 @@
         name: podman
       become: yes
 
+    - name: Ensure ~/.kube
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: ~/.kube
+        mode: 0700
+        state: directory
+
     - name: Get kubeconfig
       ansible.builtin.fetch:
         src: /var/lib/microshift/resources/kubeadmin/microshift.dev/kubeconfig
-        dest: /tmp/fetched
+        dest: ~/.kube/microshift-config
+        flat: true
       become: yes
 
-- hosts: localhost
-  gather_facts: no
-  tasks:
-    - name: Get kubeconfig when microshift is remote
-      block:
-        - name: Ensure ~/.kube
-          ansible.builtin.file:
-            path: ~/.kube
-            mode: 0700
-            state: directory
-
-        - name: Copy kubeconfig to ~.kube/config
-          ansible.builtin.copy:
-            src: /tmp/fetched/microshift/var/lib/microshift/resources/kubeadmin/microshift.dev/kubeconfig
-            dest: ~/.kube/microshift-config
-            mode: 0600
-
-        - name: remove unused data
-          ansible.builtin.file:
-            path: /tmp/fetched
-            state: absent
-
-        - name: Validate kubectl works
-          ansible.builtin.command: kubectl --kubeconfig="$HOME/.kube/microshift-config" get pods
+    - name: Validate kubectl works
+      delegate_to: localhost
+      ansible.builtin.command: kubectl --kubeconfig="$HOME/.kube/microshift-config" get pods
