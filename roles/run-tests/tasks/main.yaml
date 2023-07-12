@@ -20,8 +20,8 @@
     - health-check/config-repo-get-or-reset
     - health-check/zuul-connections
     - health-check/config-update-zuul
-    - health-check/pod-spawning
     - health-check/config-update-nodepool-launcher
+    - health-check/pod-spawning
   loop_control:
     loop_var: role
 

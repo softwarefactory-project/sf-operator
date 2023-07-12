@@ -2,3 +2,4 @@
 zuul_web_url: "https://{{ zuul_host }}"
 validate_certs: true
 retries: 180
+zuul_worker_ci_label: "zuul-worker-operator-ci"
