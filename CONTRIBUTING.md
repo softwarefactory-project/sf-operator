@@ -32,6 +32,7 @@ You need to install the following dependencies on your dev machine:
 - python-tox
 - git-review
 - python-kubernetes
+- skopeo
 
 Furthermore the `operator-sdk` is needed when you need to generate/update the OLM bundle or
 when a new `CRD` needs to be added to the operator. Here is the installation process:

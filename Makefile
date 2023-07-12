@@ -1,8 +1,14 @@
 VERSION ?= 0.0.1
 
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/software-factory/sf-operator:v$(VERSION)
-BUNDLE_IMG ?= quay.io/software-factory/sf-operator-bundle:v$(VERSION)
+BASE_REPO ?= quay.io/software-factory/sf-operator
+IMG ?= $(BASE_REPO):v$(VERSION)
+
+BUNDLE_REPO ?= $(BASE_REPO)-bundle
+BUNDLE_IMG ?= $(BUNDLE_REPO):v$(VERSION)
+
+CATALOG_REPO ?= $(BASE_REPO)-catalog
+CATALOG_IMG ?= $(CATALOG_REPO):latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.25
 
@@ -96,7 +102,7 @@ bundle-build: ## Build the bundle image.
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
-	$(MAKE) podman-push IMG=$(BUNDLE_IMG)
+	podman push $(BUNDLE_IMG)
 
 ##@ Deployment
 
@@ -171,9 +177,10 @@ $(OPERATOR_SDK): $(LOCALBIN)
 
 # Cataloge
 CATALOG_DIR=sf-operator-catalog
+CATALOG_FILE=$(CATALOG_DIR)/catalog.yaml
 OPM=$(LOCALBIN)/opm
 CHANNEL=preview
-CATALOG_IMG ?= quay.io/software-factory/sf-operator-catalog:v$(VERSION)
+AVAILTAGS = $(shell skopeo list-tags docker://$(BUNDLE_REPO) | jq -r '.Tags[]' | grep -v latest )
 
 .PHONY: install-opm
 install-opm: ## Install the cert-manager cmctl CLI
@@ -185,8 +192,12 @@ opm-dir-gen: install-opm
 
 opm-files-gen: opm-dir-gen
 	test -f $(CATALOG_DIR).Dockerfile || $(OPM) generate dockerfile $(CATALOG_DIR)
-	$(OPM) init sf-operator --default-channel=$(CHANNEL) --description=./README.md --output yaml > $(CATALOG_DIR)/operator.yaml
-	$(OPM) render $(BUNDLE_IMG) --output=yaml >> $(CATALOG_DIR)/operator.yaml
+	$(OPM) init sf-operator --default-channel=$(CHANNEL) --description=./README.md --output yaml > $(CATALOG_FILE)
+ifdef AVAILTAGS
+	$(foreach version,$(AVAILTAGS),$(OPM) render $(BUNDLE_REPO):$(version) --output=yaml >> $(CATALOG_FILE);)
+else
+	$(error There are no available tags)
+endif
 
 .PHONY: schema-operator
 schema-operator: opm-files-gen
@@ -195,12 +206,16 @@ schema-operator: opm-files-gen
 	schema: olm.channel\n\
 	package: sf-operator\n\
 	name: $(CHANNEL)\n\
-	entries:\n\
-    - name: sf-operator.v$(VERSION)\n\
-	">> $(CATALOG_DIR)/operator.yaml
+	entries:\
+	">> $(CATALOG_FILE)
+
+schema-entries:
+	$(call entries_write_fn)
+
+schema-channel: schema-operator schema-entries
 
 .PHONY: opm
-opm: schema-operator
+opm: schema-channel
 	$(OPM) validate $(CATALOG_DIR)
 
 opm-build:
@@ -212,3 +227,24 @@ opm-push:
 .PHONY: opm-clean
 clean-opm:
 	@bash -c "rm -r $(CATALOG_DIR) $(CATALOG_DIR).Dockerfile"
+
+# function with one argument $(function_name,arg1)
+entry_name_fn = \
+$(shell printf "\n  - name: sf-operator.$(1)\
+">> $(CATALOG_FILE))
+
+# function with one argument $(function_name,arg1)
+entry_replace_fn = \
+$(shell printf "\n    replaces: sf-operator.$(1)\
+">> $(CATALOG_FILE))
+
+# function with two arguments $(function_name,arg1,arg2)
+define entry_fn
+	$(call entry_name_fn,$(1))
+	$(if $(2), $(call entry_replace_fn,$(2)) )
+endef
+
+# function with no arguments
+define entries_write_fn
+	$(foreach version,$(AVAILTAGS),$(call entry_fn,$(version),$(prevversion)) $(eval prevversion=$(version)))
+endef

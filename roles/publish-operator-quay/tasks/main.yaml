@@ -6,50 +6,8 @@
       - golang
       - make
       - podman
-
-- name: "Get Bundle Version"
-  ansible.builtin.shell: |
-    awk '/^VERSION/{split($0,s," "); print s[3]}' {{ zuul.project.src_dir }}/Makefile
-  register: _command_results
-
-- name: "Set Version"
-  ansible.builtin.set_fact:
-    bundle_version: "v{{ _command_results.stdout }}"
-
-- name: Create the operator OLM bundle
-  community.general.make:
-    target: bundle
-    chdir: "{{ zuul.project.src_dir }}"
-    params:
-      BUNDLE_GEN_FLAGS: "--version {{ _command_results.stdout }}"
-
-- name: Create the operator Catalog bundle
-  community.general.make:
-    target: opm
-    chdir: "{{ zuul.project.src_dir }}"
-
-- name: Build the operator's images
-  community.general.make:
-    target: "{{ item }}"
-    chdir: "{{ zuul.project.src_dir }}"
-    params:
-      BUNDLE_IMG: "{{ ci_bundle_img_registry }}:{{ bundle_version }}"
-      IMG: "{{ ci_operator_img_registry }}:{{ bundle_version }}"
-      CATALOG_IMG: "{{ ci_catalog_img_registry }}:{{ bundle_version }}"
-  loop:
-    - bundle-build
-    - operator-build
-    - opm-build
-
-- name: "Podman Tag"
-  ansible.builtin.shell: >
-    podman tag
-    {{ item }}:{{ bundle_version }}
-    {{ item }}:latest
-  loop:
-    - "{{ ci_bundle_img_registry }}"
-    - "{{ ci_operator_img_registry }}"
-    - "{{ ci_catalog_img_registry }}"
+      - skopeo
+      - jq
 
 - name: "Podman Login to {{ registry_address }}"
   ansible.builtin.shell: >
@@ -59,11 +17,82 @@
     {{ registry_address }}
   no_log: true
 
-- name: "Podman Push Operator's Images to {{ registry_address }}"
+- name: "Get Tag Version"
+  ansible.builtin.shell: |
+    awk '/^VERSION/{print $3}' {{ zuul.project.src_dir }}/Makefile
+  register: _command_results
+
+- name: "Set Tag Version"
+  ansible.builtin.set_fact:
+    tag_version: "v{{ _command_results.stdout }}"
+
+- name: Generate the Operator's Bundle files
+  community.general.make:
+    target: bundle
+    chdir: "{{ zuul.project.src_dir }}"
+    params:
+      BUNDLE_GEN_FLAGS: "--version {{ _command_results.stdout }}"
+
+- name: Build the Operator and Bundle images
+  community.general.make:
+    target: "{{ item }}"
+    chdir: "{{ zuul.project.src_dir }}"
+    params:
+      BUNDLE_IMG: "{{ ci_bundle_img_registry }}:{{ tag_version }}"
+      IMG: "{{ ci_operator_img_registry }}:{{ tag_version }}"
+  loop:
+    - bundle-build
+    - operator-build
+
+- name: "Podman Tag Operator and Bundle"
+  ansible.builtin.shell: >
+    podman tag
+    {{ item }}:{{ tag_version }}
+    {{ item }}:latest
+  loop:
+    - "{{ ci_bundle_img_registry }}"
+    - "{{ ci_operator_img_registry }}"
+
+- name: "Podman Push Operator and Bundle Images to {{ registry_address }}"
   ansible.builtin.shell: >
     podman push
     {{ item[0] }}:{{ item[1] }}
-  loop: "{{ ['{{ ci_bundle_img_registry }}', '{{ ci_operator_img_registry }}', '{{ ci_catalog_img_registry }}'] | product(['{{ bundle_version }}', 'latest']) | list }}"
+  loop: "{{ ['{{ ci_bundle_img_registry }}', '{{ ci_operator_img_registry }}'] | product(['{{ tag_version }}', 'latest']) | list }}"
+  register: _podman_push
+  retries: 3
+  delay: 3
+  until: "_podman_push is not failed"
+
+# To Generate the Catalog the Bundle and Operator mush already be available on the registry
+
+- name: "Waiting for Registry Tags API Call to be updated and have tag: {{ tag_version }}"
+  ansible.builtin.command: >
+    skopeo
+    list-tags
+    docker://{{ ci_bundle_img_registry }}
+  register: _podman_tag
+  retries: 10
+  delay: 20
+  until: "tag_version in _podman_tag.stdout"
+
+- name: Create the Operator's Catalog
+  community.general.make:
+    target: opm
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Build the Operator's Catalog image
+  community.general.make:
+    target: "opm-build"
+    chdir: "{{ zuul.project.src_dir }}"
+    params:
+      BUNDLE_IMG: "{{ ci_bundle_img_registry }}:{{ tag_version }}"
+      IMG: "{{ ci_operator_img_registry }}:{{ tag_version }}"
+      CATALOG_IMG: "{{ ci_catalog_img_registry }}:latest"
+
+- name: "Podman Push Operator Catalog Image to {{ registry_address }}"
+  ansible.builtin.shell: >
+    podman push
+    {{ ci_catalog_img_registry }}:latest
   register: _podman_push
   retries: 3
   delay: 3
