@@ -6,6 +6,7 @@
 COMMAND=${COMMAND:-"sleep 300"}
 SF_OPERATOR_DIR=$(readlink -f "$(pwd)")
 GERRIT_ADMIN_API_KEY=$("${SF_OPERATOR_DIR}/tools/get-secret.sh" gerrit-admin-api-key)
+TMP_DIR=$(mktemp -d)
 
 if ! command -v pip3; then
     echo "Please install pip package!"
@@ -22,28 +23,33 @@ git clone \
     -c user.name="Admin" \
     -c user.email="admin@sftests.com" \
     -c http.sslVerify=false \
-    "https://admin:${GERRIT_ADMIN_API_KEY}@gerrit.sftests.com/a/config" /tmp/config && \
-    cd /tmp/config
+    "https://admin:${GERRIT_ADMIN_API_KEY}@gerrit.sftests.com/a/config" "$TMP_DIR/config"
 
-mkdir -p playbooks
+cd "$TMP_DIR/config"
+mkdir -p "$TMP_DIR/config/playbooks"
+mkdir -p "$TMP_DIR/config/zuul.d"
 
 git config user.name "Admin"
 git config user.email admin@sftests.com
 git config http.sslVerify false
-
 git remote add gerrit "https://admin:${GERRIT_ADMIN_API_KEY}@gerrit.sftests.com/a/config"
 
 cat << EOF > zuul.d/config.yaml
 ---
 - job:
-    name: test
+    name: test-job
     run: playbooks/test.yml
+    cleanup-run:
+      name: playbooks/sleep.yml
+    nodeset:
+      nodes:
+        - name: container
+          label: f38-nonroot
 
 - project:
     check:
       jobs:
-        - config-check
-        - test
+        - test-job
     gate:
       jobs:
         - config-check
@@ -60,14 +66,22 @@ cat << EOF > playbooks/test.yml
       command: $COMMAND
 EOF
 
+cat << EOF > playbooks/sleep.yml
+---
+- hosts: localhost,all
+  tasks:
+    - name: Doing command
+      command: $COMMAND
+EOF
+
 git add .
 git commit -m "Add check job"
 git push origin master
-
 
 echo "test" > test-file
 git add test-file
 git commit -m 'Executing test PS'
 git-review
 
+echo -e "\n\nTemp dir is: $TMP_DIR\n\n"
 cd -

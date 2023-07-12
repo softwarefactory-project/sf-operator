@@ -30,6 +30,7 @@
           - jq
           - make
           - podman
+          - buildah
 
     - name: Install openshift-client and python3
       ansible.builtin.package:

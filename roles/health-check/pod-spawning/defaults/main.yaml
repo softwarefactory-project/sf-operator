@@ -1,0 +1,4 @@
+---
+zuul_web_url: "https://{{ zuul_host }}"
+validate_certs: true
+retries: 180

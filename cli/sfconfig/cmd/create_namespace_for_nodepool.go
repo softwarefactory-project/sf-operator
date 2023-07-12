@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -124,14 +125,28 @@ func (e *ENV) ensureServiceAccountSecret(sa string) string {
 	panic("Could not find token")
 }
 
+func GetOutboundIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:53")
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String()
+}
+
 func createKubeConfig(ns string, sa string, token string) cliapi.Config {
 	currentConfig := config.GetConfigOrDie()
+	apiPort := currentConfig.APIPath
+	if apiPort == "" {
+		apiPort = "6443"
+	}
 	return cliapi.Config{
 		Kind:       "Config",
 		APIVersion: "v1",
 		Clusters: map[string]*cliapi.Cluster{
 			"microshift": {
-				Server:                   currentConfig.Host + currentConfig.APIPath,
+				Server:                   "https://" + net.JoinHostPort(GetOutboundIP(), apiPort),
 				CertificateAuthorityData: currentConfig.TLSClientConfig.CAData,
 			},
 		},

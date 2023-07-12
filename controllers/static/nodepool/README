@@ -1,0 +1,2 @@
+# Add own kubeconfig content into the `kubeconfig` file, if you would
+like to create nodepool-kubeconfig secret via operator.
