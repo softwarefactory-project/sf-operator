@@ -1,0 +1,8 @@
+---
+- name: Ensure job results exists in Logserver
+  ansible.builtin.uri:
+    url: "{{ item.log_url }}/job-output.txt.gz"
+    validate_certs: "{{ validate_certs }}"
+    method: GET
+  retries: "{{ retries }}"
+  loop: "{{ zuul_job_result.json | list }}"

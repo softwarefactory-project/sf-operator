@@ -1,6 +1,33 @@
 ---
-# NOTE: By checking scale-up and scale down before other tests will be running,
-# we will make sure, that the services are working correctly.
+- name: Iterate on preparation roles
+  ansible.builtin.include_role:
+    name: "roles/utils/{{ role }}"
+  loop:
+    - manage-hosts
+    - get-gerrit-admin-user-api-key
+    - config-repo-get-or-reset
+  loop_control:
+    loop_var: role
+
+- name: Iterate on tests
+  ansible.builtin.include_role:
+    name: "roles/health-check/{{ role }}"
+  loop:
+    - check-service-uri
+    - zuul-connections
+    - config-update-zuul
+    - config-update-nodepool-launcher
+    - pod-spawning
+    - test-configcheckjob
+    - ensure-job-result-artifacts
+    - test-volumestats-sidecar
+    - test-crd
+    - expand-volume
+    - ensure-job-result-artifacts
+    - validate-purgelogs
+  loop_control:
+    loop_var: role
+
 - name: Check scaling
   ansible.builtin.include_role:
     name: roles/health-check/scale-resources
@@ -9,49 +36,3 @@
     - down
   loop_control:
     loop_var: operation
-
-- name: Iterate on tests
-  ansible.builtin.include_role:
-    name: "roles/{{ role }}"
-  loop:
-    - utils/manage-hosts
-    - utils/get-gerrit-admin-user-api-key
-    - health-check/check-service-uri
-    - health-check/config-repo-get-or-reset
-    - health-check/zuul-connections
-    - health-check/config-update-zuul
-    - health-check/config-update-nodepool-launcher
-    - health-check/pod-spawning
-    - test-configcheckjob
-  loop_control:
-    loop_var: role
-
-- name: Ensure job results exists in Logserver
-  ansible.builtin.uri:
-    url: "{{ item.log_url }}/job-output.txt.gz"
-    validate_certs: "{{ validate_certs }}"
-    method: GET
-  retries: 10
-  loop: "{{ zuul_job_result.json | list }}"
-
-- name: Miscellaneous testing
-  ansible.builtin.include_role:
-    name: "roles/{{ role }}"
-  loop:
-    - test-volumestats-sidecar
-    - test-crd
-    - expand-volume
-  loop_control:
-    loop_var: role
-
-- name: Ensure data is still present after volume expansion
-  ansible.builtin.uri:
-    url: "{{ item.log_url }}/job-output.txt.gz"
-    validate_certs: "{{ validate_certs }}"
-    method: GET
-  retries: 10
-  loop: "{{ zuul_job_result.json | list }}"
-
-- name: Validate purgelogs
-  ansible.builtin.include_role:
-    name: "roles/health-check/validate-purgelogs"
