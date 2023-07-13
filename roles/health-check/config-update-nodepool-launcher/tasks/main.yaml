@@ -94,10 +94,35 @@
 
 - name: "Check that new {{ zuul_worker_ci_label }} label exists in the destination file"
   ansible.builtin.shell: |
-    kubectl exec {{ _pod_name.stdout }} -c {{ container_name }} -- grep "{{ zuul_worker_ci_label }}" /etc/nodepool/nodepool.yaml
+    kubectl exec {{ _pod_name.stdout }} -c {{ container_name }} -- grep "{{ item }}" /etc/nodepool/nodepool.yaml
+  loop:
+    - "{{ zuul_worker_ci_label }}"
+    - "microshiftLocal"
 
-- name: "Check that new microshiftLocal provider exists in the destination file"
-  ansible.builtin.shell: |
-    kubectl exec {{ _pod_name.stdout }} -c {{ container_name }} -- grep "microshiftLocal" /etc/nodepool/nodepool.yaml
+- name: Ensure the new label listed in the Nodepool API
+  ansible.builtin.uri:
+    url: "https://{{ nodepool_host }}/label-list"
+    method: GET
+    validate_certs: "{{ validate_certs }}"
+    status_code: [200, 503]
+    return_content: true
+  register: this
+  until:
+    - this.status == 200
+    - zuul_worker_ci_label in this.content
+  retries: 6
+  delay: 5
 
-# TODO: Use the nodepool api and zuul api to ensure that the label is available
+- name: Ensure the new label listed in the Zuul API
+  ansible.builtin.uri:
+    url: "https://{{ zuul_host }}/api/tenant/internal/labels"
+    method: GET
+    validate_certs: "{{ validate_certs }}"
+    status_code: [200, 503]
+    return_content: true
+  register: this
+  until:
+    - this.status == 200
+    - zuul_worker_ci_label in this.content
+  retries: 6
+  delay: 5
