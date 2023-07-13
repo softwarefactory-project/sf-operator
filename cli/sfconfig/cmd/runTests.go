@@ -30,8 +30,8 @@ Run test_only tag
 	Run: func(cmd *cobra.Command, args []string) {
 		test_only, _ := cmd.Flags().GetBool("test-only")
 		upgrade, _ := cmd.Flags().GetBool("upgrade")
-		verbose, _ := cmd.Flags().GetBool("verbose")
-		debug, _ := cmd.Flags().GetBool("debug")
+		verbose, _ := cmd.Flags().GetBool("v")
+		debug, _ := cmd.Flags().GetBool("vvv")
 
 		vars, _ := varListToMap(extravars)
 		ansiblePlaybookOptions := &playbook.AnsiblePlaybookOptions{}
@@ -101,6 +101,6 @@ func init() {
 	runTestsCmd.Flags().StringSliceVarP(&extravars, "extra-var", "e", []string{}, "Set extra variables, the format of each variable must be <key>=<value>")
 	runTestsCmd.Flags().BoolP("test-only", "t", false, "run test_only")
 	runTestsCmd.Flags().BoolP("upgrade", "u", false, "run upgrade test")
-	runTestsCmd.Flags().BoolP("verbose", "v", false, "run ansible in verbose mode")
-	runTestsCmd.Flags().BoolP("debug", "d", false, "run ansible in debug mode")
+	runTestsCmd.Flags().Bool("v", false, "run ansible in verbose mode")
+	runTestsCmd.Flags().Bool("vvv", false, "run ansible in debug mode")
 }
