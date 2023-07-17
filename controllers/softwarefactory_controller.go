@@ -16,6 +16,7 @@ import (
 
 	"k8s.io/client-go/rest"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -245,5 +246,6 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *SoftwareFactoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&sfv1.SoftwareFactory{}).
+		Owns(&corev1.Secret{}).
 		Complete(r)
 }
