@@ -119,30 +119,31 @@ func (r *SFController) DeployNodepool() bool {
 	}
 
 	// We set a place holder secret to ensure that the Secret is owned by the SoftwareFactory instance (ControllerReference)
-	if !r.GetM(NodepoolProvidersSecretsName, &apiv1.Secret{}) {
+	var nodepool_providers_secrets apiv1.Secret
+	if !r.GetM(NodepoolProvidersSecretsName, &nodepool_providers_secrets) {
 		r.CreateR(&apiv1.Secret{
 			Data:       map[string][]byte{},
 			ObjectMeta: metav1.ObjectMeta{Name: NodepoolProvidersSecretsName, Namespace: r.ns}})
+	} else {
+		if len(nodepool_providers_secrets.GetOwnerReferences()) == 0 {
+			r.log.V(1).Info("Adopting the providers secret to set the owner reference", "secret", NodepoolProvidersSecretsName)
+			r.UpdateR(&nodepool_providers_secrets)
+		}
 	}
 
-	// Fetch the nodepool secret
-	nodepool_providers_secrets, err := r.getSecretbyNameRef(NodepoolProvidersSecretsName)
-
-	if err == nil {
-		volumes = append(volumes, create_volume_secret(NodepoolProvidersSecretsName))
-		volume_mount = append(volume_mount, apiv1.VolumeMount{
-			Name:      "nodepool-providers-secrets",
-			SubPath:   "kube.config",
-			MountPath: "/.kube/config",
-			ReadOnly:  true,
-		})
-		volume_mount = append(volume_mount, apiv1.VolumeMount{
-			Name:      "nodepool-providers-secrets",
-			SubPath:   "clouds.yaml",
-			MountPath: "/.config/openstack/clouds.yaml",
-			ReadOnly:  true,
-		})
-	}
+	volumes = append(volumes, create_volume_secret(NodepoolProvidersSecretsName))
+	volume_mount = append(volume_mount, apiv1.VolumeMount{
+		Name:      "nodepool-providers-secrets",
+		SubPath:   "kube.config",
+		MountPath: "/.kube/config",
+		ReadOnly:  true,
+	})
+	volume_mount = append(volume_mount, apiv1.VolumeMount{
+		Name:      "nodepool-providers-secrets",
+		SubPath:   "clouds.yaml",
+		MountPath: "/.config/openstack/clouds.yaml",
+		ReadOnly:  true,
+	})
 
 	annotations := map[string]string{
 		"nodepool.yaml":         checksum([]byte(generateConfigScript)),
