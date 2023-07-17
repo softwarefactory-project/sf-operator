@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/yaml"
@@ -26,13 +27,28 @@ func RenderYAML(o interface{}) string {
 	return string(y)
 }
 
-func CreateKubernetesClient() client.Client {
+func GetConfigContextOrDie(contextName string) *rest.Config {
+	var conf *rest.Config
+	var err error
+	if conf, err = config.GetConfigWithContext(contextName); err != nil {
+		panic(fmt.Errorf("Couldn't find context %s: %s", contextName, err))
+	}
+	return conf
+}
+
+func CreateKubernetesClient(contextName string) client.Client {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(apiroutev1.AddToScheme(scheme))
 	utilruntime.Must(opv1.AddToScheme(scheme))
 	utilruntime.Must(sfv1.AddToScheme(scheme))
-	client, err := client.New(config.GetConfigOrDie(), client.Options{
+	var conf *rest.Config
+	if contextName != "" {
+		conf = GetConfigContextOrDie(contextName)
+	} else {
+		conf = config.GetConfigOrDie()
+	}
+	client, err := client.New(conf, client.Options{
 		Scheme: scheme,
 	})
 	if err != nil {

@@ -16,6 +16,10 @@
         - ansible_distribution == "CentOS"
         - os_host != 'controller'
 
+    - name: Ensure kubeconfig has fqdn
+      ansible.builtin.command: sed 's/localhost/microshift.dev/' -i ~/.kube/config
+      become: false
+
     - name: Install epel to get collections (ansible package)
       ansible.builtin.package:
         name: epel-release

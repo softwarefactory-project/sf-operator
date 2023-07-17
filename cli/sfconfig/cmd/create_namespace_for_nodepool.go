@@ -7,8 +7,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -19,7 +19,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	cliapi "k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 )
@@ -125,28 +124,25 @@ func (e *ENV) ensureServiceAccountSecret(sa string) string {
 	panic("Could not find token")
 }
 
-func GetOutboundIP() string {
-	conn, err := net.Dial("udp", "8.8.8.8:53")
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Close()
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP.String()
-}
-
-func createKubeConfig(ns string, sa string, token string) cliapi.Config {
-	currentConfig := config.GetConfigOrDie()
-	apiPort := currentConfig.APIPath
-	if apiPort == "" {
-		apiPort = "6443"
+func createKubeConfig(contextName string, ns string, sa string, token string) cliapi.Config {
+	currentConfig := utils.GetConfigContextOrDie(contextName)
+	if strings.HasPrefix(
+		currentConfig.Host,
+		"https://localhost",
+	) || strings.HasPrefix(
+		currentConfig.Host,
+		"https://127.",
+	) {
+		panic(fmt.Errorf(
+			"The target context server address can't be localhost, please change from %s to a publicly reachable name",
+			currentConfig.Host))
 	}
 	return cliapi.Config{
 		Kind:       "Config",
 		APIVersion: "v1",
 		Clusters: map[string]*cliapi.Cluster{
 			"microshift": {
-				Server:                   "https://" + net.JoinHostPort(GetOutboundIP(), apiPort),
+				Server:                   currentConfig.Host + currentConfig.APIPath,
 				CertificateAuthorityData: currentConfig.TLSClientConfig.CAData,
 			},
 		},
@@ -177,27 +173,31 @@ func (e *ENV) ensureKubeConfigSecret(config []byte, name string) {
 	}
 }
 
-func CreateNamespaceForNodepool(ns string, output string) {
+func CreateNamespaceForNodepool(nodepoolContext string, nodepoolNamespace string, sfContext string, sfNamespace string) {
+	if nodepoolContext == sfContext {
+		fmt.Println("Warning: deploying nodepool resources on the same cluster as sf")
+	}
 	ctx := context.TODO()
-	cli := utils.CreateKubernetesClient()
+	cli := utils.CreateKubernetesClient(nodepoolContext)
 	sa := "nodepool-sa"
-	e := ENV{cli: cli, ctx: ctx, ns: ns}
+	e := ENV{cli: cli, ctx: ctx, ns: nodepoolNamespace}
 
 	// Ensure resources exists
-	e.ensureNamespace(ns)
+	e.ensureNamespace(nodepoolNamespace)
 	e.ensureServiceAccount(sa)
 	e.ensureRole(sa)
 	token := e.ensureServiceAccountSecret(sa)
-	nodepoolConfig := createKubeConfig(ns, sa, token)
+	nodepoolConfig := createKubeConfig(nodepoolContext, nodepoolNamespace, sa, token)
 	bytes, err := clientcmd.Write(nodepoolConfig)
 	if err != nil {
 		panic(err)
 	}
 
-	e.ns = output
+	e.ns = sfNamespace
 	if e.ns == "-" {
 		fmt.Printf("%s\n", bytes)
 	} else {
+		e.cli = utils.CreateKubernetesClient(sfContext)
 		e.ensureKubeConfigSecret(bytes, "nodepool-providers-secrets")
 	}
 }
@@ -208,14 +208,18 @@ var createNamespaceNodepoolCmd = &cobra.Command{
 	Long:  "This command produce a KUBECONFIG file for nodepool",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		ns, _ := cmd.Flags().GetString("namespace")
-		output, _ := cmd.Flags().GetString("output")
-		CreateNamespaceForNodepool(ns, output)
+		nodepoolContext, _ := cmd.Flags().GetString("nodepool-context")
+		nodepoolNamespace, _ := cmd.Flags().GetString("nodepool-namespace")
+		sfContext, _ := cmd.Flags().GetString("sf-context")
+		sfNamespace, _ := cmd.Flags().GetString("sf-namespace")
+		CreateNamespaceForNodepool(nodepoolContext, nodepoolNamespace, sfContext, sfNamespace)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(createNamespaceNodepoolCmd)
-	createNamespaceNodepoolCmd.Flags().StringP("namespace", "", "nodepool", "Specify ansible playbook inventory")
-	createNamespaceNodepoolCmd.Flags().StringP("output", "", "sf", "Name of the namespace to copy the kubeconfig, or '-' for stdout")
+	createNamespaceNodepoolCmd.Flags().StringP("nodepool-context", "", "", "The kubeconfig context for the nodepool-namespace, use the default context by default")
+	createNamespaceNodepoolCmd.Flags().StringP("nodepool-namespace", "", "nodepool", "The namespace name for nodepool")
+	createNamespaceNodepoolCmd.Flags().StringP("sf-context", "", "", "The kubeconfig context of the sf-namespace, use the default context by default")
+	createNamespaceNodepoolCmd.Flags().StringP("sf-namespace", "", "sf", "Name of the namespace to copy the kubeconfig, or '-' for stdout")
 }

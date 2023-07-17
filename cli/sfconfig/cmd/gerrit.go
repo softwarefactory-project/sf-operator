@@ -369,7 +369,7 @@ var gerritCmd = &cobra.Command{
 		}
 
 		// Get the kube client
-		cl := utils.CreateKubernetesClient()
+		cl := utils.CreateKubernetesClient("")
 		ctx := context.Background()
 
 		if deploy {
