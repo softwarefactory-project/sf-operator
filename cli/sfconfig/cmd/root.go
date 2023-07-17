@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/softwarefactory-project/sf-operator/cli"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/operator"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sf"
 	"github.com/spf13/cobra"
@@ -33,6 +34,10 @@ var rootCmd = &cobra.Command{
 	Short: "sfconfig cli tool",
 	Long: `sfconfig command line tool
 	This tool is used to deploy and run tests for sf-operator`,
+	Run: func(cmd *cobra.Command, args []string) {
+		erase, _ := cmd.Flags().GetBool("erase")
+		cli.Run(erase)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -47,19 +52,12 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/sfconfig.yaml)")
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
-	// Adding Commands
 	rootCmd.AddCommand(operator.OperatorCmd)
 	rootCmd.AddCommand(sf.SfCmd)
+
+	rootCmd.Flags().BoolP("erase", "", false, "Erase data")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -81,7 +79,10 @@ func initConfig() {
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
+	if err := viper.ReadInConfig(); err != nil {
+		panic(fmt.Errorf("fatal error config file: %w", err))
+	}
+	if cfgFile == "" {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 }
