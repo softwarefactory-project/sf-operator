@@ -10,6 +10,7 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -19,12 +20,60 @@ var pymod_secret string
 //go:embed static/sf_operator/main.py
 var pymod_main string
 
-//go:embed static/sf_operator/config-updater-sa.yaml
-var config_updater_sa string
-
 func (r *SFController) SetupBaseSecrets() bool {
 
-	r.CreateYAMLs(config_updater_sa)
+	serviceAccountName := "config-updater"
+	service_account := apiv1.ServiceAccount{}
+	if !r.GetM(serviceAccountName, &service_account) {
+		service_account.SetNamespace(r.ns)
+		service_account.Name = serviceAccountName
+		r.CreateR(&service_account)
+	}
+
+	roleAnnotations := map[string]string{
+		"serial": "1",
+	}
+
+	roleName := "config-updater-role"
+	roleRules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods", "pods/exec", "services", "persistentvolumeclaims", "configmaps", "secrets"},
+			Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+		},
+		{
+			APIGroups: []string{"apps"},
+			Resources: []string{"deployments", "statefulsets"},
+			Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+		},
+	}
+
+	current_role := rbacv1.Role{}
+	if !r.GetM(roleName, &current_role) {
+		current_role.SetNamespace(r.ns)
+		current_role.Name = roleName
+		current_role.Annotations = roleAnnotations
+		current_role.Rules = roleRules
+		r.CreateR(&current_role)
+	} else {
+		if !map_equals(&current_role.Annotations, &roleAnnotations) {
+			current_role.Rules = roleRules
+			current_role.Annotations = roleAnnotations
+			r.UpdateR(&current_role)
+		}
+	}
+
+	roleBindingName := serviceAccountName
+	rb := rbacv1.RoleBinding{}
+	if !r.GetM(roleBindingName, &rb) {
+		rb.SetNamespace(r.ns)
+		rb.Name = roleBindingName
+		rb.Subjects = []rbacv1.Subject{{Kind: "ServiceAccount", Name: serviceAccountName}}
+		rb.RoleRef.Kind = "Role"
+		rb.RoleRef.Name = roleName
+		rb.RoleRef.APIGroup = "rbac.authorization.k8s.io"
+		r.CreateR(&rb)
+	}
 
 	// Create a long lived service account token for the use within the
 	// config-update process
