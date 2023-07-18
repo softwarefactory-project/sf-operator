@@ -1,7 +1,7 @@
 ---
 - name: Set random value
   ansible.builtin.set_fact:
-    random: "{{ lookup('community.general.random_string', special=false, length=8) }}"
+    zuul_worker_ci_label: "zuul-worker-sf-operator-ci-{{ lookup('community.general.random_string', special=false, upper=false, length=8) }}"
 
 - name: Ensure nodepool directory exists
   ansible.builtin.file:
@@ -16,8 +16,8 @@
 - name: Ensure nodepool.yaml default content
   ansible.builtin.copy:
     content: |
-      ---
       labels: []
+      providers: []
     dest: "{{ config_path }}/nodepool/nodepool.yaml"
   when: not _conf.stat.exists
 
@@ -28,8 +28,21 @@
 
 - ansible.builtin.set_fact:
     launcher_config: "{{ launcher_config_raw.stdout | from_yaml }}"
-    new_labels:
-      - name: "{{ random }}"
+    new_label:
+      - name: "{{ zuul_worker_ci_label }}"
+    microshift_provider:
+      - name: microshiftLocal
+        driver: openshiftpods
+        context: microshift
+        pools:
+          # NOTE: name is a name of the namespace
+          # https://github.com/softwarefactory-project/sf-config/blob/master/ansible/roles/sf-repos/files/config/nodepool/openshift.yaml#L30
+          # https://zuul-ci.org/docs/nodepool/latest/openshift-pods.html
+          - name: nodepool
+            labels:
+              - name: "{{ zuul_worker_ci_label }}"
+                image: quay.io/software-factory/zuul-worker-sf-operator-ci:latest
+                python-path: /bin/python3
 
 - ansible.builtin.set_fact:
     launcher_labels: "{{ launcher_config['labels'] }}"
@@ -42,10 +55,21 @@
     - "'labels' not in launcher_config"
 
 - ansible.builtin.set_fact:
-    launcher_new_labels: "{{ launcher_labels + new_labels }}"
+    launcher_providers: "{{ launcher_config['providers'] | selectattr('name', '!=', 'microshiftLocal') }}"
+  when:
+    - "'providers' in launcher_config"
 
 - ansible.builtin.set_fact:
-    launcher_new_config: "{{ launcher_config | ansible.builtin.combine({'labels': launcher_new_labels}) }}"
+    launcher_providers: []
+  when:
+    - "'providers' not in launcher_config"
+
+- ansible.builtin.set_fact:
+    launcher_new_labels: "{{ launcher_labels + new_label }}"
+    launcher_new_providers: "{{ launcher_providers + microshift_provider }}"
+
+- ansible.builtin.set_fact:
+    launcher_new_config: "{{ launcher_config | ansible.builtin.combine({'labels': launcher_new_labels, 'providers': launcher_new_providers}) }}"
 
 - name: Set dummy Nodepool config
   ansible.builtin.copy:
@@ -58,7 +82,7 @@
     chdir: "{{ config_path }}"
   loop:
     - "git add {{ config_path }}/nodepool/nodepool.yaml"
-    - "git commit -m 'Add {{ config_path }}/nodepool/nodepool.yaml'"
+    - "git commit -m 'Add nodepool/nodepool.yaml'"
 
 - ansible.builtin.include_role:
     name: "roles/health-check/config-repo-submit-change"
@@ -68,6 +92,12 @@
     kubectl get pods -l "{{ pod_label }}" --no-headers -o custom-columns=":metadata.name"
   register: _pod_name
 
-- name: "Check that new random label exists in the destination file"
+- name: "Check that new {{ zuul_worker_ci_label }} label exists in the destination file"
   ansible.builtin.shell: |
-    kubectl exec {{ _pod_name.stdout }} -c {{ container_name }} -- grep "{{ random }}" /etc/nodepool/nodepool.yaml
+    kubectl exec {{ _pod_name.stdout }} -c {{ container_name }} -- grep "{{ zuul_worker_ci_label }}" /etc/nodepool/nodepool.yaml
+
+- name: "Check that new microshiftLocal provider exists in the destination file"
+  ansible.builtin.shell: |
+    kubectl exec {{ _pod_name.stdout }} -c {{ container_name }} -- grep "microshiftLocal" /etc/nodepool/nodepool.yaml
+
+# TODO: Use the nodepool api and zuul api to ensure that the label is available
