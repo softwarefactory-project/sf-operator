@@ -16,7 +16,7 @@
         - sf-operator-dev
         - sf-operator-upgrade
         - ansible-lint
-    post:
+    release:
       jobs:
         - sf-operator-publish-olm-bundle-image
     periodic:
