@@ -139,11 +139,12 @@ spec:
 EOF
 ```
 
-After few mimuntes, you should see a `READY` resource called `my-sf`:
+After few minutes, you should see a `READY` resource called `my-sf`:
 ```sh
 kubectl -n sf get sf
 NAME    READY
 my-sf   true
+```
 
 
 The following `Routes` (or `Ingress`) are created:
@@ -161,7 +162,103 @@ At that point you have successfully deployed a **SoftwareFactory** instance. The
 
 To finalize the setup you'll need to setup a **config** repository for enabling the **config as code** workflow. Please read the following guides.
 
-## How to set your config repository
+## How to set the config repository
+
+To setup the **Configuration As Code** workflow, a dedicated Git repository and a *bot* account must exist on **Gerrit**. See the "Requirements for the config repository on Gerrit" section below.
+
+> Currently, the **sf-operator** only supports a **config** respository hosted on Gerrit code review system.
+
+First, a Zuul connection to the Gerrit code review system must be defined via the **SoftwareFactory**'s Spec:
+
+```sh
+kubectl edit sf my-sf
+...
+spec:
+  zuul:
+    gerritconns:
+      - name: gerrit
+        username: zuul
+        hostname: review.rdoproject.org
+        puburl: "https://review.rdoproject.org"
+...
+```
+
+Checkout the [CRD's OpenAPI schema](config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml) for specification details.
+
+Then, specify the **config** repository location:
+
+```sh
+kubectl edit sf my-sf
+...
+spec:
+  config-location:
+    base-url: "https://review.rdoproject.org"
+    name: config
+    zuul-connection-name: gerrit
+...
+```
+
+Wait for the 'my-sf' resource to become *READY*:
+
+```sh
+kubectl get sf my-sf -o jsonpath='{.status}'
+
+{"observedGeneration":1,"ready":true}
+```
+
+Once ready, the **config** repository must appear in the [Zuul's internal tenant projects list](https://zuul.sftests.com/t/internal/projects).
+Furthermore, the **config-check** and **config-update** are set automatically to run the internal tenant's **check**, **gate** and **post** pipelines.
+
+Any changes opened on the **config** repository will trigger the **config-check** job. The job validates the proposed configuration and applies them to Zuul and Nodepool.
+
+### Requirements for the config repository on Gerrit
+
+Zuul needs to authenticate on Gerrit, then a bot account must be set and zuul must be able to connect as SSH to Gerrit.
+
+The Zuul SSH public key can be fetch from the **zuul-ssh-key** secret:
+
+```sh
+kubectl get secret zuul-ssh-key -o jsonpath={.data.pub} | base64 -d
+```
+
+The **config** repository must be set with specific ACLs and Labels. Zuul expects to report, trigger and merge based on specific labels values.
+
+Here are the required labels to define in the **config** repository's *Access* settings (*meta/config*) on Gerrit:
+
+```INI
+[label "Code-Review"]
+	function = MaxWithBlock
+	defaultValue = 0
+	copyMinScore = true
+	copyAllScoresOnTrivialRebase = true
+	value = -2 Do not submit
+	value = "-1 I would prefer that you didn't submit this"
+	value = 0 No score
+	value = +1 Looks good to me, but someone else must approve
+	value = +2 Looks good to me (core reviewer)
+	copyAllScoresIfNoCodeChange = true
+[label "Verified"]
+	value = -2 Fails
+	value = "-1 Doesn't seem to work"
+	value = 0 No score
+	value = +1 Works for me
+	value = +2 Verified
+[label "Workflow"]
+	value = -1 Work in progress
+	value = 0 Ready for reviews
+	value = +1 Approved
+```
+
+Here are the required ACLs (Assuming the zuul bot user is part of the 'Service Users' group):
+
+```INI
+[access "refs/heads/*"]
+label-Verified = -2..+2 group Service Users
+submit = group Service Users
+```
+
+For further information check the Zuul documentation's [Gerrit section](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#gerrit).
+
 ## How to configure Zuul via the config repo
 ## How to configure Nodepool via the config repo
 ## How to set the nodepool kube/config or clouds.yaml
