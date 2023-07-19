@@ -35,6 +35,7 @@
           - make
           - podman
           - buildah
+          - skopeo
 
     - name: Install openshift-client and python3
       ansible.builtin.package:

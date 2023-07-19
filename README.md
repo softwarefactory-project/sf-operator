@@ -68,6 +68,9 @@ spec:
   image: quay.io/software-factory/sf-operator-catalog:latest
   displayName: sf-operator
   publisher: softwarefactory-project.io
+  updateStrategy:
+    registryPoll:
+      interval: 60m
 EOF
 ```
 
