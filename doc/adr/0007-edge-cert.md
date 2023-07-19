@@ -26,6 +26,10 @@ the **Route** to use provided TLS material and not use the default from **opensh
 the *POC* uses **cert-manager** to issues a **Certificate** and loads the TLS material from the generated
 **Secret**.
 
+We currently have **Routes** resources for zuul, nodepool, and the logserver services and each service
+is exposed under a sub-domain such as zuul.<fqdn>. We might need to request a certificate by service.
+In this case the implementation of the solution must handle a cerificate by service instead of a
+wildcard certificate for the *.<fqdn>.
 
 ## Considered Options
 
