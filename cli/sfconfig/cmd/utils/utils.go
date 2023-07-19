@@ -2,8 +2,10 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
+	"strings"
 	"text/template"
 
 	apiroutev1 "github.com/openshift/api/route/v1"
@@ -97,4 +99,19 @@ func CreateTempPlaybookFile(content string) (*os.File, error) {
 
 func RemoveTempPlaybookFile(file *os.File) {
 	defer os.Remove(file.Name())
+}
+
+func GetSF(name string) (sfv1.SoftwareFactory, error) {
+	cli := CreateKubernetesClient("")
+	var sf sfv1.SoftwareFactory
+	err := cli.Get(context.Background(), client.ObjectKey{
+		Namespace: "sf",
+		Name:      name,
+	}, &sf)
+	return sf, err
+}
+
+func IsCRDMissing(err error) bool {
+	// FIXME: replace stringly check with something more solid?
+	return strings.Contains(err.Error(), `no matches for kind "SoftwareFactory"`)
 }
