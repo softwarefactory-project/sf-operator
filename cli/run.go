@@ -10,12 +10,16 @@ import (
 	"os"
 	"os/exec"
 
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 func Run(erase bool) {
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{Development: true})))
 	fmt.Println("sfconfig started with: ", GetConfigOrDie())
 	if erase {
 		fmt.Println("Erasing...")
@@ -30,6 +34,9 @@ func EnsureDeployement() {
 	fmt.Println("[+] Checking SF resource...")
 	sf, err := utils.GetSF("my-sf")
 	if sf.Status.Ready {
+		// running the operator should be a no-op
+		RunOperator()
+
 		fmt.Println("Software Factory is already ready!")
 		// TODO: connect to the Zuul API and ensure it is running
 		fmt.Println("Check https://zuul." + sf.Spec.FQDN)
@@ -95,7 +102,7 @@ func EnsureCertManager() {
 
 func RunOperator() {
 	fmt.Println("[+] Running the operator...")
-	controllers.Main("sf", ":8081", ":8080", false)
+	controllers.Main("sf", ":8081", ":8080", false, true)
 }
 
 // temporary hack until make target are implemented natively

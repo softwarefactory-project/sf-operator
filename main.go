@@ -60,5 +60,5 @@ func main() {
 		}
 	}
 
-	controllers.Main(ns, metricsAddr, probeAddr, enableLeaderElection)
+	controllers.Main(ns, metricsAddr, probeAddr, enableLeaderElection, false)
 }
