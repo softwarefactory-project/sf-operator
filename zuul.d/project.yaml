@@ -7,19 +7,15 @@
     check:
       jobs:
         - sf-operator-olm
-        - sf-operator-dev
         - sf-operator-upgrade
+        - sf-operator-dev-multinode
         - ansible-lint
     gate:
       jobs:
         - sf-operator-olm
-        - sf-operator-dev
         - sf-operator-upgrade
+        - sf-operator-dev-multinode
         - ansible-lint
     post:
       jobs:
         - sf-operator-publish-olm-bundle-image
-    periodic:
-      jobs:
-        - sf-operator-olm
-        - sf-operator-dev

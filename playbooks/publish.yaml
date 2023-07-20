@@ -1,4 +1,4 @@
 ---
-- hosts: "{{ hostname | default('all') }}"
+- hosts: "{{ hostname | default('controller') }}"
   roles:
     - publish-operator-quay

@@ -22,15 +22,39 @@
 
 # Base CI job
 - job:
-    name: base-sf-operator
-    parent: base-microshift
+    name: sf-operator
+    parent: sf-operator-microshift
     timeout: 2200
     post-run: playbooks/post.yaml
     run: playbooks/main.yaml
-    nodeset:
-      nodes:
-        name: controller
-        label: cloud-centos-9-stream
+    abstract: true
+    required-projects:
+      - name: software-factory/sf-infra
+    roles:
+      - zuul: software-factory/sf-infra
+    vars:
+      logclassify_logserver_dir: ./
+      logclassify_debug: false
+      logclassify_report: true
+      # microshift deployment
+      disk_file_sparsed: true
+      disk_file_size: 40G
+      standard_user: false
+      create_pv: false
+      setup_olm: true
+      # post tasks artifacts directory
+      output_logs_dir: ~/zuul-output/logs
+      # dnsmasq
+      microshift_additional_addresses:
+        - "sftests.com"
+
+- job:
+    name: sf-operator-multinode
+    parent: sf-operator-microshift-multinode
+    timeout: 2200
+    post-run: playbooks/post.yaml
+    run: playbooks/main.yaml
+    abstract: true
     required-projects:
       - name: software-factory/sf-infra
     roles:
@@ -70,21 +94,21 @@
 - job:
     name: sf-operator-olm
     description: This test validates a sf-operator deployment via OLM
-    parent: base-sf-operator
+    parent: sf-operator
     vars:
       mode: "olm"
 
 - job:
-    name: sf-operator-dev
-    description: >
-      This test validates a sf-operator deployment via the dev mode described
-      in the contributor doc
-    parent: base-sf-operator
-    vars:
-      mode: "dev"
-
-- job:
     name: sf-operator-upgrade
-    parent: base-sf-operator
+    parent: sf-operator
     run: playbooks/upgrade.yaml
     timeout: 2200
+
+- job:
+    name: sf-operator-dev-multinode
+    description: >
+      This test validates a sf-operator multinode deployment
+      via the dev mode described in the contributor doc
+    parent: sf-operator-multinode
+    vars:
+      mode: "dev"

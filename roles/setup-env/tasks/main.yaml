@@ -1,8 +1,13 @@
 ---
 - name: Install dependencies
   become: true
-  when: install_requirements | bool
+  when: install_requirements
   block:
+    - name: Upgrade all packages
+      ansible.builtin.package:
+        name: "*"
+        state: latest
+
     - name: Get microshift bits for CentOS
       block:
         - ansible.builtin.include_tasks:
@@ -16,11 +21,18 @@
         - ansible_distribution == "CentOS"
         - os_host != 'controller'
 
-    - name: Ensure kubeconfig has fqdn
-      ansible.builtin.command: sed 's/localhost/microshift.dev/' -i ~/.kube/config
+    - name: Check if kubeconfig exists
+      stat:
+        path: ~/.kube/config
+      register: _kubeconfig
       become: false
 
-    - name: Install epel to get collections (ansible package)
+    - name: Ensure kubeconfig has fqdn
+      ansible.builtin.command: sed 's/localhost/{{ microshift_fqdn }}/' -i ~/.kube/config
+      when: _kubeconfig.stat.exists
+      become: false
+
+    - name: Install epel to get git-review
       ansible.builtin.package:
         name: epel-release
       when: ansible_distribution == "CentOS"
@@ -28,7 +40,6 @@
     - name: Install packages
       ansible.builtin.package:
         name:
-          - ansible
           - git-review
           - golang
           - jq
@@ -37,12 +48,10 @@
           - buildah
           - skopeo
 
-    - name: Install openshift-client and python3
+    - name: Install openshift-client
       ansible.builtin.package:
         name:
           - openshift-clients
-          - python3.11-pip
-          - python3.11-setuptools
         enablerepo: microshift-deps-rpms
       when: ansible_distribution == "CentOS"
 
@@ -50,9 +59,13 @@
       ansible.builtin.package:
         name:
           - kubernetes-client
+      when: ansible_distribution == "Fedora"
+
+    - name: Install python3-pip
+      ansible.builtin.package:
+        name:
           - python3-pip
           - python3-setuptools
-      when: ansible_distribution == "Fedora"
 
     - name: Install pip packages
       ansible.builtin.pip:

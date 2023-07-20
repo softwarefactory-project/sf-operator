@@ -1,5 +1,5 @@
 ---
-- hosts: "{{ hostname | default('all') }}"
+- hosts: "{{ hostname | default('controller') }}"
   roles:
     - setup-variables
     - setup-env

@@ -1,5 +1,8 @@
 - hosts: localhost
   tasks:
+    - name: Install ansible collection
+      command: ansible-galaxy collection install community.general community.crypto ansible.posix
+
     - name: Install required packages
       ansible.builtin.include_role:
         name: "roles/setup-env"

@@ -1,4 +1,4 @@
-- hosts: "{{ hostname | default('all') }}"
+- hosts: "{{ hostname | default('controller') }}"
   tasks:
     # Fetch zuul jobs artifacts stored in the logserver during the sf-operator functional test
     - include_role:
