@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	apiroutev1 "github.com/openshift/api/route/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -114,4 +115,14 @@ func GetSF(name string) (sfv1.SoftwareFactory, error) {
 func IsCRDMissing(err error) bool {
 	// FIXME: replace stringly check with something more solid?
 	return strings.Contains(err.Error(), `no matches for kind "SoftwareFactory"`)
+}
+
+func IsCertManagerRunning() bool {
+	cli := CreateKubernetesClient("")
+	var dep appsv1.Deployment
+	cli.Get(context.Background(), client.ObjectKey{
+		Namespace: "operators",
+		Name:      "cert-manager-webhook",
+	}, &dep)
+	return dep.Status.ReadyReplicas >= 1
 }
