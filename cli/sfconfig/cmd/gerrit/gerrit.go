@@ -335,7 +335,7 @@ func (g *GerritCMDContext) ensureGerritSTS() {
 	if err != nil && errors.IsNotFound(err) {
 		container := controllers.MkContainer(name, GERRIT_IMAGE)
 		storage_config := controllers.BaseGetStorageConfOrDefault(v1.StorageSpec{}, "")
-		pvc := controllers.MkPVC(name, g.env.Ns, storage_config)
+		pvc := controllers.MkPVC(name, g.env.Ns, storage_config, apiv1.ReadWriteOnce)
 		sts := controllers.MkStatefulset(
 			name, g.env.Ns, 1, name, container, pvc)
 		volumeMounts := []apiv1.VolumeMount{
