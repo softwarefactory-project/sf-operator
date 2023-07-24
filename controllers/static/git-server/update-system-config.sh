@@ -237,15 +237,39 @@ EOF
 
 cat << EOF > playbooks/config/check.yaml
 - hosts: localhost
+  vars:
+    config_root: "{{ zuul.executor.work_root }}/{{ zuul.project.src_dir }}"
+    zuul_config: "{{ config_root }}/zuul/main.yaml"
+    nodepool_config: "{{ config_root }}/nodepool/nodepool.yaml"
   tasks:
-    - name: Set speculative config path
-      set_fact:
-        config_root: "{{ zuul.executor.src_root }}/{{ zuul.project.canonical_name }}"
+    - name: Ensure Zuul tenant config exists
+      shell: |
+        if ! test -f "{{ zuul_config }}"; then
+          mkdir -p "{{ config_root }}/zuul/"
+          echo [] > "{{ zuul_config }}"
+        fi
 
-    - name: "Access config repo"
-      command: "ls -al ./"
-      args:
-        chdir: '{{ config_root }}'
+        cat << EOF > "{{ zuul_config }}.conf"
+        # XX_CONNECTION
+        [scheduler]
+        tenant_config={{ zuul_config }}
+        EOF
+
+    - name: Validate Zuul tenant config
+      # note: ansible appears to be messing with the env, resulting in:
+      #  ModuleNotFoundError: No module named 'zuul.cmd'
+      # clearing the env fixes that issue.
+      command: env - PATH=/usr/local/bin:/bin zuul-admin -c "{{ zuul_config }}.conf" tenant-conf-check
+
+    - name: Ensure Nodepool config exists
+      shell: |
+        if ! test -f "{{ nodepool_config }}"; then
+          mkdir -p "{{ config_root }}/nodepool/nodepool"
+          echo {} > "{{ nodepool_config }}"
+        fi
+
+    - name: Validate Nodepool config
+      command: env - PATH=/usr/local/bin:/bin nodepool -c "{{ nodepool_config }}" config-validate
 EOF
 
 cat << EOF > playbooks/config/update.yaml

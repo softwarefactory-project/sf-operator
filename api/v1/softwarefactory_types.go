@@ -65,11 +65,23 @@ type ZuulSchedulerSpec struct {
 	Storage StorageSpec `json:"storage,omitempty"`
 }
 
+// TODO: make sure to update the GetConnectionsName when adding new connection type.
+
 // TODO should be ExecutorS / SchedulerS
 type ZuulSpec struct {
 	GerritConns []GerritConnection `json:"gerritconns,omitempty"`
 	Executor    ZuulExecutorSpec   `json:"executor,omitempty"`
 	Scheduler   ZuulSchedulerSpec  `json:"scheduler,omitempty"`
+}
+
+func GetConnectionsName(spec *ZuulSpec) []string {
+	var res []string
+	res = append(res, "git-server")
+	res = append(res, "opendev.org")
+	for _, conn := range spec.GerritConns {
+		res = append(res, conn.Name)
+	}
+	return res
 }
 
 // +kubebuilder:validation:Enum=INFO;WARN;DEBUG

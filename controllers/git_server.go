@@ -7,8 +7,11 @@ package controllers
 
 import (
 	_ "embed"
+	"fmt"
 	"strconv"
+	"strings"
 
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,9 +25,29 @@ const GS_GIT_MOUNT_PATH = "/git"
 const GS_PI_MOUNT_PATH = "/entry"
 
 //go:embed static/git-server/update-system-config.sh
-var preInitScript string
+var preInitScriptTemplate string
+
+func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
+	var sb strings.Builder
+	sb.WriteString("\n")
+	for _, name := range sfv1.GetConnectionsName(spec) {
+		// Keep the indent in match with the XX_CONNECTION cookie
+		sb.WriteString(fmt.Sprintf("        [connection %s]\n", name))
+		sb.WriteString(fmt.Sprintf("        driver=git\n"))
+		sb.WriteString(fmt.Sprintf("        baseurl=localhost\n\n"))
+	}
+	return sb.String()
+}
+
+func (r *SFController) makePreInitScript() string {
+	return strings.Replace(
+		preInitScriptTemplate,
+		"# XX_CONNECTION",
+		makeZuulConnectionConfig(&r.cr.Spec.Zuul), 1)
+}
 
 func (r *SFController) DeployGitServer() bool {
+	preInitScript := r.makePreInitScript()
 	cm_data := make(map[string]string)
 	cm_data["pre-init.sh"] = preInitScript
 	r.EnsureConfigMap(GS_IDENT+"-pi", cm_data)
