@@ -36,6 +36,10 @@ var zuul_generate_tenant_config string
 // Common config sections for all Zuul components
 var commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
 
+func Zuul_Image(service string) string {
+	return "quay.io/software-factory/" + service + ":8.3.1-2"
+}
+
 func is_statefulset(service string) bool {
 	return service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger"
 }
@@ -74,7 +78,7 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 	}
 	container := apiv1.Container{
 		Name:    service,
-		Image:   "quay.io/software-factory/" + service + ":8.3.1-2",
+		Image:   Zuul_Image(service),
 		Command: command,
 		Env: []apiv1.EnvVar{
 			Create_env("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),

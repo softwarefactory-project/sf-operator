@@ -25,8 +25,11 @@ if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
   REF=$1
   REF=${REF:-origin/master}
 
+  # Use local unversioned copy
+  if [ -d ~/${CONFIG_REPO_NAME} -a ! -d ~/${CONFIG_REPO_NAME}/.git ]; then
+    echo "Running in check mode"
   # Clone or fetch config repository
-  if [ -d ~/${CONFIG_REPO_NAME}/.git ]; then
+  elif [ -d ~/${CONFIG_REPO_NAME}/.git ]; then
     pushd ~/${CONFIG_REPO_NAME}
     git remote remove origin
     git remote add origin ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME}
@@ -52,3 +55,7 @@ EOF
   fi
 
 fi
+
+echo "Generated tenants config:"
+echo
+cat ~/main.yaml

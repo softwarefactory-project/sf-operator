@@ -22,6 +22,7 @@
     - health-check/config-update-zuul
     - health-check/config-update-nodepool-launcher
     - health-check/pod-spawning
+    - test-configcheckjob
   loop_control:
     loop_var: role
 
