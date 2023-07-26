@@ -11,6 +11,7 @@ import (
 	"os/exec"
 
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
+	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -94,13 +95,7 @@ func EnsureCertManager() {
 
 func RunOperator() {
 	fmt.Println("[+] Running the operator...")
-	// TODO: call the package directly
-	cmd := exec.Command("go", "run", "./main.go", "--namespace", "sf")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		panic(fmt.Errorf("operator command failed!"))
-	}
+	controllers.Main("sf", ":8081", ":8080", false)
 }
 
 // temporary hack until make target are implemented natively
