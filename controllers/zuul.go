@@ -413,7 +413,12 @@ func (r *SFController) DeployZuulSecrets() {
 }
 
 func (r *SFController) DeployZuul() bool {
-	init_containers, db_password := r.EnsureDBInit("zuul")
+	init_containers := []apiv1.Container{}
+	db_password := apiv1.Secret{}
+	if !r.GetM(ZUUL_DB_CONFIG_SECRET, &db_password) {
+		r.log.Info("Waiting for db connection secret")
+		return false
+	}
 
 	// Update base config to add connections
 	cfg_ini := LoadConfigINI(zuul_dot_conf)
@@ -431,7 +436,7 @@ func (r *SFController) DeployZuul() bool {
 	cfg_ini.Section("web").NewKey("root", "https://zuul."+r.cr.Spec.FQDN)
 
 	// Set Database DB URI
-	cfg_ini.Section("database").NewKey("dburi", fmt.Sprintf("mysql+pymysql://zuul:%s@mariadb/zuul", db_password.Data["zuul-db-password"]))
+	cfg_ini.Section("database").NewKey("dburi", fmt.Sprintf("mysql+pymysql://zuul:%s@mariadb/zuul", db_password.Data["password"]))
 
 	// Set Zookeeper hosts
 	cfg_ini.Section("zookeeper").NewKey("hosts", "zookeeper."+r.ns+":2281")
