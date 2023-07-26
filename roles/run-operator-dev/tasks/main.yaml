@@ -1,20 +1,6 @@
 ---
-- name: Install the cert-manager operator
-  ansible.builtin.command: make install-cert-manager
-  args:
-    chdir: "{{ zuul.project.src_dir }}"
-
-# Mitigate the issue
-# 'failed calling webhook "mutate.webhooks.cert-manager.io": failed to call webhook: Post "https://cert-manager-webhook-service.operators.svc:443/mutate?timeout=10s": no endpoints available for service "cert-manager-webhook-service"'
-- name: Ensure cert-manager webhooks deployment really ready
-  command: kubectl -n operators get deployment cert-manager-webhook -o yaml
-  register: cert_manager_dep
-  until: "'readyReplicas: 1' in cert_manager_dep.stdout"
-  retries: 10
-  delay: 2
-
-- name: Install CRDs
-  ansible.builtin.command: make install
+- name: Run the sfconfig command to get started
+  ansible.builtin.command: go run ./cli/sfconfig
   args:
     chdir: "{{ zuul.project.src_dir }}"
 

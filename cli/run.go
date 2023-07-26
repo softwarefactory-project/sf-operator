@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -98,6 +99,16 @@ func EnsureCertManager() {
 	// TODO: implement natively
 	fmt.Println("[+] Installing Cert-Manager...")
 	runMake("install-cert-manager")
+	// Mitigate the issue
+	// failed calling webhook "mutate.webhooks.cert-manager.io": failed to call webhook: Post "https://cert-manager-webhook-service.operators.svc:443/mutate?timeout=10s": no endpoints available for service "cert-manager-webhook-service"
+	fmt.Println("[+] Waiting for Cert-Manager")
+	for i := 0; i < 10; i++ {
+		if utils.IsCertManagerRunning() {
+			return
+		}
+		time.Sleep(2 * time.Second)
+	}
+	panic("cert-manager didn't become ready")
 }
 
 func RunOperator() {
