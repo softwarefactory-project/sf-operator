@@ -31,6 +31,8 @@ type SoftwareFactoryReconciler struct {
 	Scheme     *runtime.Scheme
 	RESTClient rest.Interface
 	RESTConfig *rest.Config
+	CancelFunc context.CancelFunc
+	Completed  bool
 }
 
 // Run `make manifests` to apply rbac change
@@ -197,6 +199,11 @@ func (r *SFController) DebugService(debugService string) {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
 func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	if r.Completed {
+		// Special case for OneShot mode where we want to prevent re-entering the Step function
+		// and get such error: panic: client rate limiter Wait returned an error: context canceled
+		return ctrl.Result{}, nil
+	}
 	log := log.FromContext(ctx)
 
 	log.V(1).Info("SoftwareFactory CR - Entering reconcile loop")
@@ -238,6 +245,11 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{RequeueAfter: delay}, nil
 	} else {
 		log.V(1).Info("SoftwareFactory CR - Reconcile completed!")
+		if r.CancelFunc != nil {
+			log.V(1).Info("Exiting!")
+			r.CancelFunc()
+			r.Completed = true
+		}
 		return ctrl.Result{}, nil
 	}
 }
