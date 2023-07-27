@@ -13,6 +13,7 @@ import (
 	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
@@ -24,10 +25,14 @@ import (
 func Run(erase bool) {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{Development: true})))
 	fmt.Println("sfconfig started with: ", GetConfigOrDie())
+	cli, err := utils.CreateKubernetesClient("")
+	if err != nil {
+		cli = EnsureCluster(err)
+	}
 	env := utils.ENV{
 		Ctx: context.TODO(),
 		Ns:  "sf",
-		Cli: utils.CreateKubernetesClient(""),
+		Cli: cli,
 	}
 	if erase {
 		fmt.Println("Erasing...")
@@ -35,14 +40,20 @@ func Run(erase bool) {
 	} else {
 		// TODO: only do gerrit when provision demo is on?
 		gerrit.EnsureGerrit(&env, "sftests.com")
-		EnsureDeployement()
+		EnsureDeployement(&env)
 	}
 }
 
+// The goal of this function is to recorver from client creation error
+func EnsureCluster(err error) client.Client {
+	// TODO: perform openstack server reboot?
+	panic(fmt.Errorf("cluster error: %s", err))
+}
+
 // The goal of this function is to ensure a deployment is running.
-func EnsureDeployement() {
+func EnsureDeployement(env *utils.ENV) {
 	fmt.Println("[+] Checking SF resource...")
-	sf, err := utils.GetSF("my-sf")
+	sf, err := utils.GetSF(env, "my-sf")
 	if sf.Status.Ready {
 		// running the operator should be a no-op
 		RunOperator()
@@ -56,14 +67,14 @@ func EnsureDeployement() {
 		if errors.IsNotFound(err) {
 			// The resource does not exist
 			EnsureCR()
-			EnsureCertManager()
+			EnsureCertManager(env)
 			RunOperator()
 
 		} else if utils.IsCRDMissing(err) {
 			// The resource definition does not exist
 			EnsureCRD()
 			EnsureCR()
-			EnsureCertManager()
+			EnsureCertManager(env)
 			RunOperator()
 
 		} else {
@@ -79,7 +90,7 @@ func EnsureDeployement() {
 			// TODO: check operator status
 			// TODO: check cluster status and/or suggest sf resource delete/recreate
 		} else {
-			EnsureCertManager()
+			EnsureCertManager(env)
 			RunOperator()
 		}
 	}
@@ -104,7 +115,7 @@ func EnsureCRD() {
 	runMake("install")
 }
 
-func EnsureCertManager() {
+func EnsureCertManager(env *utils.ENV) {
 	// TODO: implement natively
 	fmt.Println("[+] Installing Cert-Manager...")
 	runMake("install-cert-manager")
@@ -112,7 +123,7 @@ func EnsureCertManager() {
 	// failed calling webhook "mutate.webhooks.cert-manager.io": failed to call webhook: Post "https://cert-manager-webhook-service.operators.svc:443/mutate?timeout=10s": no endpoints available for service "cert-manager-webhook-service"
 	fmt.Println("[+] Waiting for Cert-Manager")
 	for i := 0; i < 10; i++ {
-		if utils.IsCertManagerRunning() {
+		if utils.IsCertManagerRunning(env) {
 			return
 		}
 		time.Sleep(2 * time.Second)

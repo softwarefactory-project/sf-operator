@@ -168,32 +168,31 @@ func ensureKubeConfigSecret(env *utils.ENV, config []byte, name string) {
 	}
 }
 
-func CreateNamespaceForNodepool(nodepoolContext string, nodepoolNamespace string, sfContext string, sfNamespace string) {
+func CreateNamespaceForNodepool(sfEnv *utils.ENV, nodepoolContext string, nodepoolNamespace string, sfContext string) {
+	nodepoolEnv := utils.ENV{Cli: sfEnv.Cli, Ctx: sfEnv.Ctx, Ns: nodepoolNamespace}
 	if nodepoolContext == sfContext {
 		fmt.Println("Warning: deploying nodepool resources on the same cluster as sf")
+	} else {
+		// We need to recreate the client
+		nodepoolEnv.Cli = utils.CreateKubernetesClientOrDie(nodepoolContext)
 	}
-	ctx := context.TODO()
-	cli := utils.CreateKubernetesClient(nodepoolContext)
 	sa := "nodepool-sa"
-	env := utils.ENV{Cli: cli, Ctx: ctx, Ns: nodepoolNamespace}
 
 	// Ensure resources exists
-	ensureNamespace(&env, nodepoolNamespace)
-	ensureServiceAccount(&env, sa)
-	ensureRole(&env, sa)
-	token := ensureServiceAccountSecret(&env, sa)
+	ensureNamespace(&nodepoolEnv, nodepoolNamespace)
+	ensureServiceAccount(&nodepoolEnv, sa)
+	ensureRole(&nodepoolEnv, sa)
+	token := ensureServiceAccountSecret(&nodepoolEnv, sa)
 	nodepoolConfig := createKubeConfig(nodepoolContext, nodepoolNamespace, sa, token)
 	bytes, err := clientcmd.Write(nodepoolConfig)
 	if err != nil {
 		panic(err)
 	}
 
-	env.Ns = sfNamespace
-	if env.Ns == "-" {
+	if sfEnv.Ns == "-" {
 		fmt.Printf("%s\n", bytes)
 	} else {
-		env.Cli = utils.CreateKubernetesClient(sfContext)
-		ensureKubeConfigSecret(&env, bytes, sf.NodepoolProvidersSecretsName)
+		ensureKubeConfigSecret(sfEnv, bytes, sf.NodepoolProvidersSecretsName)
 	}
 }
 
@@ -207,7 +206,12 @@ var createNamespaceNodepoolCmd = &cobra.Command{
 		nodepoolNamespace, _ := cmd.Flags().GetString("nodepool-namespace")
 		sfContext, _ := cmd.Flags().GetString("sf-context")
 		sfNamespace, _ := cmd.Flags().GetString("sf-namespace")
-		CreateNamespaceForNodepool(nodepoolContext, nodepoolNamespace, sfContext, sfNamespace)
+		sfEnv := utils.ENV{
+			Cli: utils.CreateKubernetesClientOrDie(sfContext),
+			Ctx: context.TODO(),
+			Ns:  sfNamespace,
+		}
+		CreateNamespaceForNodepool(&sfEnv, nodepoolContext, nodepoolNamespace, sfContext)
 	},
 }
 

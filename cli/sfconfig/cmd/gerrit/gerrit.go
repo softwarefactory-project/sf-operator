@@ -475,7 +475,7 @@ var GerritCmd = &cobra.Command{
 		}
 
 		// Get the kube client
-		cl := utils.CreateKubernetesClient("")
+		cl := utils.CreateKubernetesClientOrDie("")
 		ctx := context.Background()
 		env := utils.ENV{
 			Cli: cl,
