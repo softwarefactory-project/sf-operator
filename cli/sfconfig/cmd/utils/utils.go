@@ -22,6 +22,12 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
+type ENV struct {
+	Cli client.Client
+	Ns  string
+	Ctx context.Context
+}
+
 func RenderYAML(o interface{}) string {
 	y, err := yaml.Marshal(o)
 	if err != nil {
