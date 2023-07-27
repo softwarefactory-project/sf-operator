@@ -6,6 +6,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,6 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -22,10 +24,17 @@ import (
 func Run(erase bool) {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{Development: true})))
 	fmt.Println("sfconfig started with: ", GetConfigOrDie())
+	env := utils.ENV{
+		Ctx: context.TODO(),
+		Ns:  "sf",
+		Cli: utils.CreateKubernetesClient(""),
+	}
 	if erase {
 		fmt.Println("Erasing...")
 		// TODO: remove the sfconfig resource and the pv
 	} else {
+		// TODO: only do gerrit when provision demo is on?
+		gerrit.EnsureGerrit(&env, "sftests.com")
 		EnsureDeployement()
 	}
 }
