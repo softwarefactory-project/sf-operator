@@ -3,7 +3,7 @@
 //
 // This package contains the gerrit configuration.
 
-package cmd
+package gerrit
 
 import (
 	"context"
@@ -38,29 +38,29 @@ const GERRIT_SITE_MOUNT_PATH = "/gerrit"
 const GERRIT_IDENT = "gerrit"
 const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.6.4-4"
 
-//go:embed static/gerrit/entrypoint.sh
+//go:embed static/entrypoint.sh
 var entrypoint string
 
-//go:embed static/gerrit/post-init.sh
+//go:embed static/post-init.sh
 var postInitScript string
 
-//go:embed static/gerrit/msf-entrypoint.sh
+//go:embed static/msf-entrypoint.sh
 var managesf_entrypoint string
 
-//go:embed static/gerrit/init.sh
+//go:embed static/init.sh
 var gerritInitScript string
 
-//go:embed static/gerrit/config.py.tmpl
+//go:embed static/config.py.tmpl
 var managesf_conf string
 
-//go:embed static/gerrit/create-repo.sh
+//go:embed static/create-repo.sh
 var CreateRepoScript string
 
-//go:embed static/gerrit/create-ci-user.sh
+//go:embed static/create-ci-user.sh
 var CreateCIUserScript string
 
 type GerritCMDContext struct {
-	env  utils.ENV
+	env  *utils.ENV
 	fqdn string
 }
 
@@ -353,11 +353,119 @@ func (g *GerritCMDContext) ensureGerritIngresses() {
 	g.ensureRoute(name, route)
 }
 
-var gerritCmd = &cobra.Command{
+func EnsureGerrit(env *utils.ENV, fqdn string) {
+	// Gerrit namespace creation
+	err := env.Cli.Get(env.Ctx, client.ObjectKey{Name: env.Ns}, &apiv1.Namespace{})
+	if err != nil && errors.IsNotFound(err) {
+		nsR := apiv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{Name: env.Ns},
+		}
+		err = env.Cli.Create(env.Ctx, &nsR)
+		if err != nil {
+			fmt.Println("failed to create the namespace", env.Ns)
+			os.Exit(1)
+		} else {
+			fmt.Println("created namespace", env.Ns)
+		}
+	}
+
+	g := GerritCMDContext{
+		env:  env,
+		fqdn: fqdn,
+	}
+
+	// Ensure the admin SSH key pair secret
+	g.ensureSecret("admin-ssh-key", controllers.CreateSSHKeySecret)
+
+	// Ensure the zuul SSH key pair secret
+	g.ensureSecret("zuul-ssh-key", controllers.CreateSSHKeySecret)
+
+	// Ensure the admin API key secret
+	adminApiKeyName := "gerrit-admin-api-key"
+	adminApiKeySecret := g.ensureSecret(adminApiKeyName, createAPIKeySecret)
+	adminApiKey, _ := controllers.GetValueFromKeySecret(adminApiKeySecret, adminApiKeyName)
+
+	// Ensure the zuul API key secret
+	g.ensureSecret("zuul-gerrit-api-key", createAPIKeySecret)
+
+	// Ensure httpd Service
+	g.ensureService(GERRIT_HTTPD_PORT_NAME, GerritHttpdService(ns))
+
+	// Ensure sshd Service
+	g.ensureService(GERRIT_SSHD_PORT_NAME, GerritSshdService(ns))
+
+	// Ensure configMaps for managesf-resources
+	cm_data := make(map[string]string)
+	cm_data["config.py"] = GenerateManageSFConfig(string(adminApiKey), fqdn)
+	g.ensureCM(MANAGESF_RESOURCES_IDENT, cm_data)
+	tooling_data := make(map[string]string)
+	tooling_data["create-repo.sh"] = CreateRepoScript
+	tooling_data["create-ci-user.sh"] = CreateCIUserScript
+	g.ensureCM(MANAGESF_RESOURCES_IDENT+"-tooling", tooling_data)
+
+	// Ensure gerrit statefulset
+	g.ensureGerritSTS()
+
+	// Wait for Gerrit statefullSet ready
+	for !g.isSTSReady(GERRIT_IDENT) {
+		fmt.Println("Wait for gerrit sts to be ready ...")
+		time.Sleep(10 * time.Second)
+	}
+
+	// Start Post Init Job
+	g.ensureGerritPostInitJob()
+
+	// Ensure the Ingress route
+	g.ensureGerritIngresses()
+}
+
+func WipeGerrit(env *utils.ENV) {
+	cl := env.Cli
+	ctx := env.Ctx
+	ns := env.Ns
+	// Delete secrets
+	cl.Delete(ctx, &apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "admin-ssh-key", Namespace: ns}})
+	cl.Delete(ctx, &apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "zuul-ssh-key", Namespace: ns}})
+	cl.Delete(ctx, &apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gerrit-admin-api-key", Namespace: ns}})
+	cl.Delete(ctx, &apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "zuul-gerrit-api-key", Namespace: ns}})
+
+	// Delete services
+	cl.Delete(ctx,
+		&apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: GERRIT_HTTPD_PORT_NAME, Namespace: ns}})
+	cl.Delete(ctx,
+		&apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: GERRIT_SSHD_PORT_NAME, Namespace: ns}})
+
+	// Delete Gerrit STS and the associated Statefulset
+	cl.Delete(ctx,
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: GERRIT_IDENT, Namespace: ns}})
+	cl.Delete(ctx,
+		&apiv1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "gerrit-gerrit-0", Namespace: ns}})
+
+	// Delete post init job
+	backgroundDeletion := metav1.DeletePropagationBackground
+	cl.Delete(ctx,
+		&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "post-init", Namespace: ns}},
+		&client.DeleteOptions{
+			PropagationPolicy: &backgroundDeletion,
+		},
+	)
+
+	// Delete managesf-resources ConfigMap
+	cl.Delete(ctx,
+		&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: MANAGESF_RESOURCES_IDENT + "-config-map", Namespace: ns}})
+	cl.Delete(ctx,
+		&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: MANAGESF_RESOURCES_IDENT + "-tooling-config-map", Namespace: ns}})
+
+	// Delete Gerrit route
+	cl.Delete(ctx,
+		&apiroutev1.Route{ObjectMeta: metav1.ObjectMeta{Name: "gerrit", Namespace: ns}})
+}
+
+var GerritCmd = &cobra.Command{
 	Use:   "gerrit",
 	Short: "Deploy a demo Gerrit instance to hack on sf-operator",
 	Run: func(cmd *cobra.Command, args []string) {
-		deploy, err := cmd.Flags().GetBool("deploy")
+		deploy, _ := cmd.Flags().GetBool("deploy")
 		wipe, _ := cmd.Flags().GetBool("wipe")
 		fqdn, _ := cmd.Flags().GetString("fqdn")
 
@@ -369,129 +477,28 @@ var gerritCmd = &cobra.Command{
 		// Get the kube client
 		cl := utils.CreateKubernetesClient("")
 		ctx := context.Background()
-
+		env := utils.ENV{
+			Cli: cl,
+			Ns:  ns,
+			Ctx: ctx,
+		}
 		if deploy {
 			fmt.Println("Ensure Gerrit deployed in namespace", ns)
-
-			// Gerrit namespace creation
-			err = cl.Get(ctx, client.ObjectKey{Name: ns}, &apiv1.Namespace{})
-			if err != nil && errors.IsNotFound(err) {
-				nsR := apiv1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{Name: ns},
-				}
-				err = cl.Create(context.Background(), &nsR)
-				if err != nil {
-					fmt.Println("failed to create the namespace", ns)
-					os.Exit(1)
-				} else {
-					fmt.Println("created namespace", ns)
-				}
-			}
-
-			g := GerritCMDContext{
-				env: utils.ENV{
-					Cli: cl,
-					Ns:  ns,
-					Ctx: ctx,
-				},
-				fqdn: fqdn,
-			}
-
-			// Ensure the admin SSH key pair secret
-			g.ensureSecret("admin-ssh-key", controllers.CreateSSHKeySecret)
-
-			// Ensure the zuul SSH key pair secret
-			g.ensureSecret("zuul-ssh-key", controllers.CreateSSHKeySecret)
-
-			// Ensure the admin API key secret
-			adminApiKeyName := "gerrit-admin-api-key"
-			adminApiKeySecret := g.ensureSecret(adminApiKeyName, createAPIKeySecret)
-			adminApiKey, _ := controllers.GetValueFromKeySecret(adminApiKeySecret, adminApiKeyName)
-
-			// Ensure the zuul API key secret
-			g.ensureSecret("zuul-gerrit-api-key", createAPIKeySecret)
-
-			// Ensure httpd Service
-			g.ensureService(GERRIT_HTTPD_PORT_NAME, GerritHttpdService(ns))
-
-			// Ensure sshd Service
-			g.ensureService(GERRIT_SSHD_PORT_NAME, GerritSshdService(ns))
-
-			// Ensure configMaps for managesf-resources
-			cm_data := make(map[string]string)
-			cm_data["config.py"] = GenerateManageSFConfig(string(adminApiKey), fqdn)
-			g.ensureCM(MANAGESF_RESOURCES_IDENT, cm_data)
-			tooling_data := make(map[string]string)
-			tooling_data["create-repo.sh"] = CreateRepoScript
-			tooling_data["create-ci-user.sh"] = CreateCIUserScript
-			g.ensureCM(MANAGESF_RESOURCES_IDENT+"-tooling", tooling_data)
-
-			// Ensure gerrit statefulset
-			g.ensureGerritSTS()
-
-			// Wait for Gerrit statefullSet ready
-			for !g.isSTSReady(GERRIT_IDENT) {
-				fmt.Println("Wait for gerrit sts to be ready ...")
-				time.Sleep(10 * time.Second)
-			}
-
-			// Start Post Init Job
-			g.ensureGerritPostInitJob()
-
-			// Ensure the Ingress route
-			g.ensureGerritIngresses()
-
+			EnsureGerrit(&env, fqdn)
 			fmt.Printf("Gerrit is available at https://gerrit.%s\n", fqdn)
-
 		}
 
 		if wipe {
 			fmt.Println("Wipe Gerrit from namespace", ns)
 
-			// Delete secrets
-			cl.Delete(ctx, &apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "admin-ssh-key", Namespace: ns}})
-			cl.Delete(ctx, &apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "zuul-ssh-key", Namespace: ns}})
-			cl.Delete(ctx, &apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gerrit-admin-api-key", Namespace: ns}})
-			cl.Delete(ctx, &apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "zuul-gerrit-api-key", Namespace: ns}})
-
-			// Delete services
-			cl.Delete(ctx,
-				&apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: GERRIT_HTTPD_PORT_NAME, Namespace: ns}})
-			cl.Delete(ctx,
-				&apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: GERRIT_SSHD_PORT_NAME, Namespace: ns}})
-
-			// Delete Gerrit STS and the associated Statefulset
-			cl.Delete(ctx,
-				&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: GERRIT_IDENT, Namespace: ns}})
-			cl.Delete(ctx,
-				&apiv1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "gerrit-gerrit-0", Namespace: ns}})
-
-			// Delete post init job
-			backgroundDeletion := metav1.DeletePropagationBackground
-			cl.Delete(ctx,
-				&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "post-init", Namespace: ns}},
-				&client.DeleteOptions{
-					PropagationPolicy: &backgroundDeletion,
-				},
-			)
-
-			// Delete managesf-resources ConfigMap
-			cl.Delete(ctx,
-				&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: MANAGESF_RESOURCES_IDENT + "-config-map", Namespace: ns}})
-			cl.Delete(ctx,
-				&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: MANAGESF_RESOURCES_IDENT + "-tooling-config-map", Namespace: ns}})
-
-			// Delete Gerrit route
-			cl.Delete(ctx,
-				&apiroutev1.Route{ObjectMeta: metav1.ObjectMeta{Name: "gerrit", Namespace: ns}})
+			WipeGerrit(&env)
 		}
 
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(gerritCmd)
-	gerritCmd.Flags().BoolP("deploy", "", false, "Deploy Gerrit")
-	gerritCmd.Flags().BoolP("wipe", "", false, "Wipe Gerrit deployment")
-	gerritCmd.PersistentFlags().StringP("fqdn", "f", "sftests.com", "The FQDN of gerrit (gerrit.<FQDN>)")
+	GerritCmd.Flags().BoolP("deploy", "", false, "Deploy Gerrit")
+	GerritCmd.Flags().BoolP("wipe", "", false, "Wipe Gerrit deployment")
+	GerritCmd.PersistentFlags().StringP("fqdn", "f", "sftests.com", "The FQDN of gerrit (gerrit.<FQDN>)")
 }
