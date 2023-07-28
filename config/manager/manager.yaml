@@ -33,6 +33,7 @@ spec:
             - /manager
           args:
             - --leader-elect
+          restartPolicy: Never
           image: controller:latest
           name: manager
           securityContext:
