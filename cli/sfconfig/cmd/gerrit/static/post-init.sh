@@ -112,3 +112,10 @@ if ! $(ssh gerrit gerrit ls-projects | grep -q "^config$"); then
 else
   echo "config repository already exists"
 fi
+
+if ! $(ssh gerrit gerrit ls-projects | grep -q "^demo-project$"); then
+  echo "Create demo-project repository and related groups"
+  /usr/share/managesf/create-repo.sh demo-project
+else
+  echo "demo-project repository already exists"
+fi
