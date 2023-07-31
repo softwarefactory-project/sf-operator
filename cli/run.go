@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -41,8 +42,44 @@ func Run(erase bool) {
 	} else {
 		// TODO: only do gerrit when provision demo is on?
 		gerrit.EnsureGerrit(&env, sfconfig.FQDN)
+		EnsureDemoConfig(&env, &sfconfig)
 		EnsureDeployement(&env)
 	}
+}
+
+// The goal of this function is to prepare a demo config
+func EnsureDemoConfig(env *utils.ENV, sfconfig *Config) {
+	apiKey := string(utils.GetSecret(env, "gerrit-admin-api-key"))
+	EnsureRepo(sfconfig, apiKey, "config")
+	EnsureRepo(sfconfig, apiKey, "demo-project")
+	SetupTenant("deploy/config", "demo-tenant")
+	PushRepoIfNeeded("deploy/config")
+}
+
+func PushRepoIfNeeded(path string) {
+	out, err := exec.Command("git", "-C", path, "status", "--porcelain").Output()
+	if err != nil {
+		panic(err)
+	}
+	if len(out) > 0 {
+		fmt.Println("[+] Pushing new config...")
+		runCmd("git", "-C", path, "commit", "-m", "Automatic update", "-a")
+		runCmd("git", "-C", path, "push", "origin")
+	}
+}
+
+func EnsureRepo(sfconfig *Config, apiKey string, name string) {
+	path := filepath.Join("deploy", name)
+	origin := fmt.Sprintf("https://admin:%s@gerrit.sftests.com/a/%s", apiKey, name)
+	if _, err := os.Stat(filepath.Join(path, ".git")); os.IsNotExist(err) {
+		runCmd("git", "-c", "http.sslVerify=false", "clone", origin, path)
+	} else {
+		runCmd("git", "-C", path, "remote", "set-url", "origin", origin)
+	}
+	runCmd("git", "-C", path, "config", "http.sslverify", "false")
+	runCmd("git", "-C", path, "config", "user.email", "admin@"+sfconfig.FQDN)
+	runCmd("git", "-C", path, "config", "user.name", "admin")
+	runCmd("git", "-C", path, "reset", "--hard", "origin/master")
 }
 
 // The goal of this function is to recorver from client creation error
@@ -139,11 +176,15 @@ func RunOperator() {
 
 // temporary hack until make target are implemented natively
 func runMake(arg string) {
-	cmd := exec.Command("make", arg)
+	runCmd("make", arg)
+}
+
+func runCmd(cmdName string, args ...string) {
+	cmd := exec.Command(cmdName, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		panic(fmt.Errorf("make %s failed: %w", arg, err))
+		panic(fmt.Errorf("%s failed: %w", args, err))
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 
 	apiroutev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -133,4 +134,16 @@ func IsCertManagerRunning(env *ENV) bool {
 		Name:      "cert-manager-webhook",
 	}, &dep)
 	return dep.Status.ReadyReplicas >= 1
+}
+
+func GetSecret(env *ENV, name string) []byte {
+	var secret apiv1.Secret
+	err := env.Cli.Get(env.Ctx, client.ObjectKey{
+		Namespace: env.Ns,
+		Name:      name,
+	}, &secret)
+	if err != nil {
+		panic(err)
+	}
+	return secret.Data[name]
 }
