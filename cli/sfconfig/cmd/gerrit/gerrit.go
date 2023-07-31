@@ -100,11 +100,23 @@ func (g *GerritCMDContext) ensureService(name string, service apiv1.Service) {
 }
 
 func (g *GerritCMDContext) ensureJob(name string, job batchv1.Job) {
-	err := g.env.Cli.Get(g.env.Ctx, client.ObjectKey{Name: name, Namespace: g.env.Ns}, &batchv1.Job{})
+	var curJob batchv1.Job
+	err := g.env.Cli.Get(g.env.Ctx, client.ObjectKey{Name: name, Namespace: g.env.Ns}, &curJob)
 	if err != nil && errors.IsNotFound(err) {
 		err = g.env.Cli.Create(g.env.Ctx, &job)
 		notifByError(err, "job", name)
 	}
+	for i := 0; i < 60; i++ {
+		if curJob.Status.Succeeded >= 1 {
+			return
+		}
+		time.Sleep(2 * time.Second)
+		if err := g.env.Cli.Get(g.env.Ctx, client.ObjectKey{Name: name, Namespace: g.env.Ns}, &curJob); err != nil {
+			panic(err)
+		}
+	}
+	fmt.Println("failed to wait for batch job")
+	os.Exit(1)
 }
 
 func (g *GerritCMDContext) ensureRoute(name string, route apiroutev1.Route) {
