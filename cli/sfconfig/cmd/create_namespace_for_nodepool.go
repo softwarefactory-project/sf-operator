@@ -24,18 +24,12 @@ import (
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 )
 
-type ENV struct {
-	cli client.Client
-	ns  string
-	ctx context.Context
-}
-
 // Helper to fetch a kubernetes resource by name, returns true when it is found.
-func (e *ENV) getM(name string, obj client.Object) bool {
-	err := e.cli.Get(e.ctx,
+func getM(env *utils.ENV, name string, obj client.Object) bool {
+	err := env.Cli.Get(env.Ctx,
 		client.ObjectKey{
 			Name:      name,
-			Namespace: e.ns,
+			Namespace: env.Ns,
 		}, obj)
 	if errors.IsNotFound(err) {
 		return false
@@ -46,35 +40,35 @@ func (e *ENV) getM(name string, obj client.Object) bool {
 }
 
 // Helper to create a kubernetes resource.
-func (e *ENV) createR(obj client.Object) {
-	fmt.Fprintf(os.Stderr, "Creating %s in %s\n", obj.GetName(), e.ns)
-	obj.SetNamespace(e.ns)
-	if err := e.cli.Create(e.ctx, obj); err != nil {
+func createR(env *utils.ENV, obj client.Object) {
+	fmt.Fprintf(os.Stderr, "Creating %s in %s\n", obj.GetName(), env.Ns)
+	obj.SetNamespace(env.Ns)
+	if err := env.Cli.Create(env.Ctx, obj); err != nil {
 		panic(fmt.Errorf("Could not create %s: %s", obj, err))
 	}
 }
 
-func (e *ENV) ensureNamespace(name string) {
+func ensureNamespace(env *utils.ENV, name string) {
 	var ns apiv1.Namespace
-	if err := e.cli.Get(e.ctx, client.ObjectKey{Name: name}, &ns); errors.IsNotFound(err) {
+	if err := env.Cli.Get(env.Ctx, client.ObjectKey{Name: name}, &ns); errors.IsNotFound(err) {
 		ns.Name = name
-		e.createR(&ns)
+		createR(env, &ns)
 	} else if err != nil {
 		panic(fmt.Errorf("Could not get namespace: %s", err))
 	}
 }
 
-func (e *ENV) ensureServiceAccount(name string) {
+func ensureServiceAccount(env *utils.ENV, name string) {
 	var sa apiv1.ServiceAccount
-	if !e.getM(name, &sa) {
+	if !getM(env, name, &sa) {
 		sa.Name = name
-		e.createR(&sa)
+		createR(env, &sa)
 	}
 }
 
-func (e *ENV) ensureRole(sa string) {
+func ensureRole(env *utils.ENV, sa string) {
 	var role rbacv1.Role
-	if !e.getM("nodepool-role", &role) {
+	if !getM(env, "nodepool-role", &role) {
 		role.Name = "nodepool-role"
 		role.Rules = []rbacv1.PolicyRule{
 			{
@@ -88,31 +82,31 @@ func (e *ENV) ensureRole(sa string) {
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 		}
-		e.createR(&role)
+		createR(env, &role)
 	} else {
 		// TODO: update if needed
 	}
 
 	var rb rbacv1.RoleBinding
-	if !e.getM("nodepool-rb", &rb) {
+	if !getM(env, "nodepool-rb", &rb) {
 		rb.Name = "nodepool-rb"
 		rb.Subjects = []rbacv1.Subject{{Kind: "ServiceAccount", Name: sa}}
 		rb.RoleRef.Kind = "Role"
 		rb.RoleRef.Name = "nodepool-role"
 		rb.RoleRef.APIGroup = "rbac.authorization.k8s.io"
-		e.createR(&rb)
+		createR(env, &rb)
 	}
 }
 
-func (e *ENV) ensureServiceAccountSecret(sa string) string {
+func ensureServiceAccountSecret(env *utils.ENV, sa string) string {
 	var secret apiv1.Secret
-	if !e.getM("nodepool-token", &secret) {
+	if !getM(env, "nodepool-token", &secret) {
 		secret.Name = "nodepool-token"
 		secret.ObjectMeta.Annotations = map[string]string{
 			"kubernetes.io/service-account.name": sa,
 		}
 		secret.Type = "kubernetes.io/service-account-token"
-		e.createR(&secret)
+		createR(env, &secret)
 	}
 	for retry := 1; retry < 20; retry++ {
 		token := secret.Data["token"]
@@ -120,7 +114,7 @@ func (e *ENV) ensureServiceAccountSecret(sa string) string {
 			return string(token)
 		}
 		time.Sleep(time.Second)
-		e.getM("nodepool-token", &secret)
+		getM(env, "nodepool-token", &secret)
 	}
 	panic("Could not find token")
 }
@@ -163,12 +157,12 @@ func createKubeConfig(contextName string, ns string, sa string, token string) cl
 	}
 }
 
-func (e *ENV) ensureKubeConfigSecret(config []byte, name string) {
+func ensureKubeConfigSecret(env *utils.ENV, config []byte, name string) {
 	var secret apiv1.Secret
-	if !e.getM(name, &secret) {
+	if !getM(env, name, &secret) {
 		secret.Name = name
 		secret.Data = map[string][]byte{"kube.config": config}
-		e.createR(&secret)
+		createR(env, &secret)
 	} else {
 		// TODO: update data if needed
 	}
@@ -181,25 +175,25 @@ func CreateNamespaceForNodepool(nodepoolContext string, nodepoolNamespace string
 	ctx := context.TODO()
 	cli := utils.CreateKubernetesClient(nodepoolContext)
 	sa := "nodepool-sa"
-	e := ENV{cli: cli, ctx: ctx, ns: nodepoolNamespace}
+	env := utils.ENV{Cli: cli, Ctx: ctx, Ns: nodepoolNamespace}
 
 	// Ensure resources exists
-	e.ensureNamespace(nodepoolNamespace)
-	e.ensureServiceAccount(sa)
-	e.ensureRole(sa)
-	token := e.ensureServiceAccountSecret(sa)
+	ensureNamespace(&env, nodepoolNamespace)
+	ensureServiceAccount(&env, sa)
+	ensureRole(&env, sa)
+	token := ensureServiceAccountSecret(&env, sa)
 	nodepoolConfig := createKubeConfig(nodepoolContext, nodepoolNamespace, sa, token)
 	bytes, err := clientcmd.Write(nodepoolConfig)
 	if err != nil {
 		panic(err)
 	}
 
-	e.ns = sfNamespace
-	if e.ns == "-" {
+	env.Ns = sfNamespace
+	if env.Ns == "-" {
 		fmt.Printf("%s\n", bytes)
 	} else {
-		e.cli = utils.CreateKubernetesClient(sfContext)
-		e.ensureKubeConfigSecret(bytes, sf.NodepoolProvidersSecretsName)
+		env.Cli = utils.CreateKubernetesClient(sfContext)
+		ensureKubeConfigSecret(&env, bytes, sf.NodepoolProvidersSecretsName)
 	}
 }
 

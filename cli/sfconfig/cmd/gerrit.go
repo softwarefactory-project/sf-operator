@@ -60,10 +60,8 @@ var CreateRepoScript string
 var CreateCIUserScript string
 
 type GerritCMDContext struct {
-	cl   client.Client
-	ns   string
+	env  utils.ENV
 	fqdn string
-	ctx  context.Context
 }
 
 var ns = "sf"
@@ -84,48 +82,48 @@ func createAPIKeySecret(name string, ns string) apiv1.Secret {
 func (g *GerritCMDContext) ensureSecret(
 	name string, secretGen func(string, string) apiv1.Secret) apiv1.Secret {
 	secret := apiv1.Secret{}
-	err := g.cl.Get(g.ctx, client.ObjectKey{Name: name, Namespace: g.ns}, &secret)
+	err := g.env.Cli.Get(g.env.Ctx, client.ObjectKey{Name: name, Namespace: g.env.Ns}, &secret)
 	if err != nil && errors.IsNotFound(err) {
-		secret = secretGen(name, g.ns)
-		err = g.cl.Create(g.ctx, &secret)
+		secret = secretGen(name, g.env.Ns)
+		err = g.env.Cli.Create(g.env.Ctx, &secret)
 		notifByError(err, "secret", name)
 	}
 	return secret
 }
 
 func (g *GerritCMDContext) ensureService(name string, service apiv1.Service) {
-	err := g.cl.Get(g.ctx, client.ObjectKey{Name: name, Namespace: g.ns}, &apiv1.Service{})
+	err := g.env.Cli.Get(g.env.Ctx, client.ObjectKey{Name: name, Namespace: g.env.Ns}, &apiv1.Service{})
 	if err != nil && errors.IsNotFound(err) {
-		err = g.cl.Create(g.ctx, &service)
+		err = g.env.Cli.Create(g.env.Ctx, &service)
 		notifByError(err, "service", name)
 	}
 }
 
 func (g *GerritCMDContext) ensureJob(name string, job batchv1.Job) {
-	err := g.cl.Get(g.ctx, client.ObjectKey{Name: name, Namespace: g.ns}, &batchv1.Job{})
+	err := g.env.Cli.Get(g.env.Ctx, client.ObjectKey{Name: name, Namespace: g.env.Ns}, &batchv1.Job{})
 	if err != nil && errors.IsNotFound(err) {
-		err = g.cl.Create(g.ctx, &job)
+		err = g.env.Cli.Create(g.env.Ctx, &job)
 		notifByError(err, "job", name)
 	}
 }
 
 func (g *GerritCMDContext) ensureRoute(name string, route apiroutev1.Route) {
-	err := g.cl.Get(g.ctx, client.ObjectKey{Name: name, Namespace: g.ns}, &apiroutev1.Route{})
+	err := g.env.Cli.Get(g.env.Ctx, client.ObjectKey{Name: name, Namespace: g.env.Ns}, &apiroutev1.Route{})
 	if err != nil && errors.IsNotFound(err) {
-		err = g.cl.Create(g.ctx, &route)
+		err = g.env.Cli.Create(g.env.Ctx, &route)
 		notifByError(err, "route", name)
 	}
 }
 
 func (g *GerritCMDContext) ensureCM(name string, data map[string]string) {
 	cmName := name + "-config-map"
-	err := g.cl.Get(g.ctx, client.ObjectKey{Name: cmName, Namespace: g.ns}, &apiv1.ConfigMap{})
+	err := g.env.Cli.Get(g.env.Ctx, client.ObjectKey{Name: cmName, Namespace: g.env.Ns}, &apiv1.ConfigMap{})
 	if err != nil && errors.IsNotFound(err) {
 		cm := apiv1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: g.ns},
+			ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: g.env.Ns},
 			Data:       data,
 		}
-		err = g.cl.Create(g.ctx, &cm)
+		err = g.env.Cli.Create(g.env.Ctx, &cm)
 		notifByError(err, "cm", name)
 	}
 }
@@ -301,7 +299,7 @@ func GerritInitContainers(volumeMounts []apiv1.VolumeMount, fqdn string) apiv1.C
 func (g *GerritCMDContext) ensureGerritPostInitJob() {
 	job_name := "post-init"
 	job := controllers.MkJob(
-		job_name, g.ns,
+		job_name, g.env.Ns,
 		GerritPostInitContainer(job_name, g.fqdn),
 	)
 	job.Spec.Template.Spec.Volumes = ManageSFVolumes
@@ -310,7 +308,7 @@ func (g *GerritCMDContext) ensureGerritPostInitJob() {
 
 func (g *GerritCMDContext) getSTS(name string) (appsv1.StatefulSet, error) {
 	sts := appsv1.StatefulSet{}
-	err := g.cl.Get(g.ctx, client.ObjectKey{Name: name, Namespace: g.ns}, &sts)
+	err := g.env.Cli.Get(g.env.Ctx, client.ObjectKey{Name: name, Namespace: g.env.Ns}, &sts)
 	return sts, err
 }
 
@@ -325,9 +323,9 @@ func (g *GerritCMDContext) ensureGerritSTS() {
 	if err != nil && errors.IsNotFound(err) {
 		container := controllers.MkContainer(name, GERRIT_IMAGE)
 		storage_config := controllers.BaseGetStorageConfOrDefault(v1.StorageSpec{}, "")
-		pvc := controllers.MkPVC(name, g.ns, storage_config)
+		pvc := controllers.MkPVC(name, g.env.Ns, storage_config)
 		sts := controllers.MkStatefulset(
-			name, g.ns, 1, name, container, pvc)
+			name, g.env.Ns, 1, name, container, pvc)
 		volumeMounts := []apiv1.VolumeMount{
 			{
 				Name:      name,
@@ -343,14 +341,14 @@ func (g *GerritCMDContext) ensureGerritSTS() {
 
 		SetGerritSTSVolumes(&sts)
 
-		err = g.cl.Create(g.ctx, &sts)
+		err = g.env.Cli.Create(g.env.Ctx, &sts)
 		notifByError(err, "sts", name)
 	}
 }
 
 func (g *GerritCMDContext) ensureGerritIngresses() {
 	name := "gerrit"
-	route := controllers.MkHTTSRoute(name, g.ns, name,
+	route := controllers.MkHTTSRoute(name, g.env.Ns, name,
 		GERRIT_HTTPD_PORT_NAME, "/", GERRIT_HTTPD_PORT, map[string]string{}, g.fqdn)
 	g.ensureRoute(name, route)
 }
@@ -391,10 +389,12 @@ var gerritCmd = &cobra.Command{
 			}
 
 			g := GerritCMDContext{
-				cl:   cl,
-				ns:   ns,
+				env: utils.ENV{
+					Cli: cl,
+					Ns:  ns,
+					Ctx: ctx,
+				},
 				fqdn: fqdn,
-				ctx:  ctx,
 			}
 
 			// Ensure the admin SSH key pair secret
