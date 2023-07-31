@@ -15,6 +15,7 @@ type Config struct {
 		Host string
 		User string
 	}
+	FQDN string `mapstructure:"sftests.com"`
 }
 
 func GetConfigOrDie() Config {
@@ -23,6 +24,9 @@ func GetConfigOrDie() Config {
 	err := viper.Unmarshal(&C)
 	if err != nil {
 		panic(fmt.Errorf("unable to decode into struct, %v", err))
+	}
+	if C.FQDN == "" {
+		C.FQDN = "sftests.com"
 	}
 	return C
 }

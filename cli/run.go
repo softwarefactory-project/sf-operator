@@ -24,7 +24,8 @@ import (
 
 func Run(erase bool) {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{Development: true})))
-	fmt.Println("sfconfig started with: ", GetConfigOrDie())
+	sfconfig := GetConfigOrDie()
+	fmt.Println("sfconfig started with: ", sfconfig)
 	cli, err := utils.CreateKubernetesClient("")
 	if err != nil {
 		cli = EnsureCluster(err)
@@ -39,7 +40,7 @@ func Run(erase bool) {
 		// TODO: remove the sfconfig resource and the pv
 	} else {
 		// TODO: only do gerrit when provision demo is on?
-		gerrit.EnsureGerrit(&env, "sftests.com")
+		gerrit.EnsureGerrit(&env, sfconfig.FQDN)
 		EnsureDeployement(&env)
 	}
 }
