@@ -45,7 +45,7 @@ func GetConfigContextOrDie(contextName string) *rest.Config {
 	return conf
 }
 
-func CreateKubernetesClient(contextName string) client.Client {
+func CreateKubernetesClient(contextName string) (client.Client, error) {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(apiroutev1.AddToScheme(scheme))
@@ -57,14 +57,18 @@ func CreateKubernetesClient(contextName string) client.Client {
 	} else {
 		conf = config.GetConfigOrDie()
 	}
-	client, err := client.New(conf, client.Options{
+	return client.New(conf, client.Options{
 		Scheme: scheme,
 	})
+}
+
+func CreateKubernetesClientOrDie(contextName string) client.Client {
+	cli, err := CreateKubernetesClient(contextName)
 	if err != nil {
 		fmt.Println("failed to create client", err)
 		os.Exit(1)
 	}
-	return client
+	return cli
 }
 
 // Function to easilly use templated string.
@@ -108,11 +112,10 @@ func RemoveTempPlaybookFile(file *os.File) {
 	defer os.Remove(file.Name())
 }
 
-func GetSF(name string) (sfv1.SoftwareFactory, error) {
-	cli := CreateKubernetesClient("")
+func GetSF(env *ENV, name string) (sfv1.SoftwareFactory, error) {
 	var sf sfv1.SoftwareFactory
-	err := cli.Get(context.Background(), client.ObjectKey{
-		Namespace: "sf",
+	err := env.Cli.Get(env.Ctx, client.ObjectKey{
+		Namespace: env.Ns,
 		Name:      name,
 	}, &sf)
 	return sf, err
@@ -123,10 +126,9 @@ func IsCRDMissing(err error) bool {
 	return strings.Contains(err.Error(), `no matches for kind "SoftwareFactory"`)
 }
 
-func IsCertManagerRunning() bool {
-	cli := CreateKubernetesClient("")
+func IsCertManagerRunning(env *ENV) bool {
 	var dep appsv1.Deployment
-	cli.Get(context.Background(), client.ObjectKey{
+	env.Cli.Get(env.Ctx, client.ObjectKey{
 		Namespace: "operators",
 		Name:      "cert-manager-webhook",
 	}, &dep)
