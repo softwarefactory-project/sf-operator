@@ -19,6 +19,7 @@ import (
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
+	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -44,6 +45,7 @@ func Run(erase bool) {
 		// TODO: only do gerrit when provision demo is on?
 		gerrit.EnsureGerrit(&env, sfconfig.FQDN)
 		EnsureDemoConfig(&env, &sfconfig)
+		nodepool.CreateNamespaceForNodepool(&env, "", "nodepool", "")
 		EnsureDeployement(&env, &sfconfig)
 	}
 }
