@@ -5,7 +5,6 @@
     - setup-env
     - sanity-check
     - setup-namespaces
-    - start-gerrit
   tasks:
     - name: >-
         Simulates the "dev" process (start with 'go run' the operator)
@@ -22,6 +21,7 @@
       ansible.builtin.include_role:
         name: "{{ item }}"
       loop:
+        - start-gerrit
         - build-operator-assets
         - clean-installations
         - install-operator
