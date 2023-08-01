@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -192,4 +193,16 @@ func GetFileContent(filePath string) []byte {
 	} else {
 		panic("Can not find provided file path or you don't have required permissions to read it in path: " + filePath)
 	}
+}
+
+func GetKubernetesClientSet() (*rest.Config, *kubernetes.Clientset) {
+
+	kubeConfig := config.GetConfigOrDie()
+
+	// create the kubernetes Clientset
+	kubeClientset, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		panic(err.Error())
+	}
+	return kubeConfig, kubeClientset
 }

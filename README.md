@@ -406,3 +406,15 @@ and all the `Route` are reconfigured.
 > Set the server to `prod` to use the Let's Encrypt production server.
 
 > Routes will be re-configured when Certificates are renewed.
+
+## Using zuul-client
+
+### As the deployment owner
+
+The `sfconfig` tool eases the use of `zuul-client` by directly calling the zuul-client program from a running Zuul web pod.
+
+To get access to zuul-client tool run, from the root of the project:
+
+```bash
+./tools/sfconfig zuul-client -h
+```
