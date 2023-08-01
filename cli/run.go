@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
@@ -43,12 +44,13 @@ func Run(erase bool) {
 		// TODO: only do gerrit when provision demo is on?
 		gerrit.EnsureGerrit(&env, sfconfig.FQDN)
 		EnsureDemoConfig(&env, &sfconfig)
-		EnsureDeployement(&env)
+		EnsureDeployement(&env, &sfconfig)
 	}
 }
 
 // The goal of this function is to prepare a demo config
 func EnsureDemoConfig(env *utils.ENV, sfconfig *Config) {
+	fmt.Println("[+] Ensuring demo config")
 	apiKey := string(utils.GetSecret(env, "gerrit-admin-api-key"))
 	EnsureRepo(sfconfig, apiKey, "config")
 	EnsureRepo(sfconfig, apiKey, "demo-project")
@@ -89,7 +91,7 @@ func EnsureCluster(err error) client.Client {
 }
 
 // The goal of this function is to ensure a deployment is running.
-func EnsureDeployement(env *utils.ENV) {
+func EnsureDeployement(env *utils.ENV, sfconfig *Config) {
 	fmt.Println("[+] Checking SF resource...")
 	sf, err := utils.GetSF(env, "my-sf")
 	if sf.Status.Ready {
@@ -104,14 +106,16 @@ func EnsureDeployement(env *utils.ENV) {
 	} else if err != nil {
 		if errors.IsNotFound(err) {
 			// The resource does not exist
-			EnsureCR()
+			EnsureNamespacePermissions(env)
+			EnsureCR(env, sfconfig)
 			EnsureCertManager(env)
 			RunOperator()
 
 		} else if utils.IsCRDMissing(err) {
 			// The resource definition does not exist
+			EnsureNamespacePermissions(env)
 			EnsureCRD()
-			EnsureCR()
+			EnsureCR(env, sfconfig)
 			EnsureCertManager(env)
 			RunOperator()
 
@@ -137,14 +141,43 @@ func EnsureDeployement(env *utils.ENV) {
 	fmt.Println("[+] Couldn't deploy your software factory, sorry!")
 }
 
-func EnsureCR() {
+func EnsureNamespacePermissions(env *utils.ENV) {
 	// TODO: implement natively
-	cmd := exec.Command("kubectl", "apply", "-f", "config/samples/sf_v1_softwarefactory.yaml")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		panic(fmt.Errorf("install CR failed: %w", err))
+	runCmd("kubectl", "label", "--overwrite", "ns", env.Ns, "pod-security.kubernetes.io/enforce=privileged")
+	runCmd("kubectl", "label", "--overwrite", "ns", env.Ns, "pod-security.kubernetes.io/enforce-version=v1.24")
+	runCmd("oc", "adm", "policy", "add-scc-to-user", "privileged", "-z", "default")
+}
+
+func EnsureCR(env *utils.ENV, sfconfig *Config) {
+	fmt.Println("[+] Installing CR...")
+	var cr sfv1.SoftwareFactory
+	cr.SetName("my-sf")
+	cr.SetNamespace(env.Ns)
+	cr.Spec.FQDN = sfconfig.FQDN
+	cr.Spec.ConfigLocation = sfv1.ConfigLocationSpec{
+		BaseURL:            "http://gerrit-httpd/",
+		Name:               "config",
+		ZuulConnectionName: "gerrit",
 	}
+	cr.Spec.Zuul.GerritConns = []sfv1.GerritConnection{
+		{
+			Name:     "gerrit",
+			Username: "zuul",
+			Hostname: "gerrit-sshd",
+			Puburl:   "https://gerrit.sftests.com",
+		},
+	}
+	cr.Spec.StorageClassName = "topolvm-provisioner"
+	var err error
+	for i := 0; i < 10; i++ {
+		err = env.Cli.Create(env.Ctx, &cr)
+		if err == nil {
+			return
+		}
+		// Sometime the api needs a bit of time to register the CRD
+		time.Sleep(2 * time.Second)
+	}
+	panic(fmt.Errorf("Could not install CR: %s", err))
 }
 
 func EnsureCRD() {
