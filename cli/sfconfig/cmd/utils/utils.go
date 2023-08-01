@@ -61,7 +61,7 @@ func CreateKubernetesClient(contextName string) client.Client {
 		Scheme: scheme,
 	})
 	if err != nil {
-		fmt.Println("failed to create client")
+		fmt.Println("failed to create client", err)
 		os.Exit(1)
 	}
 	return client

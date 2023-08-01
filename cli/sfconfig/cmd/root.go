@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/softwarefactory-project/sf-operator/cli"
+	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/operator"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sf"
 	"github.com/spf13/cobra"
@@ -56,7 +57,7 @@ func init() {
 
 	rootCmd.AddCommand(operator.OperatorCmd)
 	rootCmd.AddCommand(sf.SfCmd)
-
+	rootCmd.AddCommand(gerrit.GerritCmd)
 	rootCmd.Flags().BoolP("erase", "", false, "Erase data")
 }
 
