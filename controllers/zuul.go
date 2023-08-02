@@ -37,7 +37,7 @@ var zuul_generate_tenant_config string
 var commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
 
 func Zuul_Image(service string) string {
-	return "quay.io/software-factory/" + service + ":8.3.1-2"
+	return "quay.io/software-factory/" + service + ":8.3.1-3"
 }
 
 func is_statefulset(service string) bool {

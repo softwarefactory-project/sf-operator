@@ -48,7 +48,7 @@ const LOGSERVER_DATA = "/var/www"
 var logserver_run string
 
 const PURGELOG_IDENT = "purgelogs"
-const PURGELOG_IMAGE = "quay.io/software-factory/purgelogs:0.2.1-3"
+const PURGELOG_IMAGE = "quay.io/software-factory/purgelogs:0.2.3-2"
 const PURGELOG_LOGS_DIR = "/home/logs"
 
 //go:embed static/logserver/logserver.conf.tmpl
