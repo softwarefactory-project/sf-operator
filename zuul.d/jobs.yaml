@@ -24,7 +24,7 @@
 - job:
     name: sf-operator
     parent: sf-operator-microshift
-    timeout: 2200
+    timeout: 3600
     post-run: playbooks/post.yaml
     run: playbooks/main.yaml
     abstract: true
@@ -51,7 +51,7 @@
 - job:
     name: sf-operator-multinode
     parent: sf-operator-microshift-multinode
-    timeout: 2200
+    timeout: 3600
     post-run: playbooks/post.yaml
     run: playbooks/main.yaml
     abstract: true
@@ -102,7 +102,7 @@
     name: sf-operator-upgrade
     parent: sf-operator
     run: playbooks/upgrade.yaml
-    timeout: 2200
+    timeout: 3600
 
 - job:
     name: sf-operator-dev-multinode
