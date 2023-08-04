@@ -77,6 +77,7 @@ func EnsureRepo(sfconfig *Config, apiKey string, name string) {
 		runCmd("git", "-c", "http.sslVerify=false", "clone", origin, path)
 	} else {
 		runCmd("git", "-C", path, "remote", "set-url", "origin", origin)
+		runCmd("git", "-C", path, "fetch", "origin")
 	}
 	runCmd("git", "-C", path, "config", "http.sslverify", "false")
 	runCmd("git", "-C", path, "config", "user.email", "admin@"+sfconfig.FQDN)
