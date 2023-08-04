@@ -131,17 +131,15 @@ func parse_template(templatePath string, data any) (string, error) {
 // Pass the template text.
 // And the data structure to be applied to the template
 func Parse_string(text string, data any) (string, error) {
-
-	template.New("StringtoParse").Parse(text)
-	// Opening Template file
-	template, err := template.New("StringtoParse").Parse(text)
+	// Create Template object
+	template_body, err := template.New("StringtoParse").Parse(text)
 	if err != nil {
 		return "", fmt.Errorf("Text not in the right format: " + text)
 	}
 
 	// Parsing Template
 	var buf bytes.Buffer
-	err = template.Execute(&buf, data)
+	err = template_body.Execute(&buf, data)
 	if err != nil {
 		return "", fmt.Errorf("failure while parsing template %s", text)
 	}
