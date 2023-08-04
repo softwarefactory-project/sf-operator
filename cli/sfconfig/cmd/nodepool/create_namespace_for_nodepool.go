@@ -2,7 +2,7 @@
 Copyright © 2023 Redhat
 SPDX-License-Identifier: Apache-2.0
 */
-package cmd
+package nodepool
 
 import (
 	"context"
@@ -196,7 +196,7 @@ func CreateNamespaceForNodepool(sfEnv *utils.ENV, nodepoolContext string, nodepo
 	}
 }
 
-var createNamespaceNodepoolCmd = &cobra.Command{
+var CreateNamespaceNodepoolCmd = &cobra.Command{
 	Use:   "create-namespace-for-nodepool",
 	Short: "Create the namespace for nodepool openshiftpods driver",
 	Long:  "This command produce a KUBECONFIG file for nodepool",
@@ -216,9 +216,8 @@ var createNamespaceNodepoolCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(createNamespaceNodepoolCmd)
-	createNamespaceNodepoolCmd.Flags().StringP("nodepool-context", "", "", "The kubeconfig context for the nodepool-namespace, use the default context by default")
-	createNamespaceNodepoolCmd.Flags().StringP("nodepool-namespace", "", "nodepool", "The namespace name for nodepool")
-	createNamespaceNodepoolCmd.Flags().StringP("sf-context", "", "", "The kubeconfig context of the sf-namespace, use the default context by default")
-	createNamespaceNodepoolCmd.Flags().StringP("sf-namespace", "", "sf", "Name of the namespace to copy the kubeconfig, or '-' for stdout")
+	CreateNamespaceNodepoolCmd.Flags().StringP("nodepool-context", "", "", "The kubeconfig context for the nodepool-namespace, use the default context by default")
+	CreateNamespaceNodepoolCmd.Flags().StringP("nodepool-namespace", "", "nodepool", "The namespace name for nodepool")
+	CreateNamespaceNodepoolCmd.Flags().StringP("sf-context", "", "", "The kubeconfig context of the sf-namespace, use the default context by default")
+	CreateNamespaceNodepoolCmd.Flags().StringP("sf-namespace", "", "sf", "Name of the namespace to copy the kubeconfig, or '-' for stdout")
 }
