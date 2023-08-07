@@ -378,6 +378,59 @@ oc debug <container to copy> --as-root
 oc debug <container to copy> --as-user=<username>
 ```
 
+### Use external debug tool - go-delve
+
+How to setup go-delve is described [here](https://github.com/go-delve/delve/tree/master/Documentation/installation)
+
+#### Example debuging
+
+Let's assume, that error is in function `DeployLogserver` and to be more precise
+in a step, where the function `UpdateR` is called.
+How to check calls and analyze code:
+
+```sh
+# in that step, we assume that resource is created, and we are doing re-run
+# of sf-operator.
+dlv debug ./main.go
+```
+
+After start, we can do breakpoints like:
+
+```sh
+# this will do a break point in line 272
+break controllers/logserver_controller.go:272
+
+# if you want to analyze whole function, you can do:
+break DeployLogserver
+```
+
+Then after setting break point, we can just add:
+
+```sh
+continue
+```
+
+Short cheatcheat:
+
+```sh
+# shows local variables
+locals
+
+# show what "annotations" variable contains
+print annotations
+
+# show current step/code
+list (alias l)
+
+# overwrite variable
+set annotations = <something>
+
+# call function, eg.:
+call r.Client.Status().Update(ctx, &cr)
+```
+
+More example how to use go-delve is described [here](https://github.com/go-delve/delve/blob/master/Documentation/cli/getting_started.md)
+
 #### Checking service name resolution
 
 Normally, if the service is [headless](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services),
