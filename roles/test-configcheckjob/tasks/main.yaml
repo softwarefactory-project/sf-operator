@@ -2,7 +2,7 @@
 - name: Start a tenant config check
   ansible.builtin.command: kubectl apply -f playbooks/files/configCheckJob.yaml
   args:
-    chdir: "{{ zuul.project.src_dir }}"
+    chdir: "{{ zuul.project.src_dir | default('..') }}"
 - name: Wait for the job to be ready
   ansible.builtin.command: kubectl get ConfigCheckJob tenant-conf-check-01 -o=jsonpath='{.status}'
   register: ccj_ready
