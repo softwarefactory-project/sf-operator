@@ -10,7 +10,10 @@ BUNDLE_IMG ?= $(BUNDLE_REPO):v$(VERSION)
 CATALOG_REPO ?= $(BASE_REPO)-catalog
 CATALOG_IMG ?= $(CATALOG_REPO):latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.25
+# NOTE: MicroShift 4.13 got kubeAPI 1.26.
+# More info: https://docs.openshift.com/container-platform/4.13/release_notes/ocp-4-13-release-notes.html#ocp-4-13-about-this-release
+ENVTEST_K8S_VERSION = 1.26
+CERT_MANAGER_VERSION = v1.12.3
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -116,7 +119,7 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 
 .PHONY: install-cmctl
 install-cmctl: ## Install the cert-manager cmctl CLI
-	@bash -c "mkdir -p bin; test -f bin/cmctl || { curl -sSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/download/v1.11.1/cmctl-linux-amd64.tar.gz && tar xzf cmctl.tar.gz && mv cmctl ./bin; rm cmctl.tar.gz; }"
+	@bash -c "mkdir -p bin; test -f bin/cmctl || { curl -sSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cmctl-linux-amd64.tar.gz && tar xzf cmctl.tar.gz && mv cmctl ./bin; rm cmctl.tar.gz; }"
 
 .PHONY: install-cert-manager
 install-cert-manager: install-cmctl ## Install the cert-manager operator from a OLM sub and wait for API availability
@@ -150,11 +153,11 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.0.1
-CONTROLLER_TOOLS_VERSION ?= v0.11.3
-OPERATOR_SDK_VERSION ?= 1.28.0
+KUSTOMIZE_VERSION ?= v5.1.1
+CONTROLLER_TOOLS_VERSION ?= v0.12.1
+OPERATOR_SDK_VERSION ?= 1.31.0
 
-KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
+KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/${KUSTOMIZE_VERSION}/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 $(KUSTOMIZE): $(LOCALBIN)
@@ -181,10 +184,11 @@ CATALOG_FILE=$(CATALOG_DIR)/catalog.yaml
 OPM=$(LOCALBIN)/opm
 CHANNEL=preview
 AVAILTAGS = $(shell skopeo list-tags docker://$(BUNDLE_REPO) | jq -r '.Tags[]' | grep -v latest )
+OPERATOR_REGISTRY_VERSION = v1.28.0
 
 .PHONY: install-opm
 install-opm: ## Install the cert-manager cmctl CLI
-	@bash -c "mkdir -p $(LOCALBIN); test -f $(OPM) || (curl -sSL https://github.com/operator-framework/operator-registry/releases/download/v1.27.0/linux-amd64-opm -o $(OPM) && chmod +x $(OPM) )"
+	@bash -c "mkdir -p $(LOCALBIN); test -f $(OPM) || (curl -sSL https://github.com/operator-framework/operator-registry/releases/download/${OPERATOR_REGISTRY_VERSION}/linux-amd64-opm -o $(OPM) && chmod +x $(OPM) )"
 
 .PHONY: opm-dir-gen
 opm-dir-gen: install-opm
