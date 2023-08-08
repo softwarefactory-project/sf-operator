@@ -36,7 +36,7 @@ const GERRIT_SSHD_PORT = 29418
 const GERRIT_SSHD_PORT_NAME = "gerrit-sshd"
 const GERRIT_SITE_MOUNT_PATH = "/gerrit"
 const GERRIT_IDENT = "gerrit"
-const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.6.4-4"
+const GERRIT_IMAGE = "quay.io/software-factory/gerrit:3.6.4-8"
 
 //go:embed static/entrypoint.sh
 var entrypoint string
