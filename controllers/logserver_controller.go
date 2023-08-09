@@ -264,13 +264,14 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	// do we have an existing deployment?
 	currentDep := v1.Deployment{}
+	deploymentUpdated := true
 	if r.GetM(dep.GetName(), &currentDep) {
 		// Are annotations in sync?
 		if !map_equals(&currentDep.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			currentDep.Spec.Template.Spec = dep.Spec.Template.Spec
 			currentDep.Spec.Template.ObjectMeta.Annotations = annotations
 			log.V(1).Info("Logserver pod restarting to apply changes ...")
-			r.UpdateR(&currentDep)
+			deploymentUpdated = r.UpdateR(&currentDep)
 		}
 
 	} else {
@@ -291,7 +292,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	r.GetM(dep.GetName(), &currentDep)
 
 	return sfv1.LogServerStatus{
-		Ready:              r.IsDeploymentReady(&currentDep) && pvc_readiness,
+		Ready:              deploymentUpdated && r.IsDeploymentReady(&currentDep) && pvc_readiness,
 		ObservedGeneration: r.cr.Generation,
 		ReconciledBy:       getOperatorConditionName(),
 	}
