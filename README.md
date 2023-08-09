@@ -179,7 +179,7 @@ spec:
       - name: gerrit
         username: zuul
         hostname: review.rdoproject.org
-        puburl: "https://review.rdoproject.org"
+        puburl: "https://review.rdoproject.org/r"
 ...
 ```
 
@@ -192,7 +192,7 @@ kubectl edit sf my-sf
 ...
 spec:
   config-location:
-    base-url: "https://review.rdoproject.org"
+    base-url: "https://review.rdoproject.org/r"
     name: config
     zuul-connection-name: gerrit
 ...
