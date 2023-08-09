@@ -47,6 +47,8 @@
           - podman
           - buildah
           - skopeo
+          - openssl
+          - python3-cryptography
 
     - name: Install openshift-client
       ansible.builtin.package:

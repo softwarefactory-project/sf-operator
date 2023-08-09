@@ -1,0 +1,67 @@
+---
+- name: Create required directories
+  ansible.builtin.file:
+    path: "{{ ssl_path }}"
+    state: directory
+
+### CA ###
+- name: Gen CA privkey
+  openssl_privatekey:
+    path: "{{ ssl_path }}/localCA.key"
+
+- name: Generate CA csr
+  openssl_csr:
+    path: "{{ ssl_path }}/localCA.csr"
+    privatekey_path: "{{ ssl_path }}/localCA.key"
+    country_name: "{{ country_name }}"
+    organization_name: "{{ org_name }}"
+    common_name: "{{ ca_common_name }}"
+    state_or_province_name: "{{ state_or_province_name }}"
+    locality_name: "{{ locality_name }}"
+    organizational_unit_name: "{{ organizational_unit_name }}"
+    basic_constraints:
+      - CA:TRUE
+    key_usage:
+      - cRLSign
+      - keyCertSign
+      - keyEncipherment
+      - digitalSignature
+    key_usage_critical: true
+    extended_key_usage:
+      - clientAuth
+      - serverAuth
+
+- name: Generate selfsigned CA certificate
+  openssl_certificate:
+    path: "{{ ssl_path }}/localCA.pem"
+    csr_path: "{{ ssl_path }}/localCA.csr"
+    privatekey_path: "{{ ssl_path }}/localCA.key"
+    provider: selfsigned
+    selfsigned_digest: sha256
+
+### Client ###
+- name: Gen privkey - client
+  openssl_privatekey:
+    path: "{{ ssl_path }}/ssl.key"
+
+- name: Generate Openssl CSR - client
+  openssl_csr:
+    path: "{{ ssl_path }}/ssl.csr"
+    privatekey_path: "{{ ssl_path }}/ssl.key"
+    common_name: "{{ common_name }}"
+    country_name: "{{ country_name }}"
+    state_or_province_name: "{{ state_or_province_name }}"
+    locality_name: "{{ locality_name }}"
+    organization_name: "{{ org_name }}"
+    organizational_unit_name: "{{ organizational_unit_name }}"
+
+- name: Generate a self signed cert - client
+  openssl_certificate:
+    path: "{{ ssl_path }}/ssl.crt"
+    csr_path: "{{ ssl_path }}/ssl.csr"
+    ownca_path: "{{ ssl_path }}/localCA.pem"
+    ownca_privatekey_path: "{{ ssl_path }}/localCA.key"
+    provider: ownca
+
+- name: Add SSL cert for route as secret
+  ansible.builtin.include_tasks: add_ssl_secret.yaml

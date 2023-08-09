@@ -1,0 +1,34 @@
+---
+- name: Get new certificate content
+  ansible.builtin.shell: cat {{ ssl_path }}/ssl.crt
+  register: _ssl_content
+
+- name: Verify that the SSL is in the secret
+  ansible.builtin.shell: >
+    kubectl get secret {{ service_name_custom_ssl }}-ssl-cert -o json |
+    jq -r ".data.crt" | base64 -d
+  register: _new_cert_secret
+
+- name: Ensure that the cert and secret cert are same
+  ansible.builtin.assert:
+    that:
+      - _ssl_content.stdout == _new_cert_secret.stdout
+
+- name: Check if new route has provided cert
+  ansible.builtin.command: |
+    oc get route logserver-logserver -o jsonpath="{ .spec.tls }"
+  register: _route_details
+  until: "'-----BEGIN CERTIFICATE-----' in _route_details.stdout"
+
+- name: Make a query for the service afer update
+  ansible.builtin.shell: >
+    echo |
+    openssl s_client
+    -showcerts
+    -servername {{ common_name }}
+    -connect {{ common_name }}:443
+    2>/dev/null | openssl x509 -inform pem -noout  -subject
+  register: _new_cert_subj
+  until: "'apps.example.com' not in _new_cert_subj.stdout"
+  retries: 10
+  delay: 1

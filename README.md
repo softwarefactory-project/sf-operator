@@ -350,3 +350,19 @@ cache:
     server: 5
     port: 5
 ```
+
+#### Replace service route certificate with custom cert
+
+Below example produce SSL secret for Logserver service. After controller reconcile loop is executed,
+the route will be replaced with provided cert. It means, that the service route will use
+new SSL cert for HTTPS traffic.
+
+> The `create-service-ssl-secret` is verifying the SSL cert.
+
+```sh
+./tools/sfconfig create-service-ssl-secret \
+    --sf-service-ca /tmp/ssl/localCA.pem \
+    --sf-service-key /tmp/ssl/ssl.key \
+    --sf-service-cert /tmp/ssl/ssl.crt \
+    --sf-service-name logserver
+```

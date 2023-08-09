@@ -24,6 +24,7 @@
     - expand-volume
     - ensure-job-result-artifacts
     - validate-purgelogs
+    - replace-route-cert
   loop_control:
     loop_var: role
 

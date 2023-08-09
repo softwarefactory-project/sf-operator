@@ -25,7 +25,7 @@ import (
 )
 
 // Helper to fetch a kubernetes resource by name, returns true when it is found.
-func getM(env *utils.ENV, name string, obj client.Object) bool {
+func GetM(env *utils.ENV, name string, obj client.Object) bool {
 	err := env.Cli.Get(env.Ctx,
 		client.ObjectKey{
 			Name:      name,
@@ -40,7 +40,7 @@ func getM(env *utils.ENV, name string, obj client.Object) bool {
 }
 
 // Helper to create a kubernetes resource.
-func createR(env *utils.ENV, obj client.Object) {
+func CreateR(env *utils.ENV, obj client.Object) {
 	fmt.Fprintf(os.Stderr, "Creating %s in %s\n", obj.GetName(), env.Ns)
 	obj.SetNamespace(env.Ns)
 	if err := env.Cli.Create(env.Ctx, obj); err != nil {
@@ -52,7 +52,7 @@ func ensureNamespace(env *utils.ENV, name string) {
 	var ns apiv1.Namespace
 	if err := env.Cli.Get(env.Ctx, client.ObjectKey{Name: name}, &ns); errors.IsNotFound(err) {
 		ns.Name = name
-		createR(env, &ns)
+		CreateR(env, &ns)
 	} else if err != nil {
 		panic(fmt.Errorf("Could not get namespace: %s", err))
 	}
@@ -60,15 +60,15 @@ func ensureNamespace(env *utils.ENV, name string) {
 
 func ensureServiceAccount(env *utils.ENV, name string) {
 	var sa apiv1.ServiceAccount
-	if !getM(env, name, &sa) {
+	if !GetM(env, name, &sa) {
 		sa.Name = name
-		createR(env, &sa)
+		CreateR(env, &sa)
 	}
 }
 
 func ensureRole(env *utils.ENV, sa string) {
 	var role rbacv1.Role
-	if !getM(env, "nodepool-role", &role) {
+	if !GetM(env, "nodepool-role", &role) {
 		role.Name = "nodepool-role"
 		role.Rules = []rbacv1.PolicyRule{
 			{
@@ -82,31 +82,31 @@ func ensureRole(env *utils.ENV, sa string) {
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 		}
-		createR(env, &role)
+		CreateR(env, &role)
 	} else {
 		// TODO: update if needed
 	}
 
 	var rb rbacv1.RoleBinding
-	if !getM(env, "nodepool-rb", &rb) {
+	if !GetM(env, "nodepool-rb", &rb) {
 		rb.Name = "nodepool-rb"
 		rb.Subjects = []rbacv1.Subject{{Kind: "ServiceAccount", Name: sa}}
 		rb.RoleRef.Kind = "Role"
 		rb.RoleRef.Name = "nodepool-role"
 		rb.RoleRef.APIGroup = "rbac.authorization.k8s.io"
-		createR(env, &rb)
+		CreateR(env, &rb)
 	}
 }
 
 func ensureServiceAccountSecret(env *utils.ENV, sa string) string {
 	var secret apiv1.Secret
-	if !getM(env, "nodepool-token", &secret) {
+	if !GetM(env, "nodepool-token", &secret) {
 		secret.Name = "nodepool-token"
 		secret.ObjectMeta.Annotations = map[string]string{
 			"kubernetes.io/service-account.name": sa,
 		}
 		secret.Type = "kubernetes.io/service-account-token"
-		createR(env, &secret)
+		CreateR(env, &secret)
 	}
 	for retry := 1; retry < 20; retry++ {
 		token := secret.Data["token"]
@@ -114,7 +114,7 @@ func ensureServiceAccountSecret(env *utils.ENV, sa string) string {
 			return string(token)
 		}
 		time.Sleep(time.Second)
-		getM(env, "nodepool-token", &secret)
+		GetM(env, "nodepool-token", &secret)
 	}
 	panic("Could not find token")
 }
@@ -159,10 +159,10 @@ func createKubeConfig(contextName string, ns string, sa string, token string) cl
 
 func ensureKubeConfigSecret(env *utils.ENV, config []byte, name string) {
 	var secret apiv1.Secret
-	if !getM(env, name, &secret) {
+	if !GetM(env, name, &secret) {
 		secret.Name = name
 		secret.Data = map[string][]byte{"kube.config": config}
-		createR(env, &secret)
+		CreateR(env, &secret)
 	} else {
 		// TODO: update data if needed
 	}

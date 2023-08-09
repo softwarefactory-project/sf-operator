@@ -147,3 +147,15 @@ func GetSecret(env *ENV, name string) []byte {
 	}
 	return secret.Data[name]
 }
+
+func GetFileContent(filePath string) []byte {
+	if _, err := os.Stat(filePath); err == nil {
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			panic(err.Error())
+		}
+		return data
+	} else {
+		panic("Can not find provided file path or you don't have required permissions to read it in path: " + filePath)
+	}
+}

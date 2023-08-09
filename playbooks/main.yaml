@@ -1,10 +1,14 @@
 ---
 - hosts: "{{ hostname | default('controller') }}"
+  vars:
+    service_name_custom_ssl: logserver
   roles:
     - setup-variables
     - setup-env
     - sanity-check
     - setup-namespaces
+    # NOTE: later that cert would be used by health-check/replace-route-cert role.
+    - utils/create-route-ssl-cert
   tasks:
     - name: >-
         Simulates the "dev" process (start with 'go run' the operator)

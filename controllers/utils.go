@@ -15,6 +15,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -756,6 +757,13 @@ func (r *SFUtilContext) DeleteService(name string) {
 	}
 }
 
+func (r *SFUtilContext) DeleteRoute(name string) {
+	var route apiroutev1.Route
+	if r.GetM(name, &route) {
+		r.DeleteR(&route)
+	}
+}
+
 func (r *SFUtilContext) UpdateR(obj client.Object) bool {
 	controllerutil.SetControllerReference(r.owner, obj, r.Scheme)
 	r.log.V(1).Info("Updating object", "name", obj.GetName())
@@ -953,6 +961,68 @@ func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) {
 	}
 }
 
+func (r *SFUtilContext) getRouteByName(routeName string) (*apiroutev1.Route, error) {
+	route := &apiroutev1.Route{}
+	err := r.Client.Get(context.TODO(), client.ObjectKey{
+		Namespace: r.ns,
+		Name:      routeName,
+	}, route)
+
+	return route, err
+}
+
+func (r *SFUtilContext) ensureRouteWithCert(name string, sslCrt []byte, namespace string) {
+	var current_route apiroutev1.Route
+	route, _ := r.getRouteByName(name)
+	if route.Spec.TLS != nil {
+		r.log.V(1).Info("There is already cert provided for route: " + name)
+		if route.Spec.TLS.Certificate != string(sslCrt) {
+			r.log.V(1).Info("There is a cert missmatch for route: " + name + ". Recreating route...")
+			r.DeleteRoute(name)
+			// wait until route is not removed
+			for i := 0; i < 10; i++ {
+				if r.GetM(name, &current_route) {
+					r.log.V(1).Info("Waiting for removing route... retry: " + strconv.Itoa(i))
+					time.Sleep(1 * time.Second)
+				} else {
+					break
+				}
+			}
+		}
+	}
+}
+
+func MkHTTSRouteCustomCrt(
+	name string, ns string, host string, serviceName string, path string,
+	port int, annotations map[string]string, fqdn string,
+	certificate string, key string, caCertificate string) apiroutev1.Route {
+	return apiroutev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   ns,
+			Annotations: annotations,
+		},
+		Spec: apiroutev1.RouteSpec{
+			TLS: &apiroutev1.TLSConfig{
+				InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
+				Termination:                   apiroutev1.TLSTerminationEdge,
+				Certificate:                   certificate,
+				Key:                           key,
+				CACertificate:                 caCertificate,
+			},
+			Host: host + "." + fqdn,
+			To: apiroutev1.RouteTargetReference{
+				Kind: "Service",
+				Name: serviceName,
+			},
+			Port: &apiroutev1.RoutePort{
+				TargetPort: intstr.FromInt(port),
+			},
+			Path: path,
+		},
+	}
+}
+
 func MkHTTSRoute(
 	name string, ns string, host string, serviceName string, path string,
 	port int, annotations map[string]string, fqdn string) apiroutev1.Route {
@@ -983,6 +1053,45 @@ func MkHTTSRoute(
 func (r *SFUtilContext) ensureHTTPSRoute(
 	name string, host string, serviceName string, path string,
 	port int, annotations map[string]string, fqdn string) {
+
+	// check if there is custom certificate
+	var secret apiv1.Secret
+	secretName := host + "-ssl-cert"
+	if r.GetM(secretName, &secret) {
+		// We set a place holder secret to ensure that the Secret is owned by the SoftwareFactory instance (ControllerReference)
+		if len(secret.GetOwnerReferences()) == 0 {
+			r.log.V(1).Info("Adopting the providers secret to set the owner reference", "secret", secretName)
+			if !r.UpdateR(&secret) {
+				panic("Can not update secret owner refference for secret" + secretName)
+			}
+		}
+		r.log.V(1).Info("Service has secret that provides custom SSL certificate!")
+		sslCA, err := r.getSecretDataFromKey(secretName, "CA")
+		if err != nil {
+			panic("CA certificate is incorrect!")
+		}
+		sslCrt, err := r.getSecretDataFromKey(secretName, "crt")
+		if err != nil {
+			panic("SSL Certificate is incorrect!")
+		}
+		sslKey, err := r.getSecretDataFromKey(secretName, "key")
+		if err != nil {
+			panic("SSL Key is incorrect!")
+		}
+		// NOTE: It is not possible to change the route cert without re-creating route.
+		// Ensure that the current route does not have already the cert
+		var current_route apiroutev1.Route
+		if r.GetM(name, &current_route) {
+			r.log.V(1).Info("Checking details in current route")
+			r.ensureRouteWithCert(name, sslCrt, r.ns)
+		}
+
+		route := MkHTTSRouteCustomCrt(name, r.ns, host, serviceName, path, port, annotations, fqdn,
+			string(sslCrt), string(sslKey), string(sslCA))
+		r.ensure_route(route, name)
+		return
+	}
+	// TODO: add letsencrypt functionality
 	route := MkHTTSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn)
 	r.ensure_route(route, name)
 }

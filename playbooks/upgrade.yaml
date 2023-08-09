@@ -1,10 +1,13 @@
 ---
 - hosts: "{{ hostname | default('controller') }}"
+  vars:
+    service_name_custom_ssl: logserver
   roles:
     - setup-variables
     - setup-env
     - sanity-check
     - setup-namespaces
+    - utils/create-route-ssl-cert
     - start-gerrit
     - role: build-operator-assets
       vars:
