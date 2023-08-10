@@ -1,3 +1,13 @@
+- name: Install busybox from quay.io to avoid docker.io rate limit
+  delegate_to: "{{ os_host }}"
+  command: "{{ busybox_setup }}"
+  loop:
+    - podman pull quay.io/software-factory/busybox
+    - podman image tag quay.io/software-factory/busybox:latest docker.io/library/busybox:1.36.0
+  become: yes
+  loop_control:
+    loop_var: busybox_setup
+
 - name: Install the operator via the OLM bundle
   delegate_to: "{{ os_host }}"
   ansible.builtin.command: >
