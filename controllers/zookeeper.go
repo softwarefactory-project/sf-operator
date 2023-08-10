@@ -121,7 +121,9 @@ func (r *SFController) DeployZookeeper() bool {
 		zk_dirty = true
 	}
 	if zk_dirty {
-		r.UpdateR(&zk)
+		if !r.UpdateR(&zk) {
+			return false
+		}
 	}
 
 	return r.IsStatefulSetReady(&zk)

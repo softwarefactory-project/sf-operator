@@ -59,7 +59,9 @@ func (r *SFController) SetupBaseSecrets() bool {
 		if !map_equals(&current_role.Annotations, &roleAnnotations) {
 			current_role.Rules = roleRules
 			current_role.Annotations = roleAnnotations
-			r.UpdateR(&current_role)
+			if !r.UpdateR(&current_role) {
+				return false
+			}
 		}
 	}
 

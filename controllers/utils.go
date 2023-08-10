@@ -720,12 +720,14 @@ func (r *SFUtilContext) DeleteService(name string) {
 	}
 }
 
-func (r *SFUtilContext) UpdateR(obj client.Object) {
+func (r *SFUtilContext) UpdateR(obj client.Object) bool {
 	controllerutil.SetControllerReference(r.owner, obj, r.Scheme)
 	r.log.V(1).Info("Updating object", "name", obj.GetName())
 	if err := r.Client.Update(r.ctx, obj); err != nil {
-		panic(err.Error())
+		r.log.Error(err, "Unable to update the object")
+		return false
 	}
+	return true
 }
 
 func (r *SFUtilContext) PatchR(obj client.Object, patch client.Patch) {

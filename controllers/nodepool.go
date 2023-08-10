@@ -127,7 +127,9 @@ func (r *SFController) DeployNodepool() bool {
 	} else {
 		if len(nodepool_providers_secrets.GetOwnerReferences()) == 0 {
 			r.log.V(1).Info("Adopting the providers secret to set the owner reference", "secret", NodepoolProvidersSecretsName)
-			r.UpdateR(&nodepool_providers_secrets)
+			if !r.UpdateR(&nodepool_providers_secrets) {
+				return false
+			}
 		}
 	}
 

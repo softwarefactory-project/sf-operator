@@ -283,7 +283,9 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		ze_dirty = true
 	}
 	if ze_dirty {
-		r.UpdateR(&ze)
+		if !r.UpdateR(&ze) {
+			return false
+		}
 	}
 	return r.IsStatefulSetReady(&ze)
 }
@@ -317,7 +319,9 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		zw_dirty = true
 	}
 	if zw_dirty {
-		r.UpdateR(&zw)
+		if !r.UpdateR(&zw) {
+			return false
+		}
 	}
 	return r.IsDeploymentReady(&zw)
 }
