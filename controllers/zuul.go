@@ -167,10 +167,11 @@ var scheduler_init_and_sidecar_vols = []apiv1.VolumeMount{
 
 func (r *SFController) init_scheduler_config() apiv1.Container {
 	return apiv1.Container{
-		Name:            "init-scheduler-config",
-		Image:           BUSYBOX_IMAGE,
-		Command:         []string{"/usr/local/bin/generate-zuul-tenant-yaml.sh"},
-		Env:             append(r.get_generate_tenants_envs(), Create_env("HOME", "/var/lib/zuul")),
+		Name:    "init-scheduler-config",
+		Image:   BUSYBOX_IMAGE,
+		Command: []string{"/usr/local/bin/generate-zuul-tenant-yaml.sh"},
+		Env: append(r.get_generate_tenants_envs(),
+			Create_env("HOME", "/var/lib/zuul"), Create_env("INIT_CONTAINER", "1")),
 		VolumeMounts:    scheduler_init_and_sidecar_vols,
 		SecurityContext: create_security_context(false),
 	}
@@ -196,6 +197,7 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	annotations := map[string]string{
 		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": IniSectionsChecksum(cfg, sections),
+		"serial":                "1",
 	}
 
 	if r.isConfigRepoSet() {

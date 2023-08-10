@@ -31,14 +31,23 @@ if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
   # Clone or fetch config repository
   elif [ -d ~/${CONFIG_REPO_NAME}/.git ]; then
     pushd ~/${CONFIG_REPO_NAME}
-    git remote remove origin
+    git remote | grep origin && git remote remove origin
     git remote add origin ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME}
-    git fetch origin
-    git reset --hard $REF
+    if [ "$INIT_CONTAINER" == "1" ]; then
+      git fetch origin || true
+      git reset --hard $REF || true
+    else
+      git fetch origin
+      git reset --hard $REF
+    fi
     popd
   else
     pushd ~/
-    git clone ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME}
+    if [ "$INIT_CONTAINER" == "1" ]; then
+      git clone ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME} || true
+    else
+      git clone ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME}
+    fi
     popd
   fi
 
