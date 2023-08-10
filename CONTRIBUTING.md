@@ -52,60 +52,17 @@ Make sure that your current context is called `microshift`.
 ```sh
 kubectl config current-context
 # Must be microshift
+kubectl config set-context microshift --namespace=sf
 ```
 
-0. Create a new namespace
+Then run the `sfconfig` command to deploy the [sfconfig.yaml](./sfconfig.yaml) configuration:
 
-   ```sh
-   kubectl create namespace sf
-   kubectl config set-context microshift --namespace=sf
-   kubectl label --overwrite ns sf pod-security.kubernetes.io/enforce=privileged
-   kubectl label --overwrite ns sf pod-security.kubernetes.io/enforce-version=v1.24
-   oc adm policy add-scc-to-user privileged -z default
-   ```
+```sh
+go run ./cli/sfconfig
+```
 
-1. Install cert-manager operator
-
-   ```sh
-   # Ensure cert-manager operator is installed on your instance
-   make install-cert-manager
-   ```
-
-2. Install the Custom Resource Definition:
-
-   ```sh
-   make install
-   ```
-
-3. Deploy a Gerrit companion
-
-   ```sh
-   ./tools/sfconfig gerrit --deploy
-   ```
-
-3. Create your own copy the CR sample, for example:
-
-   ```sh
-   cp config/samples/sf_v1_softwarefactory.yaml my-sf.yaml
-   ```
-
-4. Apply the SoftwareFactory Custom Resource:
-
-   ```sh
-   kubectl apply -f ./my-sf.yaml
-   ```
-
-5. Create Nodepool serviceAccount and secret to run job on microshift
-
-    ```sh
-    ./tools/sfconfig create-namespace-for-nodepool
-    ```
-
-6. Start the operator:
-
-   ```sh
-   go run ./main.go --namespace sf
-   ```
+This command takes care of ensuring the service are running.
+Checkout the [run.go](./cli/run.go) for more information.
 
 ### Access services with the browser
 
@@ -191,6 +148,12 @@ All the commands related to `sfconfig` with the operator option can be executed 
 ```
 
 ### Run test suites locally
+
+Before running the tests, start the operator in another terminal:
+
+```sh
+go run ./main.go
+```
 
 Tests run by the **CI** (`playbooks/main.yaml`) can be also run locally using the `run-ci-tests.sh`:
 
