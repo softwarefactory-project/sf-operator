@@ -4,6 +4,7 @@
 
 - name: Verify Zuul Console output
   ansible.builtin.include_tasks: ensure-zuul-console-success.yaml
+  when: check_zuul_console
 
 - name: Ensure a success config-update
   ansible.builtin.include_tasks: ensure-config-update-success.yaml

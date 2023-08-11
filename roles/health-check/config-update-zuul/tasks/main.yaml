@@ -31,7 +31,10 @@
     - "git add {{ config_path }}/zuul/main.yaml"
     - "git commit -m 'Add {{ config_path }}/zuul/main.yaml'"
 
-- ansible.builtin.include_role:
+- name: Submit change and verify Zuul console output
+  vars:
+    check_zuul_console: true
+  ansible.builtin.include_role:
     name: "roles/health-check/config-repo-submit-change"
 
 - name: Get Zuul projects list

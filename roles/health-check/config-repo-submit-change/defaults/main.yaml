@@ -4,3 +4,4 @@ validate_certs: true
 retries: 180
 config_file_path: "resources/myfile-test.yaml"
 repository_name: "ichiban-config-test"
+check_zuul_console: false

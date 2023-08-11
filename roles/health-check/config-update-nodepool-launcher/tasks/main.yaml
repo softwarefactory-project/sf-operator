@@ -84,7 +84,8 @@
     - "git add {{ config_path }}/nodepool/nodepool.yaml"
     - "git commit -m 'Add nodepool/nodepool.yaml'"
 
-- ansible.builtin.include_role:
+- name: Update config repo change
+  ansible.builtin.include_role:
     name: "roles/health-check/config-repo-submit-change"
 
 - name: Get nodepool-launcher pod name
