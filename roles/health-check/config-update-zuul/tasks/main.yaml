@@ -11,6 +11,30 @@
 - ansible.builtin.include_role:
     name: "roles/create-gerrit-repository"
 
+# First attempt a negative test where we expect a failure
+- name: Set bad Zuul tenant config
+  ansible.builtin.blockinfile:
+    content: |
+      - tenant:
+          name: {{ tenant_name }}
+          souRZe: {}
+    path: "{{ config_path }}/zuul/main.yaml"
+    create: true
+
+- name: Commit file in the config repo
+  ansible.builtin.command: "{{ item }}"
+  args:
+    chdir: "{{ config_path }}"
+  loop:
+    - "git add {{ config_path }}/zuul/main.yaml"
+    - "git commit -m 'Add {{ config_path }}/zuul/main.yaml'"
+
+- ansible.builtin.include_role:
+    name: "roles/health-check/config-repo-submit-change"
+  vars:
+    ensure_config_check_failure: true
+
+# Now proceed with adding a correct tenant file
 - name: Set Zuul tenant config
   ansible.builtin.blockinfile:
     content: |
@@ -29,7 +53,7 @@
     chdir: "{{ config_path }}"
   loop:
     - "git add {{ config_path }}/zuul/main.yaml"
-    - "git commit -m 'Add {{ config_path }}/zuul/main.yaml'"
+    - "git commit --amend --no-edit"
 
 - name: Submit change and verify Zuul console output
   vars:

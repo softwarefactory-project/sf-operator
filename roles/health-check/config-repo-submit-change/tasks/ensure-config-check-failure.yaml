@@ -1,0 +1,25 @@
+---
+- name: Get review ID from the changeID using gerrit API
+  ansible.builtin.uri:
+    url: "https://{{ gerrit_host }}/changes/{{ _change_id.stdout }}/revisions/current/review"
+    return_content: yes
+    validate_certs: "{{ validate_certs }}"
+  register: _change_detail
+
+- ansible.builtin.set_fact:
+    json_reply: "{{ _change_detail.content[4:] | from_json }}"
+
+- name: Wait config-check FAILURE result using zuul-web API
+  ansible.builtin.uri:
+    url: "{{ zuul_web_url }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=config-check&change={{ json_reply._number }}"
+    return_content: true
+    body_format: json
+    validate_certs: "{{ validate_certs }}"
+  register: zuul_job_result
+  until:
+    - "'json' in zuul_job_result"
+    - zuul_job_result.json != []
+    - "'result' in zuul_job_result.json[0]"
+    - zuul_job_result.json[0]["result"] == 'FAILURE'
+  retries: "{{ retries }}"
+  delay: 30
