@@ -262,3 +262,35 @@ For further information check the Zuul documentation's [Gerrit section](https://
 ## How to configure Zuul via the config repo
 ## How to configure Nodepool via the config repo
 ## How to set the nodepool kube/config or clouds.yaml
+
+To add or modify an existing secret you have to:
+
+* encode in base64 your secret
+
+```sh
+$ base64 -w 0 ~/.config/openstack/clouds.yaml
+```
+
+Then edit `nodepool-providers-secrets`
+
+```sh
+$ kubectl edit secrets  nodepool-providers-secrets
+```
+
+And add the secret field within data:
+
+```yaml
+apiVersion: v1
+data:
+  clouds.yaml: Y2FjaGU6CiA....
+```
+
+Then, after saving, the nodepool-launcher container will be recreated with your secret:
+
+```sh
+$ kubectl exec -ti nodepool-launcher-$uuid -c launcher -- head -n 4 /.config/openstack/clouds.yaml
+cache:
+  expiration:
+    server: 5
+    port: 5
+```
