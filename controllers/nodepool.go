@@ -42,25 +42,6 @@ func (r *SFController) get_generate_nodepool_config_envs() []apiv1.EnvVar {
 	}
 }
 
-func (r *SFController) init_container(volumeMounts []apiv1.VolumeMount) apiv1.Container {
-	container := MkContainer("nodepool-launcher-init", BUSYBOX_IMAGE)
-	container.Command = []string{"/usr/local/bin/generate-launcher-config.sh"}
-	container.Env = r.get_generate_nodepool_config_envs()
-	container.VolumeMounts = append(volumeMounts, configScriptVolumeMount)
-	container.SecurityContext = create_security_context(false)
-	return container
-}
-
-func (r *SFController) sidecar_container(volumeMounts []apiv1.VolumeMount) apiv1.Container {
-	container := MkContainer("nodepool-launcher-sidecar", BUSYBOX_IMAGE)
-	container.Command = []string{"sh", "-c", "touch /tmp/healthy && sleep inf"}
-	container.Env = r.get_generate_nodepool_config_envs()
-	container.VolumeMounts = append(volumeMounts, configScriptVolumeMount)
-	container.ReadinessProbe = Create_readiness_cmd_probe([]string{"cat", "/tmp/healthy"})
-	container.SecurityContext = create_security_context(false)
-	return container
-}
-
 func (r *SFController) DeployNodepool() bool {
 	cert_client := r.create_client_certificate("zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper", r.cr.Spec.FQDN)
 	r.GetOrCreate(&cert_client)
@@ -84,8 +65,9 @@ func (r *SFController) DeployNodepool() bool {
 
 	volumes := []apiv1.Volume{
 		create_volume_secret("zookeeper-client-tls"),
-		create_volume_secret("nodepool-kubeconfig", "nodepool-kubeconfig"),
+		create_volume_secret(NodepoolProvidersSecretsName),
 		create_empty_dir("nodepool-config"),
+		create_empty_dir("nodepool-home"),
 		{
 			Name: "nodepool-launcher-tooling-vol",
 			VolumeSource: apiv1.VolumeSource{
@@ -112,10 +94,27 @@ func (r *SFController) DeployNodepool() bool {
 			MountPath: "/etc/nodepool/",
 		},
 		{
+			Name:      "nodepool-home",
+			MountPath: "/var/lib/nodepool",
+		},
+		{
 			Name:      "nodepool-launcher-extra-config-vol",
 			SubPath:   "logging.yaml",
 			MountPath: "/etc/nodepool-logging/logging.yaml",
 		},
+		{
+			Name:      "nodepool-providers-secrets",
+			SubPath:   "kube.config",
+			MountPath: "/var/lib/nodepool/.kube/config",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "nodepool-providers-secrets",
+			SubPath:   "clouds.yaml",
+			MountPath: "/var/lib/nodepool/.config/openstack/clouds.yaml",
+			ReadOnly:  true,
+		},
+		configScriptVolumeMount,
 	}
 
 	// We set a place holder secret to ensure that the Secret is owned by the SoftwareFactory instance (ControllerReference)
@@ -133,24 +132,10 @@ func (r *SFController) DeployNodepool() bool {
 		}
 	}
 
-	volumes = append(volumes, create_volume_secret(NodepoolProvidersSecretsName))
-	volume_mount = append(volume_mount, apiv1.VolumeMount{
-		Name:      "nodepool-providers-secrets",
-		SubPath:   "kube.config",
-		MountPath: "/.kube/config",
-		ReadOnly:  true,
-	})
-	volume_mount = append(volume_mount, apiv1.VolumeMount{
-		Name:      "nodepool-providers-secrets",
-		SubPath:   "clouds.yaml",
-		MountPath: "/.config/openstack/clouds.yaml",
-		ReadOnly:  true,
-	})
-
 	annotations := map[string]string{
 		"nodepool.yaml":         checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml": checksum([]byte(loggingConfig)),
-		"serial":                "3",
+		"serial":                "4",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"nodepool-providers-secrets": string(nodepool_providers_secrets.ResourceVersion),
 	}
@@ -160,17 +145,38 @@ func (r *SFController) DeployNodepool() bool {
 	}
 
 	nl := r.create_deployment("nodepool-launcher", "")
+
 	container := apiv1.Container{
 		Name:            "launcher",
 		Image:           "quay.io/software-factory/" + NL_IDENT + ":8.2.0-2",
 		SecurityContext: create_security_context(false),
 		VolumeMounts:    volume_mount,
+		Env: append(r.get_generate_nodepool_config_envs(),
+			Create_env("HOME", "/var/lib/nodepool")),
 		Command: []string{"/usr/local/bin/dumb-init", "--",
 			"/usr/local/bin/nodepool-launcher", "-f", "-l", "/etc/nodepool-logging/logging.yaml"},
 	}
+
+	init_container := MkContainer("nodepool-launcher-init", BUSYBOX_IMAGE)
+	init_container.Command = []string{"/usr/local/bin/generate-launcher-config.sh"}
+	init_container.Env = append(r.get_generate_nodepool_config_envs(),
+		Create_env("HOME", "/var/lib/nodepool"))
+	init_container.VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      "nodepool-config",
+			MountPath: "/etc/nodepool/",
+		},
+		{
+			Name:      "nodepool-home",
+			MountPath: "/var/lib/nodepool",
+		},
+		configScriptVolumeMount,
+	}
+	init_container.SecurityContext = create_security_context(false)
+
 	nl.Spec.Template.Spec.Volumes = volumes
-	nl.Spec.Template.Spec.InitContainers = []apiv1.Container{r.init_container(volume_mount)}
-	nl.Spec.Template.Spec.Containers = []apiv1.Container{container, r.sidecar_container(volume_mount)}
+	nl.Spec.Template.Spec.InitContainers = []apiv1.Container{init_container}
+	nl.Spec.Template.Spec.Containers = []apiv1.Container{container}
 	nl.Spec.Template.ObjectMeta.Annotations = annotations
 	nl.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/ready", NL_WEBAPP_PORT)
 	nl.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/ready", NL_WEBAPP_PORT)

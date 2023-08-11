@@ -285,16 +285,13 @@ cat << EOF > playbooks/config/update.yaml
   tasks:
     - name: "Update zuul tenant config"
       command: /usr/local/bin/generate-zuul-tenant-yaml.sh "{{ config_ref }}"
-
-- hosts: zuul-scheduler
-  tasks:
     - name: "Reconfigure the scheduler"
       command: zuul-scheduler full-reconfigure
 
-- hosts: nodepool-launcher-sidecar
+- hosts: nodepool-launcher
   vars:
     config_ref: "{{ zuul.newrev | default('origin/master') }}"
-    ansible_remote_tmp: "/tmp/ansible/.tmp"
+    ansible_python_interpreter: /usr/bin/python3.11
   tasks:
     - name: "Update nodepool-launcher config"
       command: /usr/local/bin/generate-launcher-config.sh "{{ config_ref }}"
@@ -320,10 +317,10 @@ cat << EOF > roles/add-k8s-hosts/tasks/main.yaml
   register: nodepool_launcher_info
 
 - ansible.builtin.add_host:
-    name: "nodepool-launcher-sidecar"
+    name: "nodepool-launcher"
     ansible_connection: kubectl
     ansible_kubectl_pod: "{{ nodepool_launcher_info.resources[0].metadata.name }}"
-    ansible_kubectl_container: nodepool-launcher-sidecar
+    ansible_kubectl_container: launcher
 
 EOF
 
