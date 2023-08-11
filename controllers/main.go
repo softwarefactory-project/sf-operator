@@ -91,13 +91,6 @@ func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection 
 		RESTConfig: mgr.GetConfig(),
 	}
 
-	if err = (&ConfigCheckJobReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ConfigCheckJob")
-		os.Exit(1)
-	}
 	//+kubebuilder:scaffold:builder
 
 	if err = sfr.SetupWithManager(mgr); err != nil {

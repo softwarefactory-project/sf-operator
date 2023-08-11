@@ -18,7 +18,6 @@
     - config-update-zuul
     - config-update-nodepool-launcher
     - pod-spawning
-    - test-configcheckjob
     - ensure-job-result-artifacts
     - test-volumestats-sidecar
     - test-crd
