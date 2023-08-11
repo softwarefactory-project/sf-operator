@@ -28,6 +28,9 @@
     post-run: playbooks/post.yaml
     run: playbooks/main.yaml
     abstract: true
+    irrelevant-files:
+      - ".*.md"
+      - "doc/.*"
     required-projects:
       - name: software-factory/sf-infra
     roles:
@@ -55,6 +58,9 @@
     post-run: playbooks/post.yaml
     run: playbooks/main.yaml
     abstract: true
+    irrelevant-files:
+      - ".*.md"
+      - "doc/.*"
     required-projects:
       - name: software-factory/sf-infra
     roles:
