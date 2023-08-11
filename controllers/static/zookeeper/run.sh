@@ -26,7 +26,6 @@ JMXAUTH=false
 JMXDISABLE=${JMXDISABLE:-false}
 ID_FILE="$ZK_DATA_DIR/myid"
 ZK_CONFIG_FILE="$ZK_CONF_DIR/zoo.cfg"
-LOG4J_PROPERTIES="$ZK_CONF_DIR/log4j.properties"
 HOST=$(hostname)
 DOMAIN=$(hostname -d)
 JVMFLAGS="-Xmx$ZK_HEAP_SIZE -Xms$ZK_HEAP_SIZE"
@@ -99,24 +98,7 @@ do
     echo "server.$i=$NAME-$((i-1)).$DOMAIN:$ZK_SERVER_PORT:$ZK_ELECTION_PORT" >> "$ZK_CONFIG_FILE"
 done
 
-rm -f "$LOG4J_PROPERTIES"
-
-cat << EOF >> "$LOG4J_PROPERTIES"
-zookeeper.root.logger=$ZK_LOG_LEVEL, CONSOLE
-zookeeper.console.threshold=$ZK_LOG_LEVEL
-zookeeper.log.threshold=$ZK_LOG_LEVEL
-zookeeper.log.dir=$ZK_DATA_LOG_DIR
-zookeeper.log.file=zookeeper.log
-zookeeper.log.maxfilesize=256MB
-zookeeper.log.maxbackupindex=10
-zookeeper.tracelog.dir=$ZK_DATA_LOG_DIR
-zookeeper.tracelog.file=zookeeper_trace.log
-log4j.rootLogger=\${zookeeper.root.logger}
-log4j.appender.CONSOLE=org.apache.log4j.ConsoleAppender
-log4j.appender.CONSOLE.Threshold=\${zookeeper.console.threshold}
-log4j.appender.CONSOLE.layout=org.apache.log4j.PatternLayout
-log4j.appender.CONSOLE.layout.ConversionPattern=%d{ISO8601} [myid:%X{myid}] - %-5p [%t:%C{1}@%L] - %m%n
-EOF
+cp /zookeeper/conf/logback.xml /conf
 
 if [ -n "$JMXDISABLE" ]
 then
