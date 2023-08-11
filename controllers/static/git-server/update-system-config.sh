@@ -219,12 +219,17 @@ cat << EOF > playbooks/base/post.yaml
         zuul_log_verbose: true
 EOF
 
+cat << EOF > playbooks/config/zuul-connections.txt
+# ZUUL_CONNECTIONS
+EOF
+
 cat << EOF > playbooks/config/check.yaml
 - hosts: localhost
   vars:
     config_root: "{{ zuul.executor.work_root }}/{{ zuul.project.src_dir }}"
     zuul_config: "{{ config_root }}/zuul/main.yaml"
     nodepool_config: "{{ config_root }}/nodepool/nodepool.yaml"
+    zuul_connections: "{{ lookup('file', 'zuul-connections.txt') }}"
   tasks:
     - name: Ensure Zuul tenant config exists
       shell: |
@@ -233,11 +238,17 @@ cat << EOF > playbooks/config/check.yaml
           echo [] > "{{ zuul_config }}"
         fi
 
-        cat << EOF > "{{ zuul_config }}.conf"
-        # XX_CONNECTION
-        [scheduler]
-        tenant_config={{ zuul_config }}
-        EOF
+    - name: Setup Zuul config.conf file
+      ansible.builtin.copy:
+        dest: "{{ zuul_config }}.conf"
+        content: |
+          {{ zuul_connections }}
+
+          [scheduler]
+          tenant_config={{ zuul_config }}
+
+    - name: Reveal computed config
+      ansible.builtin.command: cat {{ zuul_config }}.conf
 
     - name: Validate Zuul tenant config
       # note: ansible appears to be messing with the env, resulting in:
