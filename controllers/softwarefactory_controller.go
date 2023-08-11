@@ -145,7 +145,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	r.EnsureCA()
 
 	// Ensure SF Admin ssh key pair
-	r.EnsureSSHKey("admin-ssh-key")
 	r.DeployZuulSecrets()
 
 	// The git server service is needed to store system jobs (config-check and config-update)
