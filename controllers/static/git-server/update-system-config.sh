@@ -273,12 +273,13 @@ cat << EOF > playbooks/config/check.yaml
 EOF
 
 cat << EOF > playbooks/config/update.yaml
+---
 - hosts: localhost
   roles:
     - setup-k8s-config
     - add-k8s-hosts
 
-- hosts: zuul-scheduler-sidecar
+- hosts: zuul-scheduler
   vars:
     config_ref: "{{ zuul.newrev | default('origin/master') }}"
   tasks:
@@ -302,13 +303,7 @@ EOF
 
 mkdir -p roles/add-k8s-hosts/tasks
 cat << EOF > roles/add-k8s-hosts/tasks/main.yaml
-- ansible.builtin.add_host:
-    name: "zuul-scheduler-sidecar"
-    ansible_connection: kubectl
-    # https://docs.ansible.com/ansible/latest/collections/kubernetes/core/kubectl_connection.html#ansible-collections-kubernetes-core-kubectl-connection
-    ansible_kubectl_container: scheduler-sidecar
-    ansible_kubectl_pod: "zuul-scheduler-0"
-
+---
 - ansible.builtin.add_host:
     name: "zuul-scheduler"
     ansible_connection: kubectl
