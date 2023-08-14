@@ -261,6 +261,62 @@ For further information check the Zuul documentation's [Gerrit section](https://
 
 ## How to configure Zuul via the config repo
 ## How to configure Nodepool via the config repo
+
+### Using cloud image from openstack cloud
+
+* on the config repo, edit nodepool/nodepool.yaml to add labels and providers
+
+```yaml
+labels:
+-   name: cloud-centos-9-stream
+    # min-ready: 1
+providers:
+- name: default
+  cloud: default
+  clean-floating-ips: true
+  image-name-format: '{image_name}-{timestamp}'
+  boot-timeout: 120 # default 60
+  cloud-images:
+    - name: cloud-centos-9-stream
+      username: cloud-user
+  pools:
+    - name: main
+      max-servers: 10
+      networks:
+        - $public_network_name
+      labels:
+        - cloud-image: cloud-centos-9-stream
+          name: cloud-centos-9-stream
+          flavor-name: $flavor
+          userdata: |
+            #cloud-config
+            package_update: true
+            users:
+              - name: cloud-user
+                ssh_authorized_keys:
+                  - $zuul-ssh-key
+```
+
+* propose a review and merge the change
+
+* if min-ready is set to 1, you can validate an instance is available with:
+
+```sh
+$ kubectl exec -ti nodepool-launcher-$uuid -c launcher -- nodepool list
++------------+----------+-----------------------+--------------------------------------+--------------+------+-------+-------------+----------+
+| ID         | Provider | Label                 | Server ID                            | Public IPv4  | IPv6 | State | Age         | Locked   |
++------------+----------+-----------------------+--------------------------------------+--------------+------+-------+-------------+----------+
+| 0000000001 | default  | cloud-centos-9-stream | 6b9c0efb-493d-442b-bb2f-550ffcdb3fb3 | $public_ip   |      | ready | 00:00:01:27 | unlocked |
++------------+----------+-----------------------+--------------------------------------+--------------+------+-------+-------------+----------+
+```
+
+* you can validate zuul-executor can connect to the instance with:
+
+```sh
+$kubectl exec -ti zuul-executor-0 -- ssh -o "StrictHostKeyChecking no" -i /var/lib/zuul-ssh/..data/priv cloud-user@$public_ip hostname
+Warning: Permanently added '$public_ip' (ED25519) to the list of known hosts.
+np0000000001
+```
 ## How to set the nodepool kube/config or clouds.yaml
 
 To add or modify an existing secret you have to:
