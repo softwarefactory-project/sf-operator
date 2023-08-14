@@ -1,0 +1,16 @@
+- hosts: all
+  tasks:
+    - name: Setup dstat
+      block:
+        - name: Install dstat package
+          package:
+            name: dstat
+            state: present
+          become: true
+
+        - include_role:
+            name: "{{ item }}"
+          loop:
+            - ensure-dstat-graph
+            - run-dstat
+      when: ansible_distribution == "CentOS"

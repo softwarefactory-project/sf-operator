@@ -25,7 +25,11 @@
     name: sf-operator
     parent: sf-operator-microshift
     timeout: 3600
-    post-run: playbooks/post.yaml
+    pre-run:
+      - playbooks/health-check/dstat-pre.yaml
+    post-run:
+      - playbooks/health-check/dstat-post.yaml
+      - playbooks/post.yaml
     run: playbooks/main.yaml
     abstract: true
     irrelevant-files:
@@ -55,7 +59,11 @@
     name: sf-operator-multinode
     parent: sf-operator-microshift-multinode
     timeout: 3600
-    post-run: playbooks/post.yaml
+    pre-run:
+      - playbooks/health-check/dstat-pre.yaml
+    post-run:
+      - playbooks/health-check/dstat-post.yaml
+      - playbooks/post.yaml
     run: playbooks/main.yaml
     abstract: true
     irrelevant-files:
