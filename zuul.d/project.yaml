@@ -16,6 +16,6 @@
         - sf-operator-upgrade
         - sf-operator-dev-multinode
         - ansible-lint
-    post:
+    release:
       jobs:
         - sf-operator-publish-olm-bundle-image

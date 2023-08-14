@@ -22,16 +22,26 @@
     awk '/^VERSION/{print $3}' {{ zuul.project.src_dir }}/Makefile
   register: _command_results
 
+- name: "Check if Tag Versions do not match"
+  fail:
+    msg: >
+      The version of the repo tag {{ zuul.tag }}
+      does not match the version defined in the
+      Makefile VERSION variable {{ _command_results.stdout }}
+  when:
+    - zuul.tag is defined
+    - zuul.tag != _command_results.stdout
+
 - name: "Set Tag Version"
   ansible.builtin.set_fact:
-    tag_version: "v{{ _command_results.stdout }}"
+    tag_version: "v{{ zuul.tag }}"
 
 - name: Generate the Operator's Bundle files
   community.general.make:
     target: bundle
     chdir: "{{ zuul.project.src_dir }}"
     params:
-      BUNDLE_GEN_FLAGS: "--version {{ _command_results.stdout }}"
+      BUNDLE_GEN_FLAGS: "--version {{ zuul.tag }}"
 
 - name: Build the Operator and Bundle images
   community.general.make:
