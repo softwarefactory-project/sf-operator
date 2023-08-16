@@ -27,14 +27,14 @@ const GS_PI_MOUNT_PATH = "/entry"
 //go:embed static/git-server/update-system-config.sh
 var preInitScriptTemplate string
 
+// This function creates dummy connections to be used during the config-check
 func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
 	var sb strings.Builder
 	sb.WriteString("\n")
 	for _, name := range sfv1.GetConnectionsName(spec) {
-		// Keep the indent in match with the XX_CONNECTION cookie
-		sb.WriteString(fmt.Sprintf("        [connection %s]\n", name))
-		sb.WriteString(fmt.Sprintf("        driver=git\n"))
-		sb.WriteString(fmt.Sprintf("        baseurl=localhost\n\n"))
+		sb.WriteString(fmt.Sprintf("[connection %s]\n", name))
+		sb.WriteString(fmt.Sprintf("driver=git\n"))
+		sb.WriteString(fmt.Sprintf("baseurl=localhost\n\n"))
 	}
 	return sb.String()
 }
@@ -42,7 +42,7 @@ func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
 func (r *SFController) makePreInitScript() string {
 	return strings.Replace(
 		preInitScriptTemplate,
-		"# XX_CONNECTION",
+		"# ZUUL_CONNECTIONS",
 		makeZuulConnectionConfig(&r.cr.Spec.Zuul), 1)
 }
 
