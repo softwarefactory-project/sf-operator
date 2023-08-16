@@ -54,6 +54,7 @@
       # dnsmasq
       microshift_additional_addresses:
         - "sftests.com"
+      etcd_on_ramdisk: true
 
 - job:
     name: sf-operator-multinode
