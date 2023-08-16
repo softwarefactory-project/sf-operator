@@ -31,10 +31,6 @@ cat << EOF > zuul.d/jobs-base.yaml
     secrets:
       - site_sflogs
 
-- job:
-    name: sleeper
-    run: playbooks/sleeper.yaml
-
 - semaphore:
     name: semaphore-config-update
     max: 1
@@ -61,10 +57,6 @@ cat << EOF > zuul.d/jobs-base.yaml
     nodeset:
       nodes: []
 
-- project:
-    post:
-      jobs:
-        - sleeper
 EOF
 
 if [ -n "${CONFIG_REPO_NAME}" -a -n "${CONFIG_ZUUL_CONNECTION_NAME}" ]; then
@@ -169,23 +161,15 @@ if [ -n "${CONFIG_REPO_NAME}" -a -n "${CONFIG_ZUUL_CONNECTION_NAME}" ]; then
         - config-update
 EOF
 else
-  echo "---" > zuul.d/config-project.yaml
-fi
-
-cat << EOF > playbooks/sleeper.yaml
-- hosts: localhost
-  tasks:
-    - debug:
-        msg: "Hello zuul, i'm taking a nap"
-
-    - command: sleep 600
+  cat  << EOF > zuul.d/config-project.yaml
+---
+[]
 EOF
+fi
 
 cat << EOF > playbooks/base/pre.yaml
 - hosts: localhost
   tasks:
-    - debug:
-        var: zuul
     - block:
         - import_role:
             name: emit-job-header
