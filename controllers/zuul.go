@@ -105,15 +105,6 @@ func create_zuul_volumes(service string) []apiv1.Volume {
 				},
 			},
 		},
-		{
-			Name: "admin-ssh-key",
-			VolumeSource: apiv1.VolumeSource{
-				Secret: &apiv1.SecretVolumeSource{
-					SecretName:  "admin-ssh-key",
-					DefaultMode: &mod,
-				},
-			},
-		},
 	}
 	if !is_statefulset(service) {
 		// statefulset already has a PV for the service-name,
@@ -158,11 +149,6 @@ var scheduler_init_and_sidecar_vols = []apiv1.VolumeMount{
 		Name:      "tooling-vol",
 		SubPath:   "generate-zuul-tenant-yaml.sh",
 		MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
-	{
-		Name:      "admin-ssh-key",
-		MountPath: "/var/lib/admin-ssh",
-		ReadOnly:  true,
-	},
 }
 
 func (r *SFController) init_scheduler_config() apiv1.Container {
