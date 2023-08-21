@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/softwarefactory-project/sf-operator/cli"
-	nodepoolCli "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 )
 
@@ -25,19 +24,25 @@ func ensureSSLSecret(env *utils.ENV, serviceCAContent []byte,
 ) {
 	var secret apiv1.Secret
 	secretName := serviceName + "-ssl-cert"
-	if !nodepoolCli.GetM(env, secretName, &secret) {
+	data := map[string][]byte{
+		"CA":  serviceCAContent,
+		"crt": serviceCertContent,
+		"key": serviceKeyContent,
+	}
+	if !utils.GetM(env, secretName, &secret) {
+		// Create the secret as it does not exists
 		secret := apiv1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secretName,
 				Namespace: env.Ns,
 			},
-			Data: map[string][]byte{
-				"CA":  serviceCAContent,
-				"crt": serviceCertContent,
-				"key": serviceKeyContent,
-			},
+			Data: data,
 		}
-		nodepoolCli.CreateR(env, &secret)
+		utils.CreateR(env, &secret)
+	} else {
+		// Update the secret data
+		secret.Data = data
+		utils.UpdateR(env, &secret)
 	}
 }
 

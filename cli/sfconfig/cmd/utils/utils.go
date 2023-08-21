@@ -11,6 +11,7 @@ import (
 	apiroutev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -93,6 +94,39 @@ func Parse_string(text string, data any) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+// Helper to fetch a kubernetes resource by name, returns true when it is found.
+func GetM(env *ENV, name string, obj client.Object) bool {
+	err := env.Cli.Get(env.Ctx,
+		client.ObjectKey{
+			Name:      name,
+			Namespace: env.Ns,
+		}, obj)
+	if errors.IsNotFound(err) {
+		return false
+	} else if err != nil {
+		panic(fmt.Errorf("Could not get %s: %s", name, err))
+	}
+	return true
+}
+
+// Helper to create a kubernetes resource.
+func CreateR(env *ENV, obj client.Object) {
+	fmt.Fprintf(os.Stderr, "Creating %s in %s\n", obj.GetName(), env.Ns)
+	obj.SetNamespace(env.Ns)
+	if err := env.Cli.Create(env.Ctx, obj); err != nil {
+		panic(fmt.Errorf("Could not create %s: %s", obj, err))
+	}
+}
+
+// Helper to update a kubernetes resource.
+func UpdateR(env *ENV, obj client.Object) bool {
+	fmt.Fprintf(os.Stderr, "Updating %s in %s\n", obj.GetName(), env.Ns)
+	if err := env.Cli.Update(env.Ctx, obj); err != nil {
+		panic(fmt.Errorf("Could not update %s: %s", obj, err))
+	}
+	return true
 }
 
 func CreateTempPlaybookFile(content string) (*os.File, error) {
