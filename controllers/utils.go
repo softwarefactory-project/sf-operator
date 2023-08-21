@@ -983,42 +983,16 @@ func (r *SFUtilContext) getRouteByName(routeName string) (*apiroutev1.Route, err
 	return route, err
 }
 
-func MkHTTSRouteCustomCrt(
-	name string, ns string, host string, serviceName string, path string,
-	port int, annotations map[string]string, fqdn string,
-	certificate string, key string, caCertificate string) apiroutev1.Route {
-	return apiroutev1.Route{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   ns,
-			Annotations: annotations,
-		},
-		Spec: apiroutev1.RouteSpec{
-			TLS: &apiroutev1.TLSConfig{
-				InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
-				Termination:                   apiroutev1.TLSTerminationEdge,
-				Certificate:                   certificate,
-				Key:                           key,
-				CACertificate:                 caCertificate,
-			},
-			Host: host + "." + fqdn,
-			To: apiroutev1.RouteTargetReference{
-				Kind:   "Service",
-				Name:   serviceName,
-				Weight: pointer.Int32(100),
-			},
-			Port: &apiroutev1.RoutePort{
-				TargetPort: intstr.FromInt(port),
-			},
-			Path:           path,
-			WildcardPolicy: "None",
-		},
-	}
-}
-
 func MkHTTSRoute(
 	name string, ns string, host string, serviceName string, path string,
-	port int, annotations map[string]string, fqdn string) apiroutev1.Route {
+	port int, annotations map[string]string, fqdn string, customTls *apiroutev1.TLSConfig) apiroutev1.Route {
+	tls := apiroutev1.TLSConfig{
+		InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
+		Termination:                   apiroutev1.TLSTerminationEdge,
+	}
+	if customTls != nil {
+		tls = *customTls
+	}
 	return apiroutev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -1026,10 +1000,7 @@ func MkHTTSRoute(
 			Annotations: annotations,
 		},
 		Spec: apiroutev1.RouteSpec{
-			TLS: &apiroutev1.TLSConfig{
-				InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
-				Termination:                   apiroutev1.TLSTerminationEdge,
-			},
+			TLS:  &tls,
 			Host: host + "." + fqdn,
 			To: apiroutev1.RouteTargetReference{
 				Kind:   "Service",
@@ -1048,6 +1019,8 @@ func MkHTTSRoute(
 func (r *SFUtilContext) ensureHTTPSRoute(
 	name string, host string, serviceName string, path string,
 	port int, annotations map[string]string, fqdn string) {
+
+	route := apiroutev1.Route{}
 
 	// check if there is custom certificate
 	var secret apiv1.Secret
@@ -1074,14 +1047,18 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 		if err != nil {
 			panic("SSL Key is incorrect!")
 		}
-
-		route := MkHTTSRouteCustomCrt(name, r.ns, host, serviceName, path, port, annotations, fqdn,
-			string(sslCrt), string(sslKey), string(sslCA))
-		r.ensure_route(route, name)
-		return
+		tls := apiroutev1.TLSConfig{
+			InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
+			Termination:                   apiroutev1.TLSTerminationEdge,
+			Certificate:                   string(sslCrt),
+			Key:                           string(sslKey),
+			CACertificate:                 string(sslCA),
+		}
+		route = MkHTTSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, &tls)
+	} else {
+		route = MkHTTSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, nil)
 	}
 	// TODO: add letsencrypt functionality
-	route := MkHTTSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn)
 	r.ensure_route(route, name)
 }
 
