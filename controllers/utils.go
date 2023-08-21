@@ -15,7 +15,6 @@ import (
 	"os"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -954,10 +953,23 @@ func (r *SFUtilContext) create_job(name string, container apiv1.Container) batch
 }
 
 func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) {
-	found := r.GetM(name, &route)
+	current := apiroutev1.Route{}
+	found := r.GetM(name, &current)
 	if !found {
 		r.log.V(1).Info("Creating route...", "name", name)
 		r.CreateR(&route)
+	} else {
+		// Route already exist - check if we need to update the Route
+		// Use the String repr of the RouteSpec to compare for changes
+		// This comparaison mechanics may fail in case of some Route Spec default values
+		// not specified in the wanted version.
+		wanted_repr := route.Spec.String()
+		current_repr := current.Spec.String()
+		if wanted_repr != current_repr {
+			r.log.V(1).Info("Updating route...", "name", name)
+			current.Spec = route.Spec
+			r.UpdateR(&current)
+		}
 	}
 }
 
@@ -969,27 +981,6 @@ func (r *SFUtilContext) getRouteByName(routeName string) (*apiroutev1.Route, err
 	}, route)
 
 	return route, err
-}
-
-func (r *SFUtilContext) ensureRouteWithCert(name string, sslCrt []byte, namespace string) {
-	var current_route apiroutev1.Route
-	route, _ := r.getRouteByName(name)
-	if route.Spec.TLS != nil {
-		r.log.V(1).Info("There is already cert provided for route: " + name)
-		if route.Spec.TLS.Certificate != string(sslCrt) {
-			r.log.V(1).Info("There is a cert missmatch for route: " + name + ". Recreating route...")
-			r.DeleteRoute(name)
-			// wait until route is not removed
-			for i := 0; i < 10; i++ {
-				if r.GetM(name, &current_route) {
-					r.log.V(1).Info("Waiting for removing route... retry: " + strconv.Itoa(i))
-					time.Sleep(1 * time.Second)
-				} else {
-					break
-				}
-			}
-		}
-	}
 }
 
 func MkHTTSRouteCustomCrt(
@@ -1012,13 +1003,15 @@ func MkHTTSRouteCustomCrt(
 			},
 			Host: host + "." + fqdn,
 			To: apiroutev1.RouteTargetReference{
-				Kind: "Service",
-				Name: serviceName,
+				Kind:   "Service",
+				Name:   serviceName,
+				Weight: pointer.Int32(100),
 			},
 			Port: &apiroutev1.RoutePort{
 				TargetPort: intstr.FromInt(port),
 			},
-			Path: path,
+			Path:           path,
+			WildcardPolicy: "None",
 		},
 	}
 }
@@ -1039,13 +1032,15 @@ func MkHTTSRoute(
 			},
 			Host: host + "." + fqdn,
 			To: apiroutev1.RouteTargetReference{
-				Kind: "Service",
-				Name: serviceName,
+				Kind:   "Service",
+				Name:   serviceName,
+				Weight: pointer.Int32(100),
 			},
 			Port: &apiroutev1.RoutePort{
 				TargetPort: intstr.FromInt(port),
 			},
-			Path: path,
+			Path:           path,
+			WildcardPolicy: "None",
 		},
 	}
 }
@@ -1068,6 +1063,7 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 		r.log.V(1).Info("Service has secret that provides custom SSL certificate!")
 		sslCA, err := r.getSecretDataFromKey(secretName, "CA")
 		if err != nil {
+			// TODO: Instead of panic then add a status condition
 			panic("CA certificate is incorrect!")
 		}
 		sslCrt, err := r.getSecretDataFromKey(secretName, "crt")
@@ -1077,13 +1073,6 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 		sslKey, err := r.getSecretDataFromKey(secretName, "key")
 		if err != nil {
 			panic("SSL Key is incorrect!")
-		}
-		// NOTE: It is not possible to change the route cert without re-creating route.
-		// Ensure that the current route does not have already the cert
-		var current_route apiroutev1.Route
-		if r.GetM(name, &current_route) {
-			r.log.V(1).Info("Checking details in current route")
-			r.ensureRouteWithCert(name, sslCrt, r.ns)
 		}
 
 		route := MkHTTSRouteCustomCrt(name, r.ns, host, serviceName, path, port, annotations, fqdn,
