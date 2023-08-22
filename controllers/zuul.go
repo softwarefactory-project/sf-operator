@@ -44,7 +44,7 @@ func is_statefulset(service string) bool {
 	return service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger"
 }
 
-func create_zuul_container(fqdn string, service string) []apiv1.Container {
+func (r *SFController) create_zuul_container(service string) []apiv1.Container {
 	volumes := []apiv1.VolumeMount{
 		{
 			Name:      "zuul-config",
@@ -72,19 +72,29 @@ func create_zuul_container(fqdn string, service string) []apiv1.Container {
 			SubPath:   "ca.crt",
 		},
 	}
+	envs := []apiv1.EnvVar{
+		Create_env("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
+		Create_env("HOME", "/var/lib/zuul"),
+	}
+	if service == "zuul-scheduler" {
+		volumes = append(volumes,
+			apiv1.VolumeMount{
+				Name:      "tooling-vol",
+				SubPath:   "generate-zuul-tenant-yaml.sh",
+				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
+		)
+		envs = append(envs, r.get_generate_tenants_envs()...)
+
+	}
 	command := []string{
 		"sh", "-c",
 		fmt.Sprintf("exec %s -f -d", service),
 	}
 	container := apiv1.Container{
-		Name:    service,
-		Image:   Zuul_Image(service),
-		Command: command,
-		Env: []apiv1.EnvVar{
-			Create_env("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
-			Create_env("HOME", "/var/lib/zuul"),
-			Create_env("ZUUL_WEB_ROOT", "https://zuul."+fqdn),
-		},
+		Name:         service,
+		Image:        Zuul_Image(service),
+		Command:      command,
+		Env:          envs,
 		VolumeMounts: volumes,
 	}
 	return []apiv1.Container{container}
@@ -143,14 +153,6 @@ func (r *SFController) get_generate_tenants_envs() []apiv1.EnvVar {
 	}
 }
 
-var scheduler_init_and_sidecar_vols = []apiv1.VolumeMount{
-	{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
-	{
-		Name:      "tooling-vol",
-		SubPath:   "generate-zuul-tenant-yaml.sh",
-		MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
-}
-
 func (r *SFController) init_scheduler_config() apiv1.Container {
 	return apiv1.Container{
 		Name:    "init-scheduler-config",
@@ -158,22 +160,15 @@ func (r *SFController) init_scheduler_config() apiv1.Container {
 		Command: []string{"/usr/local/bin/generate-zuul-tenant-yaml.sh"},
 		Env: append(r.get_generate_tenants_envs(),
 			Create_env("HOME", "/var/lib/zuul"), Create_env("INIT_CONTAINER", "1")),
-		VolumeMounts:    scheduler_init_and_sidecar_vols,
+		VolumeMounts: []apiv1.VolumeMount{
+			{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
+			{
+				Name:      "tooling-vol",
+				SubPath:   "generate-zuul-tenant-yaml.sh",
+				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
+		},
 		SecurityContext: create_security_context(false),
 	}
-}
-
-func (r *SFController) scheduler_sidecar_container() apiv1.Container {
-	container := apiv1.Container{
-		Name:            "scheduler-sidecar",
-		Image:           BUSYBOX_IMAGE,
-		Command:         []string{"sh", "-c", "touch /tmp/healthy && sleep inf"},
-		Env:             append(r.get_generate_tenants_envs(), Create_env("HOME", "/var/lib/zuul")),
-		VolumeMounts:    scheduler_init_and_sidecar_vols,
-		ReadinessProbe:  Create_readiness_cmd_probe([]string{"cat", "/tmp/healthy"}),
-		SecurityContext: create_security_context(false),
-	}
-	return container
 }
 
 func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cfg *ini.File) bool {
@@ -183,7 +178,7 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	annotations := map[string]string{
 		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": IniSectionsChecksum(cfg, sections),
-		"serial":                "1",
+		"serial":                "2",
 	}
 
 	if r.isConfigRepoSet() {
@@ -194,8 +189,7 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 
 	var setAdditionalContainers = func(sts *appsv1.StatefulSet) {
 		sts.Spec.Template.Spec.InitContainers = append(init_containers, r.init_scheduler_config())
-		sts.Spec.Template.Spec.Containers = append(
-			create_zuul_container(r.cr.Spec.FQDN, "zuul-scheduler"), r.scheduler_sidecar_container())
+		sts.Spec.Template.Spec.Containers = append(r.create_zuul_container("zuul-scheduler"))
 	}
 
 	scheduler_tooling_data := make(map[string]string)
@@ -240,7 +234,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 
 	ze := r.create_headless_statefulset("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), int32(r.cr.Spec.Zuul.Executor.Replicas))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
-	ze.Spec.Template.Spec.Containers = create_zuul_container(r.cr.Spec.FQDN, "zuul-executor")
+	ze.Spec.Template.Spec.Containers = r.create_zuul_container("zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", ZUUL_PROMETHEUS_PORT)
 	ze.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", ZUUL_PROMETHEUS_PORT)
@@ -288,7 +282,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 
 	zw := r.create_deployment("zuul-web", "")
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
-	zw.Spec.Template.Spec.Containers = create_zuul_container(r.cr.Spec.FQDN, "zuul-web")
+	zw.Spec.Template.Spec.Containers = r.create_zuul_container("zuul-web")
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/api/info", ZUUL_WEB_PORT)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/api/info", ZUUL_WEB_PORT)
