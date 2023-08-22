@@ -1,4 +1,7 @@
 ---
+- ansible.builtin.include_role:
+    name: setup-variables
+
 - name: Iterate on preparation roles
   ansible.builtin.include_role:
     name: "roles/utils/{{ role }}"
@@ -24,7 +27,7 @@
     - expand-volume
     - ensure-job-result-artifacts
     - validate-purgelogs
-    - replace-route-cert
+    - test-custom-route-certs
   loop_control:
     loop_var: role
 

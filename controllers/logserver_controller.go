@@ -294,8 +294,14 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	// refresh current deployment
 	r.GetM(dep.GetName(), &currentDep)
 
+	route_changed := r.ensureHTTPSRoute(
+		r.cr.Name+"-logserver", LOGSERVER_IDENT,
+		LOGSERVER_HTTPD_PORT_NAME, "/", LOGSERVER_HTTPD_PORT, map[string]string{}, r.cr.Spec.FQDN)
+
+	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
+
 	return sfv1.LogServerStatus{
-		Ready:              deploymentUpdated && r.IsDeploymentReady(&currentDep) && pvc_readiness,
+		Ready:              deploymentUpdated && r.IsDeploymentReady(&currentDep) && pvc_readiness && !route_changed,
 		ObservedGeneration: r.cr.Generation,
 		ReconciledBy:       getOperatorConditionName(),
 	}
@@ -349,7 +355,6 @@ func (r *LogServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{RequeueAfter: delay}, nil
 	} else {
 		log.V(1).Info("Logserver CR - Reconcile completed!")
-		controller.setupLogserverIngress()
 		return ctrl.Result{}, nil
 	}
 }
@@ -360,11 +365,4 @@ func (r *LogServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&sfv1.LogServer{}).
 		Owns(&corev1.Secret{}).
 		Complete(r)
-}
-
-func (r *LogServerController) setupLogserverIngress() {
-	r.ensureHTTPSRoute(
-		r.cr.Name+"-logserver", LOGSERVER_IDENT,
-		LOGSERVER_HTTPD_PORT_NAME, "/", LOGSERVER_HTTPD_PORT, map[string]string{}, r.cr.Spec.FQDN)
-	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
 }

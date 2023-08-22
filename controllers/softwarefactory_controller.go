@@ -86,10 +86,6 @@ func isOperatorReady(services map[string]bool) bool {
 	return true
 }
 
-func (r *SFController) SetupIngress() {
-	r.setupZuulIngress()
-}
-
 func (r *SFController) DeployLogserverResource() bool {
 
 	resource := sfv1.LogServer{
@@ -173,14 +169,8 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	r.log.V(1).Info(messageInfo(r, services))
 
-	ready := isOperatorReady(services)
-
-	if ready {
-		r.SetupIngress()
-	}
-
 	return sfv1.SoftwareFactoryStatus{
-		Ready:              ready,
+		Ready:              isOperatorReady(services),
 		ObservedGeneration: r.cr.Generation,
 		ReconciledBy:       getOperatorConditionName(),
 		Conditions:         r.cr.Status.Conditions,
