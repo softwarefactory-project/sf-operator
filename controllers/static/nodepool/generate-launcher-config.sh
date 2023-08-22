@@ -2,8 +2,6 @@
 
 set -ex
 
-export HOME=/tmp
-
 # Generate the default tenants configuration file
 cat << EOF > ~/nodepool.yaml
 ---
@@ -45,4 +43,7 @@ if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
 
 fi
 
+echo "Generated nodepool config:"
+echo
+cat ~/nodepool.yaml
 cp ~/nodepool.yaml /etc/nodepool/nodepool.yaml
