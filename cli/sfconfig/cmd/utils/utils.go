@@ -206,3 +206,52 @@ func GetKubernetesClientSet() (*rest.Config, *kubernetes.Clientset) {
 	}
 	return kubeConfig, kubeClientset
 }
+
+var TenantTemplate = `- tenant:
+    name: {{ .Name }}
+    source:
+      {{ .Source }}:
+        {{ if .Trusted }}config-projects:
+        {{ range .Trusted}}- {{ . }}
+        {{end}}
+        {{- end -}}
+        {{ if .Untrusted  }}untrusted-projects:
+        {{ range .Untrusted}}- {{ . }}
+        {{ end -}}
+        {{- end }}
+`
+
+type TenantTemplateStruct struct {
+	Name      string
+	Source    string
+	Trusted   []string
+	Untrusted []string
+}
+
+func GenerateZuulTemplateFile(tenant TenantTemplateStruct) (string, error) {
+	template_config, err := Parse_string(TenantTemplate, tenant)
+
+	if err != nil {
+		fmt.Print(err)
+		return "", err
+	}
+	return template_config, nil
+}
+
+type TenantConnProjects struct {
+	ConfigProjects    []string `yaml:"config-projects"`
+	UntrustedProjects []string `yaml:"untrusted-projects"`
+}
+
+type TenantConnectionSource map[string]TenantConnProjects
+
+type TenantBody struct {
+	Name   string                 `yaml:"name"`
+	Source TenantConnectionSource `yaml:"source,omitempty"`
+}
+
+type Tenant struct {
+	Tenant TenantBody `yaml:"tenant"`
+}
+
+type TenantConfig []Tenant

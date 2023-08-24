@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"gopkg.in/yaml.v3"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -59,6 +60,35 @@ func EnsureDemoConfig(env *utils.ENV, sfconfig *Config) {
 	EnsureRepo(sfconfig, apiKey, "demo-project")
 	SetupTenant("deploy/config", "demo-tenant")
 	PushRepoIfNeeded("deploy/config")
+}
+
+func SetupTenant(configPath string, tenantName string) {
+	tenantDir := filepath.Join(configPath, "zuul")
+	if err := os.MkdirAll(tenantDir, 0755); err != nil {
+		panic(err)
+	}
+	tenantFile := filepath.Join(tenantDir, "main.yaml")
+
+	tenantData := utils.TenantConfig{
+		{
+			Tenant: utils.TenantBody{
+				Name: tenantName,
+				Source: utils.TenantConnectionSource{
+					"gerrit": {
+						ConfigProjects:    []string{"config"},
+						UntrustedProjects: []string{"demo-project"},
+					},
+				},
+			},
+		},
+	}
+
+	template_data_output, _ := yaml.Marshal(tenantData)
+
+	if err := os.WriteFile(tenantFile, []byte(template_data_output), 0644); err != nil {
+		panic(err)
+	}
+	runCmd("git", "-C", configPath, "add", "zuul/main.yaml")
 }
 
 func PushRepoIfNeeded(path string) {
