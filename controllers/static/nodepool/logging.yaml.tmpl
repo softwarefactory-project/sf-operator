@@ -1,8 +1,10 @@
 version: 1
 formatters:
   normal:
+    class: 'nodepool.logconfig.MultiLineFormatter'
     format: "%(asctime)s %(levelname)s %(name)s: %(message)s"
   console:
+    class: 'nodepool.logconfig.MultiLineFormatter'
     format: "%(levelname)7s %(name)s: %(message)s"
 handlers:
   console:
