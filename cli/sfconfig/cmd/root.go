@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/softwarefactory-project/sf-operator/cli"
+	bootstrap "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/bootstrap-tenant-config-repo"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/operator"
@@ -70,6 +71,7 @@ func init() {
 	rootCmd.AddCommand(sfprometheus.PrometheusCmd)
 	rootCmd.AddCommand(nodepool.ProvidersSecretsCmd)
 
+	rootCmd.AddCommand(bootstrap.BootstrapTenantConfigRepoCmd)
 	rootCmd.Flags().BoolP("erase", "", false, "Erase data")
 }
 

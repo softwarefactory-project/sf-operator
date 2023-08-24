@@ -406,3 +406,14 @@ To get access to zuul-client tool run, from the root of the project:
 ```bash
 ./tools/sfconfig zuul-client -h
 ```
+
+## Using bootstrap Zuul Tenant Config
+
+This feature is included in `sfconfig` tool, this generates template files to ease the creation of new pipelines, jobs and playbooks for zuul.
+
+To use run the tool with the following options:
+```bash
+tools/sfconfig bootstrap-tenant-config-repo --connection <CONNECTION NAME> --outpath <DIRECTORY ROOT PATH>
+```
+It will generate files prefixed with the connection name, and create the directory structure if they do not exist, in the outpath directory.
+

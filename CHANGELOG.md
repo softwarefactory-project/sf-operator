@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Alpha-2]
 
+- [X] Add Zuul Bootstrap Zuul Tenant Config subcommand to sfconfig cli
 - [X] Create ADR for sfconfig binary
 - [X] issue disk space metrics	Matthieu Huin
 - [X] Add a new Zuul connection (external Gerrit)
