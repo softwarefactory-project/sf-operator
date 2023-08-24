@@ -15,6 +15,8 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	sf "github.com/softwarefactory-project/sf-operator/controllers"
+
 	"github.com/softwarefactory-project/sf-operator/cli"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 )
@@ -23,7 +25,7 @@ func ensureSSLSecret(env *utils.ENV, serviceCAContent []byte,
 	serviceCertContent []byte, serviceKeyContent []byte, serviceName string,
 ) {
 	var secret apiv1.Secret
-	secretName := serviceName + "-ssl-cert"
+	secretName := sf.GetCustomRouteSSLSecretName(serviceName)
 	data := map[string][]byte{
 		"CA":  serviceCAContent,
 		"crt": serviceCertContent,
