@@ -6,7 +6,12 @@
 package controllers
 
 import (
+	"strconv"
+
+	mariadbclient "github.com/mariadb-operator/mariadb-operator/pkg/client"
+	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const DBImage = "quay.io/software-factory/mariadb:10.5.16-4"
@@ -14,10 +19,11 @@ const DBImage = "quay.io/software-factory/mariadb:10.5.16-4"
 const MARIADB_PORT = 3306
 const MARIADB_PORT_NAME = "mariadb-port"
 
-func (r *SFController) EnsureDBInit(name string) ([]apiv1.Container, apiv1.Secret) {
-	db_password := r.GenerateSecretUUID(name + "-db-password")
-	c := "CREATE DATABASE IF NOT EXISTS " + name + " CHARACTER SET utf8 COLLATE utf8_general_ci; "
-	g := "GRANT ALL PRIVILEGES ON " + name + ".* TO '" + name + "'@'%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+const ZUUL_DB_CONFIG_SECRET = "zuul-db-connection"
+
+func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
+	c := "CREATE DATABASE IF NOT EXISTS " + dbname + " CHARACTER SET utf8 COLLATE utf8_general_ci; "
+	g := "GRANT ALL PRIVILEGES ON " + dbname + ".* TO '" + username + "'@'%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
 	container := apiv1.Container{
 		Name:            "mariadb-client",
 		Image:           DBImage,
@@ -36,10 +42,70 @@ done
 `},
 		Env: []apiv1.EnvVar{
 			Create_secret_env("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
-			Create_secret_env("USER_PASSWORD", name+"-db-password", name+"-db-password"),
+			{
+				Name:  "USER_PASSWORD",
+				Value: password,
+			},
 		},
 	}
-	return []apiv1.Container{container}, db_password
+	return container
+}
+
+func (r *SFController) CreateProvisionDBJob(database string, password string) batchv1.Job {
+	var ttl int32 = 600
+	var backoffLimit int32 = 5
+	dbInitJob := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      database + "-db-provision",
+			Namespace: r.ns,
+		},
+		Spec: batchv1.JobSpec{
+			TTLSecondsAfterFinished: &ttl,
+			BackoffLimit:            &backoffLimit,
+			Template: apiv1.PodTemplateSpec{
+				Spec: apiv1.PodSpec{
+					RestartPolicy: apiv1.RestartPolicyOnFailure,
+					Containers: []apiv1.Container{
+						r.CreateDBInitContainer(database, password, database),
+					},
+				},
+			},
+		},
+	}
+	r.GetOrCreate(dbInitJob)
+	return *dbInitJob
+}
+
+func (r *SFController) DBPostInit(zuul_db_config_secret apiv1.Secret) apiv1.Secret {
+	zuulOpts := mariadbclient.Opts{
+		Username: "zuul",
+		Password: NewUUIDString(),
+		Host:     "mariadb",
+		Port:     MARIADB_PORT,
+		Database: "zuul",
+		Params:   map[string]string{},
+	}
+	dsn, err := mariadbclient.BuildDSN(zuulOpts)
+	if err != nil {
+		r.log.V(1).Error(err, "Could not generate DSN")
+		return zuul_db_config_secret
+	}
+	zuulSecretData := map[string][]byte{
+		"username": []byte(zuulOpts.Username),
+		"password": []byte(zuulOpts.Password),
+		"host":     []byte(zuulOpts.Host),
+		"port":     []byte(strconv.Itoa(int(zuulOpts.Port))),
+		"database": []byte(zuulOpts.Database),
+		"dsn":      []byte(dsn),
+	}
+
+	dbInitJob := r.CreateProvisionDBJob(zuulOpts.Database, zuulOpts.Password)
+	if *dbInitJob.Spec.Completions > 0 {
+		zuul_db_config_secret.Data = zuulSecretData
+		r.GetOrCreate(&zuul_db_config_secret)
+	}
+
+	return zuul_db_config_secret
 }
 
 func (r *SFController) DeployMariadb() bool {
@@ -86,5 +152,21 @@ func (r *SFController) DeployMariadb() bool {
 	srv := r.create_service("mariadb", "mariadb", service_ports, MARIADB_PORT_NAME)
 	r.GetOrCreate(&srv)
 
-	return r.IsStatefulSetReady(&dep)
+	var zuul_db_config_secret apiv1.Secret
+
+	if r.IsStatefulSetReady(&dep) {
+		zuul_db_config_secret = apiv1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ZUUL_DB_CONFIG_SECRET,
+				Namespace: r.ns,
+			},
+			Data: nil,
+		}
+		if !r.GetM(ZUUL_DB_CONFIG_SECRET, &zuul_db_config_secret) {
+			r.log.V(1).Info("Starting DB Post Init")
+			zuul_db_config_secret = r.DBPostInit(zuul_db_config_secret)
+		}
+	}
+
+	return r.IsStatefulSetReady(&dep) && zuul_db_config_secret.Data != nil
 }
