@@ -173,14 +173,17 @@ type SoftwareFactorySpec struct {
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory
 type SoftwareFactoryStatus struct {
 	// The deployment status.
-	Ready              bool   `json:"ready,omitempty"`
-	ObservedGeneration int64  `json:"observedGeneration,omitempty"`
-	ReconciledBy       string `json:"reconciledBy,omitempty"`
+	Ready              bool               `json:"ready,omitempty"`
+	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
+	ReconciledBy       string             `json:"reconciledBy,omitempty"`
+	Conditions         []metav1.Condition `json:"conditions,omitempty" optional:"true"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Ready",type=boolean,JSONPath=`.status.ready`
+//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[0].status",description="Status"
+//+kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[0].message",description="Message"
 //+kubebuilder:resource:shortName="sf"
 
 // SoftwareFactory is the Schema for the softwarefactories API
