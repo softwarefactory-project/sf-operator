@@ -155,7 +155,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	services["Zookeeper"] = r.DeployZookeeper()
 
 	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] {
-		add_condition(&r.cr.Status.Conditions, "ZuulReady", "Init", "Initializing Zuul service...")
 		services["Zuul"] = r.DeployZuul()
 	}
 
@@ -166,11 +165,9 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	}
 
 	if services["Zuul"] {
-		complete_condition(&r.cr.Status.Conditions, "ZuulReady", "Ready", "Zuul service is running")
-		add_condition(&r.cr.Status.Conditions, "ConfigReady", "Init", "Initializing config...")
 		services["Config"] = r.SetupConfigJob()
 		if services["Config"] {
-			complete_condition(&r.cr.Status.Conditions, "ConfigReady", "Ready", "Config is ready")
+			refresh_condition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
 		}
 	}
 

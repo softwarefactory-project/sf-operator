@@ -127,9 +127,9 @@ func parse_template(templatePath string, data any) (string, error) {
 	return buf.String(), nil
 }
 
-func new_condition(t string, reason string, message string) metav1.Condition {
+func new_condition(conditiontype string, reason string, message string) metav1.Condition {
 	return metav1.Condition{
-		Type:               t,
+		Type:               conditiontype,
 		Status:             metav1.ConditionUnknown,
 		Reason:             reason,
 		Message:            message,
@@ -137,23 +137,28 @@ func new_condition(t string, reason string, message string) metav1.Condition {
 	}
 }
 
-func add_condition(conditions *[]metav1.Condition, t string, reason string, message string) {
-	for _, condition := range *conditions {
-		if condition.Type == t {
-			return
+// Function to add or update conditions of a resource
+//
+// If a condition of type t does not exist, it creates a new condition,
+// otherwise updates with the new parameters
+
+func refresh_condition(conditions *[]metav1.Condition, conditiontype string, status metav1.ConditionStatus, reason string, message string) {
+	foundCondition := metav1.Condition{}
+	for i, condition := range *conditions {
+		if condition.Type == conditiontype {
+			foundCondition = condition
+			if condition.Status != status ||
+				condition.Reason != reason ||
+				condition.Message != message {
+				(*conditions)[i].Status = status
+				(*conditions)[i].Reason = reason
+				(*conditions)[i].Message = message
+				(*conditions)[i].LastTransitionTime = metav1.NewTime(time.Now())
+			}
 		}
 	}
-	*conditions = append([]metav1.Condition{new_condition(t, reason, message)}, *conditions...)
-}
-
-func complete_condition(conditions *[]metav1.Condition, t string, reason string, message string) {
-	for i, condition := range *conditions {
-		if condition.Type == t {
-			(*conditions)[i].Status = metav1.ConditionTrue
-			(*conditions)[i].Reason = reason
-			(*conditions)[i].Message = message
-			(*conditions)[i].LastTransitionTime = metav1.NewTime(time.Now())
-		}
+	if reflect.DeepEqual(foundCondition, metav1.Condition{}) {
+		*conditions = append([]metav1.Condition{new_condition(conditiontype, reason, message)}, *conditions...)
 	}
 }
 
