@@ -198,7 +198,7 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 
 	zs_volumes := create_zuul_volumes("zuul-scheduler")
 	zs_replicas := int32(1)
-	zs := r.create_statefulset("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), zs_replicas)
+	zs := r.create_statefulset("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), zs_replicas, apiv1.ReadWriteOnce)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	setAdditionalContainers(&zs)
 	zs.Spec.Template.Spec.Volumes = zs_volumes
@@ -232,7 +232,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-component-config": IniSectionsChecksum(cfg, sections),
 	}
 
-	ze := r.create_headless_statefulset("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), int32(r.cr.Spec.Zuul.Executor.Replicas))
+	ze := r.create_headless_statefulset("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), int32(r.cr.Spec.Zuul.Executor.Replicas), apiv1.ReadWriteOnce)
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.Containers = r.create_zuul_container("zuul-executor")
 	ze.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-executor")

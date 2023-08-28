@@ -402,7 +402,7 @@ func get_storage_classname(storageClassName string) string {
 	}
 }
 
-func MkPVC(name string, ns string, storageParams StorageConfig) apiv1.PersistentVolumeClaim {
+func MkPVC(name string, ns string, storageParams StorageConfig, accessMode apiv1.PersistentVolumeAccessMode) apiv1.PersistentVolumeClaim {
 	qty := storageParams.Size
 	return apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -411,7 +411,7 @@ func MkPVC(name string, ns string, storageParams StorageConfig) apiv1.Persistent
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
 			StorageClassName: &storageParams.StorageClassName,
-			AccessModes:      []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
+			AccessModes:      []apiv1.PersistentVolumeAccessMode{accessMode},
 			Resources: apiv1.ResourceRequirements{
 				Requests: apiv1.ResourceList{
 					"storage": qty,
@@ -421,8 +421,8 @@ func MkPVC(name string, ns string, storageParams StorageConfig) apiv1.Persistent
 	}
 }
 
-func (r *SFUtilContext) create_pvc(name string, storageParams StorageConfig) apiv1.PersistentVolumeClaim {
-	return MkPVC(name, r.ns, storageParams)
+func (r *SFUtilContext) create_pvc(name string, storageParams StorageConfig, accessMode apiv1.PersistentVolumeAccessMode) apiv1.PersistentVolumeClaim {
+	return MkPVC(name, r.ns, storageParams, accessMode)
 }
 
 func MkStatefulset(
@@ -474,7 +474,7 @@ func MkContainer(name string, image string) apiv1.Container {
 }
 
 // Create a default statefulset.
-func (r *SFUtilContext) create_statefulset(name string, image string, storageConfig StorageConfig, replicas int32, nameSuffix ...string) appsv1.StatefulSet {
+func (r *SFUtilContext) create_statefulset(name string, image string, storageConfig StorageConfig, replicas int32, accessMode apiv1.PersistentVolumeAccessMode, nameSuffix ...string) appsv1.StatefulSet {
 	service_name := name
 	if nameSuffix != nil {
 		service_name = name + "-" + nameSuffix[0]
@@ -485,13 +485,13 @@ func (r *SFUtilContext) create_statefulset(name string, image string, storageCon
 	}
 
 	container := MkContainer(name, image)
-	pvc := r.create_pvc(name, storageConfig)
+	pvc := r.create_pvc(name, storageConfig, accessMode)
 	return MkStatefulset(name, r.ns, replicas, service_name, container, pvc)
 }
 
 // Create a default headless statefulset.
-func (r *SFUtilContext) create_headless_statefulset(name string, image string, storageConfig StorageConfig, replicas int32) appsv1.StatefulSet {
-	return r.create_statefulset(name, image, storageConfig, replicas, "headless")
+func (r *SFUtilContext) create_headless_statefulset(name string, image string, storageConfig StorageConfig, replicas int32, accessMode apiv1.PersistentVolumeAccessMode) appsv1.StatefulSet {
+	return r.create_statefulset(name, image, storageConfig, replicas, accessMode, "headless")
 }
 
 // Create a default deployment.

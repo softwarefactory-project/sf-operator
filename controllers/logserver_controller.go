@@ -136,8 +136,10 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
+	// NOTE: Currently we are providing "ReadWriteOnce" access mode
+	// for the Logserver, due "ReadWriteMany" requires special storage backend.
 	data_pvc := r.create_pvc(LOGSERVER_IDENT, BaseGetStorageConfOrDefault(
-		r.cr.Spec.Settings.Storage, r.cr.Spec.StorageClassName))
+		r.cr.Spec.Settings.Storage, r.cr.Spec.StorageClassName), apiv1.ReadWriteOnce)
 	r.GetOrCreate(&data_pvc)
 	var mod int32 = 256 // decimal for 0400 octal
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
