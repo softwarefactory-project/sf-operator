@@ -23,3 +23,6 @@
     # Fetch system-config repo
     - include_role:
         name: roles/post/get-system-config
+
+    - include_role:
+        name: roles/post/get-system-logs

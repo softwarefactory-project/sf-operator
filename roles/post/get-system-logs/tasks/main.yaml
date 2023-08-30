@@ -1,0 +1,24 @@
+---
+- name: Ensure output dir exists for system logs
+  ansible.builtin.file:
+    path: "{{ output_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: Set realpath for the log directory
+  ansible.builtin.command: realpath {{ output_dir }}
+  register: _output_dir_realpath
+
+- name: Get system service logs
+  become: true
+  ansible.builtin.shell: >
+    journalctl -u {{ item }} > {{ _output_dir_realpath.stdout }}/{{ item }}.log
+  loop:
+    - microshift
+    - microshift-etcd
+    - microshift-ovs-init
+
+- name: Change owner and group for the log dir
+  become: true
+  ansible.builtin.command: chown -R {{ ansible_user }}:{{ ansible_user }} {{ _output_dir_realpath.stdout }}
