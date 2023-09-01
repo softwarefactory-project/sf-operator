@@ -3,6 +3,38 @@
   ansible.builtin.set_fact:
     zuul_worker_ci_label: "zuul-worker-sf-operator-ci-{{ lookup('community.general.random_string', special=false, upper=false, length=8) }}"
 
+# First attempt a negative test where we expect a failure
+- name: Ensure nodepool directory exists
+  ansible.builtin.file:
+    path: "{{ config_path }}/nodepool"
+    state: directory
+
+- name: Set bad Nodepool config
+  ansible.builtin.blockinfile:
+    content: |
+      labELz: {}
+    path: "{{ config_path }}/nodepool/nodepool.yaml"
+    create: true
+
+- name: Commit file in the config repo
+  ansible.builtin.command: "{{ item }}"
+  args:
+    chdir: "{{ config_path }}"
+  loop:
+    - "git add {{ config_path }}/nodepool/nodepool.yaml"
+    - "git commit -m 'Add nodepool/nodepool.yaml'"
+
+- ansible.builtin.include_role:
+    name: "roles/health-check/config-repo-submit-change"
+  vars:
+    ensure_config_check_failure: true
+
+# Now proceed with adding a correct tenant file
+- name: Reset the config repo
+  ansible.builtin.command: "git reset --hard gerrit/master"
+  args:
+    chdir: "{{ config_path }}"
+
 - name: Ensure nodepool directory exists
   ansible.builtin.file:
     path: "{{ config_path }}/nodepool"
