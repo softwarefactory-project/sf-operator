@@ -445,7 +445,7 @@ func (r *SFController) DeployZuul() bool {
 
 	r.EnsureZuulConfigSecret(cfg_ini)
 	r.EnsureZuulComponentsFrontServices()
-	return r.EnsureZuulComponents(init_containers, cfg_ini) && !r.setupZuulIngress()
+	return r.EnsureZuulComponents(init_containers, cfg_ini) && r.setupZuulIngress()
 }
 
 func (r *SFController) runZuulFullReconfigure() bool {
@@ -454,14 +454,15 @@ func (r *SFController) runZuulFullReconfigure() bool {
 }
 
 func (r *SFController) setupZuulIngress() bool {
-	route1_updated := r.ensureHTTPSRoute(r.cr.Name+"-zuul", "zuul", "zuul-web", "/", ZUUL_WEB_PORT, map[string]string{}, r.cr.Spec.FQDN)
+	route1_ready := r.ensureHTTPSRoute(r.cr.Name+"-zuul", "zuul", "zuul-web", "/", ZUUL_WEB_PORT,
+		map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
 	// Zuul ingress is special because the zuul-web container expect the
 	// the files to be served at `/zuul/`, but it is listening on `/`.
 	// Thus this ingress remove the `/zuul/` so that the javascript loads as
 	// expected
-	route2_updated := r.ensureHTTPSRoute(r.cr.Name+"-zuul-red", "zuul", "zuul-web", "/zuul", ZUUL_WEB_PORT, map[string]string{
+	route2_ready := r.ensureHTTPSRoute(r.cr.Name+"-zuul-red", "zuul", "zuul-web", "/zuul", ZUUL_WEB_PORT, map[string]string{
 		"haproxy.router.openshift.io/rewrite-target": "/",
-	}, r.cr.Spec.FQDN)
-	return route1_updated && route2_updated
+	}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
+	return route1_ready && route2_ready
 }

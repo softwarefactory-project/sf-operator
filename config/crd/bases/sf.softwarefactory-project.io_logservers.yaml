@@ -40,6 +40,20 @@ spec:
           spec:
             description: LogServerSpec defines the desired state of LogServer
             properties:
+              LetsEncrypt:
+                description: LetsEncrypt settings for enabling using LetsEncrypt for
+                  Routes/TLS
+                properties:
+                  server:
+                    description: 'Specify the Lets encrypt server. Valid values are:
+                      - "staging" - "prod"'
+                    enum:
+                    - prod
+                    - staging
+                    type: string
+                required:
+                - server
+                type: object
               authorizedSSHKey:
                 description: SSH authorized key as base64 data
                 type: string

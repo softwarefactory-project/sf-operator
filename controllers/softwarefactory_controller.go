@@ -12,6 +12,7 @@ import (
 	"sort"
 	"time"
 
+	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/fatih/color"
 
 	"k8s.io/client-go/rest"
@@ -88,14 +89,12 @@ func isOperatorReady(services map[string]bool) bool {
 
 func (r *SFController) DeployLogserverResource() bool {
 
-	resource := sfv1.LogServer{
+	current := sfv1.LogServer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      LOGSERVER_IDENT,
 			Namespace: r.ns,
 		},
 	}
-
-	exists := r.GetM(LOGSERVER_IDENT, &resource)
 
 	loopdelay, retentiondays := getLogserverSettingsOrDefault(r.cr.Spec.Logserver)
 	storage := r.cr.Spec.Logserver.Storage
@@ -108,37 +107,46 @@ func (r *SFController) DeployLogserverResource() bool {
 		Storage:       storage,
 	}
 
-	if exists && (resource.Spec.Settings != logServerSpecSettings) {
-		resource.Spec.Settings = logServerSpecSettings
-		r.log.Info("Updating the logserver resource")
-		r.UpdateR(&resource)
-		return false
-	}
-
-	if !exists {
+	if r.GetM(LOGSERVER_IDENT, &current) {
+		if current.Spec.Settings != logServerSpecSettings || current.Spec.LetsEncrypt != r.cr.Spec.LetsEncrypt {
+			current.Spec.Settings = logServerSpecSettings
+			current.Spec.LetsEncrypt = r.cr.Spec.LetsEncrypt
+			r.log.V(1).Info("Updating the logserver resource", "name", LOGSERVER_IDENT)
+			r.UpdateR(&current)
+			return false
+		}
+	} else {
 		pub_key, err := r.getSecretDataFromKey("zuul-ssh-key", "pub")
 		if err != nil {
 			return false
 		}
 		pub_key_b64 := base64.StdEncoding.EncodeToString(pub_key)
-		resource.Spec = sfv1.LogServerSpec{
+		current.Spec = sfv1.LogServerSpec{
 			FQDN:             r.cr.Spec.FQDN,
 			StorageClassName: r.cr.Spec.StorageClassName,
+			LetsEncrypt:      r.cr.Spec.LetsEncrypt,
 			AuthorizedSSHKey: pub_key_b64,
 			Settings:         logServerSpecSettings,
 		}
-		r.CreateR(&resource)
+		r.log.V(1).Info("Creating the logserver resource", "name", LOGSERVER_IDENT)
+		r.CreateR(&current)
 		return false
 	}
 
-	return isLogserverReady(resource)
+	return isLogserverReady(current)
 }
 
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	services := map[string]bool{}
 	services["Zuul"] = false
 
+	// Setup a Self-Signed certificate issuer
 	r.EnsureCA()
+
+	// Setup LetsEncrypt Issuer if needed
+	if r.cr.Spec.LetsEncrypt != nil {
+		r.ensureLetsEncryptIssuer(*r.cr.Spec.LetsEncrypt)
+	}
 
 	// Ensure SF Admin ssh key pair
 	r.DeployZuulSecrets()
@@ -252,5 +260,6 @@ func (r *SoftwareFactoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&sfv1.SoftwareFactory{}).
 		Owns(&corev1.Secret{}).
+		Owns(&certv1.Certificate{}).
 		Complete(r)
 }

@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
@@ -294,14 +295,14 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	// refresh current deployment
 	r.GetM(dep.GetName(), &currentDep)
 
-	route_changed := r.ensureHTTPSRoute(
+	route_ready := r.ensureHTTPSRoute(
 		r.cr.Name+"-logserver", LOGSERVER_IDENT,
-		LOGSERVER_HTTPD_PORT_NAME, "/", LOGSERVER_HTTPD_PORT, map[string]string{}, r.cr.Spec.FQDN)
+		LOGSERVER_HTTPD_PORT_NAME, "/", LOGSERVER_HTTPD_PORT, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
 	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
 
 	return sfv1.LogServerStatus{
-		Ready:              deploymentUpdated && r.IsDeploymentReady(&currentDep) && pvc_readiness && !route_changed,
+		Ready:              deploymentUpdated && r.IsDeploymentReady(&currentDep) && pvc_readiness && route_ready,
 		ObservedGeneration: r.cr.Generation,
 		ReconciledBy:       getOperatorConditionName(),
 	}
@@ -343,6 +344,11 @@ func (r *LogServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		cr:            cr,
 	}
 
+	// Setup LetsEncrypt Issuer if needed
+	if cr.Spec.LetsEncrypt != nil {
+		controller.ensureLetsEncryptIssuer(*cr.Spec.LetsEncrypt)
+	}
+
 	cr.Status = controller.DeployLogserver()
 
 	if err := r.Client.Status().Update(ctx, &cr); err != nil {
@@ -364,5 +370,6 @@ func (r *LogServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&sfv1.LogServer{}).
 		Owns(&corev1.Secret{}).
+		Owns(&certv1.Certificate{}).
 		Complete(r)
 }

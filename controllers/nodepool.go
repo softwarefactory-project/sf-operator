@@ -200,8 +200,8 @@ func (r *SFController) DeployNodepool() bool {
 	srv := r.create_service(NL_IDENT, NL_IDENT, []int32{NL_WEBAPP_PORT}, NL_IDENT)
 	r.GetOrCreate(&srv)
 
-	route_changed := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-launcher", "nodepool", NL_IDENT, "/",
-		NL_WEBAPP_PORT, map[string]string{}, r.cr.Spec.FQDN)
+	route_ready := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-launcher", "nodepool", NL_IDENT, "/",
+		NL_WEBAPP_PORT, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
-	return r.IsDeploymentReady(&current) && !route_changed
+	return r.IsDeploymentReady(&current) && route_ready
 }
