@@ -14,21 +14,13 @@
     that:
       - _ssl_content.stdout == _new_cert_secret.stdout
 
-- name: Check if new route has provided cert
-  ansible.builtin.command: |
-    oc get route logserver-logserver -o jsonpath="{ .spec.tls }"
-  register: _route_details
-  until: "'-----BEGIN CERTIFICATE-----' in _route_details.stdout"
-
-- name: Make a query for the service afer update
+- name: Make a query to validate that the route exposes the expected certificate
   ansible.builtin.shell: >
-    echo |
     openssl s_client
     -showcerts
     -servername {{ common_name }}
     -connect {{ common_name }}:443
-    2>/dev/null | openssl x509 -inform pem -noout  -subject
   register: _new_cert_subj
-  until: "'apps.example.com' not in _new_cert_subj.stdout"
+  until: _ssl_content.stdout in _new_cert_subj.stdout
   retries: 10
-  delay: 1
+  delay: 3

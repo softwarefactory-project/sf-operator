@@ -27,6 +27,8 @@
           pkgs.python310Packages.websocket-client
           # 26.1.0 in nixpkgs
           pkgs.python310Packages.kubernetes
+          # 3.0.10 in nixpkgs
+          pkgs.openssl
         ];
         shellHook = ''
           echo "Welcome in $name"

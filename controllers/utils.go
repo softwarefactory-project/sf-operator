@@ -952,12 +952,14 @@ func (r *SFUtilContext) create_job(name string, container apiv1.Container) batch
 	return MkJob(name, r.ns, container)
 }
 
-func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) {
+// This function returns true when the resource is created or updated
+func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) bool {
 	current := apiroutev1.Route{}
 	found := r.GetM(name, &current)
 	if !found {
 		r.log.V(1).Info("Creating route...", "name", name)
 		r.CreateR(&route)
+		return true
 	} else {
 		// Route already exist - check if we need to update the Route
 		// Use the String repr of the RouteSpec to compare for changes
@@ -969,8 +971,10 @@ func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) {
 			r.log.V(1).Info("Updating route...", "name", name)
 			current.Spec = route.Spec
 			r.UpdateR(&current)
+			return true
 		}
 	}
+	return false
 }
 
 func (r *SFUtilContext) getRouteByName(routeName string) (*apiroutev1.Route, error) {
@@ -1016,37 +1020,38 @@ func MkHTTSRoute(
 	}
 }
 
+// This function returns true when the route is created or updated
 func (r *SFUtilContext) ensureHTTPSRoute(
 	name string, host string, serviceName string, path string,
-	port int, annotations map[string]string, fqdn string) {
+	port int, annotations map[string]string, fqdn string) bool {
 
 	route := apiroutev1.Route{}
+	var customSSLSecret apiv1.Secret
+	customSSLSecretName := host + "-ssl-cert"
 
-	// check if there is custom certificate
-	var secret apiv1.Secret
-	secretName := host + "-ssl-cert"
-	if r.GetM(secretName, &secret) {
-		// We set a place holder secret to ensure that the Secret is owned by the SoftwareFactory instance (ControllerReference)
-		if len(secret.GetOwnerReferences()) == 0 {
-			r.log.V(1).Info("Adopting the providers secret to set the owner reference", "secret", secretName)
-			if !r.UpdateR(&secret) {
-				panic("Can not update secret owner refference for secret" + secretName)
+	// We set a place holder secret to ensure that the Secret is owned (ControllerReference)
+	// Or we adopt the existing secret
+	if !r.GetM(customSSLSecretName, &customSSLSecret) {
+		r.CreateR(&apiv1.Secret{
+			Data:       map[string][]byte{},
+			ObjectMeta: metav1.ObjectMeta{Name: customSSLSecretName, Namespace: r.ns}})
+	} else {
+		if len(customSSLSecret.GetOwnerReferences()) == 0 {
+			r.log.V(1).Info("Adopting the route secret to set the owner reference", "secret", customSSLSecretName, "route name", name)
+			if !r.UpdateR(&customSSLSecret) {
+				return false
 			}
 		}
-		r.log.V(1).Info("Service has secret that provides custom SSL certificate!")
-		sslCA, err := r.getSecretDataFromKey(secretName, "CA")
-		if err != nil {
-			// TODO: Instead of panic then add a status condition
-			panic("CA certificate is incorrect!")
-		}
-		sslCrt, err := r.getSecretDataFromKey(secretName, "crt")
-		if err != nil {
-			panic("SSL Certificate is incorrect!")
-		}
-		sslKey, err := r.getSecretDataFromKey(secretName, "key")
-		if err != nil {
-			panic("SSL Key is incorrect!")
-		}
+	}
+
+	// Fetching secret expected TLS Keys content
+	sslCA := customSSLSecret.Data["CA"]
+	sslCrt := customSSLSecret.Data["crt"]
+	sslKey := customSSLSecret.Data["key"]
+
+	// Checking if there is any content and setting the Route with TLS data from the Secret
+	if len(sslCA) > 0 && len(sslCrt) > 0 && len(sslKey) > 0 {
+		r.log.V(1).Info("Service custom SSL certificate detected", "host", host, "route name", name)
 		tls := apiroutev1.TLSConfig{
 			InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
 			Termination:                   apiroutev1.TLSTerminationEdge,
@@ -1059,7 +1064,7 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 		route = MkHTTSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, nil)
 	}
 	// TODO: add letsencrypt functionality
-	r.ensure_route(route, name)
+	return r.ensure_route(route, name)
 }
 
 // Get the service clusterIP. Return an empty string if service not found.

@@ -1,8 +1,12 @@
 ---
-- name: Create required directories
-  ansible.builtin.file:
-    path: "{{ ssl_path }}"
+- name: Create temporary directory for the custom CA and Route certificate
+  tempfile:
     state: directory
+    suffix: ssl
+  register: tempdir
+
+- set_fact:
+    ssl_path: "{{ tempdir.path }}"
 
 ### CA ###
 - name: Gen CA privkey
@@ -65,3 +69,9 @@
 
 - name: Add SSL cert for route as secret
   ansible.builtin.include_tasks: add_ssl_secret.yaml
+
+- ansible.builtin.include_role:
+    name: "roles/health-check/check-sf-resource-ready"
+
+- name: Check SSL for the route
+  ansible.builtin.include_tasks: check_route.yaml
