@@ -58,6 +58,19 @@ rules:
   - update
   - watch
 - apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - podmonitors
+  - servicemonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - sf.softwarefactory-project.io
   resources:
   - logservers

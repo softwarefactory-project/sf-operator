@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
@@ -333,6 +334,43 @@ func (r *SFController) EnsureZuulComponents(init_containers []apiv1.Container, c
 	return zuul_services["scheduler"] && zuul_services["executor"] && zuul_services["web"]
 }
 
+func (r *SFController) EnsureZuulPodMonitor() bool {
+	selector := metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{
+				Key:      "run",
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{"zuul-scheduler", "zuul-merger", "zuul-executor", "zuul-web"},
+			},
+			{
+				Key:      "app",
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{"sf"},
+			},
+		},
+	}
+	desired_zuul_podmonitor := r.create_PodMonitor("zuul-monitor", ZUUL_PROMETHEUS_PORT_NAME, selector)
+	// add annotations so we can handle lifecycle
+	annotations := map[string]string{
+		"version": "1",
+	}
+	desired_zuul_podmonitor.ObjectMeta.Annotations = annotations
+	current_zpm := monitoringv1.PodMonitor{}
+	if !r.GetM(desired_zuul_podmonitor.Name, &current_zpm) {
+		r.CreateR(&desired_zuul_podmonitor)
+		return false
+	} else {
+		if !map_equals(&current_zpm.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("Zuul PodMonitor configuration changed, updating...")
+			current_zpm.Spec = desired_zuul_podmonitor.Spec
+			current_zpm.ObjectMeta.Annotations = annotations
+			r.UpdateR(&current_zpm)
+			return false
+		}
+	}
+	return true
+}
+
 func (r *SFController) EnsureZuulConfigSecret(cfg *ini.File) {
 	r.EnsureSecret(&apiv1.Secret{
 		Data: map[string][]byte{
@@ -458,6 +496,8 @@ func (r *SFController) DeployZuul() bool {
 
 	r.EnsureZuulConfigSecret(cfg_ini)
 	r.EnsureZuulComponentsFrontServices()
+	// We could condition readiness to the state of the PodMonitor, but we don't.
+	r.EnsureZuulPodMonitor()
 	return r.EnsureZuulComponents(init_containers, cfg_ini) && r.setupZuulIngress()
 }
 

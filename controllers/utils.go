@@ -49,6 +49,7 @@ import (
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -65,6 +66,9 @@ import (
 
 const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.5-3"
 
+// TODO this could be a spec parameter.
+const SERVICEMONITOR_LABEL_SELECTOR = "sf-monitoring"
+
 type SFUtilContext struct {
 	Client     client.Client
 	Scheme     *runtime.Scheme
@@ -74,6 +78,50 @@ type SFUtilContext struct {
 	log        logr.Logger
 	ctx        context.Context
 	owner      client.Object
+}
+
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors,verbs=get;list;watch;create;update;patch;delete
+
+func (r *SFUtilContext) create_ServiceMonitor(name string, port string, selector metav1.LabelSelector) monitoringv1.ServiceMonitor {
+	return monitoringv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: r.ns,
+			Labels: map[string]string{
+				SERVICEMONITOR_LABEL_SELECTOR: name,
+			},
+		},
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Endpoints: []monitoringv1.Endpoint{
+				{
+					Interval: monitoringv1.Duration("30s"),
+					Port:     port,
+					Scheme:   "http",
+				},
+			},
+			Selector: selector,
+		},
+	}
+}
+
+func (r *SFUtilContext) create_PodMonitor(name string, port string, selector metav1.LabelSelector) monitoringv1.PodMonitor {
+	return monitoringv1.PodMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: r.ns,
+			Labels: map[string]string{
+				SERVICEMONITOR_LABEL_SELECTOR: name,
+			},
+		},
+		Spec: monitoringv1.PodMonitorSpec{
+			Selector: selector,
+			PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
+				{
+					Port: port,
+				},
+			},
+		},
+	}
 }
 
 func DEFAULT_QTY_1Gi() resource.Quantity {
