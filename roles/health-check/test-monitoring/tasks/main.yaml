@@ -20,3 +20,4 @@
     - "zuul-web"
     - "zuul-executor"
     - "zuul-scheduler"
+    - "logserver-nodeexporter"
