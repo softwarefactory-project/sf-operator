@@ -203,7 +203,8 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	setAdditionalContainers(&zs)
 	zs.Spec.Template.Spec.Volumes = zs_volumes
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/health/ready", ZUUL_PROMETHEUS_PORT)
-	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/health/live", ZUUL_PROMETHEUS_PORT)
+	zs.Spec.Template.Spec.Containers[0].LivenessProbe = create_liveness_http_probe("/health/live", ZUUL_PROMETHEUS_PORT)
+	zs.Spec.Template.Spec.Containers[0].StartupProbe = create_startup_http_probe("/health/ready", ZUUL_PROMETHEUS_PORT)
 	zs.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		Create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
 	}
@@ -285,7 +286,8 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	zw.Spec.Template.Spec.Containers = r.create_zuul_container("zuul-web")
 	zw.Spec.Template.Spec.Volumes = create_zuul_volumes("zuul-web")
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/api/info", ZUUL_WEB_PORT)
-	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_readiness_http_probe("/api/info", ZUUL_WEB_PORT)
+	zw.Spec.Template.Spec.Containers[0].LivenessProbe = create_liveness_http_probe("/api/info", ZUUL_WEB_PORT)
+	zw.Spec.Template.Spec.Containers[0].StartupProbe = create_startup_http_probe("/api/info", ZUUL_WEB_PORT)
 	zw.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		Create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
 	}

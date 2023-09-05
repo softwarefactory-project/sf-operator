@@ -179,6 +179,8 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_http_probe("/", LOGSERVER_HTTPD_PORT)
+	dep.Spec.Template.Spec.Containers[0].StartupProbe = create_startup_http_probe("/", LOGSERVER_HTTPD_PORT)
+	dep.Spec.Template.Spec.Containers[0].LivenessProbe = create_liveness_http_probe("/", LOGSERVER_HTTPD_PORT)
 	dep.Spec.Template.Spec.Containers[0].Command = []string{
 		"/usr/bin/" + lgEntryScriptName,
 	}

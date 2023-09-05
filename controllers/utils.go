@@ -593,8 +593,8 @@ func (r *SFUtilContext) create_headless_service(name string, selector string, po
 func create_readiness_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
 	return &apiv1.Probe{
 		ProbeHandler:     handler,
-		TimeoutSeconds:   3,
-		PeriodSeconds:    5,
+		TimeoutSeconds:   5,
+		PeriodSeconds:    10,
 		FailureThreshold: 20,
 	}
 }
@@ -633,6 +633,61 @@ func create_readiness_tcp_probe(port int) *apiv1.Probe {
 				Port: intstr.FromInt(port),
 			}}
 	return create_readiness_probe(handler)
+}
+
+// --- liveness probes (validate a pod is up and running) ---
+func create_liveness_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
+	return &apiv1.Probe{
+		ProbeHandler:        handler,
+		TimeoutSeconds:      5,
+		PeriodSeconds:       20,
+		InitialDelaySeconds: 5,
+	}
+}
+
+func Create_liveness_cmd_probe(cmd []string) *apiv1.Probe {
+	handler := apiv1.ProbeHandler{
+		Exec: &apiv1.ExecAction{
+			Command: cmd,
+		}}
+	return create_liveness_probe(handler)
+}
+
+func create_liveness_http_probe(path string, port int) *apiv1.Probe {
+	handler := apiv1.ProbeHandler{
+		HTTPGet: &apiv1.HTTPGetAction{
+			Path: path,
+			Port: intstr.FromInt(port),
+		}}
+	return create_liveness_probe(handler)
+}
+
+// --- startup probes (validate when pod has been started running) ---
+func create_startup_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
+	return &apiv1.Probe{
+		ProbeHandler:        handler,
+		TimeoutSeconds:      2,
+		PeriodSeconds:       20,
+		FailureThreshold:    10,
+		InitialDelaySeconds: 5,
+	}
+}
+
+func Create_startup_cmd_probe(cmd []string) *apiv1.Probe {
+	handler := apiv1.ProbeHandler{
+		Exec: &apiv1.ExecAction{
+			Command: cmd,
+		}}
+	return create_startup_probe(handler)
+}
+
+func create_startup_http_probe(path string, port int) *apiv1.Probe {
+	handler := apiv1.ProbeHandler{
+		HTTPGet: &apiv1.HTTPGetAction{
+			Path: path,
+			Port: intstr.FromInt(port),
+		}}
+	return create_startup_probe(handler)
 }
 
 // Get a resources, returning if it was found

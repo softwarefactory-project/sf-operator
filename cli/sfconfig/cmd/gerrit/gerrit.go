@@ -241,6 +241,8 @@ func SetGerritSTSContainer(sts *appsv1.StatefulSet, volumeMounts []apiv1.VolumeM
 		controllers.Create_secret_env("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
 	}
 	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = controllers.Create_readiness_cmd_probe([]string{"bash", "/gerrit/ready.sh"})
+	sts.Spec.Template.Spec.Containers[0].StartupProbe = controllers.Create_startup_cmd_probe([]string{"bash", "/gerrit/ready.sh"})
+	sts.Spec.Template.Spec.Containers[0].LivenessProbe = controllers.Create_liveness_cmd_probe([]string{"bash", "/gerrit/ready.sh"})
 }
 
 func SetGerritMSFRContainer(sts *appsv1.StatefulSet, fqdn string) {
