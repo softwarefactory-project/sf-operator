@@ -6,9 +6,10 @@
 package controllers
 
 import (
+	"fmt"
 	"strconv"
 
-	mariadbclient "github.com/mariadb-operator/mariadb-operator/pkg/client"
+	"github.com/go-sql-driver/mysql"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,6 +21,15 @@ const MARIADB_PORT = 3306
 const MARIADB_PORT_NAME = "mariadb-port"
 
 const ZUUL_DB_CONFIG_SECRET = "zuul-db-connection"
+
+type ZuulDBOpts struct {
+	Username string
+	Password string
+	Host     string
+	Port     int32
+	Database string
+	Params   map[string]string
+}
 
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
 	c := "CREATE DATABASE IF NOT EXISTS " + dbname + " CHARACTER SET utf8 COLLATE utf8_general_ci; "
@@ -77,7 +87,7 @@ func (r *SFController) CreateProvisionDBJob(database string, password string) ba
 }
 
 func (r *SFController) DBPostInit(zuul_db_config_secret apiv1.Secret) apiv1.Secret {
-	zuulOpts := mariadbclient.Opts{
+	zuulOpts := ZuulDBOpts{
 		Username: "zuul",
 		Password: NewUUIDString(),
 		Host:     "mariadb",
@@ -85,11 +95,15 @@ func (r *SFController) DBPostInit(zuul_db_config_secret apiv1.Secret) apiv1.Secr
 		Database: "zuul",
 		Params:   map[string]string{},
 	}
-	dsn, err := mariadbclient.BuildDSN(zuulOpts)
-	if err != nil {
-		r.log.V(1).Error(err, "Could not generate DSN")
-		return zuul_db_config_secret
-	}
+
+	config := mysql.NewConfig()
+	config.Net = "tcp"
+	config.Addr = fmt.Sprintf("%s:%d", zuulOpts.Host, zuulOpts.Port)
+	config.User = zuulOpts.Username
+	config.Passwd = zuulOpts.Password
+	config.DBName = zuulOpts.Database
+	dsn := config.FormatDSN()
+
 	zuulSecretData := map[string][]byte{
 		"username": []byte(zuulOpts.Username),
 		"password": []byte(zuulOpts.Password),
