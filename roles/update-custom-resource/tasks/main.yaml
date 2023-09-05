@@ -12,3 +12,4 @@
 
 - ansible.builtin.include_role:
     name: "roles/health-check/check-sf-resource-ready"
+  when: check_sf_resource_ready | default(true)

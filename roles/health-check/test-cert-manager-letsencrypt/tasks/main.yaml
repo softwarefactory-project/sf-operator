@@ -1,0 +1,35 @@
+---
+- name: Update SF CR to set Let's Encrypt
+  ansible.builtin.include_role:
+    name: "roles/update-custom-resource"
+  vars:
+    check_sf_resource_ready: false
+    cr_spec:
+      letsEncrypt:
+        server: "staging"
+
+# We do not wait for the CR status to be ready because it will never happen as the
+# CI deployment Route URL/Host cannot be resolved and thus the http01 challenge will
+# fails.
+# However here we are able to check that 'Certificate resources' are created for each
+# related 'Route' and we can assert that each 'Certificate.Status' is not ready due to
+# http01 challenge failure.
+# This partialy verifies the flow with Let's Encrypt.
+
+- name: Ensure service Certificate not Ready for expected reason
+  shell: "kubectl -n sf get challenge -o json | grep {{ item }}"
+  register: result
+  until: "'DNS problem: NXDOMAIN' in result.stdout"
+  loop:
+    - nodepool
+    - zuul
+    - logserver
+  retries: 3
+  delay: 10
+
+- name: Update SF CR to unset Let's Encrypt
+  ansible.builtin.include_role:
+    name: "roles/update-custom-resource"
+  vars:
+    cr_spec:
+      letsEncrypt:
