@@ -37,7 +37,7 @@ var zuul_generate_tenant_config string
 var commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
 
 func Zuul_Image(service string) string {
-	return "quay.io/software-factory/" + service + ":8.3.1-5"
+	return "quay.io/software-factory/" + service + ":9.1.0-1"
 }
 
 func is_statefulset(service string) bool {
@@ -178,6 +178,7 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	annotations := map[string]string{
 		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": IniSectionsChecksum(cfg, sections),
+		"zuul-image":            Zuul_Image("zuul-scheduler"),
 		"serial":                "2",
 	}
 
@@ -212,7 +213,7 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 	current := appsv1.StatefulSet{}
 	if r.GetM("zuul-scheduler", &current) {
 		if !map_equals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("Zuul configuration changed, restarting zuul-scheduler...")
+			r.log.V(1).Info("zuul-scheduler configuration changed, rollout zuul-scheduler pods ...")
 			current.Spec = zs.DeepCopy().Spec
 			r.UpdateR(&current)
 			return false
@@ -231,6 +232,8 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": IniSectionsChecksum(cfg, sections),
+		"zuul-image":            Zuul_Image("zuul-executor"),
+		"replicas":              strconv.Itoa(int(r.cr.Spec.Zuul.Executor.Replicas)),
 	}
 
 	ze := r.create_headless_statefulset("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), int32(r.cr.Spec.Zuul.Executor.Replicas), apiv1.ReadWriteOnce)
@@ -248,29 +251,20 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	ze.Spec.Template.Spec.Containers[0].SecurityContext = create_security_context(true)
 	ze.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = pointer.Int64(1000)
 
-	r.GetOrCreate(&ze)
-	ze_dirty := false
-
-	if *ze.Spec.Replicas != r.cr.Spec.Zuul.Executor.Replicas && r.cr.Spec.Zuul.Executor.Replicas != 0 {
-		r.log.V(1).Info("Updating replicas for zuul executor to: " + strconv.Itoa(int(r.cr.Spec.Zuul.Executor.Replicas)))
-		ze.Spec.Replicas = int32Ptr(r.cr.Spec.Zuul.Executor.Replicas)
-		ze_dirty = true
-	}
-
-	if !map_equals(&ze.Spec.Template.ObjectMeta.Annotations, &annotations) {
-		ze.Spec.Template.ObjectMeta.Annotations = annotations
-		ze_dirty = true
-	}
-	if ze.Spec.Template.Spec.HostAliases != nil {
-		ze.Spec.Template.Spec.HostAliases = nil
-		ze_dirty = true
-	}
-	if ze_dirty {
-		if !r.UpdateR(&ze) {
+	current := appsv1.StatefulSet{}
+	if r.GetM("zuul-executor", &current) {
+		if !map_equals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("zuul-executor configuration changed, rollout zuul-executor pods ...")
+			current.Spec = ze.DeepCopy().Spec
+			r.UpdateR(&current)
 			return false
 		}
+	} else {
+		current := ze
+		r.CreateR(&current)
 	}
-	return r.IsStatefulSetReady(&ze)
+
+	return r.IsStatefulSetReady(&current)
 }
 
 func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
@@ -279,6 +273,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": IniSectionsChecksum(cfg, sections),
+		"zuul-image":            Zuul_Image("zuul-web"),
 	}
 
 	zw := r.create_deployment("zuul-web", "")
@@ -292,22 +287,20 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		Create_container_port(ZUUL_PROMETHEUS_PORT, ZUUL_PROMETHEUS_PORT_NAME),
 	}
 
-	r.GetOrCreate(&zw)
-	zw_dirty := false
-	if !map_equals(&zw.Spec.Template.ObjectMeta.Annotations, &annotations) {
-		zw.Spec.Template.ObjectMeta.Annotations = annotations
-		zw_dirty = true
-	}
-	if zw.Spec.Template.Spec.HostAliases != nil {
-		zw.Spec.Template.Spec.HostAliases = nil
-		zw_dirty = true
-	}
-	if zw_dirty {
-		if !r.UpdateR(&zw) {
+	current := appsv1.Deployment{}
+	if r.GetM("zuul-web", &current) {
+		if !map_equals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("zuul-web configuration changed, rollout zuul-web pods ...")
+			current.Spec = zw.DeepCopy().Spec
+			r.UpdateR(&current)
 			return false
 		}
+	} else {
+		current := zw
+		r.CreateR(&current)
 	}
-	return r.IsDeploymentReady(&zw)
+
+	return r.IsDeploymentReady(&current)
 }
 
 func (r *SFController) EnsureZuulComponentsFrontServices() {
