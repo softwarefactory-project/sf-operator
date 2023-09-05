@@ -22,6 +22,8 @@ const NL_WEBAPP_PORT_NAME = "nlwebapp"
 const NL_WEBAPP_PORT = 8006
 const NodepoolProvidersSecretsName = "nodepool-providers-secrets"
 
+const nodepoolLauncherImage = "quay.io/software-factory/" + NL_IDENT + ":9.0.0-1"
+
 var configScriptVolumeMount = apiv1.VolumeMount{
 	Name:      "nodepool-launcher-tooling-vol",
 	SubPath:   "generate-launcher-config.sh",
@@ -138,6 +140,7 @@ func (r *SFController) DeployNodepool() bool {
 		"serial":                "4",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"nodepool-providers-secrets": string(nodepool_providers_secrets.ResourceVersion),
+		"nodepool-launcher-image":    nodepoolLauncherImage,
 	}
 
 	if r.isConfigRepoSet() {
@@ -148,7 +151,7 @@ func (r *SFController) DeployNodepool() bool {
 
 	container := apiv1.Container{
 		Name:            "launcher",
-		Image:           "quay.io/software-factory/" + NL_IDENT + ":8.2.0-2",
+		Image:           nodepoolLauncherImage,
 		SecurityContext: create_security_context(false),
 		VolumeMounts:    volume_mount,
 		Env: append(r.get_generate_nodepool_config_envs(),
@@ -188,7 +191,7 @@ func (r *SFController) DeployNodepool() bool {
 	current := appsv1.Deployment{}
 	if r.GetM(NL_IDENT, &current) {
 		if !map_equals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("Nodepool-launcher configuration changed, restarting ...")
+			r.log.V(1).Info("Nodepool-launcher configuration changed, rollout pods ...")
 			current.Spec = nl.DeepCopy().Spec
 			r.UpdateR(&current)
 			return false
