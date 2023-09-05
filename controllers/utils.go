@@ -33,6 +33,8 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/utils/pointer"
 
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -710,7 +712,7 @@ func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
 // Create resources with the owner as the ownerReferences.
 func (r *SFUtilContext) CreateR(obj client.Object) {
 	controllerutil.SetControllerReference(r.owner, obj, r.Scheme)
-	if err := r.Client.Create(r.ctx, obj); err != nil {
+	if err := r.Client.Create(r.ctx, obj); err != nil && !k8s_errors.IsAlreadyExists(err) {
 		panic(err.Error())
 	}
 }

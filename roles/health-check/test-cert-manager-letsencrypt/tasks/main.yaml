@@ -16,15 +16,31 @@
 # http01 challenge failure.
 # This partialy verifies the flow with Let's Encrypt.
 
-- name: Ensure service Certificate not Ready for expected reason
-  shell: "kubectl -n sf get challenge -o json | grep {{ item }}"
+- name: Ensure nodepool service Certificate not Ready for expected reason
+  shell: "kubectl -n sf get challenge -o json | grep nodepool"
   register: result
-  until: "'DNS problem: NXDOMAIN' in result.stdout"
-  loop:
-    - nodepool
-    - zuul
-    - logserver
-  retries: 3
+  until:
+    - result is success
+    - "'DNS problem: NXDOMAIN' in result.stdout"
+  retries: 6
+  delay: 10
+
+- name: Ensure zuul service Certificate not Ready for expected reason
+  shell: "kubectl -n sf get challenge -o json | grep zuul"
+  register: result
+  until:
+    - result is success
+    - "'DNS problem: NXDOMAIN' in result.stdout"
+  retries: 6
+  delay: 10
+
+- name: Ensure logserver service Certificate not Ready for expected reason
+  shell: "kubectl -n sf get challenge -o json | grep logserver"
+  register: result
+  until:
+    - result is success
+    - "'DNS problem: NXDOMAIN' in result.stdout"
+  retries: 6
   delay: 10
 
 - name: Update SF CR to unset Let's Encrypt

@@ -14,5 +14,7 @@
   ansible.builtin.git:
     repo: git://localhost:9418/system-config
     dest: "{{ output_dir }}"
+  register: clone
   retries: "{{ retries }}"
   delay: "{{ delay }}"
+  until: "clone is not failed"
