@@ -1020,6 +1020,10 @@ func MkHTTSRoute(
 	}
 }
 
+func GetCustomRouteSSLSecretName(host string) string {
+	return host + "-ssl-cert"
+}
+
 // This function returns true when the route is created or updated
 func (r *SFUtilContext) ensureHTTPSRoute(
 	name string, host string, serviceName string, path string,
@@ -1027,7 +1031,7 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 
 	route := apiroutev1.Route{}
 	var customSSLSecret apiv1.Secret
-	customSSLSecretName := host + "-ssl-cert"
+	customSSLSecretName := GetCustomRouteSSLSecretName(host)
 
 	// We set a place holder secret to ensure that the Secret is owned (ControllerReference)
 	// Or we adopt the existing secret
