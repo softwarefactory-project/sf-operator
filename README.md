@@ -351,13 +351,22 @@ cache:
     port: 5
 ```
 
-#### Replace service route certificate with custom cert
+## How to setup TLS for exposed Services route
 
-Below example produce SSL secret for Logserver service. After controller reconcile loop is executed,
-the route will be replaced with provided cert. It means, that the service route will use
-new SSL cert for HTTPS traffic.
+### How to use pre-existing X509 certificates
 
-> The `create-service-ssl-secret` is verifying the SSL cert.
+The operator watches specifics `Secret` in the `SoftwareFactory` Custom Resources namespace.
+When those secrets' data hold a Certificate, Key and CA Certificate (following a specific scheme) then
+the sf-operator is able to reconfigure the corresponding service `Route`'s TLS to use the TLS material
+contained into the secret.
+
+The `sfconfig` command can be used to setup secrets.
+
+> The `create-service-ssl-secret` is verifying the SSL certificate/key before updating the `Secret`.
+
+The example below updates the `Secret` for the `logserver` service. The `SoftwareFactory` CR will
+pass into a "non Ready" state until the `Route` is reconfigured. Once `Ready`, the `Route` will
+serve the new Certificate.
 
 ```sh
 ./tools/sfconfig create-service-ssl-secret \
@@ -366,3 +375,34 @@ new SSL cert for HTTPS traffic.
     --sf-service-cert /tmp/ssl/ssl.crt \
     --sf-service-name logserver
 ```
+
+Expected `sf-service-name` value are:
+
+  - logserver
+  - zuul
+  - nodepool
+
+### How to use Let's Encrypt Certificates
+
+The operator offers an option to request Certificates from `Let's Encrypt` using the `ACME http01`
+challenge. All DNS names exposed by the `Routes` must be publicly resolvable.
+
+`sf-operator` relies on the `cert-manager` operator to handle this setup.
+
+> When enabled, TLS material provided via `Secret`, are not used anymore.
+
+```sh
+kubectl edit sf my-sf
+...
+spec:
+  letsEncrypt:
+    server: "staging"
+...
+```
+
+The `SoftwareFactory` CR will pass into a "non Ready" state until all `Challenge` are resolved
+and all the `Route` are reconfigured.
+
+> Set the server to `prod` to use the Let's Encrypt production server.
+
+> Routes will be re-configured when Certificates are renewed.
