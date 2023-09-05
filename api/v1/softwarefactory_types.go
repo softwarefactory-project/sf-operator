@@ -13,6 +13,26 @@ import (
 
 type BaseSpec struct{}
 
+// +kubebuilder:validation:Enum=prod;staging
+// +kubebuilder:default:=staging
+type LEServer string
+
+const (
+	// LEServerProd set the LetsEncrypt server to Production
+	LEServerProd LEServer = "prod"
+
+	// LEServerProd set the LetsEncrypt server to Staging
+	LEServerStaging LEServer = "staging"
+)
+
+type LetsEncryptSpec struct {
+	// Specify the Lets encrypt server.
+	// Valid values are:
+	// - "staging"
+	// - "prod"
+	Server LEServer `json:"server"`
+}
+
 type StorageSpec struct {
 	//+kubebuilder:validation:Required
 	//+kubebuilder:validation:XValidation:rule="self >= oldSelf",message="Storage shrinking is not supported"
@@ -144,6 +164,9 @@ type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
 
 	FQDN string `json:"fqdn"`
+
+	// LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS
+	LetsEncrypt *LetsEncryptSpec `json:"letsEncrypt,omitempty"`
 
 	// Default storage class to use by Persistent Volume Claims
 	StorageClassName string `json:"storageClassName,omitempty"`

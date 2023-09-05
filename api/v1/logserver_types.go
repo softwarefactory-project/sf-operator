@@ -13,6 +13,8 @@ import (
 // LogServerSpec defines the desired state of LogServer
 type LogServerSpec struct {
 	FQDN string `json:"fqdn"`
+	// LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS
+	LetsEncrypt *LetsEncryptSpec `json:"LetsEncrypt,omitempty"`
 	// Default storage class to use by Persistent Volume Claims
 	StorageClassName string `json:"storageClassName,omitempty"`
 	// SSH authorized key as base64 data

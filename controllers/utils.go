@@ -43,8 +43,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	cmacme "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -1007,14 +1009,14 @@ func (r *SFUtilContext) create_job(name string, container apiv1.Container) batch
 	return MkJob(name, r.ns, container)
 }
 
-// This function returns true when the resource is created or updated
+// This function returns false when the resource is just created/updated
 func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) bool {
 	current := apiroutev1.Route{}
 	found := r.GetM(name, &current)
 	if !found {
 		r.log.V(1).Info("Creating route...", "name", name)
 		r.CreateR(&route)
-		return true
+		return false
 	} else {
 		// Route already exist - check if we need to update the Route
 		// Use the String repr of the RouteSpec to compare for changes
@@ -1026,10 +1028,10 @@ func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) bool {
 			r.log.V(1).Info("Updating route...", "name", name)
 			current.Spec = route.Spec
 			r.UpdateR(&current)
-			return true
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func (r *SFUtilContext) getRouteByName(routeName string) (*apiroutev1.Route, error) {
@@ -1079,12 +1081,21 @@ func GetCustomRouteSSLSecretName(host string) string {
 	return host + "-ssl-cert"
 }
 
-// This function returns true when the route is created or updated
-func (r *SFUtilContext) ensureHTTPSRoute(
-	name string, host string, serviceName string, path string,
-	port int, annotations map[string]string, fqdn string) bool {
+func getLetsEncryptServer(le sfv1.LetsEncryptSpec) (string, string) {
+	serverUrl := ""
+	name := ""
+	switch server := le.Server; server {
+	case sfv1.LEServerProd:
+		serverUrl = "https://acme-v02.api.letsencrypt.org/directory"
+		name = "cm-le-issuer-production"
+	case sfv1.LEServerStaging:
+		serverUrl = "https://acme-staging-v02.api.letsencrypt.org/directory"
+		name = "cm-le-issuer-staging"
+	}
+	return serverUrl, name
+}
 
-	route := apiroutev1.Route{}
+func (r *SFUtilContext) extractStaticTLSFromSecret(name string, host string) (bool, []byte, []byte, []byte) {
 	var customSSLSecret apiv1.Secret
 	customSSLSecretName := GetCustomRouteSSLSecretName(host)
 
@@ -1094,22 +1105,92 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 		r.CreateR(&apiv1.Secret{
 			Data:       map[string][]byte{},
 			ObjectMeta: metav1.ObjectMeta{Name: customSSLSecretName, Namespace: r.ns}})
+		return false, nil, nil, nil
 	} else {
 		if len(customSSLSecret.GetOwnerReferences()) == 0 {
 			r.log.V(1).Info("Adopting the route secret to set the owner reference", "secret", customSSLSecretName, "route name", name)
 			if !r.UpdateR(&customSSLSecret) {
-				return false
+				return false, nil, nil, nil
 			}
 		}
 	}
-
 	// Fetching secret expected TLS Keys content
-	sslCA := customSSLSecret.Data["CA"]
-	sslCrt := customSSLSecret.Data["crt"]
-	sslKey := customSSLSecret.Data["key"]
+	return true, customSSLSecret.Data["CA"], customSSLSecret.Data["crt"], customSSLSecret.Data["key"]
+}
+
+func (r *SFUtilContext) extractTLSFromLECertificateSecret(name string, host string, fqdn string, le sfv1.LetsEncryptSpec) (bool, []byte, []byte, []byte) {
+	_, issuerName := getLetsEncryptServer(le)
+	dnsNames := []string{host + "." + fqdn}
+	certificate := MKCertificate(name, r.ns, issuerName, dnsNames)
+
+	current := certv1.Certificate{}
+
+	found := r.GetM(name, &current)
+	if !found {
+		r.log.V(1).Info("Creating Cert-Manager LetsEncrypt Certificate ...", "name", name)
+		r.CreateR(&certificate)
+		return false, nil, nil, nil
+	} else {
+		if current.Spec.IssuerRef.Name != certificate.Spec.IssuerRef.Name &&
+			!reflect.DeepEqual(current.Spec.DNSNames, certificate.Spec.DNSNames) {
+			// We need to update the Certficate
+			r.log.V(1).Info("Updating Cert-Manager LetsEncrypt Certificate ...", "name", name)
+			current.Spec = *certificate.Spec.DeepCopy()
+			r.UpdateR(&current)
+			return false, nil, nil, nil
+		}
+		// The certificate is found and have the required Spec, so let's check
+		// the Ready status
+		ready := isCertificateReady(&current)
+
+		if ready {
+			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is Ready ...", "name", name)
+			var leSSLSecret apiv1.Secret
+			if r.GetM(current.Spec.SecretName, &leSSLSecret) {
+				// Extract the TLS material
+				return true, nil, leSSLSecret.Data["tls.crt"], leSSLSecret.Data["tls.key"]
+				// Nothing more to do the rest of the function will setup the Route's TLS
+			} else {
+				// We are not able to find the Certificate's secret
+				r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is Ready but waiting for the Secret ...",
+					"name", name, "secret", current.Spec.SecretName)
+				return false, nil, nil, nil
+			}
+		} else {
+			// Return false to force a new Reconcile as the certificate is not Ready yet
+			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is not Ready yet ...", "name", name)
+			return false, nil, nil, nil
+		}
+	}
+}
+
+// This function returns false when the controller reconcile loop must be re-triggered.
+// Returns true when the Route is 'Ready'
+func (r *SFUtilContext) ensureHTTPSRoute(
+	name string, host string, serviceName string, path string,
+	port int, annotations map[string]string, fqdn string, le *sfv1.LetsEncryptSpec) bool {
+
+	var tlsDataReady bool
+	var sslCA, sslCrt, sslKey []byte
+
+	if le == nil {
+		// Letsencrypt config has not been set so we check the `customSSLSecretName` Secret
+		// for any custom TLS data to setup the Route
+		tlsDataReady, sslCA, sslCrt, sslKey = r.extractStaticTLSFromSecret(name, host)
+	} else {
+		// Letsencrypt config has been set so we ensure we set a Certificate via the
+		// cert-manager Issuer and then we'll setup the Route based on the Certificate's Secret
+		tlsDataReady, sslCA, sslCrt, sslKey = r.extractTLSFromLECertificateSecret(name, host, fqdn, *le)
+	}
+
+	if !tlsDataReady {
+		return false
+	}
+
+	route := apiroutev1.Route{}
 
 	// Checking if there is any content and setting the Route with TLS data from the Secret
-	if len(sslCA) > 0 && len(sslCrt) > 0 && len(sslKey) > 0 {
+	if len(sslCrt) > 0 && len(sslKey) > 0 {
 		r.log.V(1).Info("Service custom SSL certificate detected", "host", host, "route name", name)
 		tls := apiroutev1.TLSConfig{
 			InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
@@ -1122,7 +1203,6 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 	} else {
 		route = MkHTTSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, nil)
 	}
-	// TODO: add letsencrypt functionality
 	return r.ensure_route(route, name)
 }
 
@@ -1207,6 +1287,66 @@ func (r *SFUtilContext) create_client_certificate(
 				fmt.Sprintf("%s.%s", servicename, r.owner.GetName()),
 				fmt.Sprintf("%s.%s", servicename, fqdn),
 				r.owner.GetName(),
+			},
+		},
+	}
+}
+
+// TODO: merge with create_client_certificate function above
+func MKCertificate(name string, ns string, issuerName string, dnsNames []string) certv1.Certificate {
+	return certv1.Certificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		Spec: certv1.CertificateSpec{
+			DNSNames:   dnsNames,
+			SecretName: name + "-tls",
+			IssuerRef: certmetav1.ObjectReference{
+				Kind: "Issuer",
+				Name: issuerName,
+			},
+			IsCA: false,
+			Usages: []certv1.KeyUsage{
+				certv1.UsageServerAuth,
+			},
+		},
+	}
+}
+
+func isCertificateReady(cert *certv1.Certificate) bool {
+	for _, condition := range cert.Status.Conditions {
+		if condition.Type == "Ready" && condition.Status == "True" {
+			return true
+		}
+	}
+	return false
+}
+
+func MKLetsEncryptIssuer(name string, ns string, server string) certv1.Issuer {
+	return certv1.Issuer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		Spec: certv1.IssuerSpec{
+			IssuerConfig: certv1.IssuerConfig{
+				ACME: &cmacme.ACMEIssuer{
+					Server:         server,
+					PreferredChain: "ISRG Root X1",
+					PrivateKey: cmmeta.SecretKeySelector{
+						LocalObjectReference: cmmeta.LocalObjectReference{
+							Name: name,
+						},
+					},
+					Solvers: []cmacme.ACMEChallengeSolver{
+						{
+							HTTP01: &cmacme.ACMEChallengeSolverHTTP01{
+								Ingress: &cmacme.ACMEChallengeSolverHTTP01Ingress{},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -1349,6 +1489,12 @@ func (r *SFUtilContext) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv
 		return false
 	}
 	return true
+}
+
+func (r *SFUtilContext) ensureLetsEncryptIssuer(le sfv1.LetsEncryptSpec) bool {
+	server, name := getLetsEncryptServer(le)
+	issuer := MKLetsEncryptIssuer(name, r.ns, server)
+	return r.GetOrCreate(&issuer)
 }
 
 // SFController struct-context scoped utils //
