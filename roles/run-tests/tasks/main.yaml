@@ -28,6 +28,7 @@
     - ensure-job-result-artifacts
     - validate-purgelogs
     - test-custom-route-certs
+    - test-cert-manager-letsencrypt
   loop_control:
     loop_var: role
 

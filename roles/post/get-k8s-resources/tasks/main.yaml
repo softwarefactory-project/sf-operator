@@ -44,6 +44,10 @@
     - catalogsources
     - logservers
     - softwarefactories
+    - issuers
+    - certificates
+    - challenges
+    - orders
   tags:
     - skip_ansible_lint
 
