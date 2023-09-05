@@ -80,7 +80,7 @@ type SFUtilContext struct {
 	owner      client.Object
 }
 
-//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
 
 func (r *SFUtilContext) create_ServiceMonitor(name string, port string, selector metav1.LabelSelector) monitoringv1.ServiceMonitor {
 	return monitoringv1.ServiceMonitor{
@@ -121,6 +121,41 @@ func (r *SFUtilContext) create_PodMonitor(name string, port string, selector met
 				},
 			},
 		},
+	}
+}
+
+func (r *SFUtilContext) create_PrometheusRuleCR(name string) monitoringv1.PrometheusRule {
+	return monitoringv1.PrometheusRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: r.ns,
+			Labels: map[string]string{
+				SERVICEMONITOR_LABEL_SELECTOR: name,
+			},
+		},
+		Spec: monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{},
+		},
+	}
+}
+
+func create_PrometheusRuleGroup(name string, rules []monitoringv1.Rule) monitoringv1.RuleGroup {
+	// d := monitoringv1.Duration(duration)
+	return monitoringv1.RuleGroup{
+		Name: name,
+		// Interval: &d,
+		Rules: rules,
+	}
+}
+
+func create_PrometheusAlertRule(name string, expr intstr.IntOrString, forDuration string, labels map[string]string, annotations map[string]string) monitoringv1.Rule {
+	f := monitoringv1.Duration(forDuration)
+	return monitoringv1.Rule{
+		Alert:       name,
+		Expr:        expr,
+		For:         &f,
+		Labels:      labels,
+		Annotations: annotations,
 	}
 }
 

@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -107,10 +108,72 @@ func (r *LogServerController) ensureLogserverPodMonitor() bool {
 		return false
 	} else {
 		if !map_equals(&current_lspm.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("Zuul PodMonitor configuration changed, updating...")
+			r.log.V(1).Info("Logserver PodMonitor configuration changed, updating...")
 			current_lspm.Spec = desired_ls_podmonitor.Spec
 			current_lspm.ObjectMeta.Annotations = annotations
 			r.UpdateR(&current_lspm)
+			return false
+		}
+	}
+	return true
+}
+
+// Create some default, interesting alerts
+func (r *LogServerController) ensureLogserverPromRule() bool {
+	disk_full_labels := map[string]string{
+		"lasttime": "{{ $value | humanizeTimestamp }}",
+		"severity": "critical",
+	}
+	disk_full_annotations := map[string]string{
+		"description": "Log server only has {{ $value | humanize1024 }} free disk available.",
+		"summary":     "Log server out of disk",
+	}
+	disk_full_3days_annotations := map[string]string{
+		"description": "Log server only has at most three days' worth ({{ $value | humanize1024 }}) of free disk available.",
+		"summary":     "Log server running out of disk",
+	}
+	disk_full := create_PrometheusAlertRule(
+		"OutOfDiskNow",
+		intstr.FromString(
+			"(node_filesystem_avail_bytes{job=\""+r.ns+"/"+LOGSERVER_IDENT+"-monitor\"} * 100 /"+
+				" node_filesystem_size_bytes{job=\""+r.ns+"/"+LOGSERVER_IDENT+"-monitor\"} < 10) and "+
+				"(node_filesystem_avail_bytes{job=\""+r.ns+"/"+LOGSERVER_IDENT+"-monitor\"} < 20 * 1024 ^ 3)"),
+		"30m",
+		disk_full_labels,
+		disk_full_annotations,
+	)
+	disk_full_in_3days := create_PrometheusAlertRule(
+		"OutOfDiskInThreeDays",
+		intstr.FromString(
+			"(node_filesystem_avail_bytes{job=\""+r.ns+"/"+LOGSERVER_IDENT+"-monitor\"} * 100 /"+
+				" node_filesystem_size_bytes{job=\""+r.ns+"/"+LOGSERVER_IDENT+"-monitor\"} < 50) and "+
+				"(predict_linear(node_filesystem_avail_bytes{job=\""+r.ns+"/"+LOGSERVER_IDENT+"-monitor\"}[1d], 3 * 24 * 3600) < 0) and "+
+				"(node_filesystem_size_bytes{job=\""+r.ns+"/"+LOGSERVER_IDENT+"-monitor\"} <= 1e+11)"),
+		"12h",
+		map[string]string{},
+		disk_full_3days_annotations,
+	)
+	ls_disk_ruleGroup := create_PrometheusRuleGroup(
+		"disk.rules",
+		[]monitoringv1.Rule{disk_full, disk_full_in_3days})
+	desired_ls_promRule := r.create_PrometheusRuleCR(LOGSERVER_IDENT + ".rules")
+	desired_ls_promRule.Spec.Groups = append(desired_ls_promRule.Spec.Groups, ls_disk_ruleGroup)
+
+	// add annotations so we can handle lifecycle
+	annotations := map[string]string{
+		"version": "1",
+	}
+	desired_ls_promRule.ObjectMeta.Annotations = annotations
+	current_promRule := monitoringv1.PrometheusRule{}
+	if !r.GetM(desired_ls_promRule.Name, &current_promRule) {
+		r.CreateR(&desired_ls_promRule)
+		return false
+	} else {
+		if !map_equals(&current_promRule.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("Logserver default Prometheus rules changed, updating...")
+			current_promRule.Spec = desired_ls_promRule.Spec
+			current_promRule.ObjectMeta.Annotations = annotations
+			r.UpdateR(&current_promRule)
 			return false
 		}
 	}
@@ -334,8 +397,9 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		LOGSERVER_HTTPD_PORT_NAME, "/", LOGSERVER_HTTPD_PORT, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
 	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
-	// TODO(mhu) we may want to include PodMonitor status in readiness computation
+	// TODO(mhu) we may want to include monitoring objects' status in readiness computation
 	r.ensureLogserverPodMonitor()
+	r.ensureLogserverPromRule()
 
 	isDeploymentReady := r.IsDeploymentReady(&currentDep)
 	updateConditions(&r.cr.Status.Conditions, LOGSERVER_IDENT, isDeploymentReady)
