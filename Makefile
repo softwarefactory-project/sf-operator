@@ -1,4 +1,4 @@
-VERSION ?= 0.0.2
+VERSION ?= 0.0.3
 
 # Image URL to use all building/pushing image targets
 BASE_REPO ?= quay.io/software-factory/sf-operator
