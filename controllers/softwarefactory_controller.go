@@ -108,9 +108,26 @@ func (r *SFController) DeployLogserverResource() bool {
 	}
 
 	if r.GetM(LOGSERVER_IDENT, &current) {
-		if current.Spec.Settings != logServerSpecSettings || current.Spec.LetsEncrypt != r.cr.Spec.LetsEncrypt {
+		needUpdate := false
+		if current.Spec.Settings != logServerSpecSettings {
 			current.Spec.Settings = logServerSpecSettings
+			needUpdate = true
+		}
+		if r.cr.Spec.LetsEncrypt == nil && current.Spec.LetsEncrypt != nil {
+			current.Spec.LetsEncrypt = nil
+			needUpdate = true
+		}
+		if r.cr.Spec.LetsEncrypt != nil && current.Spec.LetsEncrypt == nil {
 			current.Spec.LetsEncrypt = r.cr.Spec.LetsEncrypt
+			needUpdate = true
+		}
+		if r.cr.Spec.LetsEncrypt != nil && current.Spec.LetsEncrypt != nil {
+			if *r.cr.Spec.LetsEncrypt != *current.Spec.LetsEncrypt {
+				current.Spec.LetsEncrypt = r.cr.Spec.LetsEncrypt
+				needUpdate = true
+			}
+		}
+		if needUpdate {
 			r.log.V(1).Info("Updating the logserver resource", "name", LOGSERVER_IDENT)
 			r.UpdateR(&current)
 			return false

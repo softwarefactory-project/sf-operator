@@ -1131,7 +1131,7 @@ func (r *SFUtilContext) extractTLSFromLECertificateSecret(name string, host stri
 		r.CreateR(&certificate)
 		return false, nil, nil, nil
 	} else {
-		if current.Spec.IssuerRef.Name != certificate.Spec.IssuerRef.Name &&
+		if current.Spec.IssuerRef.Name != certificate.Spec.IssuerRef.Name ||
 			!reflect.DeepEqual(current.Spec.DNSNames, certificate.Spec.DNSNames) {
 			// We need to update the Certficate
 			r.log.V(1).Info("Updating Cert-Manager LetsEncrypt Certificate ...", "name", name)
@@ -1191,7 +1191,7 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 
 	// Checking if there is any content and setting the Route with TLS data from the Secret
 	if len(sslCrt) > 0 && len(sslKey) > 0 {
-		r.log.V(1).Info("Service custom SSL certificate detected", "host", host, "route name", name)
+		r.log.V(1).Info("SSL certificate for Route detected", "host", host, "route name", name)
 		tls := apiroutev1.TLSConfig{
 			InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
 			Termination:                   apiroutev1.TLSTerminationEdge,
