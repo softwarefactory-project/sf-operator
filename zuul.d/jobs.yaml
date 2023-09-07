@@ -55,6 +55,9 @@
       microshift_additional_addresses:
         - "sftests.com"
       etcd_on_ramdisk: true
+      cloudprovider_dns:
+        - 199.204.44.24
+        - 199.204.47.54
 
 - job:
     name: sf-operator-multinode
