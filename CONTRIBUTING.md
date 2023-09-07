@@ -103,7 +103,7 @@ This removes the `my-sf` Custom Resource instance.
 However:
 
 - **Persistent Volumes Claims** are not cleaned after the deletion of the softwarefactory instance
-- `tools/run-ci-tests.sh` deploys resources via OLM into the `bundle-catalog-ns` namespace
+- `tools/sfconfig runTests` deploys resources via OLM into the `bundle-catalog-ns` namespace
 
 To delete the softwarefactory instance including the PVCs and PVs run the following command:
 
@@ -155,40 +155,43 @@ Before running the tests, start the operator in another terminal:
 go run ./main.go
 ```
 
-Tests run by the **CI** (`playbooks/main.yaml`) can be also run locally using the `run-ci-tests.sh`:
+Tests run by the **CI** can be also run locally using the `sfconfig`:
 
 ```sh
-./tools/run-ci-tests.sh
+./tools/sfconfig runTests
 ```
 
 This command is a wrapper on top of `ansible-playbook` to run the same Ansible play
 than the CI. This includes the operator deployment and testing.
 
-If you want to only run the testing part (the functional tests only, assuming the operator
-deployed a Software Factory instance), you can use the `test_only` tag:
+`runTests` performs a build and installation of the `OLM package` of the `sf-operator` prior to
+run the validation test suite.
+
+If you want to only run the test suite part (the functional tests only, assuming the operator
+deployed a SoftwareFactory instance), then you can use the `--test-only` option:
 
 ```sh
-./tools/run-ci-tests.sh --test-only
+./tools/sfconfig runTests --test-only
 ```
 
-The command accepts extra Ansible parameters. For instance to override
-the default `microshift_host` var:
+The command accepts extra Ansible parameters to be passed to `ansible-playbook` command.
+For instance to override the default `microshift_host` var:
 
 ```sh
-./tools/run-ci-tests.sh --extra-var "microshift_host=my-microshift"
+./tools/sfconfig runTests --extra-var "microshift_host=my-microshift"
 ```
 
-To get more Ansible output logs, you can use `debug (-d)` or `verbose (-v)` parameter.
+To get more Ansible output logs, you can use `verbose (-v)` or `debug (-vvv)` parameter.
 For example:
 
 ```sh
-/tools/run-ci-tests.sh -v
+/tools/sfconfig runTests -v
 ```
 
-To upgrade the sf-operator, run below command:
+To run the upgrade sf-operator test scenario, run the command below:
 
 ```sh
-./tools/run-ci-tests.sh -u
+/tools/sfconfig runTests --upgrade
 ```
 
 To fetch the test suite artifacts locally, run:
