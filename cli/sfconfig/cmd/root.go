@@ -24,7 +24,8 @@ import (
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/operator"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sf"
-	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/ssl"
+	createSsl "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/ssl"
+	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/zuul_client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -62,6 +63,8 @@ func init() {
 	rootCmd.AddCommand(gerrit.GerritCmd)
 	rootCmd.AddCommand(nodepool.CreateNamespaceNodepoolCmd)
 	rootCmd.AddCommand(createSsl.CreateCertificateCmd)
+	rootCmd.AddCommand(zuul_client.ZuulClientCmd)
+
 	rootCmd.Flags().BoolP("erase", "", false, "Erase data")
 }
 

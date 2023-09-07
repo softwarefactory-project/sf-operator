@@ -1,0 +1,27 @@
+- name: Checking if zuul-client command exists
+  ansible.builtin.command: |
+    tools/sfconfig zuul-client -h
+  register: _zuul_client
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Checking "zuul-client -h" command result
+  ansible.builtin.assert:
+     that:
+       - '"usage: zuul-client" in _zuul_client.stdout'
+     fail_msg: "Something wrong with zuul-client subcommand, run 'tools/sfconfig zuul-client -h' manually or check the container"
+     success_msg: "zuul-client subcommand output return successfully"
+
+- name: Checking zuul-client api call
+  ansible.builtin.command: |
+    tools/sfconfig zuul-client autohold-list --tenant internal
+  register: _zuul_client
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Checking "zuul-client -h" command result
+  ansible.builtin.assert:
+     that:
+       - '"No autohold requests found" in _zuul_client.stdout'
+     fail_msg: "Something wrong with zuul-client subcommand, run 'tools/sfconfig zuul-client -h' manually or check the container"
+     success_msg: "zuul-client subcommand output return successfully"

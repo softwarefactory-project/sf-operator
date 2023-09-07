@@ -380,12 +380,21 @@ func AddGitConnection(cfg *ini.File, name string, baseurl string) {
 	cfg.Section(section).NewKey("baseurl", baseurl)
 }
 
+func AddWebClientSection(cfg *ini.File) {
+	section := "webclient"
+	cfg.NewSection(section)
+	cfg.Section(section).NewKey("url", "http://zuul-web:"+strconv.FormatInt(ZUUL_WEB_PORT, 10))
+}
+
 func (r *SFController) AddDefaultConnections(cfg *ini.File) {
 	// Internal git-server for system config
 	AddGitConnection(cfg, "git-server", "git://git-server/")
 
 	// Git connection to opendev.org
 	AddGitConnection(cfg, "opendev.org", "https://opendev.org/")
+
+	// Add Web Client for zuul-client
+	AddWebClientSection(cfg)
 }
 
 func LoadConfigINI(zuul_conf string) *ini.File {
