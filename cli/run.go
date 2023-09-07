@@ -23,6 +23,7 @@ import (
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func Run(erase bool) {
@@ -171,6 +172,8 @@ func EnsureCR(env *utils.ENV, sfconfig *Config) {
 		},
 	}
 	cr.Spec.StorageClassName = "topolvm-provisioner"
+	logserverVolumeSize, _ := resource.ParseQuantity("2Gi")
+	cr.Spec.Logserver.Storage.Size = logserverVolumeSize
 	var err error
 	for i := 0; i < 10; i++ {
 		err = env.Cli.Create(env.Ctx, &cr)

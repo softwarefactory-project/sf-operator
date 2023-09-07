@@ -1,3 +1,5 @@
 ---
 validate_certs: true
-retries: 10
+retries: 3
+delay: 5
+status: 200

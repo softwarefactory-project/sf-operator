@@ -1,4 +1,7 @@
 ---
+# Here we validate some constraints encoded into the CRD definition
+# This should not have any effect on the Running CR
+
 - name: Get current volume size
   ansible.builtin.shell: >
     kubectl get pvc logserver
@@ -70,37 +73,3 @@
     EOF
   register: bad_apply_result
   failed_when: "('must be a positive integer' not in bad_apply_result.stderr) and ('must be a positive integer' not in bad_apply_result.stdout)"
-
-- name: Increase loopDelay
-  ansible.builtin.include_role:
-    name: "roles/update-custom-resource"
-  vars:
-    cr_spec:
-      logserver:
-        loopDelay: 84600
-
-- name: Ensure purgelog started with updated loopDelay
-  command: >
-    kubectl get pods -l app=sf -l run=logserver
-    -o jsonpath='{range .items[*]}{range .spec.containers[*]}{.name}{" "}{.command}{"\n"}{end}{end}'
-  register: logserver_containers
-  until: logserver_containers is not failed and "84600" in logserver_containers.stdout
-  retries: 10
-  delay: 2
-
-- name: reset loopDelay to 5 seconds
-  ansible.builtin.include_role:
-    name: "roles/update-custom-resource"
-  vars:
-    cr_spec:
-      logserver:
-        loopDelay: 5
-
-- name: Ensure purgelog restarted with correct loopDelay
-  command: >
-    kubectl get pods -l app=sf -l run=logserver
-    -o jsonpath='{range .items[*]}{range .spec.containers[*]}{.name}{" "}{.command}{"\n"}{end}{end}'
-  register: logserver_containers
-  until: logserver_containers is not failed and "5" in logserver_containers.stdout
-  retries: 10
-  delay: 2

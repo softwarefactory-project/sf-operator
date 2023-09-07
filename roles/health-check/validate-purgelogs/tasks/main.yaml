@@ -1,36 +1,61 @@
-- name: Get logserver pod name
-  ansible.builtin.shell: |
-    kubectl get pods -l "{{ pod_label }}" --no-headers -o custom-columns=":metadata.name"
-  register: _logserver_pod_name
-
-- name: Save logserver content before changing the date
-  ansible.builtin.shell: |
-    kubectl exec {{ _logserver_pod_name.stdout }} -c {{ sshd_container_name }} -- rsync -r /home/data/rsync/  /tmp/rsync-back/ ;
-
-- name: Changing Logs modified time
-  ansible.builtin.shell: |
-    kubectl exec {{ _logserver_pod_name.stdout }} -c {{ sshd_container_name }} -- find /home/data/rsync/ -mindepth 1 -exec touch --date="1970-01-01" {} \;
-
-- name: Ensure job results do not exist in Logserver after purging
-  ansible.builtin.uri:
-    url: "{{ item.log_url }}/job-output.txt.gz"
-    validate_certs: "{{ validate_certs }}"
-    method: GET
-    status_code: 404 # Resquest not found
-  retries: 10
-  delay: 2
-  register: purge_results
-  until: purge_results.status == 404
-  loop: "{{ zuul_job_result.json | list }}"
-
-- name: Restore logserver content
-  ansible.builtin.shell: |
-    kubectl exec {{ _logserver_pod_name.stdout }} -c {{ sshd_container_name }} -- rsync -r --delete /tmp/rsync-back/ /home/data/rsync/;
+- name: Change logserver/purgelogs loop delay
+  ansible.builtin.include_role:
+    name: "roles/update-custom-resource"
+  vars:
+    cr_spec:
+      logserver:
+        loopDelay: 5
 
 - name: Ensure job results exists in Logserver
-  ansible.builtin.uri:
-    url: "{{ item.log_url }}/job-output.txt.gz"
-    validate_certs: "{{ validate_certs }}"
-    method: GET
-  retries: 10
-  loop: "{{ zuul_job_result.json | list }}"
+  ansible.builtin.include_role:
+    name: "roles/health-check/ensure-job-result-artifacts"
+  vars:
+    log_url: "{{ zuul_config_update_build_log_url }}"
+
+- name: Ensure logserver/purgelog restarted with correct loopDelay
+  command: >
+    kubectl get pods -l "{{ pod_label }}"
+    -o jsonpath='{range .items[*]}{range .spec.containers[*]}{.name}{" "}{.command}{"\n"}{end}{end}'
+  register: logserver_containers
+  until: logserver_containers is not failed and "5" in logserver_containers.stdout
+  delay: 5
+  retries: 6
+
+- name: Get logserver pod name
+  ansible.builtin.shell: >
+    kubectl get pods -l "{{ pod_label }}"
+    --field-selector status.phase=Running --no-headers
+    -o custom-columns=":metadata.name"
+  register: _logserver_pod_name
+  # We wait until we get only one output line because even with the
+  # 'Running' phase selector we might get the previous pod (logserver replicaset is reconfigured
+  # two tasks above) in the command output.
+  until: _logserver_pod_name.stdout_lines | length == 1
+
+- name: Save logserver content before changing the date
+  ansible.builtin.shell: >
+    kubectl exec {{ _logserver_pod_name.stdout }} -c {{ sshd_container_name }}
+    -- rsync -r /home/data/rsync/  /tmp/rsync-back/
+
+- name: Changing Logs modified time
+  ansible.builtin.shell: >
+    kubectl exec {{ _logserver_pod_name.stdout }} -c {{ sshd_container_name }}
+    -- find /home/data/rsync/ -mindepth 1 -exec touch --date="1970-01-01" {} \;
+
+- name: Ensure job results do not exist in Logserver after purging
+  ansible.builtin.include_role:
+    name: "roles/health-check/ensure-job-result-artifacts"
+  vars:
+    log_url: "{{ zuul_config_update_build_log_url }}"
+    status: 404
+
+- name: Restore logserver content
+  ansible.builtin.shell: >
+    kubectl exec {{ _logserver_pod_name.stdout }} -c {{ sshd_container_name }}
+    -- rsync -r --delete /tmp/rsync-back/ /home/data/rsync/
+
+- name: Ensure logserver content restoring worked
+  ansible.builtin.include_role:
+    name: "roles/health-check/ensure-job-result-artifacts"
+  vars:
+    log_url: "{{ zuul_config_update_build_log_url }}"

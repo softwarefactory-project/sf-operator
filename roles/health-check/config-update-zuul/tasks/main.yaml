@@ -61,6 +61,15 @@
   ansible.builtin.include_role:
     name: "roles/health-check/config-repo-submit-change"
 
+- ansible.builtin.set_fact:
+    zuul_config_update_build_log_url: "{{ (zuul_job_result.json | list)[0].log_url }}"
+
+- name: Check that Zuul has pushed the job console on the logserver
+  ansible.builtin.include_role:
+    name: "roles/health-check/ensure-job-result-artifacts"
+  vars:
+    log_url: "{{ zuul_config_update_build_log_url }}"
+
 - name: Get Zuul projects list
   ansible.builtin.uri:
     url: "https://{{ zuul_host }}/api/tenant/{{ tenant_name }}/projects"

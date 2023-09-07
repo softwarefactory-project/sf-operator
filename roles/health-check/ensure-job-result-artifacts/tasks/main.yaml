@@ -1,8 +1,14 @@
 ---
-- name: Ensure job results exists in Logserver
+- name: Ensure job console (job-output.txt.gz) exists in Logserver
   ansible.builtin.uri:
-    url: "{{ item.log_url }}/job-output.txt.gz"
+    url: "{{ log_url }}/job-output.txt.gz"
     validate_certs: "{{ validate_certs }}"
     method: GET
+    status_code:
+      - 200
+      - 404
+  register: this
+  until:
+    - this.status == status
   retries: "{{ retries }}"
-  loop: "{{ zuul_job_result.json | list }}"
+  delay: "{{ delay }}"
