@@ -223,7 +223,14 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 		r.CreateR(&current)
 	}
 
-	return r.IsStatefulSetReady(&current)
+	isStatefulSet := r.IsStatefulSetReady(&current)
+	if isStatefulSet {
+		refresh_condition(&r.cr.Status.Conditions, "zuul-scheduler", metav1.ConditionTrue, "Complete", "Initialization of zuul-scheduler service completed.")
+	} else {
+		refresh_condition(&r.cr.Status.Conditions, "zuul-scheduler", metav1.ConditionUnknown, "Awaiting", "Initializing zuul-scheduler service...")
+	}
+
+	return isStatefulSet
 }
 
 func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
@@ -264,7 +271,14 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		r.CreateR(&current)
 	}
 
-	return r.IsStatefulSetReady(&current)
+	isStatefulSet := r.IsStatefulSetReady(&current)
+	if isStatefulSet {
+		refresh_condition(&r.cr.Status.Conditions, "zuul-executor", metav1.ConditionTrue, "Complete", "Initialization of zuul-executor service completed.")
+	} else {
+		refresh_condition(&r.cr.Status.Conditions, "zuul-executor", metav1.ConditionUnknown, "Awaiting", "Initializing zuul-executor service...")
+	}
+
+	return isStatefulSet
 }
 
 func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
@@ -300,7 +314,14 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		r.CreateR(&current)
 	}
 
-	return r.IsDeploymentReady(&current)
+	isDeploymentReady := r.IsDeploymentReady(&current)
+	if isDeploymentReady {
+		refresh_condition(&r.cr.Status.Conditions, "zuul-web", metav1.ConditionTrue, "Complete", "Initialization of zuul-web service completed.")
+	} else {
+		refresh_condition(&r.cr.Status.Conditions, "zuul-web", metav1.ConditionUnknown, "Awaiting", "Initializing zuul-web service...")
+	}
+
+	return isDeploymentReady
 }
 
 func (r *SFController) EnsureZuulComponentsFrontServices() {
