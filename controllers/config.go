@@ -20,6 +20,7 @@ var pymod_secret string
 //go:embed static/sf_operator/main.py
 var pymod_main string
 
+// Returns true when the Job that set the zuul secret in the system-config repository is done
 func (r *SFController) SetupBaseSecrets() bool {
 
 	serviceAccountName := "config-updater"
@@ -150,21 +151,38 @@ func (r *SFController) InstallTooling() {
 
 func (r *SFController) SetupConfigJob() bool {
 	r.InstallTooling()
+	// We ensure that base secrets are set in the system-config repository
 	if r.SetupBaseSecrets() {
-		// We run zuul full-reconfigure once to ensure that the zuul scheduler loaded the provisionned config
-		var zs_bootstrap_full_reconfigure apiv1.ConfigMap
-		var cm_name = "zs-bootstrap-full-reconfigure"
-		if !r.GetM(cm_name, &zs_bootstrap_full_reconfigure) {
-			r.log.Info("Running the initial zuul-scheduler full-reconfigure")
-			if r.runZuulFullReconfigure() {
+		// We run zuul tenant-reconfigure for the 'internal' tenant, when:
+		// - the configMap does not exists (or)
+		// - tenant config changed
+		// This ensures that the zuul-scheduler loaded the provisionned Zuul config
+		// for the 'internal' tenant
+		var zs_internal_tenant_reconfigure apiv1.ConfigMap
+		var cm_name = "zs-internal-tenant-reconfigure"
+		var needReconfigureTenant = false
+		var configHash = checksum([]byte(preInitScriptTemplate))
+		if !r.GetM(cm_name, &zs_internal_tenant_reconfigure) {
+			needReconfigureTenant = true
+		} else {
+			if configHash != zs_internal_tenant_reconfigure.Data["internal-tenant-config-hash"] {
+				needReconfigureTenant = true
+			}
+		}
+		if needReconfigureTenant {
+			r.log.Info("Running tenant-reconfigure for the 'internal' tenant")
+			if r.runZuulInternalTenantReconfigure() {
 				// Create an empty ConfigMap to keep note the reconfigure has been already done
-				zs_bootstrap_full_reconfigure.ObjectMeta = metav1.ObjectMeta{
+				zs_internal_tenant_reconfigure.ObjectMeta = metav1.ObjectMeta{
 					Name:      cm_name,
 					Namespace: r.ns,
 				}
-				zs_bootstrap_full_reconfigure.Data = map[string]string{}
-				r.CreateR(&zs_bootstrap_full_reconfigure)
+				zs_internal_tenant_reconfigure.Data = map[string]string{
+					"internal-tenant-config-hash": configHash,
+				}
+				r.CreateR(&zs_internal_tenant_reconfigure)
 			}
+			return false
 		} else {
 			return true
 		}

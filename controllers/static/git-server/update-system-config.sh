@@ -93,9 +93,10 @@ if [ -n "${CONFIG_REPO_NAME}" -a -n "${CONFIG_ZUUL_CONNECTION_NAME}" ]; then
         - event: comment-added
           comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*(recheck|reverify)
         - event: comment-added
-          require-approval:
-            - Verified: [-1, -2]
-              username: zuul
+          require:
+            approval:
+              - Verified: [-1, -2]
+                username: zuul
           approval:
             - Workflow: 1
     start:

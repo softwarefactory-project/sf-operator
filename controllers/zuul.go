@@ -452,8 +452,11 @@ func (r *SFController) DeployZuul() bool {
 	return r.EnsureZuulComponents(init_containers, cfg_ini) && r.setupZuulIngress()
 }
 
-func (r *SFController) runZuulFullReconfigure() bool {
-	err := r.PodExec("zuul-scheduler-0", "zuul-scheduler", []string{"zuul-scheduler", "full-reconfigure"})
+func (r *SFController) runZuulInternalTenantReconfigure() bool {
+	err := r.PodExec(
+		"zuul-scheduler-0",
+		"zuul-scheduler",
+		[]string{"zuul-scheduler", "tenant-reconfigure", "internal"})
 	return err == nil
 }
 
