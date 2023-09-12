@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 package nodepool
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -12,7 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	sf "github.com/softwarefactory-project/sf-operator/controllers"
+	"github.com/softwarefactory-project/sf-operator/controllers"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -124,14 +125,56 @@ func createKubeConfig(contextName string, ns string, sa string, token string) cl
 	}
 }
 
-func ensureKubeConfigSecret(env *utils.ENV, config []byte, name string) {
+func ensureNodepoolProvidersSecrets(env *utils.ENV, cloudconfig []byte, kubeconfig []byte) {
 	var secret apiv1.Secret
-	if !utils.GetM(env, name, &secret) {
-		secret.Name = name
-		secret.Data = map[string][]byte{"kube.config": config}
+	if !utils.GetM(env, controllers.NodepoolProvidersSecretsName, &secret) {
+		// Initialize the secret data
+		secret.Name = controllers.NodepoolProvidersSecretsName
+		secret.Data = make(map[string][]byte)
+		if cloudconfig != nil {
+			secret.Data["clouds.yaml"] = cloudconfig
+		}
+		if kubeconfig != nil {
+			secret.Data["kube.config"] = kubeconfig
+		}
 		utils.CreateR(env, &secret)
 	} else {
-		// TODO: update data if needed
+		// Handle secret update
+		if secret.Data == nil {
+			secret.Data = make(map[string][]byte)
+		}
+		needUpdate := false
+		if cloudconfig != nil {
+			if bytes.Compare(secret.Data["clouds.yaml"], cloudconfig) != 0 {
+				println("Updating the clouds config ...")
+				secret.Data["clouds.yaml"] = cloudconfig
+				needUpdate = true
+			}
+		} else {
+			if _, ok := secret.Data["clouds.yaml"]; ok {
+				println("Removing the clouds config ...")
+				delete(secret.Data, "clouds.yaml")
+				needUpdate = true
+			}
+		}
+		if kubeconfig != nil {
+			if bytes.Compare(secret.Data["kube.config"], kubeconfig) != 0 {
+				println("Updating the kube config ...")
+				secret.Data["kube.config"] = kubeconfig
+				needUpdate = true
+			}
+		} else {
+			if _, ok := secret.Data["kube.config"]; ok {
+				println("Removing the kube config ...")
+				delete(secret.Data, "kube.config")
+				needUpdate = true
+			}
+		}
+		if needUpdate {
+			utils.UpdateR(env, &secret)
+		} else {
+			println(controllers.NodepoolProvidersSecretsName + " Secret already is up to date")
+		}
 	}
 }
 
@@ -150,16 +193,16 @@ func CreateNamespaceForNodepool(sfEnv *utils.ENV, nodepoolContext string, nodepo
 	utils.EnsureServiceAccount(&nodepoolEnv, sa)
 	ensureRole(&nodepoolEnv, sa)
 	token := ensureServiceAccountSecret(&nodepoolEnv, sa)
-	nodepoolConfig := createKubeConfig(nodepoolContext, nodepoolNamespace, sa, token)
-	bytes, err := clientcmd.Write(nodepoolConfig)
+	nodepoolKubeConfig := createKubeConfig(nodepoolContext, nodepoolNamespace, sa, token)
+	kubeConfig, err := clientcmd.Write(nodepoolKubeConfig)
 	if err != nil {
 		panic(err)
 	}
 
 	if sfEnv.Ns == "-" {
-		fmt.Printf("%s\n", bytes)
+		fmt.Printf("%s\n", kubeConfig)
 	} else {
-		ensureKubeConfigSecret(sfEnv, bytes, sf.NodepoolProvidersSecretsName)
+		ensureNodepoolProvidersSecrets(sfEnv, []byte{}, kubeConfig)
 	}
 }
 

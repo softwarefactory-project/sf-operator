@@ -66,6 +66,8 @@ func init() {
 	rootCmd.AddCommand(createSsl.CreateCertificateCmd)
 	rootCmd.AddCommand(zuul_client.ZuulClientCmd)
 	rootCmd.AddCommand(sfprometheus.PrometheusCmd)
+	rootCmd.AddCommand(nodepool.ProvidersSecretsCmd)
+
 	rootCmd.Flags().BoolP("erase", "", false, "Erase data")
 }
 
@@ -75,12 +77,8 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
-		currentDir, err := os.Getwd()
-		cobra.CheckErr(err)
-
 		// Search config in home directory with name "sfconfig" (without extension).
-		viper.AddConfigPath(currentDir)
+		viper.AddConfigPath(".")
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("sfconfig")
 	}
@@ -89,7 +87,8 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
-		panic(fmt.Errorf("fatal error config file: %w", err))
+		fmt.Println(fmt.Errorf("fatal error config file: %w", err))
+		os.Exit(1)
 	}
 	if cfgFile == "" {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())

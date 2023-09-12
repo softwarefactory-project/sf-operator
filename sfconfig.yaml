@@ -3,3 +3,6 @@ microshift:
   host: microshift.dev
   user: cloud-user
 fqdn: sftests.com
+nodepool:
+  clouds_file: /etc/sf-operator/nodepool/clouds.yaml
+  kube_file: /etc/sf-operator/nodepool/kubeconfig.yaml
