@@ -104,18 +104,6 @@ func (r *SFController) DeployNodepool() bool {
 			SubPath:   "logging.yaml",
 			MountPath: "/etc/nodepool-logging/logging.yaml",
 		},
-		{
-			Name:      "nodepool-providers-secrets",
-			SubPath:   "kube.config",
-			MountPath: "/var/lib/nodepool/.kube/config",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "nodepool-providers-secrets",
-			SubPath:   "clouds.yaml",
-			MountPath: "/var/lib/nodepool/.config/openstack/clouds.yaml",
-			ReadOnly:  true,
-		},
 		configScriptVolumeMount,
 	}
 
@@ -134,10 +122,28 @@ func (r *SFController) DeployNodepool() bool {
 		}
 	}
 
+	if data, ok := nodepool_providers_secrets.Data["clouds.yaml"]; ok && len(data) > 0 {
+		volume_mount = append(volume_mount, apiv1.VolumeMount{
+			Name:      "nodepool-providers-secrets",
+			SubPath:   "clouds.yaml",
+			MountPath: "/var/lib/nodepool/.config/openstack/clouds.yaml",
+			ReadOnly:  true,
+		})
+	}
+
+	if data, ok := nodepool_providers_secrets.Data["kube.config"]; ok && len(data) > 0 {
+		volume_mount = append(volume_mount, apiv1.VolumeMount{
+			Name:      "nodepool-providers-secrets",
+			SubPath:   "kube.config",
+			MountPath: "/var/lib/nodepool/.kube/config",
+			ReadOnly:  true,
+		})
+	}
+
 	annotations := map[string]string{
 		"nodepool.yaml":         checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml": checksum([]byte(loggingConfig)),
-		"serial":                "4",
+		"serial":                "5",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"nodepool-providers-secrets": string(nodepool_providers_secrets.ResourceVersion),
 		"nodepool-launcher-image":    nodepoolLauncherImage,
