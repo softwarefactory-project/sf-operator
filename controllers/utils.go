@@ -166,6 +166,21 @@ func refresh_condition(conditions *[]metav1.Condition, conditiontype string, sta
 	}
 }
 
+func updateConditions(conditions *[]metav1.Condition, condType string, ready bool) {
+	var reason, message string
+	var status metav1.ConditionStatus
+	if ready {
+		reason = "Complete"
+		message = fmt.Sprintf("Initialization of %s service completed.", condType)
+		status = metav1.ConditionTrue
+	} else {
+		reason = "Awaiting"
+		message = fmt.Sprintf("Initializing %s service...", condType)
+		status = metav1.ConditionFalse
+	}
+	refresh_condition(conditions, condType, status, reason, message)
+}
+
 // Function to easilly use templated string.
 //
 // Pass the template text.

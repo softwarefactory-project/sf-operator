@@ -7,7 +7,6 @@ import (
 	_ "embed"
 
 	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //go:embed static/zookeeper/ok.sh
@@ -128,11 +127,7 @@ func (r *SFController) DeployZookeeper() bool {
 	}
 
 	isStatefulSet := r.IsStatefulSetReady(&zk)
-	if isStatefulSet {
-		refresh_condition(&r.cr.Status.Conditions, ZK_IDENT, metav1.ConditionTrue, "Complete", "Initialization of "+ZK_IDENT+" service completed.")
-	} else {
-		refresh_condition(&r.cr.Status.Conditions, ZK_IDENT, metav1.ConditionUnknown, "Awaiting", "Initializing "+ZK_IDENT+" service...")
-	}
+	updateConditions(&r.cr.Status.Conditions, ZK_IDENT, isStatefulSet)
 
 	return isStatefulSet
 }
