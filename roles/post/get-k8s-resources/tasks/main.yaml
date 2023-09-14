@@ -61,6 +61,6 @@
   ansible.builtin.shell: |
     for pod in $(kubectl {{ namespace_opt }} get pods -o name); do
       for container in $(kubectl {{ namespace_opt }} get $pod -o jsonpath='{.spec.containers[*].name}'); do
-        kubectl {{ namespace_opt }} logs $pod -c $container > {{ dest_dir }}/${pod}-${container}-logs.txt
+        kubectl {{ namespace_opt }} logs {{ logs_arguments }} $pod -c $container > {{ dest_dir }}/${pod}-${container}-logs.txt
       done
     done

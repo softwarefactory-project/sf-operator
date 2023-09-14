@@ -1,3 +1,4 @@
 ---
 output_logs_dir: ~/zuul-output/logs
 output_dir: "{{ output_logs_dir }}/k8s-resources"
+logs_arguments: --since=2h
