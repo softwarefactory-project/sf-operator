@@ -63,6 +63,7 @@
 
 - ansible.builtin.set_fact:
     zuul_config_update_build_log_url: "{{ (zuul_job_result.json | list)[0].log_url }}"
+    check_gz_redirection: true
 
 - name: Check that Zuul has pushed the job console on the logserver
   ansible.builtin.include_role:

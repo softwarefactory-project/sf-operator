@@ -12,3 +12,14 @@
     - this.status == status
   retries: "{{ retries }}"
   delay: "{{ delay }}"
+
+- name: Ensure internal logserver rewrite from job-output.txt to job-output.txt.gz
+  ansible.builtin.uri:
+    url: "{{ log_url }}/job-output.txt"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      # Web browsers set that header
+      Accept-Encoding: gzip
+  when:
+    - status == 200
+    - check_gz_redirection

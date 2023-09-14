@@ -3,3 +3,4 @@ validate_certs: true
 retries: 3
 delay: 5
 status: 200
+check_gz_redirection: false
