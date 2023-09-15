@@ -146,11 +146,7 @@ func (r *SFController) DeployGitServer() bool {
 	r.GetOrCreate(&git_service)
 
 	is_statefulset := r.IsStatefulSetReady(&current)
-	if is_statefulset {
-		refresh_condition(&r.cr.Status.Conditions, GS_IDENT, metav1.ConditionTrue, "Complete", "Initialization of "+GS_IDENT+" service completed.")
-	} else {
-		refresh_condition(&r.cr.Status.Conditions, GS_IDENT, metav1.ConditionUnknown, "Awaiting", "Initializing "+GS_IDENT+" service...")
-	}
+	updateConditions(&r.cr.Status.Conditions, GS_IDENT, is_statefulset)
 
 	return is_statefulset
 }

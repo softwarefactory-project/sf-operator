@@ -214,11 +214,7 @@ func (r *SFController) DeployNodepool() bool {
 		NL_WEBAPP_PORT, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
 	isDeploymentReady := r.IsDeploymentReady(&current)
-	if isDeploymentReady {
-		refresh_condition(&r.cr.Status.Conditions, NL_IDENT, metav1.ConditionTrue, "Complete", "Initialization of "+NL_IDENT+" service completed.")
-	} else {
-		refresh_condition(&r.cr.Status.Conditions, NL_IDENT, metav1.ConditionUnknown, "Awaiting", "Initializing "+NL_IDENT+" service...")
-	}
+	updateConditions(&r.cr.Status.Conditions, NL_IDENT, isDeploymentReady)
 
 	return isDeploymentReady && route_ready
 }
