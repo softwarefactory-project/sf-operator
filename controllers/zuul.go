@@ -190,6 +190,7 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            ZuulImage("zuul-scheduler"),
+		"statsd_mapping":        utils.Checksum([]byte(zuulStatsdMappingConfig)),
 		"serial":                "3",
 	}
 

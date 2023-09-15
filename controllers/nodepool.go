@@ -237,6 +237,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume) 
 		"nodepool-logging.yaml": utils.Checksum([]byte(loggingConfig)),
 		"dib-ansible.py":        utils.Checksum([]byte(dibAnsibleWrapper)),
 		"ssh_config":            utils.Checksum([]byte(builderSSHConfig)),
+		"statsd_mapping":        utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		"serial":                "7",
 	}
 
@@ -380,6 +381,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume)
 	annotations := map[string]string{
 		"nodepool.yaml":         utils.Checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml": utils.Checksum([]byte(loggingConfig)),
+		"statsd_mapping":        utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		"serial":                "6",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),

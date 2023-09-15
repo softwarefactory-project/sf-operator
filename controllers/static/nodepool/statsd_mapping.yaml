@@ -1,124 +1,215 @@
-# TODO Parsed manually from nodepool's source code. Look for calls of
-# recordLaunchStats, updateNodeStats, updateProviderLimits and updateTenantLimits.
-
+# Auto-generated with zuuldoc2statsdmapper.py, please check with: 
+# podman run --rm -v controllers/static/nodepool/statsd_mapping.yaml:/tmp/statsd_mapping.yaml:z docker.io/prom/statsd-exporter --statsd.mapping-config=/tmp/statsd_mapping.yaml
+#
 mappings:
-
-# recordLaunchStats
-  - match: nodepool.launch.provider.*.ready
-    name: nodepool_launch_provider_ready
-    help: launch success counter per provider
-    labels:
-      provider: "$1"
-
-  - match: nodepool.launch.provider.*.error.*
-    name: nodepool_launch_provider_error
-    help: launch error counter per provider and error type
-    labels:
-      provider: "$1"
-      error: "$2"
-
-  - match: nodepool.launch.provider.*.*.ready
-    name: nodepool_launch_provider_az_ready
-    help: launch success counter per provider and az
-    labels:
-      provider: "$1"
-      az: "$2"
-
-  - match: nodepool.launch.requestor.*.ready
-    name: nodepool_launch_requestor_ready
-    help: launch success counter per requestor
-    labels:
-      requestor: "$1"
-
-  - match: nodepool.launch.ready
-    name: nodepool_launch_ready
-    help: launch success counter
-
-  - match: nodepool.launch.provider.*.*.error.*
-    name: nodepool_launch_provider_az_error
-    help: launch error counter per provider, az and error type
-    labels:
-      provider: "$1"
-      az: "$2"
-      error: "$3"
-
-  - match: nodepool.launch.requestor.*.error.*
-    name: nodepool_launch_requestor_error
-    help: launch error counter per requestor and error type
-    labels:
-      requestor: "$1"
-      error: "$2"
-
-  - match: nodepool.launch.error.*
-    name: nodepool_launch_error
-    help: launch error counter per error type
-    labels:
-      error: "$1"
-
-# updateNodeStats
-  - match: nodepool.nodes.*
-    name: nodepool_nodes_state
-    labels:
-      state: "$1"
-
-  - match: nodepool.provider.*.nodes.*
-    name: nodepool_provider_nodes_state
-    labels:
-      provider: "$1"
-      state: "$2"
-
-  - match: nodepool.label.*.nodes.*
-    name: nodepool_label_nodes_state
-    labels:
-      label: "$1"
-      state: "$2"
-
-# updateProviderLimits
-  - match: nodepool.provider.*.max_servers
-    name: nodepool_provider_max_servers
-    labels:
-      provider: "$1"
-
-  - match: nodepool.tenant_limits.*.*
-    name: nodepool_tenant_limits
-    labels:
-      tenant: "$1"
-      resource: "$2"
-
-# nodepool/builder.py
-  - match: nodepool.image_build_requests
-    name: nodepool_image_build_requests
-
-  - match: nodepool.dib_image_build.*.status.duration
-    name: nodepool_dib_image_build_status_duration
-    labels:
-      name: "$1"
-
-  - match: nodepool.dib_image_build.*.status.rc
-    name: nodepool_dib_image_build_status_rc
-    labels:
-      name: "$1"
-
-  - match: nodepool.dib_image_build.*.status.last_build
-    name: nodepool_dib_image_build_status_last_build
-    labels:
-      name: "$1"
-
-  - match: nodepool.dib_image_build.*.*.size
-    name: nodepool_dib_image_build_size
-    labels:
-      name: "$1"
-      image_type: "$2"
-
-  - match: nodepool.image_update.*.*
-    name: nodepool_image_update
-    labels:
-      name: "$1"
-      provider: "$2"
-
-  # Drop all non-matching metrics to avoid spamming prometheus with
-  # eventually unmatched metrics.
-  - match: .
-    match_type: regex
-    action: drop
-    name: "dropped"
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.dib_image_build.<diskimage_name>.<ext>.size
+  labels:
+    diskimage: "$1"
+    ext: "$2"
+  match: nodepool.dib_image_build.*.*.size
+  name: nodepool_dib_image_build_size
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.dib_image_build.<diskimage_name>.status.rc
+  labels:
+    diskimage: "$1"
+  match: nodepool.dib_image_build.*.status.rc
+  name: nodepool_dib_image_build_status_rc
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.dib_image_build.<diskimage_name>.status.duration
+  labels:
+    diskimage: "$1"
+  match: nodepool.dib_image_build.*.status.duration
+  name: nodepool_dib_image_build_status_duration
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.dib_image_build.<diskimage_name>.status.last_build
+  labels:
+    diskimage: "$1"
+  match: nodepool.dib_image_build.*.status.last_build
+  name: nodepool_dib_image_build_status_last_build
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.image_update.<image
+    name>.<provider name>
+  labels:
+    image: "$1"
+    provider: "$2"
+  match: nodepool.image_update.*.*
+  name: nodepool_image_update
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.image_build_requests
+  match: nodepool.image_build_requests
+  name: nodepool_image_build_requests
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.nodes.<state>
+  labels:
+    state: "$1"
+  match: nodepool.nodes.*
+  name: nodepool_nodes
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.label.<label>.nodes.<state>
+  labels:
+    label: "$1"
+    state: "$2"
+  match: nodepool.label.*.nodes.*
+  name: nodepool_label_nodes
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.tenant_limits.<tenant>.<limit>
+  labels:
+    limit: "$2"
+    tenant: "$1"
+  match: nodepool.tenant_limits.*.*
+  name: nodepool_tenant_limits
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.max_servers
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.max_servers
+  name: nodepool_provider_max_servers
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.nodes.<state>
+  labels:
+    provider: "$1"
+    state: "$2"
+  match: nodepool.provider.*.nodes.*
+  name: nodepool_provider_nodes
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked
+  name: nodepool_provider_leaked
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked.amis
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked.amis
+  name: nodepool_provider_leaked_amis
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked.disks
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked.disks
+  name: nodepool_provider_leaked_disks
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked.floatingips
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked.floatingips
+  name: nodepool_provider_leaked_floatingips
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked.images
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked.images
+  name: nodepool_provider_leaked_images
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked.instances
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked.instances
+  name: nodepool_provider_leaked_instances
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked.nics
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked.nics
+  name: nodepool_provider_leaked_nics
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked.objects
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked.objects
+  name: nodepool_provider_leaked_objects
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked.pips
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked.pips
+  name: nodepool_provider_leaked_pips
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked.ports
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked.ports
+  name: nodepool_provider_leaked_ports
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked.snapshots
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked.snapshots
+  name: nodepool_provider_leaked_snapshots
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.leaked.volumes
+  labels:
+    provider: "$1"
+  match: nodepool.provider.*.leaked.volumes
+  name: nodepool_provider_leaked_volumes
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launch.<result>
+  labels: {}
+  match: nodepool.launch.ready
+  name: nodepool_launch_ready
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launch.<result>
+  labels:
+    error: "$1"
+  match: nodepool.launch.error.*
+  name: nodepool_launch_error
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launch.provider.<provider>.<az>.<result>
+  labels:
+    az: "$2"
+    provider: "$1"
+  match: nodepool.launch.provider.*.*.ready
+  name: nodepool_launch_provider_ready
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launch.provider.<provider>.<az>.<result>
+  labels:
+    az: "$2"
+    error: "$3"
+    provider: "$1"
+  match: nodepool.launch.provider.*.*.error.*
+  name: nodepool_launch_provider_error
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launch.image.<image>.<result>
+  labels:
+    image: "$1"
+  match: nodepool.launch.image.*.ready
+  name: nodepool_launch_image_ready
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launch.image.<image>.<result>
+  labels:
+    error: "$2"
+    image: "$1"
+  match: nodepool.launch.image.*.error.*
+  name: nodepool_launch_image_error
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launch.requestor.<requestor>.<result>
+  labels:
+    requestor: "$1"
+  match: nodepool.launch.requestor.*.ready
+  name: nodepool_launch_requestor_ready
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launch.requestor.<requestor>.<result>
+  labels:
+    error: "$2"
+    requestor: "$1"
+  match: nodepool.launch.requestor.*.error.*
+  name: nodepool_launch_requestor_error
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launcher.<hostname>.zk.client.connection_queue
+  labels:
+    hostname: "$1"
+  match: nodepool.launcher.*.zk.client.connection_queue
+  name: nodepool_launcher_zk_client_connection_queue
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launcher.<hostname>.zk.node_cache.event_queue
+  labels:
+    hostname: "$1"
+  match: nodepool.launcher.*.zk.node_cache.event_queue
+  name: nodepool_launcher_zk_node_cache_event_queue
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launcher.<hostname>.zk.node_cache.playback_queue
+  labels:
+    hostname: "$1"
+  match: nodepool.launcher.*.zk.node_cache.playback_queue
+  name: nodepool_launcher_zk_node_cache_playback_queue
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launcher.<hostname>.zk.request_cache.event_queue
+  labels:
+    hostname: "$1"
+  match: nodepool.launcher.*.zk.request_cache.event_queue
+  name: nodepool_launcher_zk_request_cache_event_queue
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launcher.<hostname>.zk.request_cache.playback_queue
+  labels:
+    hostname: "$1"
+  match: nodepool.launcher.*.zk.request_cache.playback_queue
+  name: nodepool_launcher_zk_request_cache_playback_queue
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launcher.<hostname>.zk.image_cache.event_queue
+  labels:
+    hostname: "$1"
+  match: nodepool.launcher.*.zk.image_cache.event_queue
+  name: nodepool_launcher_zk_image_cache_event_queue
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launcher.<hostname>.zk.image_cache.playback_queue
+  labels:
+    hostname: "$1"
+  match: nodepool.launcher.*.zk.image_cache.playback_queue
+  name: nodepool_launcher_zk_image_cache_playback_queue
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#openstack-api-metrics
+  labels:
+    method: "$3"
+    operation: "$4"
+    provider: "$1"
+    service: "$2"
+    status: "$5"
+  match: nodepool.task.*.*.*.*.*
+  name: nodepool_task_openstack
+- action: drop
+  match: .
+  match_type: regex
+  name: "dropped"

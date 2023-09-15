@@ -1,48 +1,665 @@
-# TODO This is not nearly complete, maybe an existing mapping of
-# https://zuul-ci.org/docs/zuul/latest/monitoring.html#metrics exists somewhere?
-
+# Auto-generated with zuuldoc2statsdmapper.py, please check with: 
+# podman run --rm -v controllers/static/zuul/statsd_mapping.yaml:/tmp/statsd_mapping.yaml:z docker.io/prom/statsd-exporter --statsd.mapping-config=/tmp/statsd_mapping.yaml
+#
 mappings:
-  - match: zuul.nodepool.requests.*
-    name: zuul_nodepool_requests
-    help: Zuul requests and responses from Nodepool
-    labels:
-      state: "$1"
-
-  - match: zuul.nodepool.requests.*.label.*
-    name: zuul_nodepool_requests_state_by_label
-    help: Zuul requests and responses from Nodepool
-    labels:
-      state: "$1"
-      label: "$2"
-
-  - match: zuul.tenant.*.management_events
-    name: zuul_tenant_management_events
-    help: Size of the tenant's management event queue
-    labels:
-      tenant: "$1"
-
-  - match: zuul.tenant.*.pipeline.*.current_changes
-    name: zuul_tenant_pipeline_current_changes
-    help: Number of items currently being processed by this pipeline
-    labels:
-      tenant: "$1"
-      pipeline: "$2"
-
-  - match: zuul.executors.online
-    name: zuul_executors_online
-    help: Number of Zuul executor processes online
-  
-  - match: zuul.executors.accepting
-    name: zuul_executors_accepting
-    help: Number of Zuul executor processes accepting new jobs
-
-  - match: zuul.executors.accepting
-    name: zuul_executors_accepting
-    help: Number of Zuul executor processes accepting new jobs
-
-  # Drop all non-matching metrics to avoid spamming prometheus with
-  # eventually unmatched metrics.
-  - match: .
-    match_type: regex
-    action: drop
-    name: "dropped"
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.event.<driver>.<type>
+  labels:
+    driver: "$1"
+    type: "$2"
+  match: zuul.event.*.*
+  name: zuul_event
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.connection.<connection>
+  labels:
+    connection: "$1"
+  match: zuul.connection.*
+  name: zuul_connection
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.connection.<connection>.cache.data_size_compressed
+  labels:
+    connection: "$1"
+  match: zuul.connection.*.cache.data_size_compressed
+  name: zuul_connection_cache_data_size_compressed
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.connection.<connection>.cache.data_size_uncompressed
+  labels:
+    connection: "$1"
+  match: zuul.connection.*.cache.data_size_uncompressed
+  name: zuul_connection_cache_data_size_uncompressed
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.event_enqueue_processing_time
+  labels:
+    tenant: "$1"
+  match: zuul.tenant.*.event_enqueue_processing_time
+  name: zuul_tenant_event_enqueue_processing_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.event_enqueue_time
+  labels:
+    tenant: "$1"
+  match: zuul.tenant.*.event_enqueue_time
+  name: zuul_tenant_event_enqueue_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.management_events
+  labels:
+    tenant: "$1"
+  match: zuul.tenant.*.management_events
+  name: zuul_tenant_management_events
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.reconfiguration_time
+  labels:
+    tenant: "$1"
+  match: zuul.tenant.*.reconfiguration_time
+  name: zuul_tenant_reconfiguration_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.trigger_events
+  labels:
+    tenant: "$1"
+  match: zuul.tenant.*.trigger_events
+  name: zuul_tenant_trigger_events
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline
+  labels:
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline
+  name: zuul_tenant_pipeline
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*
+  name: zuul_tenant_pipeline
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.event_enqueue_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.event_enqueue_time
+  name: zuul_tenant_pipeline_event_enqueue_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.merge_request_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.merge_request_time
+  name: zuul_tenant_pipeline_merge_request_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.merger_merge_op_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.merger_merge_op_time
+  name: zuul_tenant_pipeline_merger_merge_op_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.merger_files_changes_op_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.merger_files_changes_op_time
+  name: zuul_tenant_pipeline_merger_files_changes_op_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.layout_generation_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.layout_generation_time
+  name: zuul_tenant_pipeline_layout_generation_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.job_freeze_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.job_freeze_time
+  name: zuul_tenant_pipeline_job_freeze_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.repo_state_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.repo_state_time
+  name: zuul_tenant_pipeline_repo_state_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.merger_repo_state_op_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.merger_repo_state_op_time
+  name: zuul_tenant_pipeline_merger_repo_state_op_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.node_request_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.node_request_time
+  name: zuul_tenant_pipeline_node_request_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.job_wait_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.job_wait_time
+  name: zuul_tenant_pipeline_job_wait_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.event_job_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.event_job_time
+  name: zuul_tenant_pipeline_event_job_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.all_jobs
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.all_jobs
+  name: zuul_tenant_pipeline_all_jobs
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.current_changes
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.current_changes
+  name: zuul_tenant_pipeline_current_changes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.window
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.window
+  name: zuul_tenant_pipeline_window
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.handling
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.handling
+  name: zuul_tenant_pipeline_handling
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.event_process
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.event_process
+  name: zuul_tenant_pipeline_event_process
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.process
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.process
+  name: zuul_tenant_pipeline_process
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.data_size_compressed
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.data_size_compressed
+  name: zuul_tenant_pipeline_data_size_compressed
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.data_size_uncompressed
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.data_size_uncompressed
+  name: zuul_tenant_pipeline_data_size_uncompressed
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.queue
+  name: zuul_tenant_pipeline_queue
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue
+    name>
+  labels:
+    pipeline: "$2"
+    queue: "$3"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.queue.*
+  name: zuul_tenant_pipeline_queue
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue
+    name>.current_changes
+  labels:
+    pipeline: "$2"
+    queue: "$3"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.queue.*.current_changes
+  name: zuul_tenant_pipeline_queue_current_changes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue
+    name>.window
+  labels:
+    pipeline: "$2"
+    queue: "$3"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.queue.*.window
+  name: zuul_tenant_pipeline_queue_window
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue
+    name>.resident_time
+  labels:
+    pipeline: "$2"
+    queue: "$3"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.queue.*.resident_time
+  name: zuul_tenant_pipeline_queue_resident_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue
+    name>.total_changes
+  labels:
+    pipeline: "$2"
+    queue: "$3"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.queue.*.total_changes
+  name: zuul_tenant_pipeline_queue_total_changes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.project
+  name: zuul_tenant_pipeline_project
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project.<canonical_hostname>
+  labels:
+    canonical_hostname: "$3"
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.project.*
+  name: zuul_tenant_pipeline_project
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project.<canonical_hostname>.<project>
+  labels:
+    canonical_hostname: "$3"
+    pipeline: "$2"
+    project: "$4"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.project.*.*
+  name: zuul_tenant_pipeline_project
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project.<canonical_hostname>.<project>.<branch>
+  labels:
+    branch: "$5"
+    canonical_hostname: "$3"
+    pipeline: "$2"
+    project: "$4"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.project.*.*.*
+  name: zuul_tenant_pipeline_project
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project.<canonical_hostname>.<project>.<branch>.job
+  labels:
+    branch: "$5"
+    canonical_hostname: "$3"
+    pipeline: "$2"
+    project: "$4"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.project.*.*.*.job
+  name: zuul_tenant_pipeline_project_job
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project.<canonical_hostname>.<project>.<branch>.job.<jobname>
+  labels:
+    branch: "$5"
+    canonical_hostname: "$3"
+    jobname: "$6"
+    pipeline: "$2"
+    project: "$4"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.project.*.*.*.job.*
+  name: zuul_tenant_pipeline_project_job
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project.<canonical_hostname>.<project>.<branch>.job.<jobname>.<result>
+  labels:
+    branch: "$5"
+    canonical_hostname: "$3"
+    jobname: "$6"
+    pipeline: "$2"
+    project: "$4"
+    result: "$7"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.project.*.*.*.job.*.*
+  name: zuul_tenant_pipeline_project_job
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project.<canonical_hostname>.<project>.<branch>.job.<jobname>.wait_time
+  labels:
+    branch: "$5"
+    canonical_hostname: "$3"
+    jobname: "$6"
+    pipeline: "$2"
+    project: "$4"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.project.*.*.*.job.*.wait_time
+  name: zuul_tenant_pipeline_project_job_wait_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project.<canonical_hostname>.<project>.<branch>.current_changes
+  labels:
+    branch: "$5"
+    canonical_hostname: "$3"
+    pipeline: "$2"
+    project: "$4"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.project.*.*.*.current_changes
+  name: zuul_tenant_pipeline_project_current_changes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project.<canonical_hostname>.<project>.<branch>.resident_time
+  labels:
+    branch: "$5"
+    canonical_hostname: "$3"
+    pipeline: "$2"
+    project: "$4"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.project.*.*.*.resident_time
+  name: zuul_tenant_pipeline_project_resident_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project.<canonical_hostname>.<project>.<branch>.total_changes
+  labels:
+    branch: "$5"
+    canonical_hostname: "$3"
+    pipeline: "$2"
+    project: "$4"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.project.*.*.*.total_changes
+  name: zuul_tenant_pipeline_project_total_changes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.read_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.read_time
+  name: zuul_tenant_pipeline_read_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.read_znodes
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.read_znodes
+  name: zuul_tenant_pipeline_read_znodes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.read_objects
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.read_objects
+  name: zuul_tenant_pipeline_read_objects
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.read_bytes
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.read_bytes
+  name: zuul_tenant_pipeline_read_bytes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.refresh
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.refresh
+  name: zuul_tenant_pipeline_refresh
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.resident_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.resident_time
+  name: zuul_tenant_pipeline_resident_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.total_changes
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.total_changes
+  name: zuul_tenant_pipeline_total_changes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.trigger_events
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.trigger_events
+  name: zuul_tenant_pipeline_trigger_events
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.result_events
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.result_events
+  name: zuul_tenant_pipeline_result_events
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.management_events
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.management_events
+  name: zuul_tenant_pipeline_management_events
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.write_time
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.write_time
+  name: zuul_tenant_pipeline_write_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.write_znodes
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.write_znodes
+  name: zuul_tenant_pipeline_write_znodes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.write_objects
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.write_objects
+  name: zuul_tenant_pipeline_write_objects
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.write_bytes
+  labels:
+    pipeline: "$2"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.write_bytes
+  name: zuul_tenant_pipeline_write_bytes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>
+  labels:
+    executor: "$1"
+  match: zuul.executor.*
+  name: zuul_executor
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.merger.<result>
+  labels:
+    executor: "$1"
+    result: "$2"
+  match: zuul.executor.*.merger.*
+  name: zuul_executor_merger
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.builds
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.builds
+  name: zuul_executor_builds
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.starting_builds
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.starting_builds
+  name: zuul_executor_starting_builds
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.running_builds
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.running_builds
+  name: zuul_executor_running_builds
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.paused_builds
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.paused_builds
+  name: zuul_executor_paused_builds
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.phase
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.phase
+  name: zuul_executor_phase
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.phase.<phase>
+  labels:
+    executor: "$1"
+    phase: "$2"
+  match: zuul.executor.*.phase.*
+  name: zuul_executor_phase
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.phase.<phase>.<result>
+  labels:
+    executor: "$1"
+    phase: "$2"
+    result: "$3"
+  match: zuul.executor.*.phase.*.*
+  name: zuul_executor_phase
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.load_average
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.load_average
+  name: zuul_executor_load_average
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.pause
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.pause
+  name: zuul_executor_pause
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.pct_used_hdd
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.pct_used_hdd
+  name: zuul_executor_pct_used_hdd
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.pct_used_ram
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.pct_used_ram
+  name: zuul_executor_pct_used_ram
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.pct_used_ram_cgroup
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.pct_used_ram_cgroup
+  name: zuul_executor_pct_used_ram_cgroup
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.requests
+  match: zuul.nodepool.requests
+  name: zuul_nodepool_requests
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.requests.<state>
+  labels:
+    state: "$1"
+  match: zuul.nodepool.requests.*
+  name: zuul_nodepool_requests
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.requests.<state>.total
+  labels:
+    state: "$1"
+  match: zuul.nodepool.requests.*.total
+  name: zuul_nodepool_requests_total
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.requests.<state>.size.<size>
+  labels:
+    size: "$2"
+    state: "$1"
+  match: zuul.nodepool.requests.*.size.*
+  name: zuul_nodepool_requests_size
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.requests.<state>.label.<label>
+  labels:
+    label: "$2"
+    state: "$1"
+  match: zuul.nodepool.requests.*.label.*
+  name: zuul_nodepool_requests_label
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool
+  match: zuul.nodepool
+  name: zuul_nodepool
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.current_requests
+  match: zuul.nodepool.current_requests
+  name: zuul_nodepool_current_requests
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.tenant.<tenant>.current_requests
+  labels:
+    tenant: "$1"
+  match: zuul.nodepool.tenant.*.current_requests
+  name: zuul_nodepool_tenant_current_requests
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.resources
+  match: zuul.nodepool.resources
+  name: zuul_nodepool_resources
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.resources.in_use
+  match: zuul.nodepool.resources.in_use
+  name: zuul_nodepool_resources_in_use
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.resources.in_use.tenant
+  match: zuul.nodepool.resources.in_use.tenant
+  name: zuul_nodepool_resources_in_use_tenant
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.resources.in_use.tenant.<tenant>.<resource>
+  labels:
+    resource: "$2"
+    tenant: "$1"
+  match: zuul.nodepool.resources.in_use.tenant.*.*
+  name: zuul_nodepool_resources_in_use_tenant
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.resources.in_use.project
+  match: zuul.nodepool.resources.in_use.project
+  name: zuul_nodepool_resources_in_use_project
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.resources.in_use.project.<project>.<resource>
+  labels:
+    project: "$1"
+    resource: "$2"
+  match: zuul.nodepool.resources.in_use.project.*.*
+  name: zuul_nodepool_resources_in_use_project
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.resources.total
+  match: zuul.nodepool.resources.total
+  name: zuul_nodepool_resources_total
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.resources.total.tenant
+  match: zuul.nodepool.resources.total.tenant
+  name: zuul_nodepool_resources_total_tenant
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.resources.total.tenant.<tenant>.<resource>
+  labels:
+    resource: "$2"
+    tenant: "$1"
+  match: zuul.nodepool.resources.total.tenant.*.*
+  name: zuul_nodepool_resources_total_tenant
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.mergers
+  match: zuul.mergers
+  name: zuul_mergers
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.mergers.online
+  match: zuul.mergers.online
+  name: zuul_mergers_online
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.mergers.jobs_running
+  match: zuul.mergers.jobs_running
+  name: zuul_mergers_jobs_running
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.mergers.jobs_queued
+  match: zuul.mergers.jobs_queued
+  name: zuul_mergers_jobs_queued
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors
+  match: zuul.executors
+  name: zuul_executors
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.online
+  match: zuul.executors.online
+  name: zuul_executors_online
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.accepting
+  match: zuul.executors.accepting
+  name: zuul_executors_accepting
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.jobs_running
+  match: zuul.executors.jobs_running
+  name: zuul_executors_jobs_running
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.jobs_queued
+  match: zuul.executors.jobs_queued
+  name: zuul_executors_jobs_queued
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.unzoned
+  match: zuul.executors.unzoned
+  name: zuul_executors_unzoned
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.unzoned.online
+  match: zuul.executors.unzoned.online
+  name: zuul_executors_unzoned_online
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.unzoned.accepting
+  match: zuul.executors.unzoned.accepting
+  name: zuul_executors_unzoned_accepting
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.unzoned.jobs_running
+  match: zuul.executors.unzoned.jobs_running
+  name: zuul_executors_unzoned_jobs_running
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.unzoned.jobs_queued
+  match: zuul.executors.unzoned.jobs_queued
+  name: zuul_executors_unzoned_jobs_queued
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.zone
+  match: zuul.executors.zone
+  name: zuul_executors_zone
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.zone.<zone>.online
+  labels:
+    zone: "$1"
+  match: zuul.executors.zone.*.online
+  name: zuul_executors_zone_online
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.zone.<zone>.accepting
+  labels:
+    zone: "$1"
+  match: zuul.executors.zone.*.accepting
+  name: zuul_executors_zone_accepting
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.zone.<zone>.jobs_running
+  labels:
+    zone: "$1"
+  match: zuul.executors.zone.*.jobs_running
+  name: zuul_executors_zone_jobs_running
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executors.zone.<zone>.jobs_queued
+  labels:
+    zone: "$1"
+  match: zuul.executors.zone.*.jobs_queued
+  name: zuul_executors_zone_jobs_queued
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.scheduler
+  match: zuul.scheduler
+  name: zuul_scheduler
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.scheduler.eventqueues
+  match: zuul.scheduler.eventqueues
+  name: zuul_scheduler_eventqueues
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.scheduler.eventqueues.management
+  match: zuul.scheduler.eventqueues.management
+  name: zuul_scheduler_eventqueues_management
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.scheduler.eventqueues.connection.<connection-name>
+  labels:
+    connection: "$1"
+  match: zuul.scheduler.eventqueues.connection.*
+  name: zuul_scheduler_eventqueues_connection
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.scheduler.run_handler
+  match: zuul.scheduler.run_handler
+  name: zuul_scheduler_run_handler
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.scheduler.time_query
+  match: zuul.scheduler.time_query
+  name: zuul_scheduler_time_query
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.web
+  match: zuul.web
+  name: zuul_web
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.web.server.<hostname>
+  labels:
+    hostname: "$1"
+  match: zuul.web.server.*
+  name: zuul_web_server
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.web.server.<hostname>.threadpool
+  labels:
+    hostname: "$1"
+  match: zuul.web.server.*.threadpool
+  name: zuul_web_server_threadpool
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.web.server.<hostname>.threadpool.idle
+  labels:
+    hostname: "$1"
+  match: zuul.web.server.*.threadpool.idle
+  name: zuul_web_server_threadpool_idle
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.web.server.<hostname>.threadpool.queue
+  labels:
+    hostname: "$1"
+  match: zuul.web.server.*.threadpool.queue
+  name: zuul_web_server_threadpool_queue
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.web.server.<hostname>.streamers
+  labels:
+    hostname: "$1"
+  match: zuul.web.server.*.streamers
+  name: zuul_web_server_streamers
+- action: drop
+  match: .
+  match_type: regex
+  name: "dropped"
