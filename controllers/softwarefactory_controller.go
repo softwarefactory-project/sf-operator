@@ -158,7 +158,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	services["Zuul"] = false
 
 	// Setup a Self-Signed certificate issuer
-	r.EnsureCA()
+	r.EnsureLocalCA()
 
 	// Setup LetsEncrypt Issuer if needed
 	if r.cr.Spec.LetsEncrypt != nil {

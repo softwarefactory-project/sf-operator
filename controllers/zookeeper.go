@@ -39,6 +39,10 @@ func (r *SFController) DeployZookeeper() bool {
 	r.GetOrCreate(&cert)
 	r.GetOrCreate(&cert_client)
 
+	if !isCertificateReady(&cert) || !isCertificateReady(&cert_client) {
+		return false
+	}
+
 	cm_data := make(map[string]string)
 	cm_data["ok.sh"] = zookeeper_ok
 	cm_data["ready.sh"] = zookeeper_ready

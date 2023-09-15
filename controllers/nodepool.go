@@ -47,6 +47,9 @@ func (r *SFController) get_generate_nodepool_config_envs() []apiv1.EnvVar {
 func (r *SFController) DeployNodepool() bool {
 	cert_client := r.create_client_certificate("zookeeper-client", "ca-issuer", "zookeeper-client-tls", "zookeeper", r.cr.Spec.FQDN)
 	r.GetOrCreate(&cert_client)
+	if !isCertificateReady(&cert_client) {
+		return false
+	}
 
 	launcher_tooling_data := make(map[string]string)
 	launcher_tooling_data["generate-launcher-config.sh"] = generateConfigScript
