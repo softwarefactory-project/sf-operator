@@ -213,5 +213,12 @@ func (r *SFController) DeployNodepool() bool {
 	route_ready := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-launcher", "nodepool", NL_IDENT, "/",
 		NL_WEBAPP_PORT, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
-	return r.IsDeploymentReady(&current) && route_ready
+	isDeploymentReady := r.IsDeploymentReady(&current)
+	if isDeploymentReady {
+		refresh_condition(&r.cr.Status.Conditions, NL_IDENT, metav1.ConditionTrue, "Complete", "Initialization of "+NL_IDENT+" service completed.")
+	} else {
+		refresh_condition(&r.cr.Status.Conditions, NL_IDENT, metav1.ConditionUnknown, "Awaiting", "Initializing "+NL_IDENT+" service...")
+	}
+
+	return isDeploymentReady && route_ready
 }
