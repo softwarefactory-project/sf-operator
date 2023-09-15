@@ -182,5 +182,12 @@ func (r *SFController) DeployMariadb() bool {
 		}
 	}
 
-	return r.IsStatefulSetReady(&dep) && zuul_db_config_secret.Data != nil
+	isStatefulSet := r.IsStatefulSetReady(&dep)
+	if isStatefulSet {
+		refresh_condition(&r.cr.Status.Conditions, "mariadb", metav1.ConditionTrue, "Complete", "Initialization of mariadb service completed.")
+	} else {
+		refresh_condition(&r.cr.Status.Conditions, "mariadb", metav1.ConditionUnknown, "Awaiting", "Initializing mariadb service...")
+	}
+
+	return isStatefulSet && zuul_db_config_secret.Data != nil
 }
