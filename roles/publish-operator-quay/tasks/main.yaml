@@ -17,20 +17,11 @@
     {{ registry_address }}
   no_log: true
 
-- name: "Get Tag Version"
-  ansible.builtin.shell: |
-    awk '/^VERSION/{print $3}' {{ zuul.project.src_dir }}/Makefile
-  register: _command_results
-
-- name: "Check if Tag Versions do not match"
+- name: Check if the tag variable is set
   fail:
-    msg: >
-      The version of the repo tag {{ zuul.tag }}
-      does not match the version defined in the
-      Makefile VERSION variable {{ _command_results.stdout }}
+    msg: The version of the repo tag 'zuul.tag' is not defined
   when:
-    - zuul.tag is defined
-    - zuul.tag != _command_results.stdout
+    - "'tag' not in zuul"
 
 - name: "Set Tag Version"
   ansible.builtin.set_fact:
@@ -48,6 +39,7 @@
     target: "{{ item }}"
     chdir: "{{ zuul.project.src_dir }}"
     params:
+      VERSION: "{{ zuul.tag }}"
       BUNDLE_IMG: "{{ ci_bundle_img_registry }}:{{ tag_version }}"
       IMG: "{{ ci_operator_img_registry }}:{{ tag_version }}"
   loop:
@@ -89,12 +81,15 @@
   community.general.make:
     target: opm
     chdir: "{{ zuul.project.src_dir }}"
+    params:
+      VERSION: "{{ zuul.tag }}"
 
 - name: Build the Operator's Catalog image
   community.general.make:
     target: "opm-build"
     chdir: "{{ zuul.project.src_dir }}"
     params:
+      VERSION: "{{ zuul.tag }}"
       BUNDLE_IMG: "{{ ci_bundle_img_registry }}:{{ tag_version }}"
       IMG: "{{ ci_operator_img_registry }}:{{ tag_version }}"
       CATALOG_IMG: "{{ ci_catalog_img_registry }}:latest"
