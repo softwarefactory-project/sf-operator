@@ -38,15 +38,18 @@ type LogServerSpecSettings struct {
 // LogServerStatus defines the observed state of LogServer
 type LogServerStatus struct {
 	// The deployment status.
-	Ready              bool   `json:"ready,omitempty"`
-	ObservedGeneration int64  `json:"observedGeneration,omitempty"`
-	ReconciledBy       string `json:"reconciledBy,omitempty"`
+	Ready              bool               `json:"ready,omitempty"`
+	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
+	ReconciledBy       string             `json:"reconciledBy,omitempty"`
+	Conditions         []metav1.Condition `json:"conditions,omitempty" optional:"true"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Ready",type=boolean,JSONPath=`.status.ready`
 //+kubebuilder:resource:shortName="logss"
+//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[0].status",description="Status"
+//+kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[0].message",description="Message"
 
 // LogServer is the Schema for the LogServers API
 type LogServer struct {

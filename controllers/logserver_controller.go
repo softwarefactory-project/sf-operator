@@ -15,6 +15,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -303,8 +304,15 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
 
+	isDeploymentReady := r.IsDeploymentReady(&currentDep)
+	if isDeploymentReady {
+		refresh_condition(&r.cr.Status.Conditions, LOGSERVER_IDENT, metav1.ConditionTrue, "Complete", "Initialization of "+LOGSERVER_IDENT+" service completed.")
+	} else {
+		refresh_condition(&r.cr.Status.Conditions, LOGSERVER_IDENT, metav1.ConditionUnknown, "Awaiting", "Initializing "+LOGSERVER_IDENT+" service...")
+	}
+
 	return sfv1.LogServerStatus{
-		Ready:              deploymentUpdated && r.IsDeploymentReady(&currentDep) && pvc_readiness && route_ready,
+		Ready:              deploymentUpdated && isDeploymentReady && pvc_readiness && route_ready,
 		ObservedGeneration: r.cr.Generation,
 		ReconciledBy:       getOperatorConditionName(),
 	}
