@@ -31,20 +31,25 @@ func (r *SFController) SetupBaseSecrets() bool {
 	}
 
 	roleAnnotations := map[string]string{
-		"serial": "1",
+		"serial": "2",
 	}
 
 	roleName := "config-updater-role"
 	roleRules := []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{""},
-			Resources: []string{"pods", "pods/exec", "services", "persistentvolumeclaims", "configmaps", "secrets"},
-			Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			Resources: []string{"pods"},
+			Verbs:     []string{"get", "list"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods/exec"},
+			Verbs:     []string{"create"},
 		},
 		{
 			APIGroups: []string{"apps"},
 			Resources: []string{"deployments", "statefulsets"},
-			Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			Verbs:     []string{"get", "list"},
 		},
 	}
 
