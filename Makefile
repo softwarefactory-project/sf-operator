@@ -126,6 +126,19 @@ install-cert-manager: install-cmctl ## Install the cert-manager operator from a 
 	kubectl apply -f ./olm-deps/cert-manager.yaml
 	./bin/cmctl check api --wait=2m
 
+OPERATOR_NAMESPACE ?= operators
+
+.PHONY: setup-prometheus-operator-serviceaccount
+# This "hack" is required on MicroShift so that the operator can be deployed
+setup-prometheus-operator-serviceaccount:
+	kubectl create serviceaccount prometheus-operator --namespace $(OPERATOR_NAMESPACE)
+	oc adm policy add-scc-to-user privileged system:serviceaccount:$(OPERATOR_NAMESPACE):prometheus-operator
+
+.PHONY: install-prometheus-operator
+install-prometheus-operator: setup-prometheus-operator-serviceaccount
+	kubectl apply -f ./olm-deps/prometheus/prometheus-subscription.yaml
+	until kubectl wait --for=condition=Ready --timeout 5s pods -l app.kubernetes.io/name=prometheus-operator -n operators | grep "prometheus-operator"; do sleep 5; done
+
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -

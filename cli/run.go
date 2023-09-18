@@ -21,6 +21,7 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
+	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sfprometheus"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -46,6 +47,7 @@ func Run(erase bool) {
 	} else {
 		// TODO: only do gerrit when provision demo is on?
 		gerrit.EnsureGerrit(&env, sfconfig.FQDN)
+		sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN)
 		EnsureDemoConfig(&env, &sfconfig)
 		nodepool.CreateNamespaceForNodepool(&env, "", "nodepool", "")
 		EnsureDeployement(&env, &sfconfig)
@@ -88,7 +90,7 @@ func SetupTenant(configPath string, tenantName string) {
 	if err := os.WriteFile(tenantFile, []byte(template_data_output), 0644); err != nil {
 		panic(err)
 	}
-	runCmd("git", "-C", configPath, "add", "zuul/main.yaml")
+	utils.RunCmd("git", "-C", configPath, "add", "zuul/main.yaml")
 }
 
 func PushRepoIfNeeded(path string) {
@@ -98,8 +100,8 @@ func PushRepoIfNeeded(path string) {
 	}
 	if len(out) > 0 {
 		fmt.Println("[+] Pushing new config...")
-		runCmd("git", "-C", path, "commit", "-m", "Automatic update", "-a")
-		runCmd("git", "-C", path, "push", "origin")
+		utils.RunCmd("git", "-C", path, "commit", "-m", "Automatic update", "-a")
+		utils.RunCmd("git", "-C", path, "push", "origin")
 	}
 }
 
@@ -107,15 +109,15 @@ func EnsureRepo(sfconfig *Config, apiKey string, name string) {
 	path := filepath.Join("deploy", name)
 	origin := fmt.Sprintf("https://admin:%s@gerrit.sftests.com/a/%s", apiKey, name)
 	if _, err := os.Stat(filepath.Join(path, ".git")); os.IsNotExist(err) {
-		runCmd("git", "-c", "http.sslVerify=false", "clone", origin, path)
+		utils.RunCmd("git", "-c", "http.sslVerify=false", "clone", origin, path)
 	} else {
-		runCmd("git", "-C", path, "remote", "set-url", "origin", origin)
-		runCmd("git", "-C", path, "fetch", "origin")
+		utils.RunCmd("git", "-C", path, "remote", "set-url", "origin", origin)
+		utils.RunCmd("git", "-C", path, "fetch", "origin")
 	}
-	runCmd("git", "-C", path, "config", "http.sslverify", "false")
-	runCmd("git", "-C", path, "config", "user.email", "admin@"+sfconfig.FQDN)
-	runCmd("git", "-C", path, "config", "user.name", "admin")
-	runCmd("git", "-C", path, "reset", "--hard", "origin/master")
+	utils.RunCmd("git", "-C", path, "config", "http.sslverify", "false")
+	utils.RunCmd("git", "-C", path, "config", "user.email", "admin@"+sfconfig.FQDN)
+	utils.RunCmd("git", "-C", path, "config", "user.name", "admin")
+	utils.RunCmd("git", "-C", path, "reset", "--hard", "origin/master")
 }
 
 // The goal of this function is to recorver from client creation error
@@ -143,6 +145,7 @@ func EnsureDeployement(env *utils.ENV, sfconfig *Config) {
 			EnsureNamespacePermissions(env)
 			EnsureCR(env, sfconfig)
 			EnsureCertManager(env)
+			EnsurePrometheusOperator(env)
 			RunOperator()
 
 		} else if utils.IsCRDMissing(err) {
@@ -151,6 +154,7 @@ func EnsureDeployement(env *utils.ENV, sfconfig *Config) {
 			EnsureCRD()
 			EnsureCR(env, sfconfig)
 			EnsureCertManager(env)
+			EnsurePrometheusOperator(env)
 			RunOperator()
 
 		} else {
@@ -158,6 +162,7 @@ func EnsureDeployement(env *utils.ENV, sfconfig *Config) {
 			// if microshift host is up but service is done, apply the ansible-microshift-role
 			// if kubectl is not connecting ask for reboot or rebuild
 			fmt.Printf("Error %v\n", errors.IsInvalid(err))
+			fmt.Println(err)
 		}
 
 	} else {
@@ -167,6 +172,7 @@ func EnsureDeployement(env *utils.ENV, sfconfig *Config) {
 			// TODO: check cluster status and/or suggest sf resource delete/recreate
 		} else {
 			EnsureCertManager(env)
+			EnsurePrometheusOperator(env)
 			RunOperator()
 		}
 	}
@@ -177,9 +183,9 @@ func EnsureDeployement(env *utils.ENV, sfconfig *Config) {
 
 func EnsureNamespacePermissions(env *utils.ENV) {
 	// TODO: implement natively
-	runCmd("kubectl", "label", "--overwrite", "ns", env.Ns, "pod-security.kubernetes.io/enforce=privileged")
-	runCmd("kubectl", "label", "--overwrite", "ns", env.Ns, "pod-security.kubernetes.io/enforce-version=v1.24")
-	runCmd("oc", "adm", "policy", "add-scc-to-user", "privileged", "-z", "default")
+	utils.RunCmd("kubectl", "label", "--overwrite", "ns", env.Ns, "pod-security.kubernetes.io/enforce=privileged")
+	utils.RunCmd("kubectl", "label", "--overwrite", "ns", env.Ns, "pod-security.kubernetes.io/enforce-version=v1.24")
+	utils.RunCmd("oc", "adm", "policy", "add-scc-to-user", "privileged", "-z", "default")
 }
 
 func EnsureCR(env *utils.ENV, sfconfig *Config) {
@@ -219,13 +225,13 @@ func EnsureCR(env *utils.ENV, sfconfig *Config) {
 func EnsureCRD() {
 	// TODO: implement natively and avoir re-entry
 	fmt.Println("[+] Installing CRD...")
-	runMake("install")
+	utils.RunMake("install")
 }
 
 func EnsureCertManager(env *utils.ENV) {
 	// TODO: implement natively
 	fmt.Println("[+] Installing Cert-Manager...")
-	runMake("install-cert-manager")
+	utils.RunMake("install-cert-manager")
 	// Mitigate the issue
 	// failed calling webhook "mutate.webhooks.cert-manager.io": failed to call webhook: Post "https://cert-manager-webhook-service.operators.svc:443/mutate?timeout=10s": no endpoints available for service "cert-manager-webhook-service"
 	fmt.Println("[+] Waiting for Cert-Manager")
@@ -238,23 +244,17 @@ func EnsureCertManager(env *utils.ENV) {
 	panic("cert-manager didn't become ready")
 }
 
+func EnsurePrometheusOperator(env *utils.ENV) {
+	fmt.Println("[+] Installing prometheus-operator...")
+	err := sfprometheus.EnsurePrometheusOperator(env)
+	if err != nil {
+		panic(fmt.Errorf("Could not install prometheus-operator: %s", err))
+	}
+}
+
 func RunOperator() {
 	fmt.Println("[+] Running the operator...")
 	controllers.Main("sf", ":8081", ":8080", false, true)
-}
-
-// temporary hack until make target are implemented natively
-func runMake(arg string) {
-	runCmd("make", arg)
-}
-
-func runCmd(cmdName string, args ...string) {
-	cmd := exec.Command(cmdName, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		panic(fmt.Errorf("%s failed: %w", args, err))
-	}
 }
 
 func IsOperatorRunning() bool {

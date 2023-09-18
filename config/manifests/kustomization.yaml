@@ -1,3 +1,5 @@
 resources:
 - bases/sf-operator.clusterserviceversion.yaml
 - ../default
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization

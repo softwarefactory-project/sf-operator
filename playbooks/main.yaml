@@ -21,10 +21,13 @@
       ansible.builtin.include_role:
         name: "{{ item }}"
       loop:
+        - microshift-workarounds
         - start-gerrit
         - build-operator-assets
         - clean-installations
         - install-operator
+        # we start prometheus after installing the operator, to ensure the prometheus-operator dependency was installed properly.
+        - start-prometheus
       when: mode == 'olm'
 
     - name: Apply custom resources
