@@ -148,7 +148,7 @@ func EnsurePrometheusInstance(env *utils.ENV) {
 				ServiceMonitorSelector: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						{
-							Key:      "sf-monitoring",
+							Key:      controllers.SERVICEMONITOR_LABEL_SELECTOR,
 							Operator: metav1.LabelSelectorOpExists,
 						},
 					},

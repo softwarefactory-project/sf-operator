@@ -48,6 +48,10 @@
     - certificates
     - challenges
     - orders
+    - prometheuses
+    - prometheusrules
+    - podmonitors
+    - servicemonitors
   tags:
     - skip_ansible_lint
 
