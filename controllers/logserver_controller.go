@@ -15,6 +15,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
@@ -83,6 +85,36 @@ func getLogserverSettingsOrDefault(settings sfv1.LogServerSpecSettings) (int, in
 		retentiondays = settings.RetentionDays
 	}
 	return loopdelay, retentiondays
+}
+
+func (r *LogServerController) ensureLogserverPodMonitor() bool {
+	selector := metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "sf",
+			"run": LOGSERVER_IDENT,
+		},
+	}
+	ne_port := Get_nodeexporter_port_name(LOGSERVER_IDENT)
+	desired_ls_podmonitor := r.create_PodMonitor(LOGSERVER_IDENT+"-monitor", ne_port, selector)
+	// add annotations so we can handle lifecycle
+	annotations := map[string]string{
+		"version": "1",
+	}
+	desired_ls_podmonitor.ObjectMeta.Annotations = annotations
+	current_lspm := monitoringv1.PodMonitor{}
+	if !r.GetM(desired_ls_podmonitor.Name, &current_lspm) {
+		r.CreateR(&desired_ls_podmonitor)
+		return false
+	} else {
+		if !map_equals(&current_lspm.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("Zuul PodMonitor configuration changed, updating...")
+			current_lspm.Spec = desired_ls_podmonitor.Spec
+			current_lspm.ObjectMeta.Annotations = annotations
+			r.UpdateR(&current_lspm)
+			return false
+		}
+	}
+	return true
 }
 
 func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
@@ -302,6 +334,8 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		LOGSERVER_HTTPD_PORT_NAME, "/", LOGSERVER_HTTPD_PORT, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
 	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
+	// TODO(mhu) we may want to include PodMonitor status in readiness computation
+	r.ensureLogserverPodMonitor()
 
 	isDeploymentReady := r.IsDeploymentReady(&currentDep)
 	updateConditions(&r.cr.Status.Conditions, LOGSERVER_IDENT, isDeploymentReady)
