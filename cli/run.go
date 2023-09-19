@@ -239,7 +239,7 @@ func EnsureCertManager(env *utils.ENV) {
 		if utils.IsCertManagerRunning(env) {
 			return
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(6 * time.Second)
 	}
 	panic("cert-manager didn't become ready")
 }
