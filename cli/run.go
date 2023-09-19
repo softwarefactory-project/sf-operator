@@ -23,6 +23,7 @@ import (
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sfprometheus"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
+	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/config"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -30,7 +31,7 @@ import (
 
 func Run(erase bool) {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{Development: true})))
-	sfconfig := GetConfigOrDie()
+	sfconfig := config.GetSFConfigOrDie()
 	fmt.Println("sfconfig started with: ", sfconfig)
 	cli, err := utils.CreateKubernetesClient("")
 	if err != nil {
@@ -55,7 +56,7 @@ func Run(erase bool) {
 }
 
 // The goal of this function is to prepare a demo config
-func EnsureDemoConfig(env *utils.ENV, sfconfig *Config) {
+func EnsureDemoConfig(env *utils.ENV, sfconfig *config.SFConfig) {
 	fmt.Println("[+] Ensuring demo config")
 	apiKey := string(utils.GetSecret(env, "gerrit-admin-api-key"))
 	EnsureRepo(sfconfig, apiKey, "config")
@@ -105,7 +106,7 @@ func PushRepoIfNeeded(path string) {
 	}
 }
 
-func EnsureRepo(sfconfig *Config, apiKey string, name string) {
+func EnsureRepo(sfconfig *config.SFConfig, apiKey string, name string) {
 	path := filepath.Join("deploy", name)
 	origin := fmt.Sprintf("https://admin:%s@gerrit.sftests.com/a/%s", apiKey, name)
 	if _, err := os.Stat(filepath.Join(path, ".git")); os.IsNotExist(err) {
@@ -127,7 +128,7 @@ func EnsureCluster(err error) client.Client {
 }
 
 // The goal of this function is to ensure a deployment is running.
-func EnsureDeployement(env *utils.ENV, sfconfig *Config) {
+func EnsureDeployement(env *utils.ENV, sfconfig *config.SFConfig) {
 	fmt.Println("[+] Checking SF resource...")
 	sf, err := utils.GetSF(env, "my-sf")
 	if sf.Status.Ready {
@@ -188,7 +189,7 @@ func EnsureNamespacePermissions(env *utils.ENV) {
 	utils.RunCmd("oc", "adm", "policy", "add-scc-to-user", "privileged", "-z", "default")
 }
 
-func EnsureCR(env *utils.ENV, sfconfig *Config) {
+func EnsureCR(env *utils.ENV, sfconfig *config.SFConfig) {
 	fmt.Println("[+] Installing CR...")
 	var cr sfv1.SoftwareFactory
 	cr.SetName("my-sf")

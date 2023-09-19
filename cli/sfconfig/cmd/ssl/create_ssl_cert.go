@@ -17,8 +17,8 @@ import (
 
 	sf "github.com/softwarefactory-project/sf-operator/controllers"
 
-	"github.com/softwarefactory-project/sf-operator/cli"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
+	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/config"
 )
 
 func ensureSSLSecret(env *utils.ENV, serviceCAContent []byte,
@@ -88,9 +88,21 @@ func CreateServiceCertSecret(sfEnv *utils.ENV, sfNamespace string,
 	sfServiceKey string, serverName string,
 ) {
 	kubernetesEnv := utils.ENV{Cli: sfEnv.Cli, Ctx: sfEnv.Ctx, Ns: sfNamespace}
-	serviceCAContent := utils.GetFileContent(sfServiceCA)
-	serviceCertContent := utils.GetFileContent(sfServiceCert)
-	serviceKeyContent := utils.GetFileContent(sfServiceKey)
+
+	var err error
+	var serviceCAContent, serviceCertContent, serviceKeyContent []byte
+
+	if serviceCAContent, err = utils.GetFileContent(sfServiceCA); err != nil {
+		panic("Unable to read " + sfServiceCA)
+	}
+	if serviceCertContent, err = utils.GetFileContent(sfServiceCert); err != nil {
+		panic("Unable to read " + sfServiceCert)
+
+	}
+	if serviceKeyContent, err = utils.GetFileContent(sfServiceKey); err != nil {
+		panic("Unable to read " + sfServiceKey)
+	}
+
 	if serviceCAContent == nil || serviceCertContent == nil ||
 		serviceKeyContent == nil {
 		panic("One of the provided files is empty! Can not continue")
@@ -121,7 +133,7 @@ var CreateCertificateCmd = &cobra.Command{
 			Ctx: context.TODO(),
 			Ns:  sfNamespace,
 		}
-		conf := cli.GetConfigOrDie()
+		conf := config.GetSFConfigOrDie()
 		serverName := serviceName + "." + conf.FQDN
 		CreateServiceCertSecret(&sfEnv, sfNamespace, serviceName, sfServiceCA,
 			sfServiceCert, sfServiceKey, serverName)

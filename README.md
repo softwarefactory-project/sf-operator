@@ -317,39 +317,27 @@ $kubectl exec -ti zuul-executor-0 -- ssh -o "StrictHostKeyChecking no" -i /var/l
 Warning: Permanently added '$public_ip' (ED25519) to the list of known hosts.
 np0000000001
 ```
-## How to set the nodepool kube/config or clouds.yaml
+## How to set the Nodepool kubeconfig or clouds.yaml
 
-To add or modify an existing secret you have to:
+Providers secrets configuration such as `kubeconfig` or `clouds.yaml` needed by `Nodepool` services
+must be set into the `nodepool-providers-secrets`'s `Secret` resource.
 
-* encode in base64 your secret
+The `sfconfig` CLI provides the `nodepool-providers-secrets` command to `update` and `dump` the
+`Secret` content.
 
-```sh
-$ base64 -w 0 ~/.config/openstack/clouds.yaml
-```
+The command reads or writes files content defined into `nodepool.clouds_file` and `nodepool.kube_file`
+section of `sfconfig.yaml`
 
-Then edit `nodepool-providers-secrets`
-
-```sh
-$ kubectl edit secrets  nodepool-providers-secrets
-```
-
-And add the secret field within data:
-
-```yaml
-apiVersion: v1
-data:
-  clouds.yaml: Y2FjaGU6CiA....
-```
-
-Then, after saving, the nodepool-launcher container will be recreated with your secret:
+To add or modify the providers secrets, first, you have to set the files contents, then run:
 
 ```sh
-$ kubectl exec -ti nodepool-launcher-$uuid -c launcher -- head -n 4 /.config/openstack/clouds.yaml
-cache:
-  expiration:
-    server: 5
-    port: 5
+tools/sfconfig nodepool-providers-secrets --upload
 ```
+
+The `SoftwareFactory` CR will pass into a "non Ready" state until all Nodepool services are
+restarted.
+
+The `dump` command, fetches the current content of the secret and updates the local files.
 
 ## How to setup TLS for exposed Services route
 
