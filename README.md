@@ -1,419 +1,88 @@
-# sf-operator
+<img src ="https://zuul-ci.org/gated.svg" />
+<img src="https://softwarefactory-project.io/zuul/api/tenant/local/badge?project=software-factory/sf-operator&pipeline=post" />
+<a href="https://matrix.to/#/#softwarefactory-project:matrix.org"><img src="https://img.shields.io/badge/matrix-%23softwarefactory--project-8A2BE2" alt="Matrix Channel" /></a>
+<img src="https://img.shields.io/github/v/tag/softwarefactory-project/sf-operator" />
+<img src="https://img.shields.io/badge/project%20status-ALPHA-FF2060" alt="Testing only; use in production at your own risks" />
 
-**sf-operator** is the next version of [Software Factory](https://www.softwarefactory-project.io) distributed as an **OpenShift Operator**.
+# SF-Operator: a Zuul-based CI infrastructure for OpenShift
 
-> Software Factory used to be a full Software Development Forge including services such as Gerrit or Etherpad, however the scope of this
-new version is focused on the Continuous Integration components.
+## About
 
-The Operator mainly manages a **SoftwareFactory** Custom Resource. This resource handles operations on the folowing services:
+SF-Operator is an Operator that simplifies the deployment and operation of [Zuul](https://zuul-ci.org) and its dependencies (NodePool, Zookeeper, MariaDB, Log Server) on the OpenShift Container Platform.
 
-- [Zuul](https://zuul-ci.org/docs/zuul/latest)
-- [Nodepool](https://zuul-ci.org/docs/nodepool/latest)
-- Logserver (Zuul jobs artifacts storage)
+It is the natural evolution of the [Software Factory project](https://softwarefactory-project.io): the 3.8.x release of Software Factory saw the containerization of every major service, but was still delivered as RPM packages, in the form of a custom CentOS 7 distribution.
+SF-Operator builds upon this containerization effort to move from a distro-centric approach to a cloud-native deployment.
+This is also an opportunity to focus on the leanest service suite needed to provide a working gated CI infrastructure; hence a scope reduced to Zuul and its dependencies only.
 
-The resource also deploys and maintains additional required services for Zuul and Nodepool such as:
+SF-Operator is built mostly in Go upon the [Operator Framework](https://operatorframework.io), with the aim of reaching the highest capability level that can be achieved, in order to bring a modern, scalable gated CI alternative to OpenShift users, with the least friction from operation as possible. 
 
-- Zookeeper
-- MariaDB
+Furthermore, SF-Operator takes advantage of some of the specificities of OpenShift as a container orchestration platform:
 
-The **SoftwareFactory** CR provides a **Configuration as Code** workflow for Zuul and Nodepool. Indeed the instance must be
-configured to rely on a Git repository hosted on a **Code Review System** to host non sensitive settings, such as the
-[Zuul tenant configuration](https://zuul-ci.org/docs/zuul/latest/tenants.html#tenant) and the
-[Nodepool configuration](https://zuul-ci.org/docs/nodepool/latest/configuration.html#configuration).
+* Improved routes API
+* Integration with OLM for streamlined operator and operands' lifecycle management
+* If [enabled in OpenShift](https://docs.openshift.com/container-platform/4.13/monitoring/enabling-monitoring-for-user-defined-projects.html#enabling-monitoring-for-user-defined-projects), SF-Operator comes with default monitoring and alerting configurations that can be used out of the box. The default alerting rules are honed from years of maintaining and running several large Zuul deployments at scale for [Fedora](https://fedora.softwarefactory-project.io/zuul/status), [Ansible](https://ansible.softwarefactory-project.io/zuul/status) and [RDO](https://review.rdoproject.org/zuul/status).
+* If [enabled](https://docs.openshift.com/container-platform/4.13/logging/cluster-logging.html), OpenShift provides application logs aggregation with its logging subsystem out of the box.
 
-## Contacts
-
-You can reach us on the [Software Factory Matrix channel](https://app.element.io/#/room/#softwarefactory-project:matrix.org).
+Finally, we also provide a Command Line Interface (CLI) called sfconfig to simplify common tasks related to the operator, management of the operands, development and testing.
 
 ## Status
 
-The current project status is: **Alpha - DO NOT USE IN PRODUCTION**
-
-See:
-
-- the [CONTRIBUTING documentation](CONTRIBUTING.md) to discover how to hack on the project.
-- the [CHANGELOG](CHANGELOG.md) to read about project development progress.
-- the [ADRs](doc/adr/) to read about the Architecture Decision Records.
-
-## Installation
-
-### Prerequisites
-
-The **sf-operator** is designed to run on Openshift and Openshift variants, thus you need an Openshift cluster to install it and make use of it.
-
-Furthermore we package the operator via OLM so your cluster must have the [OLM system](https://olm.operatorframework.io/) running.
-
-We currently validate the **sf-operator** on an installation of Microshift deployed via the [microshift-ansible-role](https://github.com/openstack-k8s-operators/ansible-microshift-role).
-
-> As we are in early development phases it is recommended to use Microshift as your Openshift environment if you want to test the operator.
-
-For more information about Microshift installation please refer to the [microshift/README.md](tools/microshift/README.md).
-
-### Installing the CatalogSource
-
-The **sf-operator** is packaged for OLM and is distributed by a **Catalog** we maintain. Thus to deploy the Operator you need to add
-a new **CatalogSource** resource into the `olm` namespace.
-
-Create the following CatalogSource:
-
-```sh
-cat << EOF | kubectl create -f -
-apiVersion: operators.coreos.com/v1alpha1
-kind: CatalogSource
-metadata:
-  name: sf-operator-catalog
-  namespace: olm
-spec:
-  sourceType: grpc
-  image: quay.io/software-factory/sf-operator-catalog:latest
-  displayName: sf-operator
-  publisher: softwarefactory-project.io
-  updateStrategy:
-    registryPoll:
-      interval: 60m
-EOF
-```
-
-Once the Catalog is defined, we can tell OLM to install the **sf-operator** by applying a **Subscription** resource:
-
-```sh
-cat << EOF | kubectl create -f -
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
-  name: sf-operator-sub
-  namespace: operators
-spec:
-  channel: preview
-  name: sf-operator
-  source: sf-operator-catalog
-  sourceNamespace: olm
-EOF
-```
-
-After few seconds you should see that the operator is running:
-
-```sh
-kubectl -n operators get deployment.apps/sf-operator-controller-manager
-NAME                                                READY   UP-TO-DATE   AVAILABLE   AGE
-pod/sf-operator-controller-manager-65cc95995c-bgt25   2/2     Running   0          3m49s
-```
-
-Custom Resources supported by the sf-operator could be listed with the following command:
-
-```sh
-kubectl get crd -o custom-columns=NAME:.metadata.name | grep softwarefactory-project.io
-logservers.sf.softwarefactory-project.io
-softwarefactories.sf.softwarefactory-project.io
-```
-
-### Start a SoftwareFactory instance
-
-Let's create a namespace where we'll reclaim a **SoftwareFactory** resource.
-
-> Currently, the namespace must allow `privileged` containers to run. Indeed the `zuul-executor` container requires
-extra priviledges due to the use of [bubblewrap](https://github.com/containers/bubblewrap).
-
-For this example we will create **sf** namespace.
-
-```sh
-kubectl create namespace sf
-kubectl label --overwrite ns sf pod-security.kubernetes.io/enforce=privileged
-kubectl label --overwrite ns sf pod-security.kubernetes.io/enforce-version=v1.24
-oc adm policy add-scc-to-user privileged system:serviceaccount:sf:default
-```
-
-Now we are ready to create our **SoftwareFactory** instance via OLM:
-
-> Only one instance of a **SoftwareFactory** resource by namespace is recommanded in order to avoid resources naming collapse.
-
-```sh
-cat << EOF | kubectl -n sf create -f -
-apiVersion: sf.softwarefactory-project.io/v1
-kind: SoftwareFactory
-metadata:
-  name: my-sf
-  namespace: sf
-spec:
-  fqdn: "sftests.com"
-EOF
-```
-
-After few minutes, you should see a `READY` resource called `my-sf`:
-```sh
-kubectl -n sf get sf
-NAME    READY
-my-sf   true
-```
-
-
-The following `Routes` (or `Ingress`) are created:
-
-```
-kubectl -n sf get routes -o custom-columns=HOST:.spec.host
-
-HOST
-zuul.sftests.com
-logserver.sftests.com
-nodepool.sftests.com
-```
-
-At that point you have successfully deployed a **SoftwareFactory** instance. The Zuul web UI is accessible using the following URL: https://zuul.sftests.com
-
-To finalize the setup you'll need to setup a **config** repository for enabling the **config as code** workflow. Please read the following guides.
-
-## How to set the config repository
-
-To setup the **Configuration As Code** workflow, a dedicated Git repository and a *bot* account must exist on **Gerrit**. See the "Requirements for the config repository on Gerrit" section below.
-
-> Currently, the **sf-operator** only supports a **config** respository hosted on Gerrit code review system.
-
-First, a Zuul connection to the Gerrit code review system must be defined via the **SoftwareFactory**'s Spec:
-
-```sh
-kubectl edit sf my-sf
-...
-spec:
-  zuul:
-    gerritconns:
-      - name: gerrit
-        username: zuul
-        hostname: review.rdoproject.org
-        puburl: "https://review.rdoproject.org/r"
-...
-```
-
-Checkout the [CRD's OpenAPI schema](config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml) for specification details.
-
-Then, specify the **config** repository location:
-
-```sh
-kubectl edit sf my-sf
-...
-spec:
-  config-location:
-    base-url: "https://review.rdoproject.org/r"
-    name: config
-    zuul-connection-name: gerrit
-...
-```
-
-Wait for the 'my-sf' resource to become *READY*:
-
-```sh
-kubectl get sf my-sf -o jsonpath='{.status}'
-
-{"observedGeneration":1,"ready":true}
-```
-
-Once ready, the **config** repository must appear in the [Zuul's internal tenant projects list](https://zuul.sftests.com/t/internal/projects).
-Furthermore, the **config-check** and **config-update** are set automatically to run the internal tenant's **check**, **gate** and **post** pipelines.
-
-Any changes opened on the **config** repository will trigger the **config-check** job. The job validates the proposed configuration and applies them to Zuul and Nodepool.
-
-### Requirements for the config repository on Gerrit
-
-Zuul needs to authenticate on Gerrit, then a bot account must be set and zuul must be able to connect as SSH to Gerrit.
-
-The Zuul SSH public key can be fetch from the **zuul-ssh-key** secret:
-
-```sh
-kubectl get secret zuul-ssh-key -o jsonpath={.data.pub} | base64 -d
-```
-
-The **config** repository must be set with specific ACLs and Labels. Zuul expects to report, trigger and merge based on specific labels values.
-
-Here are the required labels to define in the **config** repository's *Access* settings (*meta/config*) on Gerrit:
-
-```INI
-[label "Code-Review"]
-	function = MaxWithBlock
-	defaultValue = 0
-	copyMinScore = true
-	copyAllScoresOnTrivialRebase = true
-	value = -2 Do not submit
-	value = "-1 I would prefer that you didn't submit this"
-	value = 0 No score
-	value = +1 Looks good to me, but someone else must approve
-	value = +2 Looks good to me (core reviewer)
-	copyAllScoresIfNoCodeChange = true
-[label "Verified"]
-	value = -2 Fails
-	value = "-1 Doesn't seem to work"
-	value = 0 No score
-	value = +1 Works for me
-	value = +2 Verified
-[label "Workflow"]
-	value = -1 Work in progress
-	value = 0 Ready for reviews
-	value = +1 Approved
-```
-
-Here are the required ACLs (Assuming the zuul bot user is part of the 'Service Users' group):
-
-```INI
-[access "refs/heads/*"]
-label-Verified = -2..+2 group Service Users
-submit = group Service Users
-```
-
-For further information check the Zuul documentation's [Gerrit section](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#gerrit).
-
-## How to configure Zuul via the config repo
-## How to configure Nodepool via the config repo
-
-### Using cloud image from openstack cloud
-
-* on the config repo, edit nodepool/nodepool.yaml to add labels and providers
-
-```yaml
-labels:
--   name: cloud-centos-9-stream
-    # min-ready: 1
-providers:
-- name: default
-  cloud: default
-  clean-floating-ips: true
-  image-name-format: '{image_name}-{timestamp}'
-  boot-timeout: 120 # default 60
-  cloud-images:
-    - name: cloud-centos-9-stream
-      username: cloud-user
-  pools:
-    - name: main
-      max-servers: 10
-      networks:
-        - $public_network_name
-      labels:
-        - cloud-image: cloud-centos-9-stream
-          name: cloud-centos-9-stream
-          flavor-name: $flavor
-          userdata: |
-            #cloud-config
-            package_update: true
-            users:
-              - name: cloud-user
-                ssh_authorized_keys:
-                  - $zuul-ssh-key
-```
-
-* propose a review and merge the change
-
-* if min-ready is set to 1, you can validate an instance is available with:
-
-```sh
-$ kubectl exec -ti nodepool-launcher-$uuid -c launcher -- nodepool list
-+------------+----------+-----------------------+--------------------------------------+--------------+------+-------+-------------+----------+
-| ID         | Provider | Label                 | Server ID                            | Public IPv4  | IPv6 | State | Age         | Locked   |
-+------------+----------+-----------------------+--------------------------------------+--------------+------+-------+-------------+----------+
-| 0000000001 | default  | cloud-centos-9-stream | 6b9c0efb-493d-442b-bb2f-550ffcdb3fb3 | $public_ip   |      | ready | 00:00:01:27 | unlocked |
-+------------+----------+-----------------------+--------------------------------------+--------------+------+-------+-------------+----------+
-```
-
-* you can validate zuul-executor can connect to the instance with:
-
-```sh
-$kubectl exec -ti zuul-executor-0 -- ssh -o "StrictHostKeyChecking no" -i /var/lib/zuul-ssh/..data/priv cloud-user@$public_ip hostname
-Warning: Permanently added '$public_ip' (ED25519) to the list of known hosts.
-np0000000001
-```
-## How to set the Nodepool kubeconfig or clouds.yaml
-
-Providers secrets configuration such as `kubeconfig` or `clouds.yaml` needed by `Nodepool` services
-must be set into the `nodepool-providers-secrets`'s `Secret` resource.
-
-The `sfconfig` CLI provides the `nodepool-providers-secrets` command to `update` and `dump` the
-`Secret` content.
-
-The command reads or writes files content defined into `nodepool.clouds_file` and `nodepool.kube_file`
-section of `sfconfig.yaml`
-
-To add or modify the providers secrets, first, you have to set the files contents, then run:
-
-```sh
-tools/sfconfig nodepool-providers-secrets --upload
-```
-
-The `SoftwareFactory` CR will pass into a "non Ready" state until all Nodepool services are
-restarted.
-
-The `dump` command, fetches the current content of the secret and updates the local files.
-
-## How to setup TLS for exposed Services route
-
-### How to use pre-existing X509 certificates
-
-The operator watches specifics `Secret` in the `SoftwareFactory` Custom Resources namespace.
-When those secrets' data hold a Certificate, Key and CA Certificate (following a specific scheme) then
-the sf-operator is able to reconfigure the corresponding service `Route`'s TLS to use the TLS material
-contained into the secret.
-
-The `sfconfig` command can be used to setup secrets.
-
-> The `create-service-ssl-secret` is verifying the SSL certificate/key before updating the `Secret`.
-
-The example below updates the `Secret` for the `logserver` service. The `SoftwareFactory` CR will
-pass into a "non Ready" state until the `Route` is reconfigured. Once `Ready`, the `Route` will
-serve the new Certificate.
-
-```sh
-./tools/sfconfig create-service-ssl-secret \
-    --sf-service-ca /tmp/ssl/localCA.pem \
-    --sf-service-key /tmp/ssl/ssl.key \
-    --sf-service-cert /tmp/ssl/ssl.crt \
-    --sf-service-name logserver
-```
-
-Expected `sf-service-name` value are:
-
-  - logserver
-  - zuul
-  - nodepool
-
-### How to use Let's Encrypt Certificates
-
-The operator offers an option to request Certificates from `Let's Encrypt` using the `ACME http01`
-challenge. All DNS names exposed by the `Routes` must be publicly resolvable.
-
-`sf-operator` relies on the `cert-manager` operator to handle this setup.
-
-> When enabled, TLS material provided via `Secret`, are not used anymore.
-
-```sh
-kubectl edit sf my-sf
-...
-spec:
-  letsEncrypt:
-    server: "staging"
-...
-```
-
-The `SoftwareFactory` CR will pass into a "non Ready" state until all `Challenge` are resolved
-and all the `Route` are reconfigured.
-
-> Set the server to `prod` to use the Let's Encrypt production server.
-
-> Routes will be re-configured when Certificates are renewed.
-
-## Using zuul-client
-
-### As the deployment owner
-
-The `sfconfig` tool eases the use of `zuul-client` by directly calling the zuul-client program from a running Zuul web pod.
-
-To get access to zuul-client tool run, from the root of the project:
-
-```bash
-./tools/sfconfig zuul-client -h
-```
-
-## Using bootstrap Zuul Tenant Config
-
-This feature is included in `sfconfig` tool, this generates template files to ease the creation of new pipelines, jobs and playbooks for zuul.
-
-To use run the tool with the following options:
-```bash
-tools/sfconfig bootstrap-tenant-config-repo --connection <CONNECTION NAME> --outpath <DIRECTORY ROOT PATH>
-```
-It will generate files prefixed with the connection name, and create the directory structure if they do not exist, in the outpath directory.
-
+The current project status is: **Alpha - NOT PRODUCTION READY**
+
+## Capability Levels
+
+* Level 1 - Basic Install - **8/10**
+    - Zuul Scheduler: ✅
+    - Zuul Executor: ✅
+    - Zuul Web: ✅
+    - Zuul Merger: ❌
+    - Nodepool Launcher: ✅
+    - Nodepool Builder: ❌
+    - Zookeeper: ✅
+    - MariaDB: ✅
+    - Log Server: ✅
+    - Internal Config Repository, bootstrapped pipelines and default jobs: ✅
+* Level 2 - Seamless upgrades - **2/2**
+    - Operator: ✅
+    - Operands: ✅
+* Level 3 - Full Lifecycle - **1/5**
+    - SF 3.8.x migration ❌
+    - Backup: ❌
+    - Restore: ❌
+    - Rolling deployments: ❌
+    - Reconfiguration: ✅
+* Level 4 - Deep Insights - **1/3**
+    - Operator metrics: ❌
+    - Operand metrics: ✅
+    - Alerts: ❌ (WIP)
+* Level 5 - Auto pilot - **0/3**
+    - Auto-scaling : ❌
+    - Auto-healing: ❌
+    - Auto-tuning: ❌
+
+## Getting Started
+
+* [Installing the Operator ](doc/operator/getting_started.md)
+* [Deploying Zuul and dependencies with SF-Operator](doc/deployment/getting_started.md)
+
+## Documentation
+
+* [Operator documentation](doc/operator/index.md): for OpenShift cluster administrators, this documentation covers installing SF-Operator and managing the operator's lifecycle.
+* [Deployment documentation](doc/deployment/index.md): this documentation covers the essentials for people or teams who intend to deploy and manage Zuul and its dependencies through the SF-Operator.
+* [Developer documentation](doc/developer/index.md): this documentation describes how to set up a development and testing environment to develop the SF-Operator.
+* [CLI refererence](doc/cli/index.md)
+## Getting Help
+
+Should you have any questions or feedback concerning the SF-Operator, you can:
+
+* [Join our Matrix channel](https://matrix.to/#/#softwarefactory-project:matrix.org)
+* Send an email to [softwarefactory-dev@redhat.com](softwarefactory-dev@redhat.com)
+* [File an issue](https://github.com/softwarefactory-project/sf-operator/issues/new) for bugs and feature suggestions
+
+## Contributing
+
+Refer to [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Licence
+
+Sf-operator is distributed under the [Apache License](LICENSE).
