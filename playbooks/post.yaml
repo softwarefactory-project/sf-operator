@@ -18,7 +18,7 @@
     - include_role:
         name: roles/post/get-k8s-resources
       vars:
-        namespace: bundle-catalog-ns
+        namespace: operators
 
     # Fetch system-config repo
     - include_role:

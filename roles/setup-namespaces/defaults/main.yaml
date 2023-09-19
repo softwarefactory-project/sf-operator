@@ -1,5 +1,5 @@
 ---
-bundlenamspace: bundle-catalog-ns
+bundlenamspace: operators
 namespace: sf
 context: microshift
 k8s_version: 1.24

@@ -1,7 +1,7 @@
 ---
 - name: Wait for sf-operator version
   ansible.builtin.command: >
-    kubectl -n bundle-catalog-ns get deployment.apps/sf-operator-controller-manager
+    kubectl -n operators get deployment.apps/sf-operator-controller-manager
     -o jsonpath="{.metadata.labels['olm\.owner']}"
   register: operator_owner
   until:
@@ -11,7 +11,7 @@
 
 - name: Wait for sf-operator deployment ready
   ansible.builtin.command: >
-    kubectl -n bundle-catalog-ns get deployment.apps/sf-operator-controller-manager
+    kubectl -n operators get deployment.apps/sf-operator-controller-manager
     -o jsonpath="{.status.readyReplicas}"
   register: operator_ready_replicas
   until:

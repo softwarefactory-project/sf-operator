@@ -103,7 +103,7 @@ This removes the `my-sf` Custom Resource instance.
 However:
 
 - **Persistent Volumes Claims** are not cleaned after the deletion of the softwarefactory instance
-- `tools/sfconfig runTests` deploys resources via OLM into the `bundle-catalog-ns` namespace
+- `tools/sfconfig runTests` deploys resources via OLM into the `operators` namespace
 
 To delete the softwarefactory instance including the PVCs and PVs run the following command:
 
@@ -472,8 +472,8 @@ Start by setting the namespaces.
 ./tools/sfconfig operator create -a
 ```
 
-This command will create the **bundle-catalog-ns** and **sf** namespace, with the right security contexts.
-The Catalog Source for Software Factory will be installed in bundle-catalog-ns by default.
+This command will create the **operators** and **sf** namespace, with the right security contexts.
+The Catalog Source for Software Factory will be installed in operators by default.
 The Software Factory Instance will be installed in sf by default.
 
 To change the default names for the namespaces, run the command with the following options:
