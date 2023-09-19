@@ -6,6 +6,7 @@ package controllers
 import (
 	_ "embed"
 
+	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -34,8 +35,14 @@ const ZK_IDENT = "zookeeper"
 const ZK_PI_MOUNT_PATH = "/config-scripts"
 
 func (r *SFController) DeployZookeeper() bool {
-	cert := r.create_client_certificate("zookeeper-server", "ca-issuer", "zookeeper-server-tls", ZK_IDENT, r.cr.Spec.FQDN)
-	cert_client := r.create_client_certificate("zookeeper-client", "ca-issuer", "zookeeper-client-tls", ZK_IDENT, r.cr.Spec.FQDN)
+	dnsNames := r.MKClientDNSNames(ZK_IDENT)
+	privateKey := certv1.CertificatePrivateKey{
+		Encoding: certv1.PKCS8,
+	}
+	cert := MKCertificate(
+		"zookeeper-server", r.ns, "ca-issuer", dnsNames, "zookeeper-server-tls", &privateKey)
+	cert_client := MKCertificate(
+		"zookeeper-client", r.ns, "ca-issuer", dnsNames, "zookeeper-client-tls", &privateKey)
 	r.GetOrCreate(&cert)
 	r.GetOrCreate(&cert_client)
 

@@ -1086,7 +1086,7 @@ func (r *SFUtilContext) EnsureLocalCA() {
 	duration, _ := time.ParseDuration("87600h") // 10y
 	commonName := "cacert"
 	rootCACertificate := MKBaseCertificate("ca-cert", r.ns, "selfsigned-issuer", []string{"caroot"},
-		"ca-cert", true, duration, nil, &commonName)
+		"ca-cert", true, duration, nil, &commonName, nil)
 	r.GetOrCreate(&selfSignedIssuer)
 	r.GetOrCreate(&CAIssuer)
 	r.GetOrCreate(&rootCACertificate)
@@ -1227,7 +1227,7 @@ func (r *SFUtilContext) extractStaticTLSFromSecret(name string, host string) (bo
 func (r *SFUtilContext) extractTLSFromLECertificateSecret(name string, host string, fqdn string, le sfv1.LetsEncryptSpec) (bool, []byte, []byte, []byte) {
 	_, issuerName := getLetsEncryptServer(le)
 	dnsNames := []string{host + "." + fqdn}
-	certificate := MKServerCertificate(name, r.ns, issuerName, dnsNames, name+"-tls")
+	certificate := MKCertificate(name, r.ns, issuerName, dnsNames, name+"-tls", nil)
 
 	current := certv1.Certificate{}
 
@@ -1364,44 +1364,10 @@ func (r *SFUtilContext) PodExec(pod string, container string, command []string) 
 	return nil
 }
 
-func (r *SFUtilContext) create_client_certificate(
-	name string, issuer string, secret string, servicename string, fqdn string) certv1.Certificate {
-	return certv1.Certificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.ns,
-		},
-		Spec: certv1.CertificateSpec{
-			CommonName: "client",
-			SecretName: secret,
-			PrivateKey: &certv1.CertificatePrivateKey{
-				Encoding: certv1.PKCS8,
-			},
-			IssuerRef: certmetav1.ObjectReference{
-				Name: issuer,
-				Kind: "Issuer",
-			},
-			Usages: []certv1.KeyUsage{
-				certv1.UsageDigitalSignature,
-				certv1.UsageKeyEncipherment,
-				certv1.UsageServerAuth,
-				certv1.UsageClientAuth,
-			},
-			// Example DNSNames: service, service.my-sf, service.sftests.com, my-sf
-			DNSNames: []string{
-				servicename,
-				fmt.Sprintf("%s.%s", servicename, r.owner.GetName()),
-				fmt.Sprintf("%s.%s", servicename, fqdn),
-				r.owner.GetName(),
-			},
-		},
-	}
-}
-
-// TODO: merge with create_client_certificate function above
 func MKBaseCertificate(name string, ns string, issuerName string,
 	dnsNames []string, secretName string, isCA bool, duration time.Duration,
-	usages []certv1.KeyUsage, commonName *string) certv1.Certificate {
+	usages []certv1.KeyUsage, commonName *string,
+	privateKey *certv1.CertificatePrivateKey) certv1.Certificate {
 	cert := certv1.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -1422,16 +1388,23 @@ func MKBaseCertificate(name string, ns string, issuerName string,
 	if commonName != nil {
 		cert.Spec.CommonName = *commonName
 	}
+	if privateKey != nil {
+		cert.Spec.PrivateKey = privateKey
+	}
 	return cert
 }
 
-func MKServerCertificate(name string, ns string, issuerName string,
-	dnsNames []string, secretName string) certv1.Certificate {
+func MKCertificate(name string, ns string, issuerName string,
+	dnsNames []string, secretName string, privateKey *certv1.CertificatePrivateKey) certv1.Certificate {
 	duration, _ := time.ParseDuration("2160h") // 3 months (default)
 	usages := []certv1.KeyUsage{
 		certv1.UsageServerAuth,
+		certv1.UsageClientAuth,
+		certv1.UsageDigitalSignature,
+		certv1.UsageKeyEncipherment,
 	}
-	return MKBaseCertificate(name, ns, issuerName, dnsNames, secretName, false, duration, usages, nil)
+	return MKBaseCertificate(
+		name, ns, issuerName, dnsNames, secretName, false, duration, usages, nil, privateKey)
 }
 
 func isCertificateReady(cert *certv1.Certificate) bool {
@@ -1663,4 +1636,13 @@ func (r *SFController) isConfigRepoSet() bool {
 	return r.cr.Spec.ConfigLocation.BaseURL != "" &&
 		r.cr.Spec.ConfigLocation.Name != "" &&
 		r.cr.Spec.ConfigLocation.ZuulConnectionName != ""
+}
+
+func (r *SFController) MKClientDNSNames(serviceName string) []string {
+	return []string{
+		serviceName,
+		fmt.Sprintf("%s.%s", serviceName, r.owner.GetName()),
+		fmt.Sprintf("%s.%s", serviceName, r.cr.Spec.FQDN),
+		r.owner.GetName(),
+	}
 }
