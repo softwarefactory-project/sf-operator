@@ -1079,11 +1079,17 @@ func map_ensure(m1 *map[string]string, m2 *map[string]string) bool {
 	return dirty
 }
 
-//go:embed static/certificate-authority/certs.yaml
-var ca_objs string
-
-func (r *SFUtilContext) EnsureCA() {
-	r.CreateYAMLs(ca_objs)
+func (r *SFUtilContext) EnsureLocalCA() {
+	// https://cert-manager.io/docs/configuration/selfsigned/#bootstrapping-ca-issuers
+	selfSignedIssuer := MKSelfSignedIssuer("selfsigned-issuer", r.ns)
+	CAIssuer := MKCAIssuer("ca-issuer", r.ns)
+	duration, _ := time.ParseDuration("87600h") // 10y
+	commonName := "cacert"
+	rootCACertificate := MKBaseCertificate("ca-cert", r.ns, "selfsigned-issuer", []string{"caroot"},
+		"ca-cert", true, duration, nil, &commonName)
+	r.GetOrCreate(&selfSignedIssuer)
+	r.GetOrCreate(&CAIssuer)
+	r.GetOrCreate(&rootCACertificate)
 }
 
 func MkJob(name string, ns string, container apiv1.Container) batchv1.Job {
@@ -1221,7 +1227,7 @@ func (r *SFUtilContext) extractStaticTLSFromSecret(name string, host string) (bo
 func (r *SFUtilContext) extractTLSFromLECertificateSecret(name string, host string, fqdn string, le sfv1.LetsEncryptSpec) (bool, []byte, []byte, []byte) {
 	_, issuerName := getLetsEncryptServer(le)
 	dnsNames := []string{host + "." + fqdn}
-	certificate := MKCertificate(name, r.ns, issuerName, dnsNames)
+	certificate := MKServerCertificate(name, r.ns, issuerName, dnsNames, name+"-tls")
 
 	current := certv1.Certificate{}
 
@@ -1393,25 +1399,39 @@ func (r *SFUtilContext) create_client_certificate(
 }
 
 // TODO: merge with create_client_certificate function above
-func MKCertificate(name string, ns string, issuerName string, dnsNames []string) certv1.Certificate {
-	return certv1.Certificate{
+func MKBaseCertificate(name string, ns string, issuerName string,
+	dnsNames []string, secretName string, isCA bool, duration time.Duration,
+	usages []certv1.KeyUsage, commonName *string) certv1.Certificate {
+	cert := certv1.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 		},
 		Spec: certv1.CertificateSpec{
 			DNSNames:   dnsNames,
-			SecretName: name + "-tls",
+			Duration:   &metav1.Duration{Duration: duration},
+			SecretName: secretName,
 			IssuerRef: certmetav1.ObjectReference{
 				Kind: "Issuer",
 				Name: issuerName,
 			},
-			IsCA: false,
-			Usages: []certv1.KeyUsage{
-				certv1.UsageServerAuth,
-			},
+			IsCA:   isCA,
+			Usages: usages,
 		},
 	}
+	if commonName != nil {
+		cert.Spec.CommonName = *commonName
+	}
+	return cert
+}
+
+func MKServerCertificate(name string, ns string, issuerName string,
+	dnsNames []string, secretName string) certv1.Certificate {
+	duration, _ := time.ParseDuration("2160h") // 3 months (default)
+	usages := []certv1.KeyUsage{
+		certv1.UsageServerAuth,
+	}
+	return MKBaseCertificate(name, ns, issuerName, dnsNames, secretName, false, duration, usages, nil)
 }
 
 func isCertificateReady(cert *certv1.Certificate) bool {
@@ -1446,6 +1466,36 @@ func MKLetsEncryptIssuer(name string, ns string, server string) certv1.Issuer {
 							},
 						},
 					},
+				},
+			},
+		},
+	}
+}
+
+func MKSelfSignedIssuer(name string, ns string) certv1.Issuer {
+	return certv1.Issuer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		Spec: certv1.IssuerSpec{
+			IssuerConfig: certv1.IssuerConfig{
+				SelfSigned: &certv1.SelfSignedIssuer{},
+			},
+		},
+	}
+}
+
+func MKCAIssuer(name string, ns string) certv1.Issuer {
+	return certv1.Issuer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		Spec: certv1.IssuerSpec{
+			IssuerConfig: certv1.IssuerConfig{
+				CA: &certv1.CAIssuer{
+					SecretName: "ca-cert",
 				},
 			},
 		},
