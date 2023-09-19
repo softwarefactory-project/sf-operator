@@ -187,11 +187,9 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	cm_data := make(map[string]string)
 	cm_data["logserver.conf"], _ = Parse_string(logserverconf, struct {
-		ServerPort    int
 		ServerRoot    string
 		LogserverRoot string
 	}{
-		ServerPort:    LOGSERVER_HTTPD_PORT,
 		ServerRoot:    CONTAINER_HTTP_BASE_DIR,
 		LogserverRoot: LOGSERVER_DATA,
 	})
@@ -360,6 +358,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	annotations := map[string]string{
 		"fqdn":           r.cr.Spec.FQDN,
 		"serial":         "2",
+		"httpd-conf":     checksum([]byte(logserverconf)),
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(retentiondays) + " loopDelay:" + strconv.Itoa(loopdelay),
 	}
 
