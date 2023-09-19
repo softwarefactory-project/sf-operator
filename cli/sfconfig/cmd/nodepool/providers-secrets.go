@@ -2,6 +2,8 @@
 Copyright © 2023 Redhat
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package nodepool functions
 package nodepool
 
 import (

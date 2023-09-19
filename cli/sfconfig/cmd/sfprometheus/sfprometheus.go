@@ -1,8 +1,7 @@
 // Copyright (C) 2023 Red Hat
 // SPDX-License-Identifier: Apache-2.0
-//
-// This package manages a basic prometheus instance for monitoring.
 
+// Package sfprometheus manages a basic prometheus instance for monitoring.
 package sfprometheus
 
 import (
@@ -262,7 +261,7 @@ func EnsurePrometheus(env *utils.ENV, fqdn string) {
 	fmt.Println("Prometheus instance available at https://prometheus." + fqdn)
 }
 
-// prometheusCmd represents the prometheus command
+// PrometheusCmd represents the prometheus command
 var PrometheusCmd = &cobra.Command{
 	Use:   "prometheus",
 	Short: "Deploy a demo prometheus instance for service monitoring",

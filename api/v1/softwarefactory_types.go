@@ -36,7 +36,7 @@ type LetsEncryptSpec struct {
 type StorageSpec struct {
 	//+kubebuilder:validation:Required
 	//+kubebuilder:validation:XValidation:rule="self >= oldSelf",message="Storage shrinking is not supported"
-	Size      resource.Quantity `json:"size,string"`
+	Size      resource.Quantity `json:"size"`
 	ClassName string            `json:"className,omitempty"`
 }
 

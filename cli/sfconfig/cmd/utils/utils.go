@@ -1,3 +1,4 @@
+// Package utils provides utility functions for the CLI
 package utils
 
 import (
@@ -34,7 +35,7 @@ type ENV struct {
 	Ctx context.Context
 }
 
-// temporary hack until make target are implemented natively
+// RunMake is a temporary hack until make target are implemented natively
 func RunMake(arg string) {
 	RunCmd("make", arg)
 }
@@ -59,7 +60,7 @@ func EnsureServiceAccount(env *ENV, name string) {
 func RenderYAML(o interface{}) string {
 	y, err := yaml.Marshal(o)
 	if err != nil {
-		panic(fmt.Errorf("err: %v\n", err))
+		panic(fmt.Errorf("err: %v", err))
 	}
 	return string(y)
 }
@@ -68,7 +69,7 @@ func GetConfigContextOrDie(contextName string) *rest.Config {
 	var conf *rest.Config
 	var err error
 	if conf, err = config.GetConfigWithContext(contextName); err != nil {
-		panic(fmt.Errorf("Couldn't find context %s: %s", contextName, err))
+		panic(fmt.Errorf("couldn't find context %s: %s", contextName, err))
 	}
 	return conf
 }
@@ -100,7 +101,7 @@ func CreateKubernetesClientOrDie(contextName string) client.Client {
 	return cli
 }
 
-// Function to easilly use templated string.
+// Parse_string allows to easilly use templated string.
 //
 // Pass the template text.
 // And the data structure to be applied to the template
@@ -123,7 +124,7 @@ func Parse_string(text string, data any) (string, error) {
 	return buf.String(), nil
 }
 
-// Helper to fetch a kubernetes resource by name, returns true when it is found.
+// GetM is an helper to fetch a kubernetes resource by name, returns true when it is found.
 func GetM(env *ENV, name string, obj client.Object) bool {
 	err := env.Cli.Get(env.Ctx,
 		client.ObjectKey{
@@ -133,25 +134,25 @@ func GetM(env *ENV, name string, obj client.Object) bool {
 	if errors.IsNotFound(err) {
 		return false
 	} else if err != nil {
-		panic(fmt.Errorf("Could not get %s: %s", name, err))
+		panic(fmt.Errorf("could not get %s: %s", name, err))
 	}
 	return true
 }
 
-// Helper to create a kubernetes resource.
+// CreateR is an helper to create a kubernetes resource.
 func CreateR(env *ENV, obj client.Object) {
 	fmt.Fprintf(os.Stderr, "Creating %s in %s\n", obj.GetName(), env.Ns)
 	obj.SetNamespace(env.Ns)
 	if err := env.Cli.Create(env.Ctx, obj); err != nil {
-		panic(fmt.Errorf("Could not create %s: %s", obj, err))
+		panic(fmt.Errorf("could not create %s: %s", obj, err))
 	}
 }
 
-// Helper to update a kubernetes resource.
+// UpdateR is an helper to update a kubernetes resource.
 func UpdateR(env *ENV, obj client.Object) bool {
 	fmt.Fprintf(os.Stderr, "Updating %s in %s\n", obj.GetName(), env.Ns)
 	if err := env.Cli.Update(env.Ctx, obj); err != nil {
-		panic(fmt.Errorf("Could not update %s: %s", obj, err))
+		panic(fmt.Errorf("could not update %s: %s", obj, err))
 	}
 	return true
 }

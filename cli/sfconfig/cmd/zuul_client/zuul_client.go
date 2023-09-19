@@ -1,6 +1,8 @@
 /*
 Copyright © 2023 Red Hat
 */
+
+// Package zuul_client exposes function for use zuul-client
 package zuul_client
 
 import (
@@ -33,7 +35,7 @@ func xORNameSpace(args []string) []string {
 	return remainingargs
 }
 
-// operator ZuulClientCmd represents the zuul-client command
+// ZuulClientCmd operator ZuulClientCmd represents the zuul-client command
 var ZuulClientCmd = &cobra.Command{
 	Use:   "zuul-client",
 	Short: "Run zuul-client command",

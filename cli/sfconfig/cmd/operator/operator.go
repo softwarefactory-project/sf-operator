@@ -1,6 +1,8 @@
 /*
 Copyright © 2022-2023 Red Hat, Inc.
 */
+
+// Package operator provides operator functions
 package operator
 
 import (
@@ -11,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// operatorCmd represents the operator command
+// OperatorCmd represents the operator command
 var OperatorCmd = &cobra.Command{
 	Use:   "operator",
 	Short: "Command related to Software Factory Operator",

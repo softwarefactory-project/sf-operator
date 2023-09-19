@@ -1,6 +1,8 @@
 /*
 Copyright © 2022-2023 Red Hat, Inc.
 */
+
+// Package sf provides facilities for the sfconfig CLI
 package sf
 
 import (
@@ -10,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// operatorCmd represents the operator command
+// SfCmd represents the operator command
 var SfCmd = &cobra.Command{
 	Use:   "sf",
 	Short: "Command related to Software Factory",

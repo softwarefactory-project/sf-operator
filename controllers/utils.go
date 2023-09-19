@@ -19,11 +19,9 @@ import (
 	"text/template"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/ssh"
 	ini "gopkg.in/ini.v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -32,8 +30,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/utils/pointer"
-
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 
 	"crypto/rand"
 	"crypto/rsa"
@@ -47,7 +43,6 @@ import (
 
 	cmacme "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	certmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -66,7 +61,7 @@ import (
 
 const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.5-3"
 
-// TODO this could be a spec parameter.
+// SERVICEMONITOR_LABEL_SELECTOR - TODO this could be a spec parameter.
 const SERVICEMONITOR_LABEL_SELECTOR = "sf-monitoring"
 
 type SFUtilContext struct {
@@ -80,8 +75,9 @@ type SFUtilContext struct {
 	owner      client.Object
 }
 
-//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
 
+//lint:ignore U1000 this function will be used in a followup change
 func (r *SFUtilContext) create_ServiceMonitor(name string, port string, selector metav1.LabelSelector) monitoringv1.ServiceMonitor {
 	return monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
@@ -192,28 +188,6 @@ func getOperatorConditionName() string {
 	return value
 }
 
-// Function to easilly use templates files.
-//
-// Pass the template path relative to the root of the project.
-// And the data structure to be applied to the template
-func parse_template(templatePath string, data any) (string, error) {
-
-	// Opening Template file
-	template, err := template.ParseFiles(templatePath)
-	if err != nil {
-		return "", fmt.Errorf("file not found: " + templatePath)
-	}
-
-	// Parsing Template
-	var buf bytes.Buffer
-	err = template.Execute(&buf, data)
-	if err != nil {
-		return "", fmt.Errorf("failure while parsing template %s", templatePath)
-	}
-
-	return buf.String(), nil
-}
-
 func new_condition(conditiontype string, reason string, message string) metav1.Condition {
 	return metav1.Condition{
 		Type:               conditiontype,
@@ -264,7 +238,7 @@ func updateConditions(conditions *[]metav1.Condition, condType string, ready boo
 	refresh_condition(conditions, condType, status, reason, message)
 }
 
-// Function to easilly use templated string.
+// Parse_string function to easilly use templated string.
 //
 // Pass the template text.
 // And the data structure to be applied to the template
@@ -285,11 +259,11 @@ func Parse_string(text string, data any) (string, error) {
 	return buf.String(), nil
 }
 
-// Take one or more section name and compute a checkum
+// IniSectionsChecksum takes one or more section name and compute a checkum
 func IniSectionsChecksum(cfg *ini.File, names []string) string {
 
 	var IniGetSectionBody = func(cfg *ini.File, section *ini.Section) string {
-		var s string = ""
+		var s = ""
 		keys := section.KeyStrings()
 		sort.Strings(keys)
 		for _, k := range keys {
@@ -298,7 +272,7 @@ func IniSectionsChecksum(cfg *ini.File, names []string) string {
 		return s
 	}
 
-	var data string = ""
+	var data = ""
 	for _, name := range names {
 		section, err := cfg.GetSection(name)
 		if err != nil {
@@ -310,7 +284,7 @@ func IniSectionsChecksum(cfg *ini.File, names []string) string {
 	return checksum([]byte(data))
 }
 
-// Get Ini section names filtered by prefix
+// IniGetSectionNamesByPrefix gets Ini section names filtered by prefix
 func IniGetSectionNamesByPrefix(cfg *ini.File, prefix string) []string {
 	filteredNames := []string{}
 	names := cfg.SectionStrings()
@@ -444,29 +418,6 @@ func Create_volume_cm(volume_name string, config_map_ref string) apiv1.Volume {
 				LocalObjectReference: apiv1.LocalObjectReference{
 					Name: config_map_ref,
 				},
-			},
-		},
-	}
-}
-
-// Mounts specific ConfigMap keys on a volume.
-//
-// name - volume name ref
-// config_map_ref - ConfigMap name ref
-// keys - array of key to mount into the volume
-// Each element of the array has a Key and a Path
-//
-//	Key - Reference to the ConfigMap Key name
-//	Path - The relative path of the file to map the key to
-func create_volume_cm_keys(volume_name string, config_map_ref string, keys []apiv1.KeyToPath) apiv1.Volume {
-	return apiv1.Volume{
-		Name: volume_name,
-		VolumeSource: apiv1.VolumeSource{
-			ConfigMap: &apiv1.ConfigMapVolumeSource{
-				LocalObjectReference: apiv1.LocalObjectReference{
-					Name: config_map_ref,
-				},
-				Items: keys,
 			},
 		},
 	}
@@ -718,16 +669,6 @@ func create_readiness_http_probe(path string, port int) *apiv1.Probe {
 	return create_readiness_probe(handler)
 }
 
-func create_readiness_https_probe(path string, port int) *apiv1.Probe {
-	handler := apiv1.ProbeHandler{
-		HTTPGet: &apiv1.HTTPGetAction{
-			Path:   path,
-			Port:   intstr.FromInt(port),
-			Scheme: apiv1.URISchemeHTTPS,
-		}}
-	return create_readiness_probe(handler)
-}
-
 func create_readiness_tcp_probe(port int) *apiv1.Probe {
 	handler :=
 		apiv1.ProbeHandler{
@@ -792,7 +733,7 @@ func create_startup_http_probe(path string, port int) *apiv1.Probe {
 	return create_startup_probe(handler)
 }
 
-// Get a resources, returning if it was found
+// GetM gets a resource, returning if it was found
 func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
 	err := r.Client.Get(r.ctx,
 		client.ObjectKey{
@@ -807,10 +748,10 @@ func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
 	return true
 }
 
-// Create resources with the owner as the ownerReferences.
+// CreateR creates resources with the owner as the ownerReferences.
 func (r *SFUtilContext) CreateR(obj client.Object) {
 	controllerutil.SetControllerReference(r.owner, obj, r.Scheme)
-	if err := r.Client.Create(r.ctx, obj); err != nil && !k8s_errors.IsAlreadyExists(err) {
+	if err := r.Client.Create(r.ctx, obj); err != nil && !errors.IsAlreadyExists(err) {
 		panic(err.Error())
 	}
 }
@@ -838,7 +779,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 		var podList apiv1.PodList
 		matchLabels := dep.Spec.Selector.MatchLabels
 		labels := labels.SelectorFromSet(labels.Set(matchLabels))
-		labelSelectors := runtimeClient.MatchingLabelsSelector{Selector: labels}
+		labelSelectors := client.MatchingLabelsSelector{Selector: labels}
 		if err := r.Client.List(r.ctx, &podList, labelSelectors); err != nil {
 			panic(err.Error())
 		}
@@ -852,7 +793,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 			}
 			containerStatuses := pod.Status.ContainerStatuses
 			for _, containerStatus := range containerStatuses {
-				if containerStatus.Ready == false {
+				if !containerStatus.Ready {
 					r.log.V(1).Info(
 						"Waiting for statefulset containers ready",
 						"name", dep.GetName(),
@@ -950,7 +891,7 @@ func (r *SFUtilContext) DebugStatefulSet(name string) {
 	r.log.V(1).Info("Debugging service", "name", name)
 }
 
-// This does not change an existing object, update needs to be used manually.
+// GetOrCreate does not change an existing object, update needs to be used manually.
 // In the case the object already exists then the function return True
 func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
 	name := obj.GetName()
@@ -963,7 +904,7 @@ func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
 	return true
 }
 
-// Create resource from YAML description
+// CreateYAML creates resource from YAML description
 func (r *SFUtilContext) CreateYAML(y string) {
 	var obj unstructured.Unstructured
 	if err := yaml.Unmarshal([]byte(y), &obj); err != nil {
@@ -980,11 +921,9 @@ func (r *SFUtilContext) CreateYAMLs(ys string) {
 }
 
 func CreateSecretFromFunc(name string, namespace string, getData func() string) apiv1.Secret {
-	var secret apiv1.Secret
-	secret = apiv1.Secret{
+	return apiv1.Secret{
 		Data:       map[string][]byte{name: []byte(getData())},
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
-	return secret
 }
 
 func (r *SFUtilContext) GenerateSecret(name string, getData func() string) apiv1.Secret {
@@ -1001,7 +940,7 @@ func NewUUIDString() string {
 	return uuid.New().String()
 }
 
-// generate a secret if needed using a uuid4 value.
+// GenerateSecretUUID generates a secret if needed using a uuid4 value.
 func (r *SFUtilContext) GenerateSecretUUID(name string) apiv1.Secret {
 	return r.GenerateSecret(name, NewUUIDString)
 }
@@ -1027,7 +966,7 @@ func (r *SFUtilContext) EnsureSSHKey(name string) {
 	}
 }
 
-// ensure a config map exists.
+// EnsureConfigMap ensures a config map exists.
 func (r *SFUtilContext) EnsureConfigMap(base_name string, data map[string]string) apiv1.ConfigMap {
 	name := base_name + "-config-map"
 	var cm apiv1.ConfigMap
@@ -1065,18 +1004,6 @@ func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
 
 func map_equals(m1 *map[string]string, m2 *map[string]string) bool {
 	return reflect.DeepEqual(m1, m2)
-}
-
-// Merge m2 values into m1, return true if the map is updated.
-func map_ensure(m1 *map[string]string, m2 *map[string]string) bool {
-	dirty := false
-	for k, v := range *m2 {
-		if (*m1)[k] != v {
-			dirty = true
-			(*m1)[k] = v
-		}
-	}
-	return dirty
 }
 
 func (r *SFUtilContext) EnsureLocalCA() {
@@ -1138,16 +1065,6 @@ func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) bool {
 		}
 	}
 	return true
-}
-
-func (r *SFUtilContext) getRouteByName(routeName string) (*apiroutev1.Route, error) {
-	route := &apiroutev1.Route{}
-	err := r.Client.Get(context.TODO(), client.ObjectKey{
-		Namespace: r.ns,
-		Name:      routeName,
-	}, route)
-
-	return route, err
 }
 
 func MkHTTSRoute(
@@ -1293,7 +1210,7 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 		return false
 	}
 
-	route := apiroutev1.Route{}
+	var route apiroutev1.Route
 
 	// Checking if there is any content and setting the Route with TLS data from the Secret
 	if len(sslCrt) > 0 && len(sslKey) > 0 {
@@ -1310,25 +1227,6 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 		route = MkHTTSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, nil)
 	}
 	return r.ensure_route(route, name)
-}
-
-// Get the service clusterIP. Return an empty string if service not found.
-func (r *SFUtilContext) get_service_ip(service string) string {
-	var obj apiv1.Service
-	found := r.GetM(service, &obj)
-	if !found {
-		return ""
-	}
-	return obj.Spec.ClusterIP
-}
-
-func gen_bcrypt_pass(pass string) string {
-	password := []byte(pass)
-	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
-	if err != nil {
-		panic(err)
-	}
-	return string(hashedPassword)
 }
 
 func (r *SFUtilContext) PodExec(pod string, container string, command []string) error {
@@ -1353,7 +1251,7 @@ func (r *SFUtilContext) PodExec(pod string, container string, command []string) 
 	}
 
 	// r.log.V(1).Info("Streaming start")
-	err = exec.Stream(remotecommand.StreamOptions{
+	err = exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 		Tty:    false,
@@ -1377,7 +1275,7 @@ func MKBaseCertificate(name string, ns string, issuerName string,
 			DNSNames:   dnsNames,
 			Duration:   &metav1.Duration{Duration: duration},
 			SecretName: secretName,
-			IssuerRef: certmetav1.ObjectReference{
+			IssuerRef: cmmeta.ObjectReference{
 				Kind: "Issuer",
 				Name: issuerName,
 			},
@@ -1484,7 +1382,7 @@ func (r *SFUtilContext) getSecretbyNameRef(name string) (apiv1.Secret, error) {
 	return apiv1.Secret{}, fmt.Errorf("secret name with ref %s not found", name)
 }
 
-// Gets the Value of the Keyname from a Secret
+// GetValueFromKeySecret gets the Value of the Keyname from a Secret
 func GetValueFromKeySecret(secret apiv1.Secret, keyname string) ([]byte, error) {
 	keyvalue := secret.Data[keyname]
 	if len(keyvalue) == 0 {
@@ -1628,7 +1526,6 @@ func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) Sto
 
 func int32Ptr(i int32) *int32 { return &i }
 func boolPtr(b bool) *bool    { return &b }
-func strPtr(s string) *string { return &s }
 
 var Execmod int32 = 493 // decimal for 0755 octal
 

@@ -1,7 +1,7 @@
 // Copyright © 2023 Red Hat
 // SPDX-License-Identifier: Apache-2.0
 
-// This module defines the Config data type for the sfconfig.yaml
+// Package config defines the Config data type for the sfconfig.yaml
 package config
 
 import (

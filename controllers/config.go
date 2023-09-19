@@ -20,7 +20,7 @@ var pymod_secret string
 //go:embed static/sf_operator/main.py
 var pymod_main string
 
-// Returns true when the Job that set the zuul secret in the system-config repository is done
+// SetupBaseSecrets returns true when the Job that set the zuul secret in the system-config repository is done
 func (r *SFController) SetupBaseSecrets() bool {
 
 	serviceAccountName := "config-updater"

@@ -13,7 +13,6 @@ import (
 
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -471,7 +470,7 @@ func (r *LogServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 func (r *LogServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&sfv1.LogServer{}).
-		Owns(&corev1.Secret{}).
+		Owns(&apiv1.Secret{}).
 		Owns(&certv1.Certificate{}).
 		Complete(r)
 }

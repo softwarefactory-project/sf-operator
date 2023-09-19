@@ -3,6 +3,7 @@
 //
 // This package contains the gerrit configuration.
 
+// Package gerrit provides gerrit utilities
 package gerrit
 
 import (

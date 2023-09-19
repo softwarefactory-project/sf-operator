@@ -1,6 +1,8 @@
 /*
 Copyright © 2023 Redhat
 */
+
+// Package cmd provides cmd utilities
 package cmd
 
 import (

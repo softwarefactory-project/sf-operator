@@ -1,7 +1,7 @@
 // Copyright (C) 2023 Red Hat
 // SPDX-License-Identifier: Apache-2.0
-//
-// This package contains the main sfconfig CLI for the end user.
+
+// Package cli contains the main sfconfig CLI for the end user.
 // The goal is to be a onestop shop to get the service running with a single `sfconfig` command invocation.
 package cli
 
@@ -51,11 +51,11 @@ func Run(erase bool) {
 		sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN)
 		EnsureDemoConfig(&env, &sfconfig)
 		nodepool.CreateNamespaceForNodepool(&env, "", "nodepool", "")
-		EnsureDeployement(&env, &sfconfig)
+		EnsureDeployment(&env, &sfconfig)
 	}
 }
 
-// The goal of this function is to prepare a demo config
+// EnsureDemoConfig prepares a demo config
 func EnsureDemoConfig(env *utils.ENV, sfconfig *config.SFConfig) {
 	fmt.Println("[+] Ensuring demo config")
 	apiKey := string(utils.GetSecret(env, "gerrit-admin-api-key"))
@@ -121,14 +121,14 @@ func EnsureRepo(sfconfig *config.SFConfig, apiKey string, name string) {
 	utils.RunCmd("git", "-C", path, "reset", "--hard", "origin/master")
 }
 
-// The goal of this function is to recorver from client creation error
+// EnsureCluster recorvers from client creation error
 func EnsureCluster(err error) client.Client {
 	// TODO: perform openstack server reboot?
 	panic(fmt.Errorf("cluster error: %s", err))
 }
 
-// The goal of this function is to ensure a deployment is running.
-func EnsureDeployement(env *utils.ENV, sfconfig *config.SFConfig) {
+// EnsureDeployment ensures a deployment is running.
+func EnsureDeployment(env *utils.ENV, sfconfig *config.SFConfig) {
 	fmt.Println("[+] Checking SF resource...")
 	sf, err := utils.GetSF(env, "my-sf")
 	if sf.Status.Ready {
@@ -220,7 +220,7 @@ func EnsureCR(env *utils.ENV, sfconfig *config.SFConfig) {
 		// Sometime the api needs a bit of time to register the CRD
 		time.Sleep(2 * time.Second)
 	}
-	panic(fmt.Errorf("Could not install CR: %s", err))
+	panic(fmt.Errorf("could not install CR: %s", err))
 }
 
 func EnsureCRD() {
@@ -249,7 +249,7 @@ func EnsurePrometheusOperator(env *utils.ENV) {
 	fmt.Println("[+] Installing prometheus-operator...")
 	err := sfprometheus.EnsurePrometheusOperator(env)
 	if err != nil {
-		panic(fmt.Errorf("Could not install prometheus-operator: %s", err))
+		panic(fmt.Errorf("could not install prometheus-operator: %s", err))
 	}
 }
 

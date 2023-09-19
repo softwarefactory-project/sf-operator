@@ -2,6 +2,8 @@
 Copyright © 2023 Redhat
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package createSsl functions
 package createSsl
 
 import (
@@ -52,9 +54,12 @@ func verifySSLCert(serviceCAContent []byte, serviceCertContent []byte,
 	serviceKeyContent []byte, serverName string) bool {
 	// Verify if provided cert is correct
 	decoded_ca_cert, _ := pem.Decode(serviceCAContent)
-	caCert, err := x509.ParseCertificate(decoded_ca_cert.Bytes)
 	if decoded_ca_cert == nil {
-		panic("Failed to parse CA certificate!")
+		panic("Failed to decode CA certificate!")
+	}
+	caCert, err := x509.ParseCertificate(decoded_ca_cert.Bytes)
+	if err != nil {
+		panic("Failed to parse CA certificate: " + err.Error())
 	}
 
 	decoded_client_cert, _ := pem.Decode(serviceCertContent)

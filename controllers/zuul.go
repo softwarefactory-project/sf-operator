@@ -191,7 +191,7 @@ func (r *SFController) EnsureZuulScheduler(init_containers []apiv1.Container, cf
 
 	var setAdditionalContainers = func(sts *appsv1.StatefulSet) {
 		sts.Spec.Template.Spec.InitContainers = append(init_containers, r.init_scheduler_config())
-		sts.Spec.Template.Spec.Containers = append(r.create_zuul_container("zuul-scheduler"))
+		sts.Spec.Template.Spec.Containers = r.create_zuul_container("zuul-scheduler")
 	}
 
 	scheduler_tooling_data := make(map[string]string)

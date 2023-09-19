@@ -1,6 +1,8 @@
 /*
 Copyright © 2023 Red Hat
 */
+
+// Package delete provides functions to manage deletion
 package delete
 
 import (
@@ -13,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// operatorDeleteCmd represents the operatordelete command
+// DeleteCmd represents the operatordelete command
 var DeleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Run playbook/wipe.yaml",
@@ -56,7 +58,7 @@ OPTIONS
 			ansiblePlaybookOptions.Tags += "sf_delete_pcvs,"
 		}
 
-		var playbook_yaml string = "playbooks/wipe.yaml"
+		var playbook_yaml = "playbooks/wipe.yaml"
 
 		playbook := &playbook.AnsiblePlaybookCmd{
 			Playbooks:         []string{playbook_yaml},

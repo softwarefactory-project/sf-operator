@@ -1,6 +1,8 @@
 /*
 Copyright © 2023 Red Hat
 */
+
+// Package create provides helper for creation
 package create
 
 import (
@@ -44,7 +46,7 @@ func generateTemplate() string {
 	return template
 }
 
-// operatorDeleteCmd represents the operatordelete command
+// CreateCmd represents the operatordelete command
 var CreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Run a generated at playbooks/sfconfig-operator-create-*",
@@ -104,7 +106,7 @@ OPTIONS
 
 		file, _ := utils.CreateTempPlaybookFile(generateTemplate())
 
-		var playbook_yaml string = file.Name()
+		var playbook_yaml = file.Name()
 
 		playbook := &playbook.AnsiblePlaybookCmd{
 			Playbooks:         []string{playbook_yaml},

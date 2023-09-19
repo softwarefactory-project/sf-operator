@@ -32,6 +32,8 @@
         ];
         shellHook = ''
           echo "Welcome in $name"
+          export GOPATH=$(go env GOPATH)
+          export GOBIN=$(go env GOPATH)/bin
         '';
       };
     };

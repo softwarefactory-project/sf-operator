@@ -2,6 +2,8 @@
 Copyright © 2023 Redhat
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package nodepool provides helpers for Nodepool
 package nodepool
 
 import (
@@ -30,7 +32,7 @@ func ensureNamespace(env *utils.ENV, name string) {
 		ns.Name = name
 		utils.CreateR(env, &ns)
 	} else if err != nil {
-		panic(fmt.Errorf("Could not get namespace: %s", err))
+		panic(fmt.Errorf("could not get namespace: %s", err))
 	}
 }
 
@@ -51,8 +53,6 @@ func ensureRole(env *utils.ENV, sa string) {
 			},
 		}
 		utils.CreateR(env, &role)
-	} else {
-		// TODO: update if needed
 	}
 
 	var rb rbacv1.RoleBinding
@@ -97,7 +97,7 @@ func createKubeConfig(contextName string, ns string, sa string, token string) cl
 		"https://127.",
 	) {
 		panic(fmt.Errorf(
-			"The target context server address can't be localhost, please change from %s to a publicly reachable name",
+			"the target context server address can't be localhost, please change from %s to a publicly reachable name",
 			currentConfig.Host))
 	}
 	return cliapi.Config{
@@ -145,7 +145,7 @@ func ensureNodepoolProvidersSecrets(env *utils.ENV, cloudconfig []byte, kubeconf
 		}
 		needUpdate := false
 		if cloudconfig != nil {
-			if bytes.Compare(secret.Data["clouds.yaml"], cloudconfig) != 0 {
+			if !bytes.Equal(secret.Data["clouds.yaml"], cloudconfig) {
 				println("Updating the clouds config ...")
 				secret.Data["clouds.yaml"] = cloudconfig
 				needUpdate = true
@@ -158,7 +158,7 @@ func ensureNodepoolProvidersSecrets(env *utils.ENV, cloudconfig []byte, kubeconf
 			}
 		}
 		if kubeconfig != nil {
-			if bytes.Compare(secret.Data["kube.config"], kubeconfig) != 0 {
+			if !bytes.Equal(secret.Data["kube.config"], kubeconfig) {
 				println("Updating the kube config ...")
 				secret.Data["kube.config"] = kubeconfig
 				needUpdate = true

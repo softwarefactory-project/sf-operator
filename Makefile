@@ -66,6 +66,10 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: sc
+sc: staticcheck ## Run staticcheck checks https://staticcheck.dev/docs/
+	$(LOCALBIN)/staticcheck ./...
+
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
@@ -77,7 +81,7 @@ dev-deployment:
 ##@ Build
 
 .PHONY: build
-build: generate fmt vet ## Build manager binary.
+build: generate fmt vet sc ## Build manager binary.
 	go build -o bin/manager main.go
 
 .PHONY: run
@@ -169,6 +173,7 @@ OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 KUSTOMIZE_VERSION ?= v5.1.1
 CONTROLLER_TOOLS_VERSION ?= v0.12.1
 OPERATOR_SDK_VERSION ?= 1.31.0
+STATICCHECK_VERSION ?= 2023.1.6
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/${KUSTOMIZE_VERSION}/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -190,6 +195,12 @@ $(ENVTEST): $(LOCALBIN)
 operator-sdk: $(OPERATOR_SDK)
 $(OPERATOR_SDK): $(LOCALBIN)
 	(test -f $(LOCALBIN)/operator-sdk && [[ "$(shell $(LOCALBIN)/operator-sdk version)" =~ "$(OPERATOR_SDK_VERSION)" ]] ) || (curl -o $(LOCALBIN)/operator-sdk -sSL https://github.com/operator-framework/operator-sdk/releases/download/v${OPERATOR_SDK_VERSION}/operator-sdk_linux_amd64 && chmod +x $(LOCALBIN)/operator-sdk )
+
+.PHONY: staticcheck
+staticcheck:
+	(test -f $(LOCALBIN)/staticcheck && [[ "$(shell $(LOCALBIN)/staticcheck --version)" =~ "$(STATICCHECK_VERSION)" ]] ) || GOBIN=$(LOCALBIN) go install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
+	mkdir -p $(GOBIN)
+	test -L $(GOBIN)/staticcheck || ln -s $(LOCALBIN)/staticcheck $(GOBIN)/staticcheck
 
 # Cataloge
 CATALOG_DIR=sf-operator-catalog

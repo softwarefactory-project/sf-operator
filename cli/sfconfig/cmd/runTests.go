@@ -1,6 +1,8 @@
 /*
 Copyright © 2023 Red Hat
 */
+
+// Package cmd provides facilities to run the functional test suite
 package cmd
 
 import (

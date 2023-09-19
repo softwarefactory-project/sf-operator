@@ -1,5 +1,7 @@
 // Copyright (C) 2023 Red Hat
 // SPDX-License-Identifier: Apache-2.0
+
+// Package controllers provides controller functions
 package controllers
 
 import (
