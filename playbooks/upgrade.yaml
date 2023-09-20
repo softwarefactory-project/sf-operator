@@ -7,6 +7,7 @@
     - setup-namespaces
     - microshift-workarounds
     - start-gerrit
+    - start-prometheus
     - role: build-operator-assets
       vars:
         build_bundle: false
@@ -14,7 +15,6 @@
     - role: install-operator
       vars:
         ci_bundle_img: quay.io/software-factory/sf-operator-bundle:latest
-    - start-prometheus
     - apply-custom-resources
     - role: build-operator-assets
       vars:

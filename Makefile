@@ -135,7 +135,7 @@ OPERATOR_NAMESPACE ?= operators
 .PHONY: setup-prometheus-operator-serviceaccount
 # This "hack" is required on MicroShift so that the operator can be deployed
 setup-prometheus-operator-serviceaccount:
-	kubectl create serviceaccount prometheus-operator --namespace $(OPERATOR_NAMESPACE)
+	kubectl get -n $(OPERATOR_NAMESPACE) sa prometheus-operator || kubectl -n $(OPERATOR_NAMESPACE) create serviceaccount prometheus-operator
 	oc adm policy add-scc-to-user privileged system:serviceaccount:$(OPERATOR_NAMESPACE):prometheus-operator
 
 .PHONY: install-prometheus-operator

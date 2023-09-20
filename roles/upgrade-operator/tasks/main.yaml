@@ -50,7 +50,7 @@
     --skip-tls
     --skip-tls-verify
     {{ bundlename }}
-    --namespace bundle-catalog-ns
+    --namespace operators
     --security-context-config restricted
     --use-http
   args:

@@ -55,7 +55,7 @@ var CreateCmd = &cobra.Command{
 ./tools/sfconfig operator create [OPTIONS]
 
 OPTIONS
-    --bundle, -b - creates namespace for the bundle ( default: bundle-catalog-ns )
+    --bundle, -b - creates namespace for the bundle ( default: operators )
     --bundlenamespace string, -B string- creates namespace for the bundle with specific name
     --namespace, -n - creates namespace for Software Factory ( default: sf )
     --namespacename string, -N string - creates namespace for Software Factory with specific name
@@ -127,7 +127,7 @@ OPTIONS
 }
 
 func init() {
-	CreateCmd.Flags().BoolP("bundle", "b", false, "creates namespace for the bundle ( default: bundle-catalog-ns )")
+	CreateCmd.Flags().BoolP("bundle", "b", false, "creates namespace for the bundle ( default: operators )")
 	CreateCmd.Flags().StringP("bundlenamespace", "B", "", "creates namespace for the bundle with specific name")
 	CreateCmd.Flags().BoolP("namespace", "n", false, "creates namespace for Software Factory ( default: sf )")
 	CreateCmd.Flags().StringP("namespacename", "N", "", "creates namespace for Software Factory with specific name")
