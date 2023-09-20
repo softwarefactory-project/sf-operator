@@ -1,9 +1,9 @@
 ---
 # Where the operator will be installed via the OLM bundle
-- name: Create the {{ bundlenamspace }} namespace
+- name: Create the {{ bundlenamespace }} namespace
   shell: |
-    kubectl create namespace {{ bundlenamspace }}
-    oc adm policy add-scc-to-user privileged system:serviceaccount:{{ bundlenamspace }}:default
+    kubectl create namespace {{ bundlenamespace }}
+    oc adm policy add-scc-to-user privileged system:serviceaccount:{{ bundlenamespace }}:default
   when: create_test_bundle_ns
   tags:
     - operator_bundle_namespace
