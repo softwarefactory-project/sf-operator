@@ -11,55 +11,55 @@ import (
 )
 
 //go:embed static/zookeeper/ok.sh
-var zookeeper_ok string
+var zookeeperOk string
 
 //go:embed static/zookeeper/ready.sh
-var zookeeper_ready string
+var zookeeperReady string
 
 //go:embed static/zookeeper/run.sh
-var zookeeper_run string
+var zookeepeRun string
 
-const ZOOKEEPER_PORT_NAME = "zk"
-const ZOOKEEPER_PORT = 2181
+const zkPortName = "zk"
+const zkPort = 2181
 
-const ZOOKEEPER_SSL_PORT_NAME = "zkssl"
-const ZOOKEEPER_SSL_PORT = 2281
+const zkSSLPortName = "zkssl"
+const zkSSLPort = 2281
 
-const ZOOKEEPER_ELECTION_PORT_NAME = "zkelection"
-const ZOOKEEPER_ELECTION_PORT = 3888
+const zkElectionPortName = "zkelection"
+const zkElectionPort = 3888
 
-const ZOOKEEPER_SERVER_PORT_NAME = "zkserver"
-const ZOOKEEPER_SERVER_PORT = 2888
+const zkServerPortName = "zkserver"
+const zkServerPort = 2888
 
-const ZK_IDENT = "zookeeper"
-const ZK_PI_MOUNT_PATH = "/config-scripts"
+const zkIdent = "zookeeper"
+const zkPIMountPath = "/config-scripts"
 
 func (r *SFController) DeployZookeeper() bool {
-	dnsNames := r.MKClientDNSNames(ZK_IDENT)
+	dnsNames := r.MKClientDNSNames(zkIdent)
 	privateKey := certv1.CertificatePrivateKey{
 		Encoding: certv1.PKCS8,
 	}
 	cert := MKCertificate(
 		"zookeeper-server", r.ns, "ca-issuer", dnsNames, "zookeeper-server-tls", &privateKey)
-	cert_client := MKCertificate(
+	certClient := MKCertificate(
 		"zookeeper-client", r.ns, "ca-issuer", dnsNames, "zookeeper-client-tls", &privateKey)
 	r.GetOrCreate(&cert)
-	r.GetOrCreate(&cert_client)
+	r.GetOrCreate(&certClient)
 
-	if !isCertificateReady(&cert) || !isCertificateReady(&cert_client) {
+	if !isCertificateReady(&cert) || !isCertificateReady(&certClient) {
 		return false
 	}
 
-	cm_data := make(map[string]string)
-	cm_data["ok.sh"] = zookeeper_ok
-	cm_data["ready.sh"] = zookeeper_ready
-	cm_data["run.sh"] = zookeeper_run
-	r.EnsureConfigMap(ZK_IDENT+"-pi", cm_data)
+	cmData := make(map[string]string)
+	cmData["ok.sh"] = zookeeperOk
+	cmData["ready.sh"] = zookeeperReady
+	cmData["run.sh"] = zookeepeRun
+	r.EnsureConfigMap(zkIdent+"-pi", cmData)
 
 	annotations := map[string]string{
-		"ok":    checksum([]byte(zookeeper_ok)),
-		"ready": checksum([]byte(zookeeper_ready)),
-		"run":   checksum([]byte(zookeeper_run)),
+		"ok":    checksum([]byte(zookeeperOk)),
+		"ready": checksum([]byte(zookeeperReady)),
+		"run":   checksum([]byte(zookeepeRun)),
 	}
 
 	volumes := []apiv1.VolumeMount{
@@ -74,71 +74,71 @@ func (r *SFController) DeployZookeeper() bool {
 			ReadOnly:  true,
 		},
 		{
-			Name:      ZK_IDENT + "-data",
+			Name:      zkIdent + "-data",
 			MountPath: "/data",
 		},
 		{
-			Name:      ZK_IDENT + "-conf",
+			Name:      zkIdent + "-conf",
 			MountPath: "/conf",
 		},
 		{
-			Name:      ZK_IDENT + "-pi",
-			MountPath: ZK_PI_MOUNT_PATH,
+			Name:      zkIdent + "-pi",
+			MountPath: zkPIMountPath,
 		},
 	}
 
 	container := apiv1.Container{
-		Name:            ZK_IDENT,
-		Image:           "quay.io/software-factory/" + ZK_IDENT + ":3.8.0-5",
+		Name:            zkIdent,
+		Image:           "quay.io/software-factory/" + zkIdent + ":3.8.0-5",
 		Command:         []string{"/bin/bash", "/config-scripts/run.sh"},
-		SecurityContext: create_security_context(false),
+		SecurityContext: mkSecurityContext(false),
 		VolumeMounts:    volumes,
 	}
 
-	service_ports := []int32{ZOOKEEPER_SSL_PORT}
-	srv := r.create_service(ZK_IDENT, ZK_IDENT, service_ports, ZK_IDENT)
+	servicePorts := []int32{zkSSLPort}
+	srv := r.mkService(zkIdent, zkIdent, servicePorts, zkIdent)
 	r.GetOrCreate(&srv)
 
-	headless_ports := []int32{ZOOKEEPER_SSL_PORT, ZOOKEEPER_ELECTION_PORT, ZOOKEEPER_SERVER_PORT}
-	srv_zk := r.create_headless_service(ZK_IDENT, ZK_IDENT, headless_ports, ZK_IDENT)
-	r.GetOrCreate(&srv_zk)
+	headlessPorts := []int32{zkSSLPort, zkElectionPort, zkServerPort}
+	srvZK := r.mkHeadlessService(zkIdent, zkIdent, headlessPorts, zkIdent)
+	r.GetOrCreate(&srvZK)
 
 	replicas := int32(1)
-	zk := r.create_headless_statefulset(ZK_IDENT, "", r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage), replicas, apiv1.ReadWriteOnce)
+	zk := r.mkHeadlessSatefulSet(zkIdent, "", r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage), replicas, apiv1.ReadWriteOnce)
 	zk.Spec.VolumeClaimTemplates = append(
 		zk.Spec.VolumeClaimTemplates,
-		r.create_pvc(ZK_IDENT+"-data", r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage), apiv1.ReadWriteOnce))
+		r.MkPVC(zkIdent+"-data", r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage), apiv1.ReadWriteOnce))
 	zk.Spec.Template.Spec.Containers = []apiv1.Container{container}
 	zk.Spec.Template.ObjectMeta.Annotations = annotations
 	zk.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		Create_volume_cm(ZK_IDENT+"-pi", ZK_IDENT+"-pi-config-map"),
-		create_volume_secret("zookeeper-client-tls"),
-		create_volume_secret("zookeeper-server-tls"),
-		create_empty_dir(ZK_IDENT + "-conf"),
+		MKVolumeCM(zkIdent+"-pi", zkIdent+"-pi-config-map"),
+		mkVolumeSecret("zookeeper-client-tls"),
+		mkVolumeSecret("zookeeper-server-tls"),
+		mkEmptyDirVolume(zkIdent + "-conf"),
 	}
-	zk.Spec.Template.Spec.Containers[0].ReadinessProbe = Create_readiness_cmd_probe([]string{"/bin/bash", "/config-scripts/ready.sh"})
-	zk.Spec.Template.Spec.Containers[0].LivenessProbe = Create_readiness_cmd_probe([]string{"/bin/bash", "/config-scripts/ok.sh"})
+	zk.Spec.Template.Spec.Containers[0].ReadinessProbe = MkReadinessCMDProbe([]string{"/bin/bash", "/config-scripts/ready.sh"})
+	zk.Spec.Template.Spec.Containers[0].LivenessProbe = MkReadinessCMDProbe([]string{"/bin/bash", "/config-scripts/ok.sh"})
 	zk.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		Create_container_port(ZOOKEEPER_PORT, ZOOKEEPER_PORT_NAME),
-		Create_container_port(ZOOKEEPER_SSL_PORT, ZOOKEEPER_SSL_PORT_NAME),
-		Create_container_port(ZOOKEEPER_ELECTION_PORT, ZOOKEEPER_ELECTION_PORT_NAME),
-		Create_container_port(ZOOKEEPER_SERVER_PORT, ZOOKEEPER_SERVER_PORT_NAME),
+		MKContainerPort(zkPort, zkPortName),
+		MKContainerPort(zkSSLPort, zkSSLPortName),
+		MKContainerPort(zkElectionPort, zkElectionPortName),
+		MKContainerPort(zkServerPort, zkServerPortName),
 	}
 
 	r.GetOrCreate(&zk)
-	zk_dirty := false
-	if !map_equals(&zk.Spec.Template.ObjectMeta.Annotations, &annotations) {
+	zkDirty := false
+	if !mapEquals(&zk.Spec.Template.ObjectMeta.Annotations, &annotations) {
 		zk.Spec.Template.ObjectMeta.Annotations = annotations
-		zk_dirty = true
+		zkDirty = true
 	}
-	if zk_dirty {
+	if zkDirty {
 		if !r.UpdateR(&zk) {
 			return false
 		}
 	}
 
 	isStatefulSet := r.IsStatefulSetReady(&zk)
-	updateConditions(&r.cr.Status.Conditions, ZK_IDENT, isStatefulSet)
+	updateConditions(&r.cr.Status.Conditions, zkIdent, isStatefulSet)
 
 	return isStatefulSet
 }

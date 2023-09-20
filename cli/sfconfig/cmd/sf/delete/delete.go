@@ -58,10 +58,10 @@ OPTIONS
 			ansiblePlaybookOptions.Tags += "sf_delete_pcvs,"
 		}
 
-		var playbook_yaml = "playbooks/wipe.yaml"
+		var playbookYAML = "playbooks/wipe.yaml"
 
 		playbook := &playbook.AnsiblePlaybookCmd{
-			Playbooks:         []string{playbook_yaml},
+			Playbooks:         []string{playbookYAML},
 			ConnectionOptions: ansiblePlaybookConnectionOptions,
 			Options:           ansiblePlaybookOptions,
 		}

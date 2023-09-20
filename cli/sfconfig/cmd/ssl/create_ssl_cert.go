@@ -3,8 +3,8 @@ Copyright © 2023 Redhat
 SPDX-License-Identifier: Apache-2.0
 */
 
-// Package createSsl functions
-package createSsl
+// Package createssl functions
+package createssl
 
 import (
 	"context"
@@ -53,17 +53,17 @@ func ensureSSLSecret(env *utils.ENV, serviceCAContent []byte,
 func verifySSLCert(serviceCAContent []byte, serviceCertContent []byte,
 	serviceKeyContent []byte, serverName string) bool {
 	// Verify if provided cert is correct
-	decoded_ca_cert, _ := pem.Decode(serviceCAContent)
-	if decoded_ca_cert == nil {
+	decodedCACert, _ := pem.Decode(serviceCAContent)
+	if decodedCACert == nil {
 		panic("Failed to decode CA certificate!")
 	}
-	caCert, err := x509.ParseCertificate(decoded_ca_cert.Bytes)
+	caCert, err := x509.ParseCertificate(decodedCACert.Bytes)
 	if err != nil {
 		panic("Failed to parse CA certificate: " + err.Error())
 	}
 
-	decoded_client_cert, _ := pem.Decode(serviceCertContent)
-	clientCert, err := x509.ParseCertificate(decoded_client_cert.Bytes)
+	decodedClientCert, _ := pem.Decode(serviceCertContent)
+	clientCert, err := x509.ParseCertificate(decodedClientCert.Bytes)
 	if err != nil {
 		panic("Failed to parse certificate: " + err.Error())
 	}

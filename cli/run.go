@@ -86,9 +86,9 @@ func SetupTenant(configPath string, tenantName string) {
 		},
 	}
 
-	template_data_output, _ := yaml.Marshal(tenantData)
+	templateDataOutput, _ := yaml.Marshal(tenantData)
 
-	if err := os.WriteFile(tenantFile, []byte(template_data_output), 0644); err != nil {
+	if err := os.WriteFile(tenantFile, []byte(templateDataOutput), 0644); err != nil {
 		panic(err)
 	}
 	utils.RunCmd("git", "-C", configPath, "add", "zuul/main.yaml")

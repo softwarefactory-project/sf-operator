@@ -101,11 +101,11 @@ func CreateKubernetesClientOrDie(contextName string) client.Client {
 	return cli
 }
 
-// Parse_string allows to easilly use templated string.
+// ParseString allows to easilly use templated string.
 //
 // Pass the template text.
 // And the data structure to be applied to the template
-func Parse_string(text string, data any) (string, error) {
+func ParseString(text string, data any) (string, error) {
 
 	template.New("StringtoParse").Parse(text)
 	// Opening Template file
@@ -258,13 +258,13 @@ type TenantTemplateStruct struct {
 }
 
 func GenerateZuulTemplateFile(tenant TenantTemplateStruct) (string, error) {
-	template_config, err := Parse_string(TenantTemplate, tenant)
+	templateConfig, err := ParseString(TenantTemplate, tenant)
 
 	if err != nil {
 		fmt.Print(err)
 		return "", err
 	}
-	return template_config, nil
+	return templateConfig, nil
 }
 
 type TenantConnProjects struct {

@@ -45,10 +45,10 @@ var ProvidersSecretsCmd = &cobra.Command{
 		conf := config.GetSFConfigOrDie()
 
 		if updateOpt {
-			clouds_content, _ := utils.GetFileContent(conf.Nodepool.CloudsFile)
+			cloudsContent, _ := utils.GetFileContent(conf.Nodepool.CloudsFile)
 			println(conf.Nodepool.CloudsFile)
-			kube_content, _ := utils.GetFileContent(conf.Nodepool.KubeFile)
-			ensureNodepoolProvidersSecrets(&sfEnv, clouds_content, kube_content)
+			kubeContent, _ := utils.GetFileContent(conf.Nodepool.KubeFile)
+			ensureNodepoolProvidersSecrets(&sfEnv, cloudsContent, kubeContent)
 		}
 
 		if dumpOpt {

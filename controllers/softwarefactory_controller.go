@@ -91,7 +91,7 @@ func (r *SFController) DeployLogserverResource() bool {
 
 	current := sfv1.LogServer{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      LOGSERVER_IDENT,
+			Name:      logserverIdent,
 			Namespace: r.ns,
 		},
 	}
@@ -99,7 +99,7 @@ func (r *SFController) DeployLogserverResource() bool {
 	loopdelay, retentiondays := getLogserverSettingsOrDefault(r.cr.Spec.Logserver)
 	storage := r.cr.Spec.Logserver.Storage
 	if storage.Size.IsZero() {
-		storage.Size = DEFAULT_QTY_1Gi()
+		storage.Size = Qty1Gi()
 	}
 	logServerSpecSettings := sfv1.LogServerSpecSettings{
 		LoopDelay:     loopdelay,
@@ -107,7 +107,7 @@ func (r *SFController) DeployLogserverResource() bool {
 		Storage:       storage,
 	}
 
-	if r.GetM(LOGSERVER_IDENT, &current) {
+	if r.GetM(logserverIdent, &current) {
 		needUpdate := false
 		if current.Spec.Settings != logServerSpecSettings {
 			current.Spec.Settings = logServerSpecSettings
@@ -128,24 +128,24 @@ func (r *SFController) DeployLogserverResource() bool {
 			}
 		}
 		if needUpdate {
-			r.log.V(1).Info("Updating the logserver resource", "name", LOGSERVER_IDENT)
+			r.log.V(1).Info("Updating the logserver resource", "name", logserverIdent)
 			r.UpdateR(&current)
 			return false
 		}
 	} else {
-		pub_key, err := r.getSecretDataFromKey("zuul-ssh-key", "pub")
+		pubKey, err := r.getSecretDataFromKey("zuul-ssh-key", "pub")
 		if err != nil {
 			return false
 		}
-		pub_key_b64 := base64.StdEncoding.EncodeToString(pub_key)
+		pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
 		current.Spec = sfv1.LogServerSpec{
 			FQDN:             r.cr.Spec.FQDN,
 			StorageClassName: r.cr.Spec.StorageClassName,
 			LetsEncrypt:      r.cr.Spec.LetsEncrypt,
-			AuthorizedSSHKey: pub_key_b64,
+			AuthorizedSSHKey: pubKeyB64,
 			Settings:         logServerSpecSettings,
 		}
-		r.log.V(1).Info("Creating the logserver resource", "name", LOGSERVER_IDENT)
+		r.log.V(1).Info("Creating the logserver resource", "name", logserverIdent)
 		r.CreateR(&current)
 		return false
 	}
@@ -188,7 +188,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	if services["Zuul"] {
 		services["Config"] = r.SetupConfigJob()
 		if services["Config"] {
-			refresh_condition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
+			refreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
 		}
 	}
 
