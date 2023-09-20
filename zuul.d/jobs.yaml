@@ -33,7 +33,7 @@
     run: playbooks/main.yaml
     abstract: true
     irrelevant-files:
-      - ".*.md"
+      - ".*.md$"
       - "doc/.*"
     required-projects:
       - name: software-factory/sf-infra
@@ -71,7 +71,7 @@
     run: playbooks/main.yaml
     abstract: true
     irrelevant-files:
-      - ".*.md"
+      - ".*.md$"
       - "doc/.*"
     required-projects:
       - name: software-factory/sf-infra
