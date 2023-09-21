@@ -30,7 +30,7 @@ Run test_only tag
 ./tools/sfconfig runTests --test-only
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
-		test_only, _ := cmd.Flags().GetBool("test-only")
+		testOnly, _ := cmd.Flags().GetBool("test-only")
 		upgrade, _ := cmd.Flags().GetBool("upgrade")
 		verbose, _ := cmd.Flags().GetBool("v")
 		debug, _ := cmd.Flags().GetBool("vvv")
@@ -53,12 +53,12 @@ Run test_only tag
 			ansiblePlaybookOptions.AddExtraVar(keyVar, valueVar)
 		}
 
-		var playbook_yaml string
+		var playbookYAML string
 		if upgrade {
-			playbook_yaml = "playbooks/upgrade.yaml"
+			playbookYAML = "playbooks/upgrade.yaml"
 		} else {
-			playbook_yaml = "playbooks/main.yaml"
-			if test_only {
+			playbookYAML = "playbooks/main.yaml"
+			if testOnly {
 				ansiblePlaybookOptions.Tags = "test_only"
 				ansiblePlaybookOptions.AddExtraVar("mode", "dev")
 			} else {
@@ -67,7 +67,7 @@ Run test_only tag
 		}
 
 		playbook := &playbook.AnsiblePlaybookCmd{
-			Playbooks:         []string{playbook_yaml},
+			Playbooks:         []string{playbookYAML},
 			ConnectionOptions: ansiblePlaybookConnectionOptions,
 			Options:           ansiblePlaybookOptions,
 		}

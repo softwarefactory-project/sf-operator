@@ -37,7 +37,7 @@ func generateTemplate() string {
 		Tasks: "",
 	}
 
-	template, err := utils.Parse_string(getTemplate(), yamlData)
+	template, err := utils.ParseString(getTemplate(), yamlData)
 	if err != nil {
 		fmt.Println(err)
 		panic("Template parsing failed")
@@ -106,10 +106,10 @@ OPTIONS
 
 		file, _ := utils.CreateTempPlaybookFile(generateTemplate())
 
-		var playbook_yaml = file.Name()
+		var playbookYAML = file.Name()
 
 		playbook := &playbook.AnsiblePlaybookCmd{
-			Playbooks:         []string{playbook_yaml},
+			Playbooks:         []string{playbookYAML},
 			ConnectionOptions: ansiblePlaybookConnectionOptions,
 			Options:           ansiblePlaybookOptions,
 		}

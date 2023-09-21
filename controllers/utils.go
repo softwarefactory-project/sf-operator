@@ -59,10 +59,10 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
-const BUSYBOX_IMAGE = "quay.io/software-factory/sf-op-busybox:1.5-3"
+const BusyboxImage = "quay.io/software-factory/sf-op-busybox:1.5-3"
 
-// SERVICEMONITOR_LABEL_SELECTOR - TODO this could be a spec parameter.
-const SERVICEMONITOR_LABEL_SELECTOR = "sf-monitoring"
+// ServiceMonitorLabelSelector - TODO this could be a spec parameter.
+const ServiceMonitorLabelSelector = "sf-monitoring"
 
 type SFUtilContext struct {
 	Client     client.Client
@@ -78,13 +78,13 @@ type SFUtilContext struct {
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
 
 //lint:ignore U1000 this function will be used in a followup change
-func (r *SFUtilContext) create_ServiceMonitor(name string, port string, selector metav1.LabelSelector) monitoringv1.ServiceMonitor {
+func (r *SFUtilContext) mkServiceMonitor(name string, port string, selector metav1.LabelSelector) monitoringv1.ServiceMonitor {
 	return monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: r.ns,
 			Labels: map[string]string{
-				SERVICEMONITOR_LABEL_SELECTOR: name,
+				ServiceMonitorLabelSelector: name,
 			},
 		},
 		Spec: monitoringv1.ServiceMonitorSpec{
@@ -100,13 +100,13 @@ func (r *SFUtilContext) create_ServiceMonitor(name string, port string, selector
 	}
 }
 
-func (r *SFUtilContext) create_PodMonitor(name string, port string, selector metav1.LabelSelector) monitoringv1.PodMonitor {
+func (r *SFUtilContext) mkPodMonitor(name string, port string, selector metav1.LabelSelector) monitoringv1.PodMonitor {
 	return monitoringv1.PodMonitor{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: r.ns,
 			Labels: map[string]string{
-				SERVICEMONITOR_LABEL_SELECTOR: name,
+				ServiceMonitorLabelSelector: name,
 			},
 		},
 		Spec: monitoringv1.PodMonitorSpec{
@@ -120,13 +120,13 @@ func (r *SFUtilContext) create_PodMonitor(name string, port string, selector met
 	}
 }
 
-func (r *SFUtilContext) create_PrometheusRuleCR(name string) monitoringv1.PrometheusRule {
+func (r *SFUtilContext) mkPrometheusRuleCR(name string) monitoringv1.PrometheusRule {
 	return monitoringv1.PrometheusRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: r.ns,
 			Labels: map[string]string{
-				SERVICEMONITOR_LABEL_SELECTOR: name,
+				ServiceMonitorLabelSelector: name,
 			},
 		},
 		Spec: monitoringv1.PrometheusRuleSpec{
@@ -135,7 +135,7 @@ func (r *SFUtilContext) create_PrometheusRuleCR(name string) monitoringv1.Promet
 	}
 }
 
-func create_PrometheusRuleGroup(name string, rules []monitoringv1.Rule) monitoringv1.RuleGroup {
+func mkPrometheusRuleGroup(name string, rules []monitoringv1.Rule) monitoringv1.RuleGroup {
 	// d := monitoringv1.Duration(duration)
 	return monitoringv1.RuleGroup{
 		Name: name,
@@ -144,7 +144,7 @@ func create_PrometheusRuleGroup(name string, rules []monitoringv1.Rule) monitori
 	}
 }
 
-func create_PrometheusAlertRule(name string, expr intstr.IntOrString, forDuration string, labels map[string]string, annotations map[string]string) monitoringv1.Rule {
+func mkPrometheusAlertRule(name string, expr intstr.IntOrString, forDuration string, labels map[string]string, annotations map[string]string) monitoringv1.Rule {
 	f := monitoringv1.Duration(forDuration)
 	return monitoringv1.Rule{
 		Alert:       name,
@@ -155,7 +155,7 @@ func create_PrometheusAlertRule(name string, expr intstr.IntOrString, forDuratio
 	}
 }
 
-func DEFAULT_QTY_1Gi() resource.Quantity {
+func Qty1Gi() resource.Quantity {
 	q, _ := resource.ParseQuantity("1Gi")
 	return q
 }
@@ -188,7 +188,7 @@ func getOperatorConditionName() string {
 	return value
 }
 
-func new_condition(conditiontype string, reason string, message string) metav1.Condition {
+func mkCondition(conditiontype string, reason string, message string) metav1.Condition {
 	return metav1.Condition{
 		Type:               conditiontype,
 		Status:             metav1.ConditionUnknown,
@@ -203,7 +203,7 @@ func new_condition(conditiontype string, reason string, message string) metav1.C
 // If a condition of type t does not exist, it creates a new condition,
 // otherwise updates with the new parameters
 
-func refresh_condition(conditions *[]metav1.Condition, conditiontype string, status metav1.ConditionStatus, reason string, message string) {
+func refreshCondition(conditions *[]metav1.Condition, conditiontype string, status metav1.ConditionStatus, reason string, message string) {
 	foundCondition := metav1.Condition{}
 	for i, condition := range *conditions {
 		if condition.Type == conditiontype {
@@ -219,7 +219,7 @@ func refresh_condition(conditions *[]metav1.Condition, conditiontype string, sta
 		}
 	}
 	if reflect.DeepEqual(foundCondition, metav1.Condition{}) {
-		*conditions = append([]metav1.Condition{new_condition(conditiontype, reason, message)}, *conditions...)
+		*conditions = append([]metav1.Condition{mkCondition(conditiontype, reason, message)}, *conditions...)
 	}
 }
 
@@ -235,23 +235,23 @@ func updateConditions(conditions *[]metav1.Condition, condType string, ready boo
 		message = fmt.Sprintf("Initializing %s service...", condType)
 		status = metav1.ConditionFalse
 	}
-	refresh_condition(conditions, condType, status, reason, message)
+	refreshCondition(conditions, condType, status, reason, message)
 }
 
-// Parse_string function to easilly use templated string.
+// ParseString function to easilly use templated string.
 //
 // Pass the template text.
 // And the data structure to be applied to the template
-func Parse_string(text string, data any) (string, error) {
+func ParseString(text string, data any) (string, error) {
 	// Create Template object
-	template_body, err := template.New("StringtoParse").Parse(text)
+	templateBody, err := template.New("StringtoParse").Parse(text)
 	if err != nil {
 		return "", fmt.Errorf("Text not in the right format: " + text)
 	}
 
 	// Parsing Template
 	var buf bytes.Buffer
-	err = template_body.Execute(&buf, data)
+	err = templateBody.Execute(&buf, data)
 	if err != nil {
 		return "", fmt.Errorf("failure while parsing template %s", text)
 	}
@@ -296,7 +296,7 @@ func IniGetSectionNamesByPrefix(cfg *ini.File, prefix string) []string {
 	return filteredNames
 }
 
-func create_ssh_key() SSHKey {
+func mkSSHKey() SSHKey {
 	bitSize := 4096
 
 	generatePrivateKey := func(bitSize int) (*rsa.PrivateKey, error) {
@@ -359,7 +359,7 @@ func create_ssh_key() SSHKey {
 	}
 }
 
-func Create_secret_env(env string, secret string, key string) apiv1.EnvVar {
+func MKSecretEnvVar(env string, secret string, key string) apiv1.EnvVar {
 	if key == "" {
 		key = secret
 	}
@@ -383,7 +383,7 @@ var defaultPodSecurityContext = apiv1.PodSecurityContext{
 	},
 }
 
-func create_security_context(privileged bool) *apiv1.SecurityContext {
+func mkSecurityContext(privileged bool) *apiv1.SecurityContext {
 	return &apiv1.SecurityContext{
 		Privileged:               pointer.Bool(privileged),
 		AllowPrivilegeEscalation: pointer.Bool(privileged),
@@ -395,14 +395,14 @@ func create_security_context(privileged bool) *apiv1.SecurityContext {
 	}
 }
 
-func Create_env(env string, value string) apiv1.EnvVar {
+func MKEnvVar(env string, value string) apiv1.EnvVar {
 	return apiv1.EnvVar{
 		Name:  env,
 		Value: value,
 	}
 }
 
-func Create_container_port(port int, name string) apiv1.ContainerPort {
+func MKContainerPort(port int, name string) apiv1.ContainerPort {
 	return apiv1.ContainerPort{
 		Name:          name,
 		Protocol:      apiv1.ProtocolTCP,
@@ -410,35 +410,35 @@ func Create_container_port(port int, name string) apiv1.ContainerPort {
 	}
 }
 
-func Create_volume_cm(volume_name string, config_map_ref string) apiv1.Volume {
+func MKVolumeCM(volumeName string, configMapRef string) apiv1.Volume {
 	return apiv1.Volume{
-		Name: volume_name,
+		Name: volumeName,
 		VolumeSource: apiv1.VolumeSource{
 			ConfigMap: &apiv1.ConfigMapVolumeSource{
 				LocalObjectReference: apiv1.LocalObjectReference{
-					Name: config_map_ref,
+					Name: configMapRef,
 				},
 			},
 		},
 	}
 }
 
-func create_volume_secret(name string, secret_name ...string) apiv1.Volume {
-	sec_name := name
-	if secret_name != nil {
-		sec_name = secret_name[0]
+func mkVolumeSecret(name string, secretName ...string) apiv1.Volume {
+	secName := name
+	if secretName != nil {
+		secName = secretName[0]
 	}
 	return apiv1.Volume{
 		Name: name,
 		VolumeSource: apiv1.VolumeSource{
 			Secret: &apiv1.SecretVolumeSource{
-				SecretName: sec_name,
+				SecretName: secName,
 			},
 		},
 	}
 }
 
-func create_empty_dir(name string) apiv1.Volume {
+func mkEmptyDirVolume(name string) apiv1.Volume {
 	return apiv1.Volume{
 		Name: name,
 		VolumeSource: apiv1.VolumeSource{
@@ -447,7 +447,7 @@ func create_empty_dir(name string) apiv1.Volume {
 	}
 }
 
-func get_storage_classname(storageClassName string) string {
+func getStorageClassname(storageClassName string) string {
 	if storageClassName != "" {
 		return storageClassName
 	} else {
@@ -474,12 +474,12 @@ func MkPVC(name string, ns string, storageParams StorageConfig, accessMode apiv1
 	}
 }
 
-func (r *SFUtilContext) create_pvc(name string, storageParams StorageConfig, accessMode apiv1.PersistentVolumeAccessMode) apiv1.PersistentVolumeClaim {
+func (r *SFUtilContext) MkPVC(name string, storageParams StorageConfig, accessMode apiv1.PersistentVolumeAccessMode) apiv1.PersistentVolumeClaim {
 	return MkPVC(name, r.ns, storageParams, accessMode)
 }
 
 func MkStatefulset(
-	name string, ns string, replicas int32, service_name string,
+	name string, ns string, replicas int32, serviceName string,
 	container apiv1.Container, pvc apiv1.PersistentVolumeClaim) appsv1.StatefulSet {
 	return appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -488,7 +488,7 @@ func MkStatefulset(
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas:    int32Ptr(replicas),
-			ServiceName: service_name,
+			ServiceName: serviceName,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "sf",
@@ -522,15 +522,15 @@ func MkContainer(name string, image string) apiv1.Container {
 		Name:            name,
 		Image:           image,
 		ImagePullPolicy: "IfNotPresent",
-		SecurityContext: create_security_context(false),
+		SecurityContext: mkSecurityContext(false),
 	}
 }
 
 // Create a default statefulset.
-func (r *SFUtilContext) create_statefulset(name string, image string, storageConfig StorageConfig, replicas int32, accessMode apiv1.PersistentVolumeAccessMode, nameSuffix ...string) appsv1.StatefulSet {
-	service_name := name
+func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig StorageConfig, replicas int32, accessMode apiv1.PersistentVolumeAccessMode, nameSuffix ...string) appsv1.StatefulSet {
+	serviceName := name
 	if nameSuffix != nil {
-		service_name = name + "-" + nameSuffix[0]
+		serviceName = name + "-" + nameSuffix[0]
 	}
 
 	if replicas == 0 {
@@ -538,22 +538,22 @@ func (r *SFUtilContext) create_statefulset(name string, image string, storageCon
 	}
 
 	container := MkContainer(name, image)
-	pvc := r.create_pvc(name, storageConfig, accessMode)
-	return MkStatefulset(name, r.ns, replicas, service_name, container, pvc)
+	pvc := r.MkPVC(name, storageConfig, accessMode)
+	return MkStatefulset(name, r.ns, replicas, serviceName, container, pvc)
 }
 
 // Create a default headless statefulset.
-func (r *SFUtilContext) create_headless_statefulset(name string, image string, storageConfig StorageConfig, replicas int32, accessMode apiv1.PersistentVolumeAccessMode) appsv1.StatefulSet {
-	return r.create_statefulset(name, image, storageConfig, replicas, accessMode, "headless")
+func (r *SFUtilContext) mkHeadlessSatefulSet(name string, image string, storageConfig StorageConfig, replicas int32, accessMode apiv1.PersistentVolumeAccessMode) appsv1.StatefulSet {
+	return r.mkStatefulSet(name, image, storageConfig, replicas, accessMode, "headless")
 }
 
 // Create a default deployment.
-func (r *SFUtilContext) create_deployment(name string, image string) appsv1.Deployment {
+func (r *SFUtilContext) mkDeployment(name string, image string) appsv1.Deployment {
 	container := apiv1.Container{
 		Name:            name,
 		Image:           image,
 		ImagePullPolicy: "IfNotPresent",
-		SecurityContext: create_security_context(false),
+		SecurityContext: mkSecurityContext(false),
 	}
 	return appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -588,13 +588,13 @@ func (r *SFUtilContext) create_deployment(name string, image string) appsv1.Depl
 }
 
 // create a default service.
-func (r *SFUtilContext) create_service(name string, selector string, ports []int32, port_name string) apiv1.Service {
-	service_ports := []apiv1.ServicePort{}
+func (r *SFUtilContext) mkService(name string, selector string, ports []int32, portName string) apiv1.Service {
+	servicePorts := []apiv1.ServicePort{}
 	for _, p := range ports {
-		service_ports = append(
-			service_ports,
+		servicePorts = append(
+			servicePorts,
 			apiv1.ServicePort{
-				Name:     fmt.Sprintf("%s-%d", port_name, p),
+				Name:     fmt.Sprintf("%s-%d", portName, p),
 				Protocol: apiv1.ProtocolTCP,
 				Port:     p,
 			})
@@ -605,7 +605,7 @@ func (r *SFUtilContext) create_service(name string, selector string, ports []int
 			Namespace: r.ns,
 		},
 		Spec: apiv1.ServiceSpec{
-			Ports: service_ports,
+			Ports: servicePorts,
 			Selector: map[string]string{
 				"app": "sf",
 				"run": selector,
@@ -614,13 +614,13 @@ func (r *SFUtilContext) create_service(name string, selector string, ports []int
 }
 
 // create a headless service.
-func (r *SFUtilContext) create_headless_service(name string, selector string, ports []int32, port_name string) apiv1.Service {
-	service_ports := []apiv1.ServicePort{}
+func (r *SFUtilContext) mkHeadlessService(name string, selector string, ports []int32, portName string) apiv1.Service {
+	servicePorts := []apiv1.ServicePort{}
 	for _, p := range ports {
-		service_ports = append(
-			service_ports,
+		servicePorts = append(
+			servicePorts,
 			apiv1.ServicePort{
-				Name:     fmt.Sprintf("%s-%d", port_name, p),
+				Name:     fmt.Sprintf("%s-%d", portName, p),
 				Protocol: apiv1.ProtocolTCP,
 				Port:     p,
 			})
@@ -633,7 +633,7 @@ func (r *SFUtilContext) create_headless_service(name string, selector string, po
 		},
 		Spec: apiv1.ServiceSpec{
 			ClusterIP: "None",
-			Ports:     service_ports,
+			Ports:     servicePorts,
 			Selector: map[string]string{
 				"app": "sf",
 				"run": selector,
@@ -643,7 +643,7 @@ func (r *SFUtilContext) create_headless_service(name string, selector string, po
 }
 
 // --- readiness probes (validate a pod is ready to serve) ---
-func create_readiness_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
+func mkReadinessProbe(handler apiv1.ProbeHandler) *apiv1.Probe {
 	return &apiv1.Probe{
 		ProbeHandler:     handler,
 		TimeoutSeconds:   5,
@@ -652,34 +652,34 @@ func create_readiness_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
 	}
 }
 
-func Create_readiness_cmd_probe(cmd []string) *apiv1.Probe {
+func MkReadinessCMDProbe(cmd []string) *apiv1.Probe {
 	handler := apiv1.ProbeHandler{
 		Exec: &apiv1.ExecAction{
 			Command: cmd,
 		}}
-	return create_readiness_probe(handler)
+	return mkReadinessProbe(handler)
 }
 
-func create_readiness_http_probe(path string, port int) *apiv1.Probe {
+func mkReadinessHTTPProbe(path string, port int) *apiv1.Probe {
 	handler := apiv1.ProbeHandler{
 		HTTPGet: &apiv1.HTTPGetAction{
 			Path: path,
 			Port: intstr.FromInt(port),
 		}}
-	return create_readiness_probe(handler)
+	return mkReadinessProbe(handler)
 }
 
-func create_readiness_tcp_probe(port int) *apiv1.Probe {
+func mkReadinessTCPProbe(port int) *apiv1.Probe {
 	handler :=
 		apiv1.ProbeHandler{
 			TCPSocket: &apiv1.TCPSocketAction{
 				Port: intstr.FromInt(port),
 			}}
-	return create_readiness_probe(handler)
+	return mkReadinessProbe(handler)
 }
 
 // --- liveness probes (validate a pod is up and running) ---
-func create_liveness_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
+func mkLivenessProbe(handler apiv1.ProbeHandler) *apiv1.Probe {
 	return &apiv1.Probe{
 		ProbeHandler:        handler,
 		TimeoutSeconds:      5,
@@ -688,25 +688,25 @@ func create_liveness_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
 	}
 }
 
-func Create_liveness_cmd_probe(cmd []string) *apiv1.Probe {
+func MkLivenessCMDProbe(cmd []string) *apiv1.Probe {
 	handler := apiv1.ProbeHandler{
 		Exec: &apiv1.ExecAction{
 			Command: cmd,
 		}}
-	return create_liveness_probe(handler)
+	return mkLivenessProbe(handler)
 }
 
-func create_liveness_http_probe(path string, port int) *apiv1.Probe {
+func mkLiveHTTPProbe(path string, port int) *apiv1.Probe {
 	handler := apiv1.ProbeHandler{
 		HTTPGet: &apiv1.HTTPGetAction{
 			Path: path,
 			Port: intstr.FromInt(port),
 		}}
-	return create_liveness_probe(handler)
+	return mkLivenessProbe(handler)
 }
 
 // --- startup probes (validate when pod has been started running) ---
-func create_startup_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
+func mkStartupProbe(handler apiv1.ProbeHandler) *apiv1.Probe {
 	return &apiv1.Probe{
 		ProbeHandler:        handler,
 		TimeoutSeconds:      2,
@@ -716,21 +716,21 @@ func create_startup_probe(handler apiv1.ProbeHandler) *apiv1.Probe {
 	}
 }
 
-func Create_startup_cmd_probe(cmd []string) *apiv1.Probe {
+func MkStartupCMDProbe(cmd []string) *apiv1.Probe {
 	handler := apiv1.ProbeHandler{
 		Exec: &apiv1.ExecAction{
 			Command: cmd,
 		}}
-	return create_startup_probe(handler)
+	return mkStartupProbe(handler)
 }
 
-func create_startup_http_probe(path string, port int) *apiv1.Probe {
+func mkStartupHTTPProbe(path string, port int) *apiv1.Probe {
 	handler := apiv1.ProbeHandler{
 		HTTPGet: &apiv1.HTTPGetAction{
 			Path: path,
 			Port: intstr.FromInt(port),
 		}}
-	return create_startup_probe(handler)
+	return mkStartupProbe(handler)
 }
 
 // GetM gets a resource, returning if it was found
@@ -947,7 +947,7 @@ func (r *SFUtilContext) GenerateSecretUUID(name string) apiv1.Secret {
 
 func CreateSSHKeySecret(name string, namespace string) apiv1.Secret {
 	var secret apiv1.Secret
-	sshkey := create_ssh_key()
+	sshkey := mkSSHKey()
 	secret = apiv1.Secret{
 		Data: map[string][]byte{
 			"priv": sshkey.Priv,
@@ -967,8 +967,8 @@ func (r *SFUtilContext) EnsureSSHKey(name string) {
 }
 
 // EnsureConfigMap ensures a config map exists.
-func (r *SFUtilContext) EnsureConfigMap(base_name string, data map[string]string) apiv1.ConfigMap {
-	name := base_name + "-config-map"
+func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string) apiv1.ConfigMap {
+	name := baseName + "-config-map"
 	var cm apiv1.ConfigMap
 	if !r.GetM(name, &cm) {
 		r.log.V(1).Info("Creating config", "name", name)
@@ -1002,7 +1002,7 @@ func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
 	}
 }
 
-func map_equals(m1 *map[string]string, m2 *map[string]string) bool {
+func mapEquals(m1 *map[string]string, m2 *map[string]string) bool {
 	return reflect.DeepEqual(m1, m2)
 }
 
@@ -1038,12 +1038,12 @@ func MkJob(name string, ns string, container apiv1.Container) batchv1.Job {
 		}}
 }
 
-func (r *SFUtilContext) create_job(name string, container apiv1.Container) batchv1.Job {
+func (r *SFUtilContext) mkJob(name string, container apiv1.Container) batchv1.Job {
 	return MkJob(name, r.ns, container)
 }
 
 // This function returns false when the resource is just created/updated
-func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) bool {
+func (r *SFUtilContext) ensureRoute(route apiroutev1.Route, name string) bool {
 	current := apiroutev1.Route{}
 	found := r.GetM(name, &current)
 	if !found {
@@ -1055,9 +1055,9 @@ func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) bool {
 		// Use the String repr of the RouteSpec to compare for changes
 		// This comparaison mechanics may fail in case of some Route Spec default values
 		// not specified in the wanted version.
-		wanted_repr := route.Spec.String()
-		current_repr := current.Spec.String()
-		if wanted_repr != current_repr {
+		wantedRepr := route.Spec.String()
+		currentRepr := current.Spec.String()
+		if wantedRepr != currentRepr {
 			r.log.V(1).Info("Updating route...", "name", name)
 			current.Spec = route.Spec
 			r.UpdateR(&current)
@@ -1069,13 +1069,13 @@ func (r *SFUtilContext) ensure_route(route apiroutev1.Route, name string) bool {
 
 func MkHTTSRoute(
 	name string, ns string, host string, serviceName string, path string,
-	port int, annotations map[string]string, fqdn string, customTls *apiroutev1.TLSConfig) apiroutev1.Route {
+	port int, annotations map[string]string, fqdn string, customTLS *apiroutev1.TLSConfig) apiroutev1.Route {
 	tls := apiroutev1.TLSConfig{
 		InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
 		Termination:                   apiroutev1.TLSTerminationEdge,
 	}
-	if customTls != nil {
-		tls = *customTls
+	if customTLS != nil {
+		tls = *customTLS
 	}
 	return apiroutev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1105,17 +1105,17 @@ func GetCustomRouteSSLSecretName(host string) string {
 }
 
 func getLetsEncryptServer(le sfv1.LetsEncryptSpec) (string, string) {
-	serverUrl := ""
+	var serverURL string
 	name := ""
 	switch server := le.Server; server {
 	case sfv1.LEServerProd:
-		serverUrl = "https://acme-v02.api.letsencrypt.org/directory"
+		serverURL = "https://acme-v02.api.letsencrypt.org/directory"
 		name = "cm-le-issuer-production"
 	case sfv1.LEServerStaging:
-		serverUrl = "https://acme-staging-v02.api.letsencrypt.org/directory"
+		serverURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
 		name = "cm-le-issuer-staging"
 	}
-	return serverUrl, name
+	return serverURL, name
 }
 
 func (r *SFUtilContext) extractStaticTLSFromSecret(name string, host string) (bool, []byte, []byte, []byte) {
@@ -1226,7 +1226,7 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 	} else {
 		route = MkHTTSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, nil)
 	}
-	return r.ensure_route(route, name)
+	return r.ensureRoute(route, name)
 }
 
 func (r *SFUtilContext) PodExec(pod string, container string, command []string) error {
@@ -1440,8 +1440,8 @@ func (r *SFUtilContext) ImageToBase64(imagepath string) (string, error) {
 }
 
 func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName string) StorageConfig {
-	var size = DEFAULT_QTY_1Gi()
-	var className = get_storage_classname(storageClassName)
+	var size = Qty1Gi()
+	var className = getStorageClassname(storageClassName)
 	if !storageSpec.Size.IsZero() {
 		size = storageSpec.Size
 	}
@@ -1454,25 +1454,25 @@ func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName 
 	}
 }
 
-func (r *SFUtilContext) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv1.StorageSpec) bool {
-	new_qty := newStorageSpec.Size
+func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.StorageSpec) bool {
+	newQTY := newStorageSpec.Size
 
-	found_pvc := &apiv1.PersistentVolumeClaim{}
-	if !r.GetM(pvc_name, found_pvc) {
-		r.log.V(1).Info("PVC " + pvc_name + " not found")
+	foundPVC := &apiv1.PersistentVolumeClaim{}
+	if !r.GetM(pvcName, foundPVC) {
+		r.log.V(1).Info("PVC " + pvcName + " not found")
 		return false
 	}
-	r.log.V(1).Info("Inspecting volume " + found_pvc.Name)
+	r.log.V(1).Info("Inspecting volume " + foundPVC.Name)
 
-	current_qty := found_pvc.Status.Capacity.Storage()
-	if current_qty.IsZero() {
+	currentQTY := foundPVC.Status.Capacity.Storage()
+	if currentQTY.IsZero() {
 		// When the PVC is just created but not fully up it might happen that the current
 		// size is 0. So let force a new reconcile.
 		return false
 	}
 
 	// Is a resize in progress?
-	for _, condition := range found_pvc.Status.Conditions {
+	for _, condition := range foundPVC.Status.Conditions {
 		switch condition.Type {
 		case
 			apiv1.PersistentVolumeClaimResizing,
@@ -1482,31 +1482,31 @@ func (r *SFUtilContext) reconcile_expand_pvc(pvc_name string, newStorageSpec sfv
 		}
 	}
 
-	switch new_qty.Cmp(*current_qty) {
+	switch newQTY.Cmp(*currentQTY) {
 	case -1:
-		r.log.V(1).Info("Cannot downsize volume " + pvc_name)
+		r.log.V(1).Info("Cannot downsize volume " + pvcName)
 		return true
 	case 0:
-		r.log.V(1).Info("Volume " + pvc_name + " at expected size, nothing to do")
+		r.log.V(1).Info("Volume " + pvcName + " at expected size, nothing to do")
 		return true
 	case 1:
-		r.log.V(1).Info("Volume expansion required for  " + pvc_name +
-			". current size: " + current_qty.String() + " -> new size: " + new_qty.String())
-		new_resources := apiv1.ResourceRequirements{
+		r.log.V(1).Info("Volume expansion required for  " + pvcName +
+			". current size: " + currentQTY.String() + " -> new size: " + newQTY.String())
+		newResources := apiv1.ResourceRequirements{
 			Requests: apiv1.ResourceList{
-				"storage": new_qty,
+				"storage": newQTY,
 			},
 		}
-		found_pvc.Spec.Resources = new_resources
-		if err := r.Client.Update(r.ctx, found_pvc); err != nil {
-			r.log.V(1).Error(err, "Updating PVC failed for volume  "+pvc_name)
+		foundPVC.Spec.Resources = newResources
+		if err := r.Client.Update(r.ctx, foundPVC); err != nil {
+			r.log.V(1).Error(err, "Updating PVC failed for volume  "+pvcName)
 			return false
 		}
 		// We return false to notify that a volume expansion was just
 		// requested. Technically we could consider the reconcile is
 		// over as most storage classes support hot resizing without
 		// service interruption.
-		r.log.V(1).Info("Expansion started for volume " + pvc_name)
+		r.log.V(1).Info("Expansion started for volume " + pvcName)
 		return false
 	}
 	return true

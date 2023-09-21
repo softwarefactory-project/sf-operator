@@ -2,8 +2,8 @@
 Copyright © 2023 Red Hat
 */
 
-// Package zuul_client exposes function for use zuul-client
-package zuul_client
+// Package zuulclient exposes function for use zuul-client
+package zuulclient
 
 import (
 	"bytes"

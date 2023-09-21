@@ -17,12 +17,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const GS_IDENT = "git-server"
-const GS_GIT_PORT = 9418
-const GS_GIT_PORT_NAME = "git-server-port"
-const GS_IMAGE = "quay.io/software-factory/git-deamon:2.39.1-3"
-const GS_GIT_MOUNT_PATH = "/git"
-const GS_PI_MOUNT_PATH = "/entry"
+const gsIdent = "git-server"
+const gsGitPort = 9418
+const gsGitPortName = "git-server-port"
+const gsImage = "quay.io/software-factory/git-deamon:2.39.1-3"
+const gsGitMountPath = "/git"
+const gsPiMountPath = "/entry"
 
 //go:embed static/git-server/update-system-config.sh
 var preInitScriptTemplate string
@@ -48,9 +48,9 @@ func (r *SFController) makePreInitScript() string {
 
 func (r *SFController) DeployGitServer() bool {
 	preInitScript := r.makePreInitScript()
-	cm_data := make(map[string]string)
-	cm_data["pre-init.sh"] = preInitScript
-	r.EnsureConfigMap(GS_IDENT+"-pi", cm_data)
+	cmData := make(map[string]string)
+	cmData["pre-init.sh"] = preInitScript
+	r.EnsureConfigMap(gsIdent+"-pi", cmData)
 
 	annotations := map[string]string{
 		"system-config": checksum([]byte(preInitScript)),
@@ -63,45 +63,45 @@ func (r *SFController) DeployGitServer() bool {
 
 	// Create the deployment
 	replicas := int32(1)
-	dep := r.create_statefulset(GS_IDENT, GS_IMAGE, r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), replicas, apiv1.ReadWriteOnce)
+	dep := r.mkStatefulSet(gsIdent, gsImage, r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), replicas, apiv1.ReadWriteOnce)
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 		{
-			Name:      GS_IDENT,
-			MountPath: GS_GIT_MOUNT_PATH,
+			Name:      gsIdent,
+			MountPath: gsGitMountPath,
 		},
 	}
 
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		Create_volume_cm(GS_IDENT+"-pi", GS_IDENT+"-pi-config-map"),
+		MKVolumeCM(gsIdent+"-pi", gsIdent+"-pi-config-map"),
 	}
 
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		Create_container_port(GS_GIT_PORT, GS_GIT_PORT_NAME),
+		MKContainerPort(gsGitPort, gsGitPortName),
 	}
 
 	// Define initContainer
-	initContainer := MkContainer("init-config", GS_IMAGE)
+	initContainer := MkContainer("init-config", gsImage)
 	initContainer.Command = []string{"/bin/bash", "/entry/pre-init.sh"}
 	initContainer.Env = []apiv1.EnvVar{
-		Create_env("FQDN", r.cr.Spec.FQDN),
-		Create_env("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(LOGSERVER_SSHD_PORT)),
+		MKEnvVar("FQDN", r.cr.Spec.FQDN),
+		MKEnvVar("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(sshdPort)),
 	}
 	initContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
-			Name:      GS_IDENT,
-			MountPath: GS_GIT_MOUNT_PATH,
+			Name:      gsIdent,
+			MountPath: gsGitMountPath,
 		},
 		{
-			Name:      GS_IDENT + "-pi",
-			MountPath: GS_PI_MOUNT_PATH,
+			Name:      gsIdent + "-pi",
+			MountPath: gsPiMountPath,
 		},
 	}
 
 	if r.isConfigRepoSet() {
 		initContainer.Env = append(initContainer.Env,
-			Create_env("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
-			Create_env("CONFIG_ZUUL_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName))
+			MKEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+			MKEnvVar("CONFIG_ZUUL_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName))
 	}
 
 	dep.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
@@ -111,8 +111,8 @@ func (r *SFController) DeployGitServer() bool {
 	// dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GS_GIT_PORT)
 
 	current := appsv1.StatefulSet{}
-	if r.GetM(GS_IDENT, &current) {
-		if !map_equals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+	if r.GetM(gsIdent, &current) {
+		if !mapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("System configuration needs to be updated, restarting git-server...")
 			current.Spec = dep.DeepCopy().Spec
 			r.UpdateR(&current)
@@ -124,29 +124,29 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Create services exposed
-	git_service := apiv1.Service{
+	gitService := apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GS_IDENT,
+			Name:      gsIdent,
 			Namespace: r.ns,
 		},
 		Spec: apiv1.ServiceSpec{
 			Ports: []apiv1.ServicePort{
 				{
-					Name:     GS_GIT_PORT_NAME,
+					Name:     gsGitPortName,
 					Protocol: apiv1.ProtocolTCP,
-					Port:     GS_GIT_PORT,
+					Port:     gsGitPort,
 				},
 			},
 			Type: apiv1.ServiceTypeNodePort,
 			Selector: map[string]string{
 				"app": "sf",
-				"run": GS_IDENT,
+				"run": gsIdent,
 			},
 		}}
-	r.GetOrCreate(&git_service)
+	r.GetOrCreate(&gitService)
 
-	is_statefulset := r.IsStatefulSetReady(&current)
-	updateConditions(&r.cr.Status.Conditions, GS_IDENT, is_statefulset)
+	isStatefulset := r.IsStatefulSetReady(&current)
+	updateConditions(&r.cr.Status.Conditions, gsIdent, isStatefulset)
 
-	return is_statefulset
+	return isStatefulset
 }

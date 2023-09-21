@@ -23,39 +23,39 @@ var microshiftCmd = &cobra.Command{
            ./tools/sfconfig microshift --inventory ./tools/microshift/my-inventory.yaml`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		skip_local_setup, _ := cmd.Flags().GetBool("skip-local-setup")
-		skip_deploy, _ := cmd.Flags().GetBool("skip-deploy")
+		skipLocalSetup, _ := cmd.Flags().GetBool("skip-local-setup")
+		skipDeploy, _ := cmd.Flags().GetBool("skip-deploy")
 
 		ansiblePlaybookOptions := &playbook.AnsiblePlaybookOptions{
 			Inventory: inventory,
 		}
 
 		// Here we ensure we have the ansible-microshift-role available
-		microshift_role_setup := &playbook.AnsiblePlaybookCmd{
+		microshiftRoleSetup := &playbook.AnsiblePlaybookCmd{
 			Playbooks: []string{"tools/microshift/ansible-microshift-role.yaml"},
 			Options:   ansiblePlaybookOptions,
 		}
-		fmt.Println(microshift_role_setup)
-		err := microshift_role_setup.Run(context.TODO())
+		fmt.Println(microshiftRoleSetup)
+		err := microshiftRoleSetup.Run(context.TODO())
 		if err != nil {
 			panic(err)
 		}
 
 		// Here we setup the local environment (packages deps, local resolver, ...)
-		if !skip_local_setup {
-			local_setup := &playbook.AnsiblePlaybookCmd{
+		if !skipLocalSetup {
+			localSetup := &playbook.AnsiblePlaybookCmd{
 				Playbooks: []string{"tools/microshift/local-setup.yaml"},
 				Options:   ansiblePlaybookOptions,
 			}
-			fmt.Println(local_setup)
-			err := local_setup.Run(context.TODO())
+			fmt.Println(localSetup)
+			err := localSetup.Run(context.TODO())
 			if err != nil {
 				panic(err)
 			}
 		}
 
 		// Here we setup the remote microshift machine and we fetch a working kube/config
-		if !skip_deploy {
+		if !skipDeploy {
 			ansiblePlaybookOptions.ExtraVarsFile = []string{"@tools/microshift/group_vars/all.yaml"}
 			deploy := &playbook.AnsiblePlaybookCmd{
 				Playbooks: []string{"tools/microshift/deploy-microshift.yaml"},

@@ -33,8 +33,8 @@ type PromCMDContext struct {
 
 var ns = "sf"
 
-const PROMETHEUS_NAME = "prometheus"
-const PROMETHEUS_PORT = 9090
+const prometheusName = "prometheus"
+const prometheusPort = 9090
 
 func EnsurePrometheusOperator(env *utils.ENV) error {
 	fmt.Println("Ensure prometheus operator is present...")
@@ -58,14 +58,14 @@ func EnsurePrometheusOperator(env *utils.ENV) error {
 }
 
 func EnsurePrometheusInstanceServiceAccount(env *utils.ENV) {
-	utils.EnsureServiceAccount(env, PROMETHEUS_NAME)
+	utils.EnsureServiceAccount(env, prometheusName)
 }
 
 func EnsurePrometheusInstanceClusterRole(env *utils.ENV) {
 	cr := &rbac.ClusterRole{
 		TypeMeta: metav1.TypeMeta{APIVersion: rbac.SchemeGroupVersion.String(), Kind: "ClusterRole"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      PROMETHEUS_NAME,
+			Name:      prometheusName,
 			Namespace: env.Ns,
 		},
 		Rules: []rbac.PolicyRule{
@@ -106,18 +106,18 @@ func EnsurePrometheusInstanceCRBinding(env *utils.ENV) {
 	crbinding := &rbac.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{APIVersion: rbac.SchemeGroupVersion.String(), Kind: "ClusterRoleBinding"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      PROMETHEUS_NAME,
+			Name:      prometheusName,
 			Namespace: env.Ns,
 		},
 		RoleRef: rbac.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     PROMETHEUS_NAME,
+			Name:     prometheusName,
 		},
 		Subjects: []rbac.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      PROMETHEUS_NAME,
+				Name:      prometheusName,
 				Namespace: env.Ns,
 			},
 		},
@@ -138,16 +138,16 @@ func EnsurePrometheusInstance(env *utils.ENV) {
 	memRequest, _ := resource.ParseQuantity("400Mi")
 	prom := &monitoringv1.Prometheus{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      PROMETHEUS_NAME,
+			Name:      prometheusName,
 			Namespace: env.Ns,
 		},
 		Spec: monitoringv1.PrometheusSpec{
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
-				ServiceAccountName: PROMETHEUS_NAME,
+				ServiceAccountName: prometheusName,
 				ServiceMonitorSelector: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						{
-							Key:      controllers.SERVICEMONITOR_LABEL_SELECTOR,
+							Key:      controllers.ServiceMonitorLabelSelector,
 							Operator: metav1.LabelSelectorOpExists,
 						},
 					},
@@ -196,21 +196,21 @@ func EnsurePrometheusInstance(env *utils.ENV) {
 func EnsurePrometheusService(env *utils.ENV) {
 	service := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      PROMETHEUS_NAME,
+			Name:      prometheusName,
 			Namespace: env.Ns,
 		},
 		Spec: apiv1.ServiceSpec{
 			Type: apiv1.ServiceTypeNodePort,
 			Ports: []apiv1.ServicePort{
 				{
-					Name:       PROMETHEUS_NAME + "-web",
+					Name:       prometheusName + "-web",
 					Protocol:   apiv1.ProtocolTCP,
-					Port:       PROMETHEUS_PORT,
+					Port:       prometheusPort,
 					TargetPort: intstr.FromString("web"),
 				},
 			},
 			Selector: map[string]string{
-				"prometheus": PROMETHEUS_NAME,
+				"prometheus": prometheusName,
 			},
 		},
 	}
@@ -230,9 +230,9 @@ func EnsurePrometheusService(env *utils.ENV) {
 
 func (p *PromCMDContext) EnsurePrometheusRoute() {
 	route := controllers.MkHTTSRoute(
-		PROMETHEUS_NAME, p.env.Ns, PROMETHEUS_NAME, PROMETHEUS_NAME, "/", PROMETHEUS_PORT, map[string]string{}, p.fqdn, nil)
+		prometheusName, p.env.Ns, prometheusName, prometheusName, "/", prometheusPort, map[string]string{}, p.fqdn, nil)
 	err := p.env.Cli.Get(p.env.Ctx, client.ObjectKey{
-		Name:      PROMETHEUS_NAME,
+		Name:      prometheusName,
 		Namespace: p.env.Ns,
 	}, &apiroutev1.Route{})
 	if errors.IsNotFound(err) {
