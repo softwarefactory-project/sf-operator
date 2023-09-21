@@ -284,8 +284,13 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		httpdPortName, logserverIdent, servicePorts, httpdPortName)
 	r.GetOrCreate(&httpdService)
 
-	// Side Car Container
-	volumeMountsSidecar := []apiv1.VolumeMount{
+	// Setup the sidecar container for sshd
+	sshdContainer := MkContainer(sshdPortName, sshdImage)
+	sshdContainer.Command = []string{"bash", "/conf/run.sh"}
+	sshdContainer.Env = []apiv1.EnvVar{
+		MKEnvVar("AUTHORIZED_KEY", r.cr.Spec.AuthorizedSSHKey),
+	}
+	sshdContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      logserverIdent,
 			MountPath: "/home/data/rsync",
@@ -300,25 +305,11 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 			MountPath: "/conf",
 		},
 	}
-
-	portsSidecar := []apiv1.ContainerPort{
+	sshdContainer.Ports = []apiv1.ContainerPort{
 		MKContainerPort(sshdPort, sshdPortName),
 	}
 
-	envSidecar := []apiv1.EnvVar{
-		MKEnvVar("AUTHORIZED_KEY", r.cr.Spec.AuthorizedSSHKey),
-	}
-
-	// Setup the sidecar container for sshd
-	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
-		Name:            sshdPortName,
-		Image:           sshdImage,
-		Command:         []string{"bash", "/conf/run.sh"},
-		VolumeMounts:    volumeMountsSidecar,
-		Env:             envSidecar,
-		Ports:           portsSidecar,
-		SecurityContext: mkSecurityContext(false),
-	})
+	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, sshdContainer)
 
 	loopdelay, retentiondays := getLogserverSettingsOrDefault(r.cr.Spec.Settings)
 

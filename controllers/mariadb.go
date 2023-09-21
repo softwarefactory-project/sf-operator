@@ -34,28 +34,24 @@ type ZuulDBOpts struct {
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
 	c := "CREATE DATABASE IF NOT EXISTS " + dbname + " CHARACTER SET utf8 COLLATE utf8_general_ci; "
 	g := "GRANT ALL PRIVILEGES ON " + dbname + ".* TO '" + username + "'@'%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
-	container := apiv1.Container{
-		Name:            "mariadb-client",
-		Image:           DBImage,
-		SecurityContext: mkSecurityContext(false),
-		Command: []string{"sh", "-c", `
-echo 'Running: mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
-ATTEMPT=0
-while ! mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"; do
-    ATTEMPT=$[ $ATTEMPT + 1 ]
-    if test $ATTEMPT -eq 10; then
-        echo "Failed after $ATTEMPT attempt";
-        exit 1
-    fi
-    sleep 10;
-done
-`},
-		Env: []apiv1.EnvVar{
-			MKSecretEnvVar("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
-			{
-				Name:  "USER_PASSWORD",
-				Value: password,
-			},
+	container := MkContainer("mariadb-client", DBImage)
+	container.Command = []string{"sh", "-c", `
+	echo 'Running: mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
+	ATTEMPT=0
+	while ! mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"; do
+		ATTEMPT=$[ $ATTEMPT + 1 ]
+		if test $ATTEMPT -eq 10; then
+			echo "Failed after $ATTEMPT attempt";
+			exit 1
+		fi
+		sleep 10;
+	done
+	`}
+	container.Env = []apiv1.EnvVar{
+		MKSecretEnvVar("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
+		{
+			Name:  "USER_PASSWORD",
+			Value: password,
 		},
 	}
 	return container
