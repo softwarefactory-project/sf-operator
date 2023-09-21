@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/softwarefactory-project/sf-operator/controllers"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -22,7 +23,7 @@ func getWatchNamespace() (string, error) {
 	// WatchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
 	// which specifies the Namespace to watch.
 	// An empty value means the operator is running with cluster scope.
-	return controllers.GetEnvVarValue("WATCH_NAMESPACE")
+	return utils.GetEnvVarValue("WATCH_NAMESPACE")
 }
 
 func main() {

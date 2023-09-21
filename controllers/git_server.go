@@ -12,6 +12,9 @@ import (
 	"strings"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +56,7 @@ func (r *SFController) DeployGitServer() bool {
 	r.EnsureConfigMap(gsIdent+"-pi", cmData)
 
 	annotations := map[string]string{
-		"system-config": checksum([]byte(preInitScript)),
+		"system-config": utils.Checksum([]byte(preInitScript)),
 	}
 
 	if r.isConfigRepoSet() {
@@ -73,19 +76,19 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		MKVolumeCM(gsIdent+"-pi", gsIdent+"-pi-config-map"),
+		base.MkVolumeCM(gsIdent+"-pi", gsIdent+"-pi-config-map"),
 	}
 
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		MKContainerPort(gsGitPort, gsGitPortName),
+		base.MkContainerPort(gsGitPort, gsGitPortName),
 	}
 
 	// Define initContainer
-	initContainer := MkContainer("init-config", gsImage)
+	initContainer := base.MkContainer("init-config", gsImage)
 	initContainer.Command = []string{"/bin/bash", "/entry/pre-init.sh"}
 	initContainer.Env = []apiv1.EnvVar{
-		MKEnvVar("FQDN", r.cr.Spec.FQDN),
-		MKEnvVar("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(sshdPort)),
+		base.MkEnvVar("FQDN", r.cr.Spec.FQDN),
+		base.MkEnvVar("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(sshdPort)),
 	}
 	initContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
@@ -100,8 +103,8 @@ func (r *SFController) DeployGitServer() bool {
 
 	if r.isConfigRepoSet() {
 		initContainer.Env = append(initContainer.Env,
-			MKEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
-			MKEnvVar("CONFIG_ZUUL_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName))
+			base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+			base.MkEnvVar("CONFIG_ZUUL_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName))
 	}
 
 	dep.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
@@ -112,7 +115,7 @@ func (r *SFController) DeployGitServer() bool {
 
 	current := appsv1.StatefulSet{}
 	if r.GetM(gsIdent, &current) {
-		if !mapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("System configuration needs to be updated, restarting git-server...")
 			current.Spec = dep.DeepCopy().Spec
 			r.UpdateR(&current)
@@ -146,7 +149,7 @@ func (r *SFController) DeployGitServer() bool {
 	r.GetOrCreate(&gitService)
 
 	isStatefulset := r.IsStatefulSetReady(&current)
-	updateConditions(&r.cr.Status.Conditions, gsIdent, isStatefulset)
+	conds.UpdateConditions(&r.cr.Status.Conditions, gsIdent, isStatefulset)
 
 	return isStatefulset
 }

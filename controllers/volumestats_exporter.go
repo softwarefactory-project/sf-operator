@@ -10,6 +10,7 @@ package controllers
 import (
 	"math"
 
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -38,10 +39,10 @@ func getNodeExporterArgs(volumeMounts []apiv1.VolumeMount) []string {
 }
 
 func createNodeExporterSideCarContainer(serviceName string, volumeMounts []apiv1.VolumeMount) apiv1.Container {
-	container := MkContainer(serviceName+nameSuffix, NodeExporterImage)
+	container := base.MkContainer(serviceName+nameSuffix, NodeExporterImage)
 	container.Args = getNodeExporterArgs(volumeMounts)
 	container.Ports = []apiv1.ContainerPort{
-		MKContainerPort(port, GetNodeexporterPortName(serviceName)),
+		base.MkContainerPort(port, GetNodeexporterPortName(serviceName)),
 	}
 	container.VolumeMounts = volumeMounts
 	return container
@@ -50,6 +51,6 @@ func createNodeExporterSideCarContainer(serviceName string, volumeMounts []apiv1
 func (r *SFUtilContext) getOrCreateNodeExporterSideCarService(serviceName string) {
 	var portName = GetNodeexporterPortName(serviceName)
 	servicePorts := []int32{port}
-	neService := r.mkService(serviceName+portNameSuffix, serviceName, servicePorts, portName)
+	neService := base.MkService(serviceName+portNameSuffix, r.ns, serviceName, servicePorts, portName)
 	r.GetOrCreate(&neService)
 }

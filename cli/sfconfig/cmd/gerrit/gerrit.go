@@ -27,6 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	cutils "github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
 
 const managesfResourcesIdent string = "managesf-resources"
@@ -77,7 +79,7 @@ func notifByError(err error, oType string, name string) {
 }
 
 func createAPIKeySecret(name string, ns string) apiv1.Secret {
-	return controllers.CreateSecretFromFunc(name, ns, controllers.NewUUIDString)
+	return base.MkSecretFromFunc(name, ns, cutils.NewUUIDString)
 }
 
 func (g *GerritCMDContext) ensureSecret(
@@ -205,7 +207,7 @@ func GenerateManageSFConfig(gerritadminpassword string, fqdn string) string {
 		gerritadminpassword,
 	}
 
-	template, err := controllers.ParseString(managesfConf, configpy)
+	template, err := cutils.ParseString(managesfConf, configpy)
 	if err != nil {
 		panic("Template parsing failed")
 	}
@@ -214,7 +216,7 @@ func GenerateManageSFConfig(gerritadminpassword string, fqdn string) string {
 }
 
 var ManageSFVolumes = []apiv1.Volume{
-	controllers.MKVolumeCM(managesfResourcesIdent+"-config-vol",
+	base.MkVolumeCM(managesfResourcesIdent+"-config-vol",
 		managesfResourcesIdent+"-config-map"),
 	{
 		Name: managesfResourcesIdent + "-tooling-vol",
@@ -223,7 +225,7 @@ var ManageSFVolumes = []apiv1.Volume{
 				LocalObjectReference: apiv1.LocalObjectReference{
 					Name: managesfResourcesIdent + "-tooling-config-map",
 				},
-				DefaultMode: &controllers.Execmod,
+				DefaultMode: &cutils.Execmod,
 			},
 		},
 	},
@@ -233,27 +235,27 @@ func SetGerritSTSContainer(sts *appsv1.StatefulSet, volumeMounts []apiv1.VolumeM
 	sts.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
 	sts.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 	sts.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		controllers.MKContainerPort(gerritHTTPDPort, gerritHTTPDPortName),
-		controllers.MKContainerPort(gerritSSHDPort, gerritSSHDPortName),
+		base.MkContainerPort(gerritHTTPDPort, gerritHTTPDPortName),
+		base.MkContainerPort(gerritSSHDPort, gerritSSHDPortName),
 	}
 	sts.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
-		controllers.MKEnvVar("HOME", "/gerrit"),
-		controllers.MKEnvVar("FQDN", fqdn),
-		controllers.MKSecretEnvVar("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
+		base.MkEnvVar("HOME", "/gerrit"),
+		base.MkEnvVar("FQDN", fqdn),
+		base.MkSecretEnvVar("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
 	}
-	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = controllers.MkReadinessCMDProbe([]string{"bash", "/gerrit/ready.sh"})
-	sts.Spec.Template.Spec.Containers[0].StartupProbe = controllers.MkStartupCMDProbe([]string{"bash", "/gerrit/ready.sh"})
-	sts.Spec.Template.Spec.Containers[0].LivenessProbe = controllers.MkLivenessCMDProbe([]string{"bash", "/gerrit/ready.sh"})
+	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessCMDProbe([]string{"bash", "/gerrit/ready.sh"})
+	sts.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupCMDProbe([]string{"bash", "/gerrit/ready.sh"})
+	sts.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLivenessCMDProbe([]string{"bash", "/gerrit/ready.sh"})
 }
 
 func SetGerritMSFRContainer(sts *appsv1.StatefulSet, fqdn string) {
-	container := controllers.MkContainer(managesfResourcesIdent, controllers.BusyboxImage)
+	container := base.MkContainer(managesfResourcesIdent, controllers.BusyboxImage)
 	container.Command = []string{"sh", "-c", managesfEntrypoint}
 	container.Env = []apiv1.EnvVar{
-		controllers.MKEnvVar("HOME", "/tmp"),
-		controllers.MKEnvVar("FQDN", fqdn),
+		base.MkEnvVar("HOME", "/tmp"),
+		base.MkEnvVar("FQDN", fqdn),
 		// managesf-resources need an admin ssh access to the local Gerrit
-		controllers.MKSecretEnvVar("SF_ADMIN_SSH", "admin-ssh-key", "priv"),
+		base.MkSecretEnvVar("SF_ADMIN_SSH", "admin-ssh-key", "priv"),
 	}
 	container.VolumeMounts = []apiv1.VolumeMount{
 		{
@@ -276,15 +278,15 @@ func SetGerritSTSVolumes(sts *appsv1.StatefulSet) {
 
 func GerritPostInitContainer(jobName string, fqdn string) apiv1.Container {
 	env := []apiv1.EnvVar{
-		controllers.MKEnvVar("HOME", "/tmp"),
-		controllers.MKEnvVar("FQDN", fqdn),
-		controllers.MKSecretEnvVar("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
-		controllers.MKSecretEnvVar("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
-		controllers.MKSecretEnvVar("ZUUL_SSH_PUB_KEY", "zuul-ssh-key", "pub"),
-		controllers.MKSecretEnvVar("ZUUL_HTTP_PASSWORD", "zuul-gerrit-api-key", "zuul-gerrit-api-key"),
+		base.MkEnvVar("HOME", "/tmp"),
+		base.MkEnvVar("FQDN", fqdn),
+		base.MkSecretEnvVar("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
+		base.MkSecretEnvVar("GERRIT_ADMIN_API_KEY", "gerrit-admin-api-key", "gerrit-admin-api-key"),
+		base.MkSecretEnvVar("ZUUL_SSH_PUB_KEY", "zuul-ssh-key", "pub"),
+		base.MkSecretEnvVar("ZUUL_HTTP_PASSWORD", "zuul-gerrit-api-key", "zuul-gerrit-api-key"),
 	}
 
-	container := controllers.MkContainer(fmt.Sprintf("%s-container", jobName), controllers.BusyboxImage)
+	container := base.MkContainer(fmt.Sprintf("%s-container", jobName), controllers.BusyboxImage)
 	container.Command = []string{"sh", "-c", postInitScript}
 	container.Env = env
 	container.VolumeMounts = []apiv1.VolumeMount{
@@ -301,11 +303,11 @@ func GerritPostInitContainer(jobName string, fqdn string) apiv1.Container {
 }
 
 func GerritInitContainers(volumeMounts []apiv1.VolumeMount, fqdn string) apiv1.Container {
-	container := controllers.MkContainer("gerrit-init", gerritImage)
+	container := base.MkContainer("gerrit-init", gerritImage)
 	container.Command = []string{"sh", "-c", gerritInitScript}
 	container.Env = []apiv1.EnvVar{
-		controllers.MKSecretEnvVar("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
-		controllers.MKEnvVar("FQDN", fqdn),
+		base.MkSecretEnvVar("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
+		base.MkEnvVar("FQDN", fqdn),
 	}
 	container.VolumeMounts = volumeMounts
 	return container
@@ -313,7 +315,7 @@ func GerritInitContainers(volumeMounts []apiv1.VolumeMount, fqdn string) apiv1.C
 
 func (g *GerritCMDContext) ensureGerritPostInitJob() {
 	jobName := "post-init"
-	job := controllers.MkJob(
+	job := base.MkJob(
 		jobName, g.env.Ns,
 		GerritPostInitContainer(jobName, g.fqdn),
 	)
@@ -329,17 +331,17 @@ func (g *GerritCMDContext) getSTS(name string) (appsv1.StatefulSet, error) {
 
 func (g *GerritCMDContext) isSTSReady(name string) bool {
 	sts, _ := g.getSTS(name)
-	return controllers.IsStatefulSetRolloutDone(&sts)
+	return base.IsStatefulSetRolloutDone(&sts)
 }
 
 func (g *GerritCMDContext) ensureGerritSTS() {
 	name := gerritIdent
 	_, err := g.getSTS(name)
 	if err != nil && errors.IsNotFound(err) {
-		container := controllers.MkContainer(name, gerritImage)
+		container := base.MkContainer(name, gerritImage)
 		storageConfig := controllers.BaseGetStorageConfOrDefault(v1.StorageSpec{}, "")
-		pvc := controllers.MkPVC(name, g.env.Ns, storageConfig, apiv1.ReadWriteOnce)
-		sts := controllers.MkStatefulset(
+		pvc := base.MkPVC(name, g.env.Ns, storageConfig, apiv1.ReadWriteOnce)
+		sts := base.MkStatefulset(
 			name, g.env.Ns, 1, name, container, pvc)
 		volumeMounts := []apiv1.VolumeMount{
 			{
@@ -363,7 +365,7 @@ func (g *GerritCMDContext) ensureGerritSTS() {
 
 func (g *GerritCMDContext) ensureGerritIngresses() {
 	name := "gerrit"
-	route := controllers.MkHTTSRoute(name, g.env.Ns, name,
+	route := base.MkHTTPSRoute(name, g.env.Ns, name,
 		gerritHTTPDPortName, "/", gerritHTTPDPort, map[string]string{}, g.fqdn, nil)
 	g.ensureRoute(name, route)
 }
@@ -390,10 +392,10 @@ func EnsureGerrit(env *utils.ENV, fqdn string) {
 	}
 
 	// Ensure the admin SSH key pair secret
-	g.ensureSecret("admin-ssh-key", controllers.CreateSSHKeySecret)
+	g.ensureSecret("admin-ssh-key", base.MkSSHKeySecret)
 
 	// Ensure the zuul SSH key pair secret
-	g.ensureSecret("zuul-ssh-key", controllers.CreateSSHKeySecret)
+	g.ensureSecret("zuul-ssh-key", base.MkSSHKeySecret)
 
 	// Ensure the admin API key secret
 	adminAPIKeyName := "gerrit-admin-api-key"

@@ -8,6 +8,8 @@ package controllers
 import (
 	_ "embed"
 
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -62,7 +64,7 @@ func (r *SFController) SetupBaseSecrets() bool {
 		currentRole.Rules = roleRules
 		r.CreateR(&currentRole)
 	} else {
-		if !mapEquals(&currentRole.Annotations, &roleAnnotations) {
+		if !utils.MapEquals(&currentRole.Annotations, &roleAnnotations) {
 			currentRole.Rules = roleRules
 			currentRole.Annotations = roleAnnotations
 			if !r.UpdateR(&currentRole) {
@@ -107,9 +109,9 @@ func (r *SFController) SetupBaseSecrets() bool {
 	found := r.GetM(jobName, &job)
 
 	extraCmdVars := []apiv1.EnvVar{
-		MKEnvVar("HOME", "/tmp"),
-		MKSecretEnvVar("SERVICE_ACCOUNT_TOKEN", secretName, "token"),
-		MKSecretEnvVar("ZUUL_LOGSERVER_PRIVATE_KEY", "zuul-ssh-key", "priv"),
+		base.MkEnvVar("HOME", "/tmp"),
+		base.MkSecretEnvVar("SERVICE_ACCOUNT_TOKEN", secretName, "token"),
+		base.MkSecretEnvVar("ZUUL_LOGSERVER_PRIVATE_KEY", "zuul-ssh-key", "priv"),
 	}
 
 	if !found {
@@ -125,18 +127,18 @@ func (r *SFController) SetupBaseSecrets() bool {
 }
 
 func (r *SFController) RunCommand(name string, args []string, extraVars []apiv1.EnvVar) *batchv1.Job {
-	jobContainer := MkContainer("sf-operator", BusyboxImage)
+	jobContainer := base.MkContainer("sf-operator", BusyboxImage)
 	jobContainer.Command = append([]string{"python3", "/sf_operator/main.py"}, args...)
 	jobContainer.Env = append([]apiv1.EnvVar{
-		MKEnvVar("PYTHONPATH", "/"),
-		MKEnvVar("FQDN", r.cr.Spec.FQDN),
+		base.MkEnvVar("PYTHONPATH", "/"),
+		base.MkEnvVar("FQDN", r.cr.Spec.FQDN),
 	}, extraVars...)
 	jobContainer.VolumeMounts = []apiv1.VolumeMount{
 		{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
 	}
-	job := r.mkJob(name, jobContainer)
+	job := base.MkJob(name, r.ns, jobContainer)
 	job.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		MKVolumeCM("pymod-sf-operator", "pymod-sf-operator-config-map"),
+		base.MkVolumeCM("pymod-sf-operator", "pymod-sf-operator-config-map"),
 	}
 	return &job
 }
@@ -160,7 +162,7 @@ func (r *SFController) SetupConfigJob() bool {
 		var zsInternalTenantReconfigure apiv1.ConfigMap
 		var cmName = "zs-internal-tenant-reconfigure"
 		var needReconfigureTenant = false
-		var configHash = checksum([]byte(preInitScriptTemplate))
+		var configHash = utils.Checksum([]byte(preInitScriptTemplate))
 		if !r.GetM(cmName, &zsInternalTenantReconfigure) {
 			needReconfigureTenant = true
 		} else {

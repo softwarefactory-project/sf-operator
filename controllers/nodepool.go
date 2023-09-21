@@ -8,6 +8,9 @@ import (
 	_ "embed"
 
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,13 +38,13 @@ var configScriptVolumeMount = apiv1.VolumeMount{
 func (r *SFController) getNodepoolConfigEnvs() []apiv1.EnvVar {
 	if r.isConfigRepoSet() {
 		return []apiv1.EnvVar{
-			MKEnvVar("CONFIG_REPO_SET", "TRUE"),
-			MKEnvVar("CONFIG_REPO_BASE_URL", r.cr.Spec.ConfigLocation.BaseURL),
-			MKEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+			base.MkEnvVar("CONFIG_REPO_SET", "TRUE"),
+			base.MkEnvVar("CONFIG_REPO_BASE_URL", r.cr.Spec.ConfigLocation.BaseURL),
+			base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
 		}
 	} else {
 		return []apiv1.EnvVar{
-			MKEnvVar("CONFIG_REPO_SET", "FALSE"),
+			base.MkEnvVar("CONFIG_REPO_SET", "FALSE"),
 		}
 	}
 }
@@ -58,7 +61,7 @@ func (r *SFController) DeployNodepool() bool {
 		logLevel = r.cr.Spec.Nodepool.Launcher.LogLevel
 	}
 
-	loggingConfig, _ := ParseString(
+	loggingConfig, _ := utils.ParseString(
 		loggingConfigTemplate, struct{ LogLevel string }{LogLevel: string(logLevel)})
 
 	launcherExtraConfigData := make(map[string]string)
@@ -66,10 +69,10 @@ func (r *SFController) DeployNodepool() bool {
 	r.EnsureConfigMap("nodepool-launcher-extra-config", launcherExtraConfigData)
 
 	volumes := []apiv1.Volume{
-		mkVolumeSecret("zookeeper-client-tls"),
-		mkVolumeSecret(NodepoolProvidersSecretsName),
-		mkEmptyDirVolume("nodepool-config"),
-		mkEmptyDirVolume("nodepool-home"),
+		base.MkVolumeSecret("zookeeper-client-tls"),
+		base.MkVolumeSecret(NodepoolProvidersSecretsName),
+		base.MkEmptyDirVolume("nodepool-config"),
+		base.MkEmptyDirVolume("nodepool-home"),
 		{
 			Name: "nodepool-launcher-tooling-vol",
 			VolumeSource: apiv1.VolumeSource{
@@ -77,11 +80,11 @@ func (r *SFController) DeployNodepool() bool {
 					LocalObjectReference: apiv1.LocalObjectReference{
 						Name: "nodepool-launcher-tooling-config-map",
 					},
-					DefaultMode: &Execmod,
+					DefaultMode: &utils.Execmod,
 				},
 			},
 		},
-		MKVolumeCM("nodepool-launcher-extra-config-vol",
+		base.MkVolumeCM("nodepool-launcher-extra-config-vol",
 			"nodepool-launcher-extra-config-config-map"),
 	}
 
@@ -141,8 +144,8 @@ func (r *SFController) DeployNodepool() bool {
 	}
 
 	annotations := map[string]string{
-		"nodepool.yaml":         checksum([]byte(generateConfigScript)),
-		"nodepool-logging.yaml": checksum([]byte(loggingConfig)),
+		"nodepool.yaml":         utils.Checksum([]byte(generateConfigScript)),
+		"nodepool-logging.yaml": utils.Checksum([]byte(loggingConfig)),
 		"serial":                "5",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),
@@ -153,23 +156,19 @@ func (r *SFController) DeployNodepool() bool {
 		annotations["config-repo-info-hash"] = r.cr.Spec.ConfigLocation.BaseURL + r.cr.Spec.ConfigLocation.Name
 	}
 
-	nl := r.mkDeployment("nodepool-launcher", "")
+	nl := base.MkDeployment("nodepool-launcher", r.ns, "")
 
-	container := apiv1.Container{
-		Name:            "launcher",
-		Image:           nodepoolLauncherImage,
-		SecurityContext: mkSecurityContext(false),
-		VolumeMounts:    volumeMount,
-		Env: append(r.getNodepoolConfigEnvs(),
-			MKEnvVar("HOME", "/var/lib/nodepool")),
-		Command: []string{"/usr/local/bin/dumb-init", "--",
-			"/usr/local/bin/nodepool-launcher", "-f", "-l", "/etc/nodepool-logging/logging.yaml"},
-	}
+	container := base.MkContainer("launcher", nodepoolLauncherImage)
+	container.VolumeMounts = volumeMount
+	container.Command = []string{"/usr/local/bin/dumb-init", "--",
+		"/usr/local/bin/nodepool-launcher", "-f", "-l", "/etc/nodepool-logging/logging.yaml"}
+	container.Env = append(r.getNodepoolConfigEnvs(),
+		base.MkEnvVar("HOME", "/var/lib/nodepool"))
 
-	initContainer := MkContainer("nodepool-launcher-init", BusyboxImage)
+	initContainer := base.MkContainer("nodepool-launcher-init", BusyboxImage)
 	initContainer.Command = []string{"/usr/local/bin/generate-launcher-config.sh"}
 	initContainer.Env = append(r.getNodepoolConfigEnvs(),
-		MKEnvVar("HOME", "/var/lib/nodepool"))
+		base.MkEnvVar("HOME", "/var/lib/nodepool"))
 	initContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      "nodepool-config",
@@ -181,22 +180,21 @@ func (r *SFController) DeployNodepool() bool {
 		},
 		configScriptVolumeMount,
 	}
-	initContainer.SecurityContext = mkSecurityContext(false)
 
 	nl.Spec.Template.Spec.Volumes = volumes
 	nl.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nl.Spec.Template.Spec.Containers = []apiv1.Container{container}
 	nl.Spec.Template.ObjectMeta.Annotations = annotations
-	nl.Spec.Template.Spec.Containers[0].ReadinessProbe = mkReadinessHTTPProbe("/ready", launcherPort)
-	nl.Spec.Template.Spec.Containers[0].LivenessProbe = mkLiveHTTPProbe("/ready", launcherPort)
-	nl.Spec.Template.Spec.Containers[0].StartupProbe = mkStartupHTTPProbe("/ready", launcherPort)
+	nl.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/ready", launcherPort)
+	nl.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/ready", launcherPort)
+	nl.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/ready", launcherPort)
 	nl.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		MKContainerPort(launcherPort, launcherPortName),
+		base.MkContainerPort(launcherPort, launcherPortName),
 	}
 
 	current := appsv1.Deployment{}
 	if r.GetM(launcherIdent, &current) {
-		if !mapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("Nodepool-launcher configuration changed, rollout pods ...")
 			current.Spec = nl.DeepCopy().Spec
 			r.UpdateR(&current)
@@ -207,14 +205,14 @@ func (r *SFController) DeployNodepool() bool {
 		r.CreateR(&current)
 	}
 
-	srv := r.mkService(launcherIdent, launcherIdent, []int32{launcherPort}, launcherIdent)
+	srv := base.MkService(launcherIdent, r.ns, launcherIdent, []int32{launcherPort}, launcherIdent)
 	r.GetOrCreate(&srv)
 
 	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-launcher", "nodepool", launcherIdent, "/",
 		launcherPort, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
 	isDeploymentReady := r.IsDeploymentReady(&current)
-	updateConditions(&r.cr.Status.Conditions, launcherIdent, isDeploymentReady)
+	conds.UpdateConditions(&r.cr.Status.Conditions, launcherIdent, isDeploymentReady)
 
 	return isDeploymentReady && routeReady
 }

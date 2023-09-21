@@ -25,6 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
 
 type SoftwareFactoryReconciler struct {
@@ -44,6 +46,7 @@ type SoftwareFactoryReconciler struct {
 //+kubebuilder:rbac:groups=*,resources=jobs;pods;pods/exec;services;routes;routes/custom-host;statefulsets;deployments;configmaps;secrets;persistentvolumeclaims;serviceaccounts;roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=*,resources=jobs/status;pods/status;services/status;routes/status;statefulsets/status;deployments/status;configmaps/status;secrets/status;persistentvolumeclaims/status;serviceaccounts/status;roles/status,verbs=get
 //+kubebuilder:rbac:groups=cert-manager.io,resources=*,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
 
 type SFController struct {
 	SFUtilContext
@@ -99,7 +102,7 @@ func (r *SFController) DeployLogserverResource() bool {
 	loopdelay, retentiondays := getLogserverSettingsOrDefault(r.cr.Spec.Logserver)
 	storage := r.cr.Spec.Logserver.Storage
 	if storage.Size.IsZero() {
-		storage.Size = Qty1Gi()
+		storage.Size = utils.Qty1Gi()
 	}
 	logServerSpecSettings := sfv1.LogServerSpecSettings{
 		LoopDelay:     loopdelay,
@@ -188,7 +191,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	if services["Zuul"] {
 		services["Config"] = r.SetupConfigJob()
 		if services["Config"] {
-			refreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
+			conds.RefreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
 		}
 	}
 
@@ -197,7 +200,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	return sfv1.SoftwareFactoryStatus{
 		Ready:              isOperatorReady(services),
 		ObservedGeneration: r.cr.Generation,
-		ReconciledBy:       getOperatorConditionName(),
+		ReconciledBy:       conds.GetOperatorConditionName(),
 		Conditions:         r.cr.Status.Conditions,
 	}
 }

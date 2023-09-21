@@ -25,11 +25,17 @@ import (
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
 
 //+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=logservers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=logservers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=logservers/finalizers,verbs=update
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
 
 const logserverIdent = "logserver"
 const httpdPort = 8080
@@ -95,7 +101,7 @@ func (r *LogServerController) ensureLogserverPodMonitor() bool {
 		},
 	}
 	nePort := GetNodeexporterPortName(logserverIdent)
-	desiredLsPodmonitor := r.mkPodMonitor(logserverIdent+"-monitor", nePort, selector)
+	desiredLsPodmonitor := monitoring.MkPodMonitor(logserverIdent+"-monitor", r.ns, nePort, selector)
 	// add annotations so we can handle lifecycle
 	annotations := map[string]string{
 		"version": "1",
@@ -106,7 +112,7 @@ func (r *LogServerController) ensureLogserverPodMonitor() bool {
 		r.CreateR(&desiredLsPodmonitor)
 		return false
 	} else {
-		if !mapEquals(&currentLspm.ObjectMeta.Annotations, &annotations) {
+		if !utils.MapEquals(&currentLspm.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("Logserver PodMonitor configuration changed, updating...")
 			currentLspm.Spec = desiredLsPodmonitor.Spec
 			currentLspm.ObjectMeta.Annotations = annotations
@@ -131,7 +137,7 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 		"description": "Log server only has at most three days' worth ({{ $value | humanize1024 }}) of free disk available.",
 		"summary":     "Log server running out of disk",
 	}
-	diskFull := mkPrometheusAlertRule(
+	diskFull := monitoring.MkPrometheusAlertRule(
 		"OutOfDiskNow",
 		intstr.FromString(
 			"(node_filesystem_avail_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} * 100 /"+
@@ -141,7 +147,7 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 		diskFullLabels,
 		diskFullAnnotations,
 	)
-	diskFullIn3days := mkPrometheusAlertRule(
+	diskFullIn3days := monitoring.MkPrometheusAlertRule(
 		"OutOfDiskInThreeDays",
 		intstr.FromString(
 			"(node_filesystem_avail_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} * 100 /"+
@@ -152,10 +158,10 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 		map[string]string{},
 		diskFull3daysAnnotations,
 	)
-	lsDiskRuleGroup := mkPrometheusRuleGroup(
+	lsDiskRuleGroup := monitoring.MkPrometheusRuleGroup(
 		"disk.rules",
 		[]monitoringv1.Rule{diskFull, diskFullIn3days})
-	desiredLsPromRule := r.mkPrometheusRuleCR(logserverIdent + ".rules")
+	desiredLsPromRule := monitoring.MkPrometheusRuleCR(logserverIdent+".rules", r.ns)
 	desiredLsPromRule.Spec.Groups = append(desiredLsPromRule.Spec.Groups, lsDiskRuleGroup)
 
 	// add annotations so we can handle lifecycle
@@ -168,7 +174,7 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 		r.CreateR(&desiredLsPromRule)
 		return false
 	} else {
-		if !mapEquals(&currentPromRule.ObjectMeta.Annotations, &annotations) {
+		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("Logserver default Prometheus rules changed, updating...")
 			currentPromRule.Spec = desiredLsPromRule.Spec
 			currentPromRule.ObjectMeta.Annotations = annotations
@@ -182,10 +188,10 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	log := log.FromContext(r.ctx)
 
-	r.EnsureSSHKey(logserverIdent + "-keys")
+	r.EnsureSSHKeySecret(logserverIdent + "-keys")
 
 	cmData := make(map[string]string)
-	cmData["logserver.conf"], _ = ParseString(logserverConf, struct {
+	cmData["logserver.conf"], _ = utils.ParseString(logserverConf, struct {
 		ServerRoot    string
 		LogserverRoot string
 	}{
@@ -225,14 +231,14 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	// Create the deployment
-	dep := r.mkDeployment(logserverIdent, image)
+	dep := base.MkDeployment(logserverIdent, r.ns, image)
 
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
 	// NOTE: Currently we are providing "ReadWriteOnce" access mode
 	// for the Logserver, due "ReadWriteMany" requires special storage backend.
-	dataPvc := r.MkPVC(logserverIdent, BaseGetStorageConfOrDefault(
+	dataPvc := base.MkPVC(logserverIdent, r.ns, BaseGetStorageConfOrDefault(
 		r.cr.Spec.Settings.Storage, r.cr.Spec.StorageClassName), apiv1.ReadWriteOnce)
 	r.GetOrCreate(&dataPvc)
 	var mod int32 = 256 // decimal for 0400 octal
@@ -244,7 +250,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 					LocalObjectReference: apiv1.LocalObjectReference{
 						Name: logserverIdent + "-config-map",
 					},
-					DefaultMode: &Execmod,
+					DefaultMode: &utils.Execmod,
 				},
 			},
 		},
@@ -268,27 +274,27 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		MKContainerPort(httpdPort, httpdPortName),
+		base.MkContainerPort(httpdPort, httpdPortName),
 	}
 
-	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = mkReadinessHTTPProbe("/", httpdPort)
-	dep.Spec.Template.Spec.Containers[0].StartupProbe = mkStartupHTTPProbe("/", httpdPort)
-	dep.Spec.Template.Spec.Containers[0].LivenessProbe = mkLiveHTTPProbe("/", httpdPort)
+	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/", httpdPort)
+	dep.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/", httpdPort)
+	dep.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/", httpdPort)
 	dep.Spec.Template.Spec.Containers[0].Command = []string{
 		"/usr/bin/" + lgEntryScriptName,
 	}
 
 	// Create services exposed by logserver
 	servicePorts := []int32{httpdPort}
-	httpdService := r.mkService(
-		httpdPortName, logserverIdent, servicePorts, httpdPortName)
+	httpdService := base.MkService(
+		httpdPortName, r.ns, logserverIdent, servicePorts, httpdPortName)
 	r.GetOrCreate(&httpdService)
 
 	// Setup the sidecar container for sshd
-	sshdContainer := MkContainer(sshdPortName, sshdImage)
+	sshdContainer := base.MkContainer(sshdPortName, sshdImage)
 	sshdContainer.Command = []string{"bash", "/conf/run.sh"}
 	sshdContainer.Env = []apiv1.EnvVar{
-		MKEnvVar("AUTHORIZED_KEY", r.cr.Spec.AuthorizedSSHKey),
+		base.MkEnvVar("AUTHORIZED_KEY", r.cr.Spec.AuthorizedSSHKey),
 	}
 	sshdContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
@@ -306,32 +312,30 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		},
 	}
 	sshdContainer.Ports = []apiv1.ContainerPort{
-		MKContainerPort(sshdPort, sshdPortName),
+		base.MkContainerPort(sshdPort, sshdPortName),
 	}
 
 	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, sshdContainer)
 
 	loopdelay, retentiondays := getLogserverSettingsOrDefault(r.cr.Spec.Settings)
 
-	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, apiv1.Container{
-		Name:  purgelogIdent,
-		Image: purgeLogsImage,
-		Command: []string{
-			"/usr/local/bin/purgelogs",
-			"--retention-days",
-			strconv.Itoa(retentiondays),
-			"--loop", strconv.Itoa(loopdelay),
-			"--log-path-dir",
-			purgelogsLogsDir,
-			"--debug"},
-		VolumeMounts: []apiv1.VolumeMount{
-			{
-				Name:      logserverIdent,
-				MountPath: purgelogsLogsDir,
-			},
+	purgelogsContainer := base.MkContainer(purgelogIdent, purgeLogsImage)
+	purgelogsContainer.Command = []string{
+		"/usr/local/bin/purgelogs",
+		"--retention-days",
+		strconv.Itoa(retentiondays),
+		"--loop", strconv.Itoa(loopdelay),
+		"--log-path-dir",
+		purgelogsLogsDir,
+		"--debug"}
+	purgelogsContainer.VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      logserverIdent,
+			MountPath: purgelogsLogsDir,
 		},
-		SecurityContext: mkSecurityContext(false),
-	})
+	}
+
+	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, purgelogsContainer)
 
 	// add volumestats exporter
 	volumeMountsStatsExporter := []apiv1.VolumeMount{
@@ -348,7 +352,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	annotations := map[string]string{
 		"fqdn":           r.cr.Spec.FQDN,
 		"serial":         "2",
-		"httpd-conf":     checksum([]byte(logserverConf)),
+		"httpd-conf":     utils.Checksum([]byte(logserverConf)),
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(retentiondays) + " loopDelay:" + strconv.Itoa(loopdelay),
 	}
 
@@ -357,7 +361,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	deploymentUpdated := true
 	if r.GetM(dep.GetName(), &currentDep) {
 		// Are annotations in sync?
-		if !mapEquals(&currentDep.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		if !utils.MapEquals(&currentDep.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			currentDep.Spec.Template.Spec = dep.Spec.Template.Spec
 			currentDep.Spec.Template.ObjectMeta.Annotations = annotations
 			log.V(1).Info("Logserver pod restarting to apply changes ...")
@@ -371,7 +375,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	sshdServicePorts := []int32{sshdPort}
-	sshdService := r.mkService(sshdPortName, logserverIdent, sshdServicePorts, sshdPortName)
+	sshdService := base.MkService(sshdPortName, r.ns, logserverIdent, sshdServicePorts, sshdPortName)
 	r.GetOrCreate(&sshdService)
 
 	r.getOrCreateNodeExporterSideCarService(logserverIdent)
@@ -391,12 +395,12 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	r.ensureLogserverPromRule()
 
 	isDeploymentReady := r.IsDeploymentReady(&currentDep)
-	updateConditions(&r.cr.Status.Conditions, logserverIdent, isDeploymentReady)
+	conds.UpdateConditions(&r.cr.Status.Conditions, logserverIdent, isDeploymentReady)
 
 	return sfv1.LogServerStatus{
 		Ready:              deploymentUpdated && isDeploymentReady && pvcReadiness && routeReady,
 		ObservedGeneration: r.cr.Generation,
-		ReconciledBy:       getOperatorConditionName(),
+		ReconciledBy:       conds.GetOperatorConditionName(),
 	}
 }
 
