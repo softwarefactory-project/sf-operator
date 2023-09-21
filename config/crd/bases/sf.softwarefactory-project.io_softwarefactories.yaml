@@ -398,6 +398,46 @@ spec:
                       - name
                       type: object
                     type: array
+                  githubconns:
+                    description: The list of GitHub-based connections to add to Zuul's
+                      configuration
+                    items:
+                      description: 'Describes a Zuul connection using the `github`
+                        driver: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#'
+                      properties:
+                        apiToken:
+                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token
+                          type: string
+                        appId:
+                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_id
+                          type: string
+                        appKey:
+                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key
+                          type: string
+                        canonicalHostname:
+                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.canonical_hostname
+                          type: string
+                        name:
+                          description: How the connection will be named in Zuul's
+                            configuration and appear in zuul-web
+                          type: string
+                        server:
+                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.server
+                          type: string
+                        verifySsl:
+                          default: true
+                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.verify_ssl
+                          type: boolean
+                        webHookToken:
+                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token
+                          type: string
+                      required:
+                      - apiToken
+                      - appId
+                      - appKey
+                      - name
+                      type: object
+                    type: array
                   merger:
                     description: Configuration of the merger microservice
                     properties:

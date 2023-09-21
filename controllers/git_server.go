@@ -34,7 +34,12 @@ var preInitScriptTemplate string
 func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
 	var sb strings.Builder
 	sb.WriteString("\n")
-	for _, name := range sfv1.GetConnectionsName(spec) {
+	for _, name := range sfv1.GetGerritConnectionsName(spec) {
+		sb.WriteString(fmt.Sprintf("[connection %s]\n", name))
+		sb.WriteString("driver=git\n")
+		sb.WriteString("baseurl=localhost\n\n")
+	}
+	for _, name := range sfv1.GetGitHubConnectionsName(spec) {
 		sb.WriteString(fmt.Sprintf("[connection %s]\n", name))
 		sb.WriteString("driver=git\n")
 		sb.WriteString("baseurl=localhost\n\n")

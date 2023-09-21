@@ -1,14 +1,23 @@
 ---
+- name: Setting Dummy Connections
+  set_fact:
+    dummy_gerritconn:
+      - name: dummy-gerrit-conn
+        hostname: dummy-gerrit.local
+        username: zuul
+    dummy_githubconns:
+      - name: dummy-github-conn
+        appId: githubId
+        appKey: githubKey
+        apiToken: githubToken
+        webHookToken: githubwebtoken
+
 - name: Get current Zuul gerrit connections
   command: kubectl get sf my-sf -o jsonpath='{.spec.zuul.gerritconns}'
   register: gerritconns
 
 - set_fact:
     gerritconns_orig: "{{ gerritconns.stdout | from_json }}"
-    dummy_gerritconn:
-      - name: dummy-gerrit-conn
-        hostname: dummy-gerrit.local
-        username: zuul
 
 - name: Add a dummy Zuul Gerrit connection
   ansible.builtin.include_role:
@@ -17,6 +26,7 @@
     cr_spec:
       zuul:
         gerritconns: "{{ gerritconns_orig + dummy_gerritconn }}"
+        githubconns: "{{ dummy_githubconns }}"
 
 - name: Wait for the new Zuul connection to appear in the Zuul API
   ansible.builtin.uri:
@@ -25,7 +35,9 @@
     return_content: true
     validate_certs: "{{ validate_certs }}"
   register: this
-  until: "'dummy-gerrit-conn' in this.content"
+  until:
+    - "'dummy-gerrit-conn' in this.content"
+    - "'dummy-github-conn' in this.content"
   retries: "{{ retries }}"
   delay: "{{ delay }}"
 
@@ -36,6 +48,7 @@
     cr_spec:
       zuul:
         gerritconns: "{{ gerritconns_orig }}"
+        githubconns: []
 
 - name: Wait for the dummy Zuul connection to be removed from the API
   ansible.builtin.uri:
@@ -44,6 +57,9 @@
     return_content: true
     validate_certs: "{{ validate_certs }}"
   register: this
-  until: "'dummy-gerrit-conn' not in this.content"
+  until:
+    - "'dummy-gerrit-conn' not in this.content"
+    - "'dummy-github-conn' not in this.content"
   retries: "{{ retries }}"
   delay: "{{ delay }}"
+

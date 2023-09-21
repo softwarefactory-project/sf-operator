@@ -56,6 +56,31 @@ type ConfigLocationSpec struct {
 	ZuulConnectionName string `json:"zuul-connection-name"`
 }
 
+// Describes a Zuul connection using the `github` driver: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#
+type GitHubConnection struct {
+	// How the connection will be named in Zuul's configuration and appear in zuul-web
+	Name string `json:"name"`
+	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_id
+	AppID string `json:"appId"`
+	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key
+	AppKey string `json:"appKey"`
+	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token
+	APIToken string `json:"apiToken"`
+	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token
+	// +optional
+	WebhookToken string `json:"webHookToken,omitempty"`
+	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.server
+	// +optional
+	Server string `json:"server,omitempty"`
+	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.canonical_hostname
+	// +optional
+	Canonicalhostname string `json:"canonicalHostname,omitempty"`
+	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.verify_ssl
+	// +kubebuilder:default:=true
+	// +optional
+	VerifySSL bool `json:"verifySsl,omitempty"`
+}
+
 // Describes a Zuul connection using the `gerrit` driver: https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#connection-configuration
 type GerritConnection struct {
 	// How the connection will be named in Zuul's configuration and appear in zuul-web
@@ -200,6 +225,8 @@ type ZuulSpec struct {
 	DefaultAuthenticator string `json:"defaultAuthenticator,omitempty"`
 	// The list of Gerrit-based connections to add to Zuul's configuration
 	GerritConns []GerritConnection `json:"gerritconns,omitempty"`
+	// The list of GitHub-based connections to add to Zuul's configuration
+	GitHubConns []GitHubConnection `json:"githubconns,omitempty"`
 	// Configuration of the executor microservices
 	Executor ZuulExecutorSpec `json:"executor,omitempty"`
 	// Configuration of the scheduler microservice
@@ -210,11 +237,19 @@ type ZuulSpec struct {
 	Merger ZuulMergerSpec `json:"merger,omitempty"`
 }
 
-func GetConnectionsName(spec *ZuulSpec) []string {
+func GetGerritConnectionsName(spec *ZuulSpec) []string {
 	var res []string
 	res = append(res, "git-server")
 	res = append(res, "opendev.org")
 	for _, conn := range spec.GerritConns {
+		res = append(res, conn.Name)
+	}
+	return res
+}
+
+func GetGitHubConnectionsName(spec *ZuulSpec) []string {
+	var res []string
+	for _, conn := range spec.GitHubConns {
 		res = append(res, conn.Name)
 	}
 	return res

@@ -689,6 +689,31 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	cfg.Section(section).NewKey("git_over_ssh", strconv.FormatBool(conn.GitOverSSH))
 }
 
+func (r *SFController) AddGitHubConnection(cfg *ini.File, conn sfv1.GitHubConnection) {
+	section := "connection " + conn.Name
+	cfg.NewSection(section)
+
+	addKey := func(fieldKey string, fieldValue string) {
+		if fieldValue != "" {
+			cfg.Section(section).NewKey(fieldKey, fieldValue)
+		}
+	}
+	for key, value := range map[string]string{
+		"driver":             "github",
+		"app_id":             conn.AppID,
+		"app_key":            conn.AppKey,
+		"app_token":          conn.APIToken,
+		"webhook_token":      conn.WebhookToken,
+		"sshkey":             "/var/lib/zuul-ssh/..data/priv",
+		"server":             conn.Server,
+		"canonical_hostname": conn.Canonicalhostname,
+		"verify_ssl":         fmt.Sprint(conn.VerifySSL),
+	} {
+		addKey(key, value)
+	}
+
+}
+
 func AddGitConnection(cfg *ini.File, name string, baseurl string) {
 	section := "connection " + name
 	cfg.NewSection(section)
@@ -751,6 +776,11 @@ func (r *SFController) DeployZuul() bool {
 	for _, conn := range r.cr.Spec.Zuul.GerritConns {
 		r.AddGerritConnection(cfgINI, conn)
 	}
+
+	for _, conn := range r.cr.Spec.Zuul.GitHubConns {
+		r.AddGitHubConnection(cfgINI, conn)
+	}
+
 	// Add default connections
 	r.AddDefaultConnections(cfgINI)
 
