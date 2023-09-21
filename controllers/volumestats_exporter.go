@@ -38,22 +38,13 @@ func getNodeExporterArgs(volumeMounts []apiv1.VolumeMount) []string {
 }
 
 func createNodeExporterSideCarContainer(serviceName string, volumeMounts []apiv1.VolumeMount) apiv1.Container {
-
-	var exporterPortName = GetNodeexporterPortName(serviceName)
-
-	exporterArgs := getNodeExporterArgs(volumeMounts)
-	ports := []apiv1.ContainerPort{
-		MKContainerPort(port, exporterPortName),
+	container := MkContainer(serviceName+nameSuffix, NodeExporterImage)
+	container.Args = getNodeExporterArgs(volumeMounts)
+	container.Ports = []apiv1.ContainerPort{
+		MKContainerPort(port, GetNodeexporterPortName(serviceName)),
 	}
-	return apiv1.Container{
-		Name:            serviceName + nameSuffix,
-		Image:           NodeExporterImage,
-		ImagePullPolicy: "IfNotPresent",
-		Args:            exporterArgs,
-		VolumeMounts:    volumeMounts,
-		Ports:           ports,
-		SecurityContext: mkSecurityContext(false),
-	}
+	container.VolumeMounts = volumeMounts
+	return container
 }
 
 func (r *SFUtilContext) getOrCreateNodeExporterSideCarService(serviceName string) {

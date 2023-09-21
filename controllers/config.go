@@ -125,22 +125,16 @@ func (r *SFController) SetupBaseSecrets() bool {
 }
 
 func (r *SFController) RunCommand(name string, args []string, extraVars []apiv1.EnvVar) *batchv1.Job {
-	job := r.mkJob(
-		name,
-		apiv1.Container{
-			Name:    "sf-operator",
-			Image:   BusyboxImage,
-			Command: append([]string{"python3", "/sf_operator/main.py"}, args...),
-			Env: append([]apiv1.EnvVar{
-				MKEnvVar("PYTHONPATH", "/"),
-				MKEnvVar("FQDN", r.cr.Spec.FQDN),
-			}, extraVars...),
-			VolumeMounts: []apiv1.VolumeMount{
-				{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
-			},
-			SecurityContext: mkSecurityContext(false),
-		},
-	)
+	jobContainer := MkContainer("sf-operator", BusyboxImage)
+	jobContainer.Command = append([]string{"python3", "/sf_operator/main.py"}, args...)
+	jobContainer.Env = append([]apiv1.EnvVar{
+		MKEnvVar("PYTHONPATH", "/"),
+		MKEnvVar("FQDN", r.cr.Spec.FQDN),
+	}, extraVars...)
+	jobContainer.VolumeMounts = []apiv1.VolumeMount{
+		{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
+	}
+	job := r.mkJob(name, jobContainer)
 	job.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		MKVolumeCM("pymod-sf-operator", "pymod-sf-operator-config-map"),
 	}
