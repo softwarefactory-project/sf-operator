@@ -1,5 +1,5 @@
 ---
-bundlenamspace: operators
+bundlenamespace: operators
 namespace: sf
 context: microshift
 k8s_version: 1.24

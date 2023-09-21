@@ -93,7 +93,7 @@ OPTIONS
 		}
 
 		if len(bundlenamespace) != 0 {
-			ansiblePlaybookOptions.AddExtraVar("bundlenamspace", bundlenamespace)
+			ansiblePlaybookOptions.AddExtraVar("bundlenamespace", bundlenamespace)
 		}
 
 		if namespace || all {
