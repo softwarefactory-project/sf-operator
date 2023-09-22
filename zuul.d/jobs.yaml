@@ -40,9 +40,7 @@
     roles:
       - zuul: software-factory/sf-infra
     vars:
-      logclassify_logserver_dir: ./
-      logclassify_debug: false
-      logclassify_report: true
+      logreduce_optin: true
       # microshift deployment
       disk_file_sparsed: true
       disk_file_size: 40G
@@ -78,9 +76,7 @@
     roles:
       - zuul: software-factory/sf-infra
     vars:
-      logclassify_logserver_dir: ./
-      logclassify_debug: false
-      logclassify_report: true
+      logreduce_optin: true
       # microshift deployment
       disk_file_sparsed: true
       disk_file_size: 40G
