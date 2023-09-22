@@ -20,7 +20,7 @@
 
 - name: Get events
   ansible.builtin.shell: |
-    kubectl {{ namespace_opt }} get events > {{ dest_dir }}/events.txt
+    kubectl {{ namespace_opt }} get events --output custom-columns="DATE:metadata.creationTimestamp,TYPE:type,REASON:reason,OBJECT KIND:involvedObject.kind,OBJECT NAME:involvedObject.name,MESSAGE:message" --sort-by=".metadata.creationTimestamp" > {{ dest_dir }}/events.txt
 
 - name: Describe namespace resources
   ansible.builtin.shell: |
