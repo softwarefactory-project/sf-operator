@@ -1,0 +1,14 @@
+---
+build-log-dir: /var/lib/nodepool/builds
+build-log-retention: -1
+images-dir: /var/lib/nodepool/dib
+webapp:
+  port: 8006
+zookeeper-servers:
+  - host: zookeeper
+    port: 2281
+zookeeper-tls:
+  ca: /tls/client/ca.crt
+  cert: /tls/client/tls.crt
+  key: /tls/client/tls.key
+diskimages: []
