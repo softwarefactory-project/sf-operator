@@ -23,7 +23,8 @@ import (
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
-	"github.com/softwarefactory-project/sf-operator/controllers"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 )
 
 type PromCMDContext struct {
@@ -147,7 +148,7 @@ func EnsurePrometheusInstance(env *utils.ENV) {
 				ServiceMonitorSelector: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						{
-							Key:      controllers.ServiceMonitorLabelSelector,
+							Key:      monitoring.ServiceMonitorLabelSelector,
 							Operator: metav1.LabelSelectorOpExists,
 						},
 					},
@@ -229,7 +230,7 @@ func EnsurePrometheusService(env *utils.ENV) {
 }
 
 func (p *PromCMDContext) EnsurePrometheusRoute() {
-	route := controllers.MkHTTSRoute(
+	route := base.MkHTTPSRoute(
 		prometheusName, p.env.Ns, prometheusName, prometheusName, "/", prometheusPort, map[string]string{}, p.fqdn, nil)
 	err := p.env.Cli.Get(p.env.Ctx, client.ObjectKey{
 		Name:      prometheusName,

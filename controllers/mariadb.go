@@ -10,6 +10,9 @@ import (
 	"strconv"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +37,7 @@ type ZuulDBOpts struct {
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
 	c := "CREATE DATABASE IF NOT EXISTS " + dbname + " CHARACTER SET utf8 COLLATE utf8_general_ci; "
 	g := "GRANT ALL PRIVILEGES ON " + dbname + ".* TO '" + username + "'@'%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
-	container := MkContainer("mariadb-client", DBImage)
+	container := base.MkContainer("mariadb-client", DBImage)
 	container.Command = []string{"sh", "-c", `
 	echo 'Running: mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
 	ATTEMPT=0
@@ -48,7 +51,7 @@ func (r *SFController) CreateDBInitContainer(username string, password string, d
 	done
 	`}
 	container.Env = []apiv1.EnvVar{
-		MKSecretEnvVar("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
+		base.MkSecretEnvVar("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
 		{
 			Name:  "USER_PASSWORD",
 			Value: password,
@@ -85,7 +88,7 @@ func (r *SFController) CreateProvisionDBJob(database string, password string) ba
 func (r *SFController) DBPostInit(configSecret apiv1.Secret) apiv1.Secret {
 	zuulOpts := ZuulDBOpts{
 		Username: "zuul",
-		Password: NewUUIDString(),
+		Password: utils.NewUUIDString(),
 		Host:     "mariadb",
 		Port:     mariadbPort,
 		Database: "zuul",
@@ -120,7 +123,7 @@ func (r *SFController) DBPostInit(configSecret apiv1.Secret) apiv1.Secret {
 
 func (r *SFController) DeployMariadb() bool {
 	passName := "mariadb-root-password"
-	r.GenerateSecretUUID(passName)
+	r.EnsureSecretUUID(passName)
 
 	replicas := int32(1)
 	dep := r.mkStatefulSet("mariadb", DBImage, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), replicas, apiv1.ReadWriteOnce)
@@ -128,7 +131,7 @@ func (r *SFController) DeployMariadb() bool {
 	dep.Spec.VolumeClaimTemplates = append(
 		dep.Spec.VolumeClaimTemplates,
 		// TODO redirect logs to stdout so we don't need a volume
-		r.MkPVC("mariadb-logs", r.getStorageConfOrDefault(r.cr.Spec.MariaDB.LogStorage), apiv1.ReadWriteOnce))
+		base.MkPVC("mariadb-logs", r.ns, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.LogStorage), apiv1.ReadWriteOnce))
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      "mariadb",
@@ -144,22 +147,22 @@ func (r *SFController) DeployMariadb() bool {
 		},
 	}
 	dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
-		MKEnvVar("HOME", "/var/lib/mysql"),
-		MKSecretEnvVar("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
+		base.MkEnvVar("HOME", "/var/lib/mysql"),
+		base.MkSecretEnvVar("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
 	}
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		MKContainerPort(mariadbPort, mariaDBPortName),
+		base.MkContainerPort(mariadbPort, mariaDBPortName),
 	}
 
-	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = mkReadinessTCPProbe(mariadbPort)
-	dep.Spec.Template.Spec.Containers[0].LivenessProbe = mkReadinessTCPProbe(mariadbPort)
+	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessTCPProbe(mariadbPort)
+	dep.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessTCPProbe(mariadbPort)
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		mkEmptyDirVolume("mariadb-run"),
+		base.MkEmptyDirVolume("mariadb-run"),
 	}
 
 	r.GetOrCreate(&dep)
 	servicePorts := []int32{mariadbPort}
-	srv := r.mkService("mariadb", "mariadb", servicePorts, mariaDBPortName)
+	srv := base.MkService("mariadb", r.ns, "mariadb", servicePorts, mariaDBPortName)
 	r.GetOrCreate(&srv)
 
 	var zuulDBSecret apiv1.Secret
@@ -179,7 +182,7 @@ func (r *SFController) DeployMariadb() bool {
 	}
 
 	isStatefulSet := r.IsStatefulSetReady(&dep)
-	updateConditions(&r.cr.Status.Conditions, "mariadb", isStatefulSet)
+	conds.UpdateConditions(&r.cr.Status.Conditions, "mariadb", isStatefulSet)
 
 	return isStatefulSet && zuulDBSecret.Data != nil
 }

@@ -6,63 +6,39 @@
 package controllers
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
 	_ "embed"
 	"fmt"
-	"net/http"
 	"os"
 	"reflect"
-	"sort"
-	"strings"
-	"text/template"
 	"time"
 
-	"golang.org/x/crypto/ssh"
-	ini "gopkg.in/ini.v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/yaml"
-
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/utils/pointer"
-
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/pem"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
-	cmacme "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
+
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
 	"github.com/go-logr/logr"
-	"github.com/google/uuid"
 	apiroutev1 "github.com/openshift/api/route/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
 const BusyboxImage = "quay.io/software-factory/sf-op-busybox:1.5-3"
-
-// ServiceMonitorLabelSelector - TODO this could be a spec parameter.
-const ServiceMonitorLabelSelector = "sf-monitoring"
 
 type SFUtilContext struct {
 	Client     client.Client
@@ -75,663 +51,7 @@ type SFUtilContext struct {
 	owner      client.Object
 }
 
-// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
-
-//lint:ignore U1000 this function will be used in a followup change
-func (r *SFUtilContext) mkServiceMonitor(name string, port string, selector metav1.LabelSelector) monitoringv1.ServiceMonitor {
-	return monitoringv1.ServiceMonitor{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.ns,
-			Labels: map[string]string{
-				ServiceMonitorLabelSelector: name,
-			},
-		},
-		Spec: monitoringv1.ServiceMonitorSpec{
-			Endpoints: []monitoringv1.Endpoint{
-				{
-					Interval: monitoringv1.Duration("30s"),
-					Port:     port,
-					Scheme:   "http",
-				},
-			},
-			Selector: selector,
-		},
-	}
-}
-
-func (r *SFUtilContext) mkPodMonitor(name string, port string, selector metav1.LabelSelector) monitoringv1.PodMonitor {
-	return monitoringv1.PodMonitor{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.ns,
-			Labels: map[string]string{
-				ServiceMonitorLabelSelector: name,
-			},
-		},
-		Spec: monitoringv1.PodMonitorSpec{
-			Selector: selector,
-			PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
-				{
-					Port: port,
-				},
-			},
-		},
-	}
-}
-
-func (r *SFUtilContext) mkPrometheusRuleCR(name string) monitoringv1.PrometheusRule {
-	return monitoringv1.PrometheusRule{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.ns,
-			Labels: map[string]string{
-				ServiceMonitorLabelSelector: name,
-			},
-		},
-		Spec: monitoringv1.PrometheusRuleSpec{
-			Groups: []monitoringv1.RuleGroup{},
-		},
-	}
-}
-
-func mkPrometheusRuleGroup(name string, rules []monitoringv1.Rule) monitoringv1.RuleGroup {
-	// d := monitoringv1.Duration(duration)
-	return monitoringv1.RuleGroup{
-		Name: name,
-		// Interval: &d,
-		Rules: rules,
-	}
-}
-
-func mkPrometheusAlertRule(name string, expr intstr.IntOrString, forDuration string, labels map[string]string, annotations map[string]string) monitoringv1.Rule {
-	f := monitoringv1.Duration(forDuration)
-	return monitoringv1.Rule{
-		Alert:       name,
-		Expr:        expr,
-		For:         &f,
-		Labels:      labels,
-		Annotations: annotations,
-	}
-}
-
-func Qty1Gi() resource.Quantity {
-	q, _ := resource.ParseQuantity("1Gi")
-	return q
-}
-
-func checksum(data []byte) string {
-	return fmt.Sprintf("%x", sha256.Sum256(data))
-}
-
-type SSHKey struct {
-	Pub  []byte
-	Priv []byte
-}
-
-type StorageConfig struct {
-	StorageClassName string
-	Size             resource.Quantity
-}
-
-// GetEnvVarValue returns the value of the named env var. Return an empty string when not found.
-func GetEnvVarValue(varName string) (string, error) {
-	ns, found := os.LookupEnv(varName)
-	if !found {
-		return "", fmt.Errorf("%s unable to find env var", varName)
-	}
-	return ns, nil
-}
-
-func getOperatorConditionName() string {
-	value, _ := GetEnvVarValue("OPERATOR_CONDITION_NAME")
-	return value
-}
-
-func mkCondition(conditiontype string, reason string, message string) metav1.Condition {
-	return metav1.Condition{
-		Type:               conditiontype,
-		Status:             metav1.ConditionUnknown,
-		Reason:             reason,
-		Message:            message,
-		LastTransitionTime: metav1.NewTime(time.Now()),
-	}
-}
-
-// Function to add or update conditions of a resource
-//
-// If a condition of type t does not exist, it creates a new condition,
-// otherwise updates with the new parameters
-
-func refreshCondition(conditions *[]metav1.Condition, conditiontype string, status metav1.ConditionStatus, reason string, message string) {
-	foundCondition := metav1.Condition{}
-	for i, condition := range *conditions {
-		if condition.Type == conditiontype {
-			foundCondition = condition
-			if condition.Status != status ||
-				condition.Reason != reason ||
-				condition.Message != message {
-				(*conditions)[i].Status = status
-				(*conditions)[i].Reason = reason
-				(*conditions)[i].Message = message
-				(*conditions)[i].LastTransitionTime = metav1.NewTime(time.Now())
-			}
-		}
-	}
-	if reflect.DeepEqual(foundCondition, metav1.Condition{}) {
-		*conditions = append([]metav1.Condition{mkCondition(conditiontype, reason, message)}, *conditions...)
-	}
-}
-
-func updateConditions(conditions *[]metav1.Condition, condType string, ready bool) {
-	var reason, message string
-	var status metav1.ConditionStatus
-	if ready {
-		reason = "Complete"
-		message = fmt.Sprintf("Initialization of %s service completed.", condType)
-		status = metav1.ConditionTrue
-	} else {
-		reason = "Awaiting"
-		message = fmt.Sprintf("Initializing %s service...", condType)
-		status = metav1.ConditionFalse
-	}
-	refreshCondition(conditions, condType, status, reason, message)
-}
-
-// ParseString function to easilly use templated string.
-//
-// Pass the template text.
-// And the data structure to be applied to the template
-func ParseString(text string, data any) (string, error) {
-	// Create Template object
-	templateBody, err := template.New("StringtoParse").Parse(text)
-	if err != nil {
-		return "", fmt.Errorf("Text not in the right format: " + text)
-	}
-
-	// Parsing Template
-	var buf bytes.Buffer
-	err = templateBody.Execute(&buf, data)
-	if err != nil {
-		return "", fmt.Errorf("failure while parsing template %s", text)
-	}
-
-	return buf.String(), nil
-}
-
-// IniSectionsChecksum takes one or more section name and compute a checkum
-func IniSectionsChecksum(cfg *ini.File, names []string) string {
-
-	var IniGetSectionBody = func(cfg *ini.File, section *ini.Section) string {
-		var s = ""
-		keys := section.KeyStrings()
-		sort.Strings(keys)
-		for _, k := range keys {
-			s = s + k + section.Key(k).String()
-		}
-		return s
-	}
-
-	var data = ""
-	for _, name := range names {
-		section, err := cfg.GetSection(name)
-		if err != nil {
-			panic("No such ini section: " + name)
-		}
-		data += IniGetSectionBody(cfg, section)
-	}
-
-	return checksum([]byte(data))
-}
-
-// IniGetSectionNamesByPrefix gets Ini section names filtered by prefix
-func IniGetSectionNamesByPrefix(cfg *ini.File, prefix string) []string {
-	filteredNames := []string{}
-	names := cfg.SectionStrings()
-	for _, n := range names {
-		if strings.HasPrefix(n, prefix) {
-			filteredNames = append(filteredNames, n)
-		}
-	}
-	return filteredNames
-}
-
-func mkSSHKey() SSHKey {
-	bitSize := 4096
-
-	generatePrivateKey := func(bitSize int) (*rsa.PrivateKey, error) {
-		// Private Key generation
-		privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
-		if err != nil {
-			return nil, err
-		}
-		// Validate Private Key
-		err = privateKey.Validate()
-		if err != nil {
-			return nil, err
-		}
-		return privateKey, nil
-	}
-
-	generatePublicKey := func(privatekey *rsa.PublicKey) ([]byte, error) {
-		publicRsaKey, err := ssh.NewPublicKey(privatekey)
-		if err != nil {
-			return nil, err
-		}
-
-		pubKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
-
-		return pubKeyBytes, nil
-	}
-
-	encodePrivateKeyToPEM := func(privateKey *rsa.PrivateKey) []byte {
-		// Get ASN.1 DER format
-		privDER := x509.MarshalPKCS1PrivateKey(privateKey)
-
-		// pem.Block
-		privBlock := pem.Block{
-			Type:    "RSA PRIVATE KEY",
-			Headers: nil,
-			Bytes:   privDER,
-		}
-
-		// Private key in PEM format
-		privatePEM := pem.EncodeToMemory(&privBlock)
-
-		return privatePEM
-	}
-
-	privateKey, err := generatePrivateKey(bitSize)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	publicKeyBytes, err := generatePublicKey(&privateKey.PublicKey)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	privateKeyBytes := encodePrivateKeyToPEM(privateKey)
-
-	return SSHKey{
-		Pub:  publicKeyBytes,
-		Priv: privateKeyBytes,
-	}
-}
-
-func MKSecretEnvVar(env string, secret string, key string) apiv1.EnvVar {
-	if key == "" {
-		key = secret
-	}
-	return apiv1.EnvVar{
-		Name: env,
-		ValueFrom: &apiv1.EnvVarSource{
-			SecretKeyRef: &apiv1.SecretKeySelector{
-				LocalObjectReference: apiv1.LocalObjectReference{
-					Name: secret,
-				},
-				Key: key,
-			},
-		},
-	}
-}
-
-var defaultPodSecurityContext = apiv1.PodSecurityContext{
-	RunAsNonRoot: pointer.Bool(true),
-	SeccompProfile: &apiv1.SeccompProfile{
-		Type: "RuntimeDefault",
-	},
-}
-
-func mkSecurityContext(privileged bool) *apiv1.SecurityContext {
-	return &apiv1.SecurityContext{
-		Privileged:               pointer.Bool(privileged),
-		AllowPrivilegeEscalation: pointer.Bool(privileged),
-		Capabilities: &apiv1.Capabilities{
-			Drop: []apiv1.Capability{
-				"ALL",
-			},
-		},
-	}
-}
-
-func MKEnvVar(env string, value string) apiv1.EnvVar {
-	return apiv1.EnvVar{
-		Name:  env,
-		Value: value,
-	}
-}
-
-func MKContainerPort(port int, name string) apiv1.ContainerPort {
-	return apiv1.ContainerPort{
-		Name:          name,
-		Protocol:      apiv1.ProtocolTCP,
-		ContainerPort: int32(port),
-	}
-}
-
-func MKVolumeCM(volumeName string, configMapRef string) apiv1.Volume {
-	return apiv1.Volume{
-		Name: volumeName,
-		VolumeSource: apiv1.VolumeSource{
-			ConfigMap: &apiv1.ConfigMapVolumeSource{
-				LocalObjectReference: apiv1.LocalObjectReference{
-					Name: configMapRef,
-				},
-			},
-		},
-	}
-}
-
-func mkVolumeSecret(name string, secretName ...string) apiv1.Volume {
-	secName := name
-	if secretName != nil {
-		secName = secretName[0]
-	}
-	return apiv1.Volume{
-		Name: name,
-		VolumeSource: apiv1.VolumeSource{
-			Secret: &apiv1.SecretVolumeSource{
-				SecretName: secName,
-			},
-		},
-	}
-}
-
-func mkEmptyDirVolume(name string) apiv1.Volume {
-	return apiv1.Volume{
-		Name: name,
-		VolumeSource: apiv1.VolumeSource{
-			EmptyDir: &apiv1.EmptyDirVolumeSource{},
-		},
-	}
-}
-
-func getStorageClassname(storageClassName string) string {
-	if storageClassName != "" {
-		return storageClassName
-	} else {
-		return "topolvm-provisioner"
-	}
-}
-
-func MkPVC(name string, ns string, storageParams StorageConfig, accessMode apiv1.PersistentVolumeAccessMode) apiv1.PersistentVolumeClaim {
-	qty := storageParams.Size
-	return apiv1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Spec: apiv1.PersistentVolumeClaimSpec{
-			StorageClassName: &storageParams.StorageClassName,
-			AccessModes:      []apiv1.PersistentVolumeAccessMode{accessMode},
-			Resources: apiv1.ResourceRequirements{
-				Requests: apiv1.ResourceList{
-					"storage": qty,
-				},
-			},
-		},
-	}
-}
-
-func (r *SFUtilContext) MkPVC(name string, storageParams StorageConfig, accessMode apiv1.PersistentVolumeAccessMode) apiv1.PersistentVolumeClaim {
-	return MkPVC(name, r.ns, storageParams, accessMode)
-}
-
-func MkStatefulset(
-	name string, ns string, replicas int32, serviceName string,
-	container apiv1.Container, pvc apiv1.PersistentVolumeClaim) appsv1.StatefulSet {
-	return appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Spec: appsv1.StatefulSetSpec{
-			Replicas:    int32Ptr(replicas),
-			ServiceName: serviceName,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "sf",
-					"run": name,
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "sf",
-						"run": name,
-					},
-				},
-				Spec: apiv1.PodSpec{
-					SecurityContext: &defaultPodSecurityContext,
-					Containers: []apiv1.Container{
-						container,
-					},
-					AutomountServiceAccountToken: boolPtr(false),
-				},
-			},
-			VolumeClaimTemplates: []apiv1.PersistentVolumeClaim{
-				pvc,
-			},
-		},
-	}
-}
-
-func MkContainer(name string, image string) apiv1.Container {
-	return apiv1.Container{
-		Name:            name,
-		Image:           image,
-		ImagePullPolicy: "IfNotPresent",
-		SecurityContext: mkSecurityContext(false),
-	}
-}
-
-// Create a default statefulset.
-func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig StorageConfig, replicas int32, accessMode apiv1.PersistentVolumeAccessMode, nameSuffix ...string) appsv1.StatefulSet {
-	serviceName := name
-	if nameSuffix != nil {
-		serviceName = name + "-" + nameSuffix[0]
-	}
-
-	if replicas == 0 {
-		replicas = 1
-	}
-
-	container := MkContainer(name, image)
-	pvc := r.MkPVC(name, storageConfig, accessMode)
-	return MkStatefulset(name, r.ns, replicas, serviceName, container, pvc)
-}
-
-// Create a default headless statefulset.
-func (r *SFUtilContext) mkHeadlessSatefulSet(name string, image string, storageConfig StorageConfig, replicas int32, accessMode apiv1.PersistentVolumeAccessMode) appsv1.StatefulSet {
-	return r.mkStatefulSet(name, image, storageConfig, replicas, accessMode, "headless")
-}
-
-// Create a default deployment.
-func (r *SFUtilContext) mkDeployment(name string, image string) appsv1.Deployment {
-	container := apiv1.Container{
-		Name:            name,
-		Image:           image,
-		ImagePullPolicy: "IfNotPresent",
-		SecurityContext: mkSecurityContext(false),
-	}
-	return appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.ns,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(1),
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "sf",
-					"run": name,
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "sf",
-						"run": name,
-					},
-				},
-				Spec: apiv1.PodSpec{
-					Containers: []apiv1.Container{
-						container,
-					},
-					AutomountServiceAccountToken: boolPtr(false),
-					SecurityContext:              &defaultPodSecurityContext,
-				},
-			},
-		},
-	}
-}
-
-// create a default service.
-func (r *SFUtilContext) mkService(name string, selector string, ports []int32, portName string) apiv1.Service {
-	servicePorts := []apiv1.ServicePort{}
-	for _, p := range ports {
-		servicePorts = append(
-			servicePorts,
-			apiv1.ServicePort{
-				Name:     fmt.Sprintf("%s-%d", portName, p),
-				Protocol: apiv1.ProtocolTCP,
-				Port:     p,
-			})
-	}
-	return apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.ns,
-		},
-		Spec: apiv1.ServiceSpec{
-			Ports: servicePorts,
-			Selector: map[string]string{
-				"app": "sf",
-				"run": selector,
-			},
-		}}
-}
-
-// create a headless service.
-func (r *SFUtilContext) mkHeadlessService(name string, selector string, ports []int32, portName string) apiv1.Service {
-	servicePorts := []apiv1.ServicePort{}
-	for _, p := range ports {
-		servicePorts = append(
-			servicePorts,
-			apiv1.ServicePort{
-				Name:     fmt.Sprintf("%s-%d", portName, p),
-				Protocol: apiv1.ProtocolTCP,
-				Port:     p,
-			})
-	}
-
-	return apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name + "-headless",
-			Namespace: r.ns,
-		},
-		Spec: apiv1.ServiceSpec{
-			ClusterIP: "None",
-			Ports:     servicePorts,
-			Selector: map[string]string{
-				"app": "sf",
-				"run": selector,
-			},
-		},
-	}
-}
-
-// --- readiness probes (validate a pod is ready to serve) ---
-func mkReadinessProbe(handler apiv1.ProbeHandler) *apiv1.Probe {
-	return &apiv1.Probe{
-		ProbeHandler:     handler,
-		TimeoutSeconds:   5,
-		PeriodSeconds:    10,
-		FailureThreshold: 20,
-	}
-}
-
-func MkReadinessCMDProbe(cmd []string) *apiv1.Probe {
-	handler := apiv1.ProbeHandler{
-		Exec: &apiv1.ExecAction{
-			Command: cmd,
-		}}
-	return mkReadinessProbe(handler)
-}
-
-func mkReadinessHTTPProbe(path string, port int) *apiv1.Probe {
-	handler := apiv1.ProbeHandler{
-		HTTPGet: &apiv1.HTTPGetAction{
-			Path: path,
-			Port: intstr.FromInt(port),
-		}}
-	return mkReadinessProbe(handler)
-}
-
-func mkReadinessTCPProbe(port int) *apiv1.Probe {
-	handler :=
-		apiv1.ProbeHandler{
-			TCPSocket: &apiv1.TCPSocketAction{
-				Port: intstr.FromInt(port),
-			}}
-	return mkReadinessProbe(handler)
-}
-
-// --- liveness probes (validate a pod is up and running) ---
-func mkLivenessProbe(handler apiv1.ProbeHandler) *apiv1.Probe {
-	return &apiv1.Probe{
-		ProbeHandler:        handler,
-		TimeoutSeconds:      5,
-		PeriodSeconds:       20,
-		InitialDelaySeconds: 5,
-	}
-}
-
-func MkLivenessCMDProbe(cmd []string) *apiv1.Probe {
-	handler := apiv1.ProbeHandler{
-		Exec: &apiv1.ExecAction{
-			Command: cmd,
-		}}
-	return mkLivenessProbe(handler)
-}
-
-func mkLiveHTTPProbe(path string, port int) *apiv1.Probe {
-	handler := apiv1.ProbeHandler{
-		HTTPGet: &apiv1.HTTPGetAction{
-			Path: path,
-			Port: intstr.FromInt(port),
-		}}
-	return mkLivenessProbe(handler)
-}
-
-// --- startup probes (validate when pod has been started running) ---
-func mkStartupProbe(handler apiv1.ProbeHandler) *apiv1.Probe {
-	return &apiv1.Probe{
-		ProbeHandler:        handler,
-		TimeoutSeconds:      2,
-		PeriodSeconds:       20,
-		FailureThreshold:    10,
-		InitialDelaySeconds: 5,
-	}
-}
-
-func MkStartupCMDProbe(cmd []string) *apiv1.Probe {
-	handler := apiv1.ProbeHandler{
-		Exec: &apiv1.ExecAction{
-			Command: cmd,
-		}}
-	return mkStartupProbe(handler)
-}
-
-func mkStartupHTTPProbe(path string, port int) *apiv1.Probe {
-	handler := apiv1.ProbeHandler{
-		HTTPGet: &apiv1.HTTPGetAction{
-			Path: path,
-			Port: intstr.FromInt(port),
-		}}
-	return mkStartupProbe(handler)
-}
+// --- API Interact primitive functions ---
 
 // GetM gets a resource, returning if it was found
 func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
@@ -748,7 +68,7 @@ func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
 	return true
 }
 
-// CreateR creates resources with the owner as the ownerReferences.
+// CreateR creates a resource with the owner as the ownerReferences.
 func (r *SFUtilContext) CreateR(obj client.Object) {
 	controllerutil.SetControllerReference(r.owner, obj, r.Scheme)
 	if err := r.Client.Create(r.ctx, obj); err != nil && !errors.IsAlreadyExists(err) {
@@ -756,111 +76,14 @@ func (r *SFUtilContext) CreateR(obj client.Object) {
 	}
 }
 
+// DeleteR delete a resource.
 func (r *SFUtilContext) DeleteR(obj client.Object) {
 	if err := r.Client.Delete(r.ctx, obj); err != nil {
 		panic(err.Error())
 	}
 }
 
-func IsStatefulSetRolloutDone(obj *appsv1.StatefulSet) bool {
-	return obj.Status.ObservedGeneration >= obj.Generation &&
-		obj.Status.Replicas == obj.Status.ReadyReplicas &&
-		obj.Status.Replicas == obj.Status.CurrentReplicas
-}
-
-func IsDeploymentRolloutDone(obj *appsv1.Deployment) bool {
-	return obj.Status.ObservedGeneration >= obj.Generation &&
-		obj.Status.Replicas == obj.Status.ReadyReplicas &&
-		obj.Status.Replicas == obj.Status.AvailableReplicas
-}
-
-func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
-	if dep.Status.ReadyReplicas > 0 {
-		var podList apiv1.PodList
-		matchLabels := dep.Spec.Selector.MatchLabels
-		labels := labels.SelectorFromSet(labels.Set(matchLabels))
-		labelSelectors := client.MatchingLabelsSelector{Selector: labels}
-		if err := r.Client.List(r.ctx, &podList, labelSelectors); err != nil {
-			panic(err.Error())
-		}
-		for _, pod := range podList.Items {
-			if pod.Status.Phase != "Running" {
-				r.log.V(1).Info(
-					"Waiting for statefulset state: Running",
-					"name", dep.GetName(),
-					"status", dep.Status)
-				return false
-			}
-			containerStatuses := pod.Status.ContainerStatuses
-			for _, containerStatus := range containerStatuses {
-				if !containerStatus.Ready {
-					r.log.V(1).Info(
-						"Waiting for statefulset containers ready",
-						"name", dep.GetName(),
-						"status", dep.Status,
-						"podStatus", pod.Status,
-						"containerStatuses", containerStatuses)
-					return false
-				}
-			}
-		}
-		// All containers in Ready state
-		return true && IsStatefulSetRolloutDone(dep)
-	}
-	// No Replica available
-	return false
-}
-
-func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
-	if dep.Status.ReadyReplicas > 0 {
-		return true && IsDeploymentRolloutDone(dep)
-	}
-	r.log.V(1).Info("Waiting for deployment", "name", dep.GetName())
-	return false
-}
-
-func (r *SFUtilContext) DeleteDeployment(name string) {
-	var dep appsv1.Deployment
-	if r.GetM(name, &dep) {
-		r.DeleteR(&dep)
-	}
-}
-
-func (r *SFUtilContext) DeleteStatefulSet(name string) {
-	var dep appsv1.StatefulSet
-	if r.GetM(name, &dep) {
-		r.DeleteR(&dep)
-	}
-}
-
-func (r *SFUtilContext) DeleteConfigMap(name string) {
-	var dep apiv1.ConfigMap
-	if r.GetM(name, &dep) {
-		r.DeleteR(&dep)
-	}
-}
-
-func (r *SFUtilContext) DeleteSecret(name string) {
-	var dep apiv1.Secret
-	if r.GetM(name, &dep) {
-		r.DeleteR(&dep)
-	}
-}
-
-func (r *SFUtilContext) DeleteService(name string) {
-	var srv apiv1.Service
-	if r.GetM(name, &srv) {
-		r.DeleteR(&srv)
-	}
-}
-
-func (r *SFUtilContext) DeleteRoute(name string) {
-	var route apiroutev1.Route
-	if r.GetM(name, &route) {
-		r.DeleteR(&route)
-	}
-}
-
+// UpdateR updates resource with the owner as the ownerReferences.
 func (r *SFUtilContext) UpdateR(obj client.Object) bool {
 	controllerutil.SetControllerReference(r.owner, obj, r.Scheme)
 	r.log.V(1).Info("Updating object", "name", obj.GetName())
@@ -871,24 +94,11 @@ func (r *SFUtilContext) UpdateR(obj client.Object) bool {
 	return true
 }
 
+// PatchR delete a resource.
 func (r *SFUtilContext) PatchR(obj client.Object, patch client.Patch) {
 	if err := r.Client.Patch(r.ctx, obj, patch); err != nil {
 		panic(err.Error())
 	}
-}
-
-func (r *SFUtilContext) DebugStatefulSet(name string) {
-	var dep appsv1.StatefulSet
-	if !r.GetM(name, &dep) {
-		panic("Can't find the statefulset")
-	}
-	// Disable probes
-	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
-	dep.Spec.Template.Spec.Containers[0].LivenessProbe = nil
-	// Set sleep command
-	dep.Spec.Template.Spec.Containers[0].Command = []string{"sleep", "infinity"}
-	r.UpdateR(&dep)
-	r.log.V(1).Info("Debugging service", "name", name)
 }
 
 // GetOrCreate does not change an existing object, update needs to be used manually.
@@ -904,331 +114,9 @@ func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
 	return true
 }
 
-// CreateYAML creates resource from YAML description
-func (r *SFUtilContext) CreateYAML(y string) {
-	var obj unstructured.Unstructured
-	if err := yaml.Unmarshal([]byte(y), &obj); err != nil {
-		panic(err.Error())
-	}
-	obj.SetNamespace(r.ns)
-	r.GetOrCreate(&obj)
-}
-
-func (r *SFUtilContext) CreateYAMLs(ys string) {
-	for _, y := range strings.Split(ys, "\n---\n") {
-		r.CreateYAML(y)
-	}
-}
-
-func CreateSecretFromFunc(name string, namespace string, getData func() string) apiv1.Secret {
-	return apiv1.Secret{
-		Data:       map[string][]byte{name: []byte(getData())},
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
-}
-
-func (r *SFUtilContext) GenerateSecret(name string, getData func() string) apiv1.Secret {
-	var secret apiv1.Secret
-	if !r.GetM(name, &secret) {
-		r.log.V(1).Info("Creating secret", "name", name)
-		secret = CreateSecretFromFunc(name, r.ns, getData)
-		r.CreateR(&secret)
-	}
-	return secret
-}
-
-func NewUUIDString() string {
-	return uuid.New().String()
-}
-
-// GenerateSecretUUID generates a secret if needed using a uuid4 value.
-func (r *SFUtilContext) GenerateSecretUUID(name string) apiv1.Secret {
-	return r.GenerateSecret(name, NewUUIDString)
-}
-
-func CreateSSHKeySecret(name string, namespace string) apiv1.Secret {
-	var secret apiv1.Secret
-	sshkey := mkSSHKey()
-	secret = apiv1.Secret{
-		Data: map[string][]byte{
-			"priv": sshkey.Priv,
-			"pub":  sshkey.Pub,
-		},
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
-	return secret
-}
-
-func (r *SFUtilContext) EnsureSSHKey(name string) {
-	var secret apiv1.Secret
-	if !r.GetM(name, &secret) {
-		r.log.V(1).Info("Creating ssh key", "name", name)
-		secret := CreateSSHKeySecret(name, r.ns)
-		r.CreateR(&secret)
-	}
-}
-
-// EnsureConfigMap ensures a config map exists.
-func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string) apiv1.ConfigMap {
-	name := baseName + "-config-map"
-	var cm apiv1.ConfigMap
-	if !r.GetM(name, &cm) {
-		r.log.V(1).Info("Creating config", "name", name)
-		cm = apiv1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns},
-			Data:       data,
-		}
-		r.CreateR(&cm)
-	} else {
-		if !reflect.DeepEqual(cm.Data, data) {
-			r.log.V(1).Info("Updating config", "name", name)
-			cm.Data = data
-			r.UpdateR(&cm)
-		}
-	}
-	return cm
-}
-
-func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
-	var current apiv1.Secret
-	name := secret.GetName()
-	if !r.GetM(name, &current) {
-		r.log.V(1).Info("Creating secret", "name", name)
-		r.CreateR(secret)
-	} else {
-		if !reflect.DeepEqual(current.Data, secret.Data) {
-			r.log.V(1).Info("Updating secret", "name", name)
-			current.Data = secret.Data
-			r.UpdateR(&current)
-		}
-	}
-}
-
-func mapEquals(m1 *map[string]string, m2 *map[string]string) bool {
-	return reflect.DeepEqual(m1, m2)
-}
-
-func (r *SFUtilContext) EnsureLocalCA() {
-	// https://cert-manager.io/docs/configuration/selfsigned/#bootstrapping-ca-issuers
-	selfSignedIssuer := MKSelfSignedIssuer("selfsigned-issuer", r.ns)
-	CAIssuer := MKCAIssuer("ca-issuer", r.ns)
-	duration, _ := time.ParseDuration("87600h") // 10y
-	commonName := "cacert"
-	rootCACertificate := MKBaseCertificate("ca-cert", r.ns, "selfsigned-issuer", []string{"caroot"},
-		"ca-cert", true, duration, nil, &commonName, nil)
-	r.GetOrCreate(&selfSignedIssuer)
-	r.GetOrCreate(&CAIssuer)
-	r.GetOrCreate(&rootCACertificate)
-}
-
-func MkJob(name string, ns string, container apiv1.Container) batchv1.Job {
-	return batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Spec: batchv1.JobSpec{
-			Template: apiv1.PodTemplateSpec{
-				Spec: apiv1.PodSpec{
-					Containers: []apiv1.Container{
-						container,
-					},
-					RestartPolicy:   "Never",
-					SecurityContext: &defaultPodSecurityContext,
-				},
-			},
-		}}
-}
-
-func (r *SFUtilContext) mkJob(name string, container apiv1.Container) batchv1.Job {
-	return MkJob(name, r.ns, container)
-}
-
-// This function returns false when the resource is just created/updated
-func (r *SFUtilContext) ensureRoute(route apiroutev1.Route, name string) bool {
-	current := apiroutev1.Route{}
-	found := r.GetM(name, &current)
-	if !found {
-		r.log.V(1).Info("Creating route...", "name", name)
-		r.CreateR(&route)
-		return false
-	} else {
-		// Route already exist - check if we need to update the Route
-		// Use the String repr of the RouteSpec to compare for changes
-		// This comparaison mechanics may fail in case of some Route Spec default values
-		// not specified in the wanted version.
-		wantedRepr := route.Spec.String()
-		currentRepr := current.Spec.String()
-		if wantedRepr != currentRepr {
-			r.log.V(1).Info("Updating route...", "name", name)
-			current.Spec = route.Spec
-			r.UpdateR(&current)
-			return false
-		}
-	}
-	return true
-}
-
-func MkHTTSRoute(
-	name string, ns string, host string, serviceName string, path string,
-	port int, annotations map[string]string, fqdn string, customTLS *apiroutev1.TLSConfig) apiroutev1.Route {
-	tls := apiroutev1.TLSConfig{
-		InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
-		Termination:                   apiroutev1.TLSTerminationEdge,
-	}
-	if customTLS != nil {
-		tls = *customTLS
-	}
-	return apiroutev1.Route{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   ns,
-			Annotations: annotations,
-		},
-		Spec: apiroutev1.RouteSpec{
-			TLS:  &tls,
-			Host: host + "." + fqdn,
-			To: apiroutev1.RouteTargetReference{
-				Kind:   "Service",
-				Name:   serviceName,
-				Weight: pointer.Int32(100),
-			},
-			Port: &apiroutev1.RoutePort{
-				TargetPort: intstr.FromInt(port),
-			},
-			Path:           path,
-			WildcardPolicy: "None",
-		},
-	}
-}
-
-func GetCustomRouteSSLSecretName(host string) string {
-	return host + "-ssl-cert"
-}
-
-func getLetsEncryptServer(le sfv1.LetsEncryptSpec) (string, string) {
-	var serverURL string
-	name := ""
-	switch server := le.Server; server {
-	case sfv1.LEServerProd:
-		serverURL = "https://acme-v02.api.letsencrypt.org/directory"
-		name = "cm-le-issuer-production"
-	case sfv1.LEServerStaging:
-		serverURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
-		name = "cm-le-issuer-staging"
-	}
-	return serverURL, name
-}
-
-func (r *SFUtilContext) extractStaticTLSFromSecret(name string, host string) (bool, []byte, []byte, []byte) {
-	var customSSLSecret apiv1.Secret
-	customSSLSecretName := GetCustomRouteSSLSecretName(host)
-
-	// We set a place holder secret to ensure that the Secret is owned (ControllerReference)
-	// Or we adopt the existing secret
-	if !r.GetM(customSSLSecretName, &customSSLSecret) {
-		r.CreateR(&apiv1.Secret{
-			Data:       map[string][]byte{},
-			ObjectMeta: metav1.ObjectMeta{Name: customSSLSecretName, Namespace: r.ns}})
-		return false, nil, nil, nil
-	} else {
-		if len(customSSLSecret.GetOwnerReferences()) == 0 {
-			r.log.V(1).Info("Adopting the route secret to set the owner reference", "secret", customSSLSecretName, "route name", name)
-			if !r.UpdateR(&customSSLSecret) {
-				return false, nil, nil, nil
-			}
-		}
-	}
-	// Fetching secret expected TLS Keys content
-	return true, customSSLSecret.Data["CA"], customSSLSecret.Data["crt"], customSSLSecret.Data["key"]
-}
-
-func (r *SFUtilContext) extractTLSFromLECertificateSecret(name string, host string, fqdn string, le sfv1.LetsEncryptSpec) (bool, []byte, []byte, []byte) {
-	_, issuerName := getLetsEncryptServer(le)
-	dnsNames := []string{host + "." + fqdn}
-	certificate := MKCertificate(name, r.ns, issuerName, dnsNames, name+"-tls", nil)
-
-	current := certv1.Certificate{}
-
-	found := r.GetM(name, &current)
-	if !found {
-		r.log.V(1).Info("Creating Cert-Manager LetsEncrypt Certificate ...", "name", name)
-		r.CreateR(&certificate)
-		return false, nil, nil, nil
-	} else {
-		if current.Spec.IssuerRef.Name != certificate.Spec.IssuerRef.Name ||
-			!reflect.DeepEqual(current.Spec.DNSNames, certificate.Spec.DNSNames) {
-			// We need to update the Certficate
-			r.log.V(1).Info("Updating Cert-Manager LetsEncrypt Certificate ...", "name", name)
-			current.Spec = *certificate.Spec.DeepCopy()
-			r.UpdateR(&current)
-			return false, nil, nil, nil
-		}
-		// The certificate is found and have the required Spec, so let's check
-		// the Ready status
-		ready := isCertificateReady(&current)
-
-		if ready {
-			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is Ready ...", "name", name)
-			var leSSLSecret apiv1.Secret
-			if r.GetM(current.Spec.SecretName, &leSSLSecret) {
-				// Extract the TLS material
-				return true, nil, leSSLSecret.Data["tls.crt"], leSSLSecret.Data["tls.key"]
-				// Nothing more to do the rest of the function will setup the Route's TLS
-			} else {
-				// We are not able to find the Certificate's secret
-				r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is Ready but waiting for the Secret ...",
-					"name", name, "secret", current.Spec.SecretName)
-				return false, nil, nil, nil
-			}
-		} else {
-			// Return false to force a new Reconcile as the certificate is not Ready yet
-			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is not Ready yet ...", "name", name)
-			return false, nil, nil, nil
-		}
-	}
-}
-
-// This function returns false when the controller reconcile loop must be re-triggered.
-// Returns true when the Route is 'Ready'
-func (r *SFUtilContext) ensureHTTPSRoute(
-	name string, host string, serviceName string, path string,
-	port int, annotations map[string]string, fqdn string, le *sfv1.LetsEncryptSpec) bool {
-
-	var tlsDataReady bool
-	var sslCA, sslCrt, sslKey []byte
-
-	if le == nil {
-		// Letsencrypt config has not been set so we check the `customSSLSecretName` Secret
-		// for any custom TLS data to setup the Route
-		tlsDataReady, sslCA, sslCrt, sslKey = r.extractStaticTLSFromSecret(name, host)
-	} else {
-		// Letsencrypt config has been set so we ensure we set a Certificate via the
-		// cert-manager Issuer and then we'll setup the Route based on the Certificate's Secret
-		tlsDataReady, sslCA, sslCrt, sslKey = r.extractTLSFromLECertificateSecret(name, host, fqdn, *le)
-	}
-
-	if !tlsDataReady {
-		return false
-	}
-
-	var route apiroutev1.Route
-
-	// Checking if there is any content and setting the Route with TLS data from the Secret
-	if len(sslCrt) > 0 && len(sslKey) > 0 {
-		r.log.V(1).Info("SSL certificate for Route detected", "host", host, "route name", name)
-		tls := apiroutev1.TLSConfig{
-			InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
-			Termination:                   apiroutev1.TLSTerminationEdge,
-			Certificate:                   string(sslCrt),
-			Key:                           string(sslKey),
-			CACertificate:                 string(sslCA),
-		}
-		route = MkHTTSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, &tls)
-	} else {
-		route = MkHTTSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, nil)
-	}
-	return r.ensureRoute(route, name)
-}
-
+// PodExec connects to a container's Pod and execute a command
+// Stdout and Stderr is output on the caller's Stdout
+// The function returns an Error for any issue
 func (r *SFUtilContext) PodExec(pod string, container string, command []string) error {
 	r.log.V(1).Info("Running pod execution", "pod", pod, "command", command)
 	execReq := r.RESTClient.
@@ -1262,114 +150,355 @@ func (r *SFUtilContext) PodExec(pod string, container string, command []string) 
 	return nil
 }
 
-func MKBaseCertificate(name string, ns string, issuerName string,
-	dnsNames []string, secretName string, isCA bool, duration time.Duration,
-	usages []certv1.KeyUsage, commonName *string,
-	privateKey *certv1.CertificatePrivateKey) certv1.Certificate {
-	cert := certv1.Certificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Spec: certv1.CertificateSpec{
-			DNSNames:   dnsNames,
-			Duration:   &metav1.Duration{Duration: duration},
-			SecretName: secretName,
-			IssuerRef: cmmeta.ObjectReference{
-				Kind: "Issuer",
-				Name: issuerName,
-			},
-			IsCA:   isCA,
-			Usages: usages,
-		},
-	}
-	if commonName != nil {
-		cert.Spec.CommonName = *commonName
-	}
-	if privateKey != nil {
-		cert.Spec.PrivateKey = privateKey
-	}
-	return cert
-}
+// --- Ensure resources functions ---
 
-func MKCertificate(name string, ns string, issuerName string,
-	dnsNames []string, secretName string, privateKey *certv1.CertificatePrivateKey) certv1.Certificate {
-	duration, _ := time.ParseDuration("2160h") // 3 months (default)
-	usages := []certv1.KeyUsage{
-		certv1.UsageServerAuth,
-		certv1.UsageClientAuth,
-		certv1.UsageDigitalSignature,
-		certv1.UsageKeyEncipherment,
-	}
-	return MKBaseCertificate(
-		name, ns, issuerName, dnsNames, secretName, false, duration, usages, nil, privateKey)
-}
-
-func isCertificateReady(cert *certv1.Certificate) bool {
-	for _, condition := range cert.Status.Conditions {
-		if condition.Type == "Ready" && condition.Status == "True" {
-			return true
+// EnsureConfigMap ensures a config map exist
+// The ConfigMap is updated if needed
+func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string) apiv1.ConfigMap {
+	name := baseName + "-config-map"
+	var cm apiv1.ConfigMap
+	if !r.GetM(name, &cm) {
+		r.log.V(1).Info("Creating config", "name", name)
+		cm = apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns},
+			Data:       data,
+		}
+		r.CreateR(&cm)
+	} else {
+		if !reflect.DeepEqual(cm.Data, data) {
+			r.log.V(1).Info("Updating config", "name", name)
+			cm.Data = data
+			r.UpdateR(&cm)
 		}
 	}
+	return cm
+}
+
+// EnsureSecret ensures a Secret exist
+// The Secret is updated if needed
+func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
+	var current apiv1.Secret
+	name := secret.GetName()
+	if !r.GetM(name, &current) {
+		r.log.V(1).Info("Creating secret", "name", name)
+		r.CreateR(secret)
+	} else {
+		if !reflect.DeepEqual(current.Data, secret.Data) {
+			r.log.V(1).Info("Updating secret", "name", name)
+			current.Data = secret.Data
+			r.UpdateR(&current)
+		}
+	}
+}
+
+// ensureSecretFromFunc ensure a Secret exists
+// If it does not the Secret is created from the getData function
+// This function does not support Secret update
+// This function returns the Secret
+func (r *SFUtilContext) ensureSecretFromFunc(name string, getData func() string) apiv1.Secret {
+	var secret apiv1.Secret
+	if !r.GetM(name, &secret) {
+		r.log.V(1).Info("Creating secret", "name", name)
+		secret = base.MkSecretFromFunc(name, r.ns, getData)
+		r.CreateR(&secret)
+	}
+	return secret
+}
+
+// EnsureSecretUUID ensures a Secret caontaining an UUID
+// This function does not support update
+func (r *SFUtilContext) EnsureSecretUUID(name string) apiv1.Secret {
+	return r.ensureSecretFromFunc(name, utils.NewUUIDString)
+}
+
+// EnsureSSHKeySecret ensures a Secret exists container an autogenerated SSH key pair
+// If it does not exixtthe Secret is created
+// This function does not support Secret update
+func (r *SFUtilContext) EnsureSSHKeySecret(name string) {
+	var secret apiv1.Secret
+	if !r.GetM(name, &secret) {
+		r.log.V(1).Info("Creating ssh key", "name", name)
+		secret := base.MkSSHKeySecret(name, r.ns)
+		r.CreateR(&secret)
+	}
+}
+
+// ensureRoute ensures the Route exist
+// The Route is updated if needed
+// The function returns false when the resource is just created/updated
+func (r *SFUtilContext) ensureRoute(route apiroutev1.Route, name string) bool {
+	current := apiroutev1.Route{}
+	found := r.GetM(name, &current)
+	if !found {
+		r.log.V(1).Info("Creating route...", "name", name)
+		r.CreateR(&route)
+		return false
+	} else {
+		// Route already exist - check if we need to update the Route
+		// Use the String repr of the RouteSpec to compare for changes
+		// This comparaison mechanics may fail in case of some Route Spec default values
+		// not specified in the wanted version.
+		wantedRepr := route.Spec.String()
+		currentRepr := current.Spec.String()
+		if wantedRepr != currentRepr {
+			r.log.V(1).Info("Updating route...", "name", name)
+			current.Spec = route.Spec
+			r.UpdateR(&current)
+			return false
+		}
+	}
+	return true
+}
+
+// ensureHTTPSRoute ensures a HTTPS enabled Route exist
+// The Route is updated if needed
+// The function returns false when the controller reconcile loop must be re-triggered because
+// the route setting changed.
+func (r *SFUtilContext) ensureHTTPSRoute(
+	name string, host string, serviceName string, path string,
+	port int, annotations map[string]string, fqdn string, le *sfv1.LetsEncryptSpec) bool {
+
+	var tlsDataReady bool
+	var sslCA, sslCrt, sslKey []byte
+
+	if le == nil {
+		// Letsencrypt config has not been set so we check the `customSSLSecretName` Secret
+		// for any custom TLS data to setup the Route
+		tlsDataReady, sslCA, sslCrt, sslKey = r.extractStaticTLSFromSecret(name, host)
+	} else {
+		// Letsencrypt config has been set so we ensure we set a Certificate via the
+		// cert-manager Issuer and then we'll setup the Route based on the Certificate's Secret
+		tlsDataReady, sslCA, sslCrt, sslKey = r.extractTLSFromLECertificateSecret(name, host, fqdn, *le)
+	}
+
+	if !tlsDataReady {
+		return false
+	}
+
+	var route apiroutev1.Route
+
+	// Checking if there is any content and setting the Route with TLS data from the Secret
+	if len(sslCrt) > 0 && len(sslKey) > 0 {
+		r.log.V(1).Info("SSL certificate for Route detected", "host", host, "route name", name)
+		tls := apiroutev1.TLSConfig{
+			InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
+			Termination:                   apiroutev1.TLSTerminationEdge,
+			Certificate:                   string(sslCrt),
+			Key:                           string(sslKey),
+			CACertificate:                 string(sslCA),
+		}
+		route = base.MkHTTPSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, &tls)
+	} else {
+		route = base.MkHTTPSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, nil)
+	}
+	return r.ensureRoute(route, name)
+}
+
+// EnsureLocalCA ensures cert-manager resources exists to enable of local CA Issuer
+// This function does not support update
+func (r *SFUtilContext) EnsureLocalCA() {
+	// https://cert-manager.io/docs/configuration/selfsigned/#bootstrapping-ca-issuers
+	selfSignedIssuer := cert.MkSelfSignedIssuer("selfsigned-issuer", r.ns)
+	CAIssuer := cert.MkCAIssuer("ca-issuer", r.ns)
+	duration, _ := time.ParseDuration("87600h") // 10y
+	commonName := "cacert"
+	rootCACertificate := cert.MkBaseCertificate("ca-cert", r.ns, "selfsigned-issuer", []string{"caroot"},
+		"ca-cert", true, duration, nil, &commonName, nil)
+	r.GetOrCreate(&selfSignedIssuer)
+	r.GetOrCreate(&CAIssuer)
+	r.GetOrCreate(&rootCACertificate)
+}
+
+// --- Functions and Structs below are helper for handle cert-manager / Let's Encrypt ---
+
+// getLetsEncryptServer returns a tuple with the production or statging URL based on sfv1.LetsEncryptSpec
+// and the a proposed name for the Issuer.
+func getLetsEncryptServer(le sfv1.LetsEncryptSpec) (string, string) {
+	var serverURL string
+	name := ""
+	switch server := le.Server; server {
+	case sfv1.LEServerProd:
+		serverURL = "https://acme-v02.api.letsencrypt.org/directory"
+		name = "cm-le-issuer-production"
+	case sfv1.LEServerStaging:
+		serverURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
+		name = "cm-le-issuer-staging"
+	}
+	return serverURL, name
+}
+
+// This function ensures the cert-manager / Let's Encrypt issuer is created
+// Thus function does not support update
+func (r *SFUtilContext) ensureLetsEncryptIssuer(le sfv1.LetsEncryptSpec) bool {
+	server, name := getLetsEncryptServer(le)
+	issuer := cert.MkLetsEncryptIssuer(name, r.ns, server)
+	return r.GetOrCreate(&issuer)
+}
+
+//----------------------------------------------------------------------------
+// --- TODO clean functions below / remove useless code and set doc string ---
+//----------------------------------------------------------------------------
+
+func getStorageClassname(storageClassName string) string {
+	if storageClassName != "" {
+		return storageClassName
+	} else {
+		return "topolvm-provisioner"
+	}
+}
+
+// Create a default statefulset.
+func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, replicas int32, accessMode apiv1.PersistentVolumeAccessMode, nameSuffix ...string) appsv1.StatefulSet {
+	serviceName := name
+	if nameSuffix != nil {
+		serviceName = name + "-" + nameSuffix[0]
+	}
+
+	if replicas == 0 {
+		replicas = 1
+	}
+
+	container := base.MkContainer(name, image)
+	pvc := base.MkPVC(name, r.ns, storageConfig, accessMode)
+	return base.MkStatefulset(name, r.ns, replicas, serviceName, container, pvc)
+}
+
+// Create a default headless statefulset.
+func (r *SFUtilContext) mkHeadlessSatefulSet(
+	name string, image string, storageConfig base.StorageConfig,
+	replicas int32, accessMode apiv1.PersistentVolumeAccessMode) appsv1.StatefulSet {
+	return r.mkStatefulSet(name, image, storageConfig, replicas, accessMode, "headless")
+}
+
+func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
+	if dep.Status.ReadyReplicas > 0 {
+		var podList apiv1.PodList
+		matchLabels := dep.Spec.Selector.MatchLabels
+		labels := labels.SelectorFromSet(labels.Set(matchLabels))
+		labelSelectors := client.MatchingLabelsSelector{Selector: labels}
+		if err := r.Client.List(r.ctx, &podList, labelSelectors); err != nil {
+			panic(err.Error())
+		}
+		for _, pod := range podList.Items {
+			if pod.Status.Phase != "Running" {
+				r.log.V(1).Info(
+					"Waiting for statefulset state: Running",
+					"name", dep.GetName(),
+					"status", dep.Status)
+				return false
+			}
+			containerStatuses := pod.Status.ContainerStatuses
+			for _, containerStatus := range containerStatuses {
+				if !containerStatus.Ready {
+					r.log.V(1).Info(
+						"Waiting for statefulset containers ready",
+						"name", dep.GetName(),
+						"status", dep.Status,
+						"podStatus", pod.Status,
+						"containerStatuses", containerStatuses)
+					return false
+				}
+			}
+		}
+		// All containers in Ready state
+		return true && base.IsStatefulSetRolloutDone(dep)
+	}
+	// No Replica available
 	return false
 }
 
-func MKLetsEncryptIssuer(name string, ns string, server string) certv1.Issuer {
-	return certv1.Issuer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Spec: certv1.IssuerSpec{
-			IssuerConfig: certv1.IssuerConfig{
-				ACME: &cmacme.ACMEIssuer{
-					Server:         server,
-					PreferredChain: "ISRG Root X1",
-					PrivateKey: cmmeta.SecretKeySelector{
-						LocalObjectReference: cmmeta.LocalObjectReference{
-							Name: name,
-						},
-					},
-					Solvers: []cmacme.ACMEChallengeSolver{
-						{
-							HTTP01: &cmacme.ACMEChallengeSolverHTTP01{
-								Ingress: &cmacme.ACMEChallengeSolverHTTP01Ingress{},
-							},
-						},
-					},
-				},
-			},
-		},
+func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
+	if base.IsDeploymentReady(dep) {
+		return true
 	}
+	r.log.V(1).Info("Waiting for deployment", "name", dep.GetName())
+	return false
 }
 
-func MKSelfSignedIssuer(name string, ns string) certv1.Issuer {
-	return certv1.Issuer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Spec: certv1.IssuerSpec{
-			IssuerConfig: certv1.IssuerConfig{
-				SelfSigned: &certv1.SelfSignedIssuer{},
-			},
-		},
+func (r *SFUtilContext) DebugStatefulSet(name string) {
+	var dep appsv1.StatefulSet
+	if !r.GetM(name, &dep) {
+		panic("Can't find the statefulset")
 	}
+	// Disable probes
+	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
+	dep.Spec.Template.Spec.Containers[0].LivenessProbe = nil
+	// Set sleep command
+	dep.Spec.Template.Spec.Containers[0].Command = []string{"sleep", "infinity"}
+	r.UpdateR(&dep)
+	r.log.V(1).Info("Debugging service", "name", name)
 }
 
-func MKCAIssuer(name string, ns string) certv1.Issuer {
-	return certv1.Issuer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Spec: certv1.IssuerSpec{
-			IssuerConfig: certv1.IssuerConfig{
-				CA: &certv1.CAIssuer{
-					SecretName: "ca-cert",
-				},
-			},
-		},
+func GetCustomRouteSSLSecretName(host string) string {
+	return host + "-ssl-cert"
+}
+
+func (r *SFUtilContext) extractStaticTLSFromSecret(name string, host string) (bool, []byte, []byte, []byte) {
+	var customSSLSecret apiv1.Secret
+	customSSLSecretName := GetCustomRouteSSLSecretName(host)
+
+	// We set a place holder secret to ensure that the Secret is owned (ControllerReference)
+	// Or we adopt the existing secret
+	if !r.GetM(customSSLSecretName, &customSSLSecret) {
+		r.CreateR(&apiv1.Secret{
+			Data:       map[string][]byte{},
+			ObjectMeta: metav1.ObjectMeta{Name: customSSLSecretName, Namespace: r.ns}})
+		return false, nil, nil, nil
+	} else {
+		if len(customSSLSecret.GetOwnerReferences()) == 0 {
+			r.log.V(1).Info("Adopting the route secret to set the owner reference", "secret", customSSLSecretName, "route name", name)
+			if !r.UpdateR(&customSSLSecret) {
+				return false, nil, nil, nil
+			}
+		}
+	}
+	// Fetching secret expected TLS Keys content
+	return true, customSSLSecret.Data["CA"], customSSLSecret.Data["crt"], customSSLSecret.Data["key"]
+}
+
+func (r *SFUtilContext) extractTLSFromLECertificateSecret(name string, host string, fqdn string, le sfv1.LetsEncryptSpec) (bool, []byte, []byte, []byte) {
+	_, issuerName := getLetsEncryptServer(le)
+	dnsNames := []string{host + "." + fqdn}
+	certificate := cert.MkCertificate(name, r.ns, issuerName, dnsNames, name+"-tls", nil)
+
+	current := certv1.Certificate{}
+
+	found := r.GetM(name, &current)
+	if !found {
+		r.log.V(1).Info("Creating Cert-Manager LetsEncrypt Certificate ...", "name", name)
+		r.CreateR(&certificate)
+		return false, nil, nil, nil
+	} else {
+		if current.Spec.IssuerRef.Name != certificate.Spec.IssuerRef.Name ||
+			!reflect.DeepEqual(current.Spec.DNSNames, certificate.Spec.DNSNames) {
+			// We need to update the Certficate
+			r.log.V(1).Info("Updating Cert-Manager LetsEncrypt Certificate ...", "name", name)
+			current.Spec = *certificate.Spec.DeepCopy()
+			r.UpdateR(&current)
+			return false, nil, nil, nil
+		}
+		// The certificate is found and have the required Spec, so let's check
+		// the Ready status
+		ready := cert.IsCertificateReady(&current)
+
+		if ready {
+			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is Ready ...", "name", name)
+			var leSSLSecret apiv1.Secret
+			if r.GetM(current.Spec.SecretName, &leSSLSecret) {
+				// Extract the TLS material
+				return true, nil, leSSLSecret.Data["tls.crt"], leSSLSecret.Data["tls.key"]
+				// Nothing more to do the rest of the function will setup the Route's TLS
+			} else {
+				// We are not able to find the Certificate's secret
+				r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is Ready but waiting for the Secret ...",
+					"name", name, "secret", current.Spec.SecretName)
+				return false, nil, nil, nil
+			}
+		} else {
+			// Return false to force a new Reconcile as the certificate is not Ready yet
+			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is not Ready yet ...", "name", name)
+			return false, nil, nil, nil
+		}
 	}
 }
 
@@ -1415,32 +544,8 @@ func (r *SFUtilContext) getSecretData(name string) ([]byte, error) {
 	return r.getSecretDataFromKey(name, "")
 }
 
-func (r *SFUtilContext) ImageToBase64(imagepath string) (string, error) {
-	// Read the file to bytes
-	bytes, err := os.ReadFile(imagepath)
-	if err != nil {
-		r.log.V(1).Error(err, "Something wrong while reading file "+imagepath)
-		return "", err
-	}
-
-	var base64Encoding string
-
-	mimeType := http.DetectContentType(bytes)
-
-	switch mimeType {
-	case "image/jpeg":
-		base64Encoding += "data:image/jpeg;base64,"
-	case "image/png":
-		base64Encoding += "data:image/png;base64,"
-	}
-
-	encodedimage := base64.StdEncoding.EncodeToString(bytes)
-
-	return encodedimage, nil
-}
-
-func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName string) StorageConfig {
-	var size = Qty1Gi()
+func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName string) base.StorageConfig {
+	var size = utils.Qty1Gi()
 	var className = getStorageClassname(storageClassName)
 	if !storageSpec.Size.IsZero() {
 		size = storageSpec.Size
@@ -1448,7 +553,7 @@ func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName 
 	if storageSpec.ClassName != "" {
 		className = storageSpec.ClassName
 	}
-	return StorageConfig{
+	return base.StorageConfig{
 		StorageClassName: className,
 		Size:             size,
 	}
@@ -1512,22 +617,11 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 	return true
 }
 
-func (r *SFUtilContext) ensureLetsEncryptIssuer(le sfv1.LetsEncryptSpec) bool {
-	server, name := getLetsEncryptServer(le)
-	issuer := MKLetsEncryptIssuer(name, r.ns, server)
-	return r.GetOrCreate(&issuer)
-}
-
 // SFController struct-context scoped utils //
 
-func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) StorageConfig {
+func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) base.StorageConfig {
 	return BaseGetStorageConfOrDefault(storageSpec, r.cr.Spec.StorageClassName)
 }
-
-func int32Ptr(i int32) *int32 { return &i }
-func boolPtr(b bool) *bool    { return &b }
-
-var Execmod int32 = 493 // decimal for 0755 octal
 
 func (r *SFController) isConfigRepoSet() bool {
 	return r.cr.Spec.ConfigLocation.BaseURL != "" &&
@@ -1535,7 +629,7 @@ func (r *SFController) isConfigRepoSet() bool {
 		r.cr.Spec.ConfigLocation.ZuulConnectionName != ""
 }
 
-func (r *SFController) MKClientDNSNames(serviceName string) []string {
+func (r *SFController) MkClientDNSNames(serviceName string) []string {
 	return []string{
 		serviceName,
 		fmt.Sprintf("%s.%s", serviceName, r.owner.GetName()),

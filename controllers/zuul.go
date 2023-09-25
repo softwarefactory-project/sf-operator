@@ -18,6 +18,10 @@ import (
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
 
 const zuulWEBPort = 9000
@@ -74,8 +78,8 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 		},
 	}
 	envs := []apiv1.EnvVar{
-		MKEnvVar("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
-		MKEnvVar("HOME", "/var/lib/zuul"),
+		base.MkEnvVar("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
+		base.MkEnvVar("HOME", "/var/lib/zuul"),
 	}
 	if service == "zuul-scheduler" {
 		volumes = append(volumes,
@@ -104,9 +108,9 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 func mkZuulVolumes(service string) []apiv1.Volume {
 	var mod int32 = 256 // decimal for 0400 octal
 	volumes := []apiv1.Volume{
-		mkVolumeSecret("ca-cert"),
-		mkVolumeSecret("zuul-config"),
-		mkVolumeSecret("zookeeper-client-tls"),
+		base.MkVolumeSecret("ca-cert"),
+		base.MkVolumeSecret("zuul-config"),
+		base.MkVolumeSecret("zookeeper-client-tls"),
 		{
 			Name: "zuul-ssh-key",
 			VolumeSource: apiv1.VolumeSource{
@@ -120,7 +124,7 @@ func mkZuulVolumes(service string) []apiv1.Volume {
 	if !isStatefulset(service) {
 		// statefulset already has a PV for the service-name,
 		// for the other, we use an empty dir.
-		volumes = append(volumes, mkEmptyDirVolume(service))
+		volumes = append(volumes, base.MkEmptyDirVolume(service))
 	}
 	if service == "zuul-scheduler" {
 		toolingVol := apiv1.Volume{
@@ -130,7 +134,7 @@ func mkZuulVolumes(service string) []apiv1.Volume {
 					LocalObjectReference: apiv1.LocalObjectReference{
 						Name: "zuul-scheduler-tooling-config-map",
 					},
-					DefaultMode: &Execmod,
+					DefaultMode: &utils.Execmod,
 				},
 			},
 		}
@@ -142,43 +146,40 @@ func mkZuulVolumes(service string) []apiv1.Volume {
 func (r *SFController) getTenantsEnvs() []apiv1.EnvVar {
 	if r.isConfigRepoSet() {
 		return []apiv1.EnvVar{
-			MKEnvVar("CONFIG_REPO_SET", "TRUE"),
-			MKEnvVar("CONFIG_REPO_BASE_URL", strings.TrimSuffix(r.cr.Spec.ConfigLocation.BaseURL, "/")),
-			MKEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
-			MKEnvVar("CONFIG_REPO_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName),
+			base.MkEnvVar("CONFIG_REPO_SET", "TRUE"),
+			base.MkEnvVar("CONFIG_REPO_BASE_URL", strings.TrimSuffix(r.cr.Spec.ConfigLocation.BaseURL, "/")),
+			base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+			base.MkEnvVar("CONFIG_REPO_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName),
 		}
 	} else {
 		return []apiv1.EnvVar{
-			MKEnvVar("CONFIG_REPO_SET", "FALSE"),
+			base.MkEnvVar("CONFIG_REPO_SET", "FALSE"),
 		}
 	}
 }
 
 func (r *SFController) mkInitSchedulerConfigContainer() apiv1.Container {
-	return apiv1.Container{
-		Name:    "init-scheduler-config",
-		Image:   BusyboxImage,
-		Command: []string{"/usr/local/bin/generate-zuul-tenant-yaml.sh"},
-		Env: append(r.getTenantsEnvs(),
-			MKEnvVar("HOME", "/var/lib/zuul"), MKEnvVar("INIT_CONTAINER", "1")),
-		VolumeMounts: []apiv1.VolumeMount{
-			{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
-			{
-				Name:      "tooling-vol",
-				SubPath:   "generate-zuul-tenant-yaml.sh",
-				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
-		},
-		SecurityContext: mkSecurityContext(false),
+	container := base.MkContainer("init-scheduler-config", BusyboxImage)
+	container.Command = []string{"/usr/local/bin/generate-zuul-tenant-yaml.sh"}
+	container.Env = append(r.getTenantsEnvs(),
+		base.MkEnvVar("HOME", "/var/lib/zuul"), base.MkEnvVar("INIT_CONTAINER", "1"))
+	container.VolumeMounts = []apiv1.VolumeMount{
+		{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
+		{
+			Name:      "tooling-vol",
+			SubPath:   "generate-zuul-tenant-yaml.sh",
+			MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
 	}
+	return container
 }
 
 func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg *ini.File) bool {
-	sections := IniGetSectionNamesByPrefix(cfg, "connection")
+	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	sections = append(sections, "scheduler")
 
 	annotations := map[string]string{
-		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": IniSectionsChecksum(cfg, sections),
+		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            ZuulImage("zuul-scheduler"),
 		"serial":                "2",
 	}
@@ -204,16 +205,16 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	setAdditionalContainers(&zs)
 	zs.Spec.Template.Spec.Volumes = zsVolumes
-	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = mkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
-	zs.Spec.Template.Spec.Containers[0].LivenessProbe = mkLiveHTTPProbe("/health/live", zuulPrometheusPort)
-	zs.Spec.Template.Spec.Containers[0].StartupProbe = mkStartupHTTPProbe("/health/ready", zuulPrometheusPort)
+	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
+	zs.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/health/live", zuulPrometheusPort)
+	zs.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/health/ready", zuulPrometheusPort)
 	zs.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		MKContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
+		base.MkContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
 	}
 
 	current := appsv1.StatefulSet{}
 	if r.GetM("zuul-scheduler", &current) {
-		if !mapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("zuul-scheduler configuration changed, rollout zuul-scheduler pods ...")
 			current.Spec = zs.DeepCopy().Spec
 			r.UpdateR(&current)
@@ -225,17 +226,17 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 	}
 
 	isStatefulSet := r.IsStatefulSetReady(&current)
-	updateConditions(&r.cr.Status.Conditions, "zuul-scheduler", isStatefulSet)
+	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-scheduler", isStatefulSet)
 
 	return isStatefulSet
 }
 
 func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
-	sections := IniGetSectionNamesByPrefix(cfg, "connection")
+	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	sections = append(sections, "executor")
 	annotations := map[string]string{
-		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": IniSectionsChecksum(cfg, sections),
+		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            ZuulImage("zuul-executor"),
 		"replicas":              strconv.Itoa(int(r.cr.Spec.Zuul.Executor.Replicas)),
 	}
@@ -244,20 +245,20 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-executor")
 	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor")
-	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = mkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
-	ze.Spec.Template.Spec.Containers[0].LivenessProbe = mkReadinessHTTPProbe("/health/live", zuulPrometheusPort)
+	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
+	ze.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessHTTPProbe("/health/live", zuulPrometheusPort)
 	ze.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		MKContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
-		MKContainerPort(zuulExecutorPort, zuulExecutorPortName),
+		base.MkContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
+		base.MkContainerPort(zuulExecutorPort, zuulExecutorPortName),
 	}
 	// NOTE(dpawlik): Zuul Executor needs to privileged pod, due error in the console log:
 	// "bwrap: Can't bind mount /oldroot/etc/resolv.conf on /newroot/etc/resolv.conf: Permission denied""
-	ze.Spec.Template.Spec.Containers[0].SecurityContext = mkSecurityContext(true)
+	ze.Spec.Template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(true)
 	ze.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = pointer.Int64(1000)
 
 	current := appsv1.StatefulSet{}
 	if r.GetM("zuul-executor", &current) {
-		if !mapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("zuul-executor configuration changed, rollout zuul-executor pods ...")
 			current.Spec = ze.DeepCopy().Spec
 			r.UpdateR(&current)
@@ -269,34 +270,34 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	}
 
 	isStatefulSet := r.IsStatefulSetReady(&current)
-	updateConditions(&r.cr.Status.Conditions, "zuul-executor", isStatefulSet)
+	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-executor", isStatefulSet)
 
 	return isStatefulSet
 }
 
 func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
-	sections := IniGetSectionNamesByPrefix(cfg, "connection")
+	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	sections = append(sections, "scheduler")
 	annotations := map[string]string{
-		"zuul-common-config":    IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": IniSectionsChecksum(cfg, sections),
+		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            ZuulImage("zuul-web"),
 	}
 
-	zw := r.mkDeployment("zuul-web", "")
+	zw := base.MkDeployment("zuul-web", r.ns, "")
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
 	zw.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-web")
 	zw.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-web")
-	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = mkReadinessHTTPProbe("/api/info", zuulWEBPort)
-	zw.Spec.Template.Spec.Containers[0].LivenessProbe = mkLiveHTTPProbe("/api/info", zuulWEBPort)
-	zw.Spec.Template.Spec.Containers[0].StartupProbe = mkStartupHTTPProbe("/api/info", zuulWEBPort)
+	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/api/info", zuulWEBPort)
+	zw.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/api/info", zuulWEBPort)
+	zw.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		MKContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
+		base.MkContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
 	}
 
 	current := appsv1.Deployment{}
 	if r.GetM("zuul-web", &current) {
-		if !mapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("zuul-web configuration changed, rollout zuul-web pods ...")
 			current.Spec = zw.DeepCopy().Spec
 			r.UpdateR(&current)
@@ -308,18 +309,18 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	}
 
 	isDeploymentReady := r.IsDeploymentReady(&current)
-	updateConditions(&r.cr.Status.Conditions, "zuul-web", isDeploymentReady)
+	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-web", isDeploymentReady)
 
 	return isDeploymentReady
 }
 
 func (r *SFController) EnsureZuulComponentsFrontServices() {
 	servicePorts := []int32{zuulWEBPort}
-	srv := r.mkService("zuul-web", "zuul-web", servicePorts, "zuul-web")
+	srv := base.MkService("zuul-web", r.ns, "zuul-web", servicePorts, "zuul-web")
 	r.GetOrCreate(&srv)
 
 	headlessPorts := []int32{zuulExecutorPort}
-	srvZE := r.mkHeadlessService("zuul-executor", "zuul-executor", headlessPorts, "zuul-executor")
+	srvZE := base.MkHeadlessService("zuul-executor", r.ns, "zuul-executor", headlessPorts, "zuul-executor")
 	r.GetOrCreate(&srvZE)
 
 }
@@ -349,7 +350,7 @@ func (r *SFController) EnsureZuulPodMonitor() bool {
 			},
 		},
 	}
-	desiredZuulPodMonitor := r.mkPodMonitor("zuul-monitor", zuulPrometheusPortName, selector)
+	desiredZuulPodMonitor := monitoring.MkPodMonitor("zuul-monitor", r.ns, zuulPrometheusPortName, selector)
 	// add annotations so we can handle lifecycle
 	annotations := map[string]string{
 		"version": "1",
@@ -360,7 +361,7 @@ func (r *SFController) EnsureZuulPodMonitor() bool {
 		r.CreateR(&desiredZuulPodMonitor)
 		return false
 	} else {
-		if !mapEquals(&currentZPM.ObjectMeta.Annotations, &annotations) {
+		if !utils.MapEquals(&currentZPM.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("Zuul PodMonitor configuration changed, updating...")
 			currentZPM.Spec = desiredZuulPodMonitor.Spec
 			currentZPM.ObjectMeta.Annotations = annotations
@@ -452,9 +453,9 @@ func DumpConfigINI(cfg *ini.File) string {
 }
 
 func (r *SFController) DeployZuulSecrets() {
-	r.EnsureSSHKey("zuul-ssh-key")
-	r.GenerateSecretUUID("zuul-keystore-password")
-	r.GenerateSecretUUID("zuul-auth-secret")
+	r.EnsureSSHKeySecret("zuul-ssh-key")
+	r.EnsureSecretUUID("zuul-keystore-password")
+	r.EnsureSecretUUID("zuul-auth-secret")
 }
 
 func (r *SFController) DeployZuul() bool {
