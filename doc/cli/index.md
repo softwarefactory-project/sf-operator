@@ -178,6 +178,29 @@ See [this section in the deployment documentation](./../deployment/nodepool.md#s
 
 ### Zuul
 
+#### create-auth-token
+
+This command is a proxy for the "zuul-admin create-auth-token" command run on a scheduler pod.
+
+The command will output a JWT that can be passed to the zuul-client CLI or used with cURL to perform
+administrative actions on a specified tenant.
+
+Usage:
+```sh
+sfconfig zuul create-auth-token [flags]
+```
+
+Flags:
+| Argument | Type | Description | Default |
+|----------|------|-------|----|
+|  -x, --expires-in| int32 |  The lifespan in seconds of the token. | 15 minutes (900s)|
+|  -n, --namespace| string|   Name of the namespace where Zuul is deployed| "sf"|
+|  -t, --tenant| string  |    The Zuul tenant on which to grant administrative powers| "local"|
+|  -u, --user| string   |     A username for the token holder. Used for logs auditing only |"cli_user"|
+
+See [Zuul's upstream documentation](https://zuul-ci.org/docs/zuul/latest/client.html#create-auth-token)
+for more details.
+
 #### zuul-client
 
 This command provides a "proxy" of sorts to the `zuul-client` CLI.

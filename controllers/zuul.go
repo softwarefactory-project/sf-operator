@@ -181,7 +181,7 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            ZuulImage("zuul-scheduler"),
-		"serial":                "2",
+		"serial":                "3",
 	}
 
 	if r.isConfigRepoSet() {
@@ -239,6 +239,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            ZuulImage("zuul-executor"),
 		"replicas":              strconv.Itoa(int(r.cr.Spec.Zuul.Executor.Replicas)),
+		"serial":                "1",
 	}
 
 	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), int32(r.cr.Spec.Zuul.Executor.Replicas), apiv1.ReadWriteOnce)
@@ -282,6 +283,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            ZuulImage("zuul-web"),
+		"serial":                "1",
 	}
 
 	zw := base.MkDeployment("zuul-web", r.ns, "")
@@ -494,6 +496,15 @@ func (r *SFController) DeployZuul() bool {
 		return false
 	}
 	cfgINI.Section("keystore").NewKey("password", string(keystorePass))
+
+	// Set CLI auth
+	cliAuthSecret, err := r.getSecretData("zuul-auth-secret")
+	if err != nil {
+		r.log.Info("Waiting for zuul-auth-secret secret")
+		return false
+	}
+	cfgINI.Section("auth zuul_client").NewKey("secret", string(cliAuthSecret))
+	cfgINI.Section("auth zuul_client").NewKey("realm", "zuul."+r.cr.Spec.FQDN)
 
 	r.EnsureZuulConfigSecret(cfgINI)
 	r.EnsureZuulComponentsFrontServices()

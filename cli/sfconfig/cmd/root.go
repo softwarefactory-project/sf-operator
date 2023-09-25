@@ -29,6 +29,7 @@ import (
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sf"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sfprometheus"
 	createSsl "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/ssl"
+	zuul "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/zuul"
 	zuulclient "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/zuul_client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -70,6 +71,7 @@ func init() {
 	rootCmd.AddCommand(zuulclient.ZuulClientCmd)
 	rootCmd.AddCommand(sfprometheus.PrometheusCmd)
 	rootCmd.AddCommand(nodepool.ProvidersSecretsCmd)
+	rootCmd.AddCommand(zuul.ZuulCmd)
 
 	rootCmd.AddCommand(bootstrap.BootstrapTenantConfigRepoCmd)
 	rootCmd.Flags().BoolP("erase", "", false, "Erase data")

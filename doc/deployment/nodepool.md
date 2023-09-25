@@ -11,6 +11,7 @@ but addresses specificities and idiosyncrasies induced by deploying Nodepool wit
 1. [Setting up providers secrets](#setting-up-providers-secrets)
 1. [Using a cloud image in an OpenStack cloud](#using-a-cloud-image-in-an-openstack-cloud)
 1. [Using the openshifpods driver with your cluster](#using-the-openshiftpods-driver-with-your-cluster)
+1. [Using the Nodepool CLI](#using-the-nodepool-cli)
 
 ## Architecture
 
@@ -158,3 +159,21 @@ providers:
 
 Commit your change, review it and validate it. After a run of `config-update`, your new provider and
 labels will be available in Nodepool.
+
+## Using the Nodepool CLI
+
+The `nodepool` command line utility is available on `nodepool-launcher` pods.
+
+To get the list of currently running launcher pods:
+
+```sh
+kubectl get pods --selector run=nodepool-launcher
+```
+
+Open a shell on any running `nodepool-launcher` pod listed by the previous command:
+
+```sh
+kubectl exec --stdin --tty nodepool-launcher-XYZ -- /bin/sh
+```
+
+Then from that shell, run the `nodepool` command.
