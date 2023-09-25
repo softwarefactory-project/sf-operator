@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+- [X] Zuul: Add OIDC Authenticators section in spec
+
 ## [Alpha-2]
 
 - [X] Add Zuul Bootstrap Zuul Tenant Config subcommand to sfconfig cli
