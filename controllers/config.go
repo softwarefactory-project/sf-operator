@@ -162,12 +162,14 @@ func (r *SFController) SetupConfigJob() bool {
 		var zsInternalTenantReconfigure apiv1.ConfigMap
 		var cmName = "zs-internal-tenant-reconfigure"
 		var needReconfigureTenant = false
+		var needConfigMapUpdate = false
 		var configHash = utils.Checksum([]byte(preInitScriptTemplate))
 		if !r.GetM(cmName, &zsInternalTenantReconfigure) {
 			needReconfigureTenant = true
 		} else {
 			if configHash != zsInternalTenantReconfigure.Data["internal-tenant-config-hash"] {
 				needReconfigureTenant = true
+				needConfigMapUpdate = true
 			}
 		}
 		if needReconfigureTenant {
@@ -181,7 +183,11 @@ func (r *SFController) SetupConfigJob() bool {
 				zsInternalTenantReconfigure.Data = map[string]string{
 					"internal-tenant-config-hash": configHash,
 				}
-				r.CreateR(&zsInternalTenantReconfigure)
+				if needConfigMapUpdate {
+					r.UpdateR(&zsInternalTenantReconfigure)
+				} else {
+					r.CreateR(&zsInternalTenantReconfigure)
+				}
 			}
 			return false
 		} else {
