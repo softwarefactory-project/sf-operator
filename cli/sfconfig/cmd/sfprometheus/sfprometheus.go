@@ -244,13 +244,15 @@ func (p *PromCMDContext) EnsurePrometheusRoute() {
 	}
 }
 
-func EnsurePrometheus(env *utils.ENV, fqdn string) {
+func EnsurePrometheus(env *utils.ENV, fqdn string, skipOperator bool) {
 	p := PromCMDContext{
 		env:  env,
 		fqdn: fqdn,
 	}
 
-	EnsurePrometheusOperator(p.env)
+	if !skipOperator {
+		EnsurePrometheusOperator(p.env)
+	}
 	// Deploying a Prometheus instance requires a dedicated Service Account with the appropriate RBAC
 	EnsurePrometheusInstanceServiceAccount(p.env)
 	EnsurePrometheusInstanceClusterRole(p.env)
@@ -275,6 +277,7 @@ The sf namespace must exist prior to running this command.
 The prometheus dashboard will be accessible at https://prometheus.<fqdn>.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fqdn, _ := cmd.Flags().GetString("fqdn")
+		skipOperator, _ := cmd.Flags().GetBool("skip-operator-setup")
 
 		// Get the kube client
 		cl := utils.CreateKubernetesClientOrDie("")
@@ -284,11 +287,12 @@ The prometheus dashboard will be accessible at https://prometheus.<fqdn>.`,
 			Ns:  ns,
 			Ctx: ctx,
 		}
-		EnsurePrometheus(&env, fqdn)
+		EnsurePrometheus(&env, fqdn, skipOperator)
 	},
 }
 
 func init() {
 	PrometheusCmd.Flags().StringP("fqdn", "f", "sftests.com", "The FQDN for prometheus (prometheus.<FQDN>)")
+	PrometheusCmd.Flags().BoolP("skip-operator-setup", "", false, "do not check if the prometheus operator is present and do not install it")
 	// TODO we may want to deploy prometheus in a different namespace
 }

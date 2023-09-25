@@ -48,7 +48,7 @@ func Run(erase bool) {
 	} else {
 		// TODO: only do gerrit when provision demo is on?
 		gerrit.EnsureGerrit(&env, sfconfig.FQDN)
-		sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN)
+		sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN, false)
 		EnsureDemoConfig(&env, &sfconfig)
 		nodepool.CreateNamespaceForNodepool(&env, "", "nodepool", "")
 		EnsureDeployment(&env, &sfconfig)
