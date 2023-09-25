@@ -75,6 +75,28 @@ _Appears in:_
 | `verifySsl` _boolean_ | the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.verify_ssl) parameter | {true}|
 
 
+#### GitLabConnection
+
+
+
+Describes a Zuul connection using the [gitlab driver](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#gitlab).
+
+_Appears in:_
+- [ZuulSpec](#zuulspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `name` _string_ | How the connection will be named in Zuul's configuration and appear in zuul-web | -|
+| `server` _string_ | the [server](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.server) | -|
+| `canonicalHostname` _string_ | the [canonicalHostname](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.canonical_hostname) | -|
+| `baseUrl` _string_ | the (baseUrl)[https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.baseurl) | -|
+| `secrets` _string_ | Name of the secret which containes the following keys: the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token) the [api_token_name](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name) the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.webhook_token) | -|
+| `apiTokenName` _string_ | the [apiTokenName](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name) | -|
+| `cloneUrl` _string_ | the [cloneUrl](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.cloneurl) | -|
+| `keepAlive` _integer_ | the [keepAlive](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.keepalive) | -|
+| `disableConnectionPool` _boolean_ | the [disableConnectionPool](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.disable_connection_pool) | -|
+
+
 #### GitServerSpec
 
 
@@ -465,6 +487,7 @@ _Appears in:_
 | `defaultAuthenticator` _string_ | The name of the default authenticator to use if no authenticator is bound explicitly to a tenant with zuul-web | -|
 | `gerritconns` _[GerritConnection](#gerritconnection) array_ | The list of Gerrit-based connections to add to Zuul's configuration | -|
 | `githubconns` _[GitHubConnection](#githubconnection) array_ | The list of GitHub-based connections to add to Zuul's configuration | -|
+| `gitlabconns` _[GitLabConnection](#gitlabconnection) array_ | The list of GitLab-based connections to add to Zuul's configuration | -|
 | `executor` _[ZuulExecutorSpec](#zuulexecutorspec)_ | Configuration of the executor microservices | -|
 | `scheduler` _[ZuulSchedulerSpec](#zuulschedulerspec)_ | Configuration of the scheduler microservice | -|
 | `web` _[ZuulWebSpec](#zuulwebspec)_ | Configuration of the web microservice | -|

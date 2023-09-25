@@ -54,6 +54,32 @@ type ConfigLocationSpec struct {
 	ZuulConnectionName string `json:"zuul-connection-name"`
 }
 
+// Describes a Zuul connection using the [gitlab driver](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#gitlab).
+type GitLabConnection struct {
+	// How the connection will be named in Zuul's configuration and appear in zuul-web
+	Name string `json:"name"`
+	// the [server](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.server)
+	Server string `json:"server,omitempty"`
+	// the [canonicalHostname](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.canonical_hostname)
+	CanonicalHostname string `json:"canonicalHostname,omitempty"`
+	// the (baseUrl)[https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.baseurl)
+	BaseURL string `json:"baseUrl,omitempty"`
+	// Name of the secret which containes the following keys:
+	// the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token)
+	// the [api_token_name](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name)
+	// the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.webhook_token)
+	Secrets string `json:"secrets,omitempty"`
+	// the [apiTokenName](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name)
+	APITokenName string `json:"apiTokenName,omitempty"`
+	// the [cloneUrl](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.cloneurl)
+	CloneURL string `json:"cloneUrl,omitempty"`
+	// the [keepAlive](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.keepalive)
+	// +kubebuilder:validation:Minimum:=0
+	KeepAlive uint8 `json:"keepAlive,omitempty"`
+	// the [disableConnectionPool](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.disable_connection_pool)
+	DisableConnectionPool bool `json:"disableConnectionPool,omitempty"`
+}
+
 // Describes a Zuul connection using the [github driver](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#).
 type GitHubConnection struct {
 	// How the connection will be named in Zuul's configuration and appear in zuul-web
@@ -225,6 +251,8 @@ type ZuulSpec struct {
 	GerritConns []GerritConnection `json:"gerritconns,omitempty"`
 	// The list of GitHub-based connections to add to Zuul's configuration
 	GitHubConns []GitHubConnection `json:"githubconns,omitempty"`
+	// The list of GitLab-based connections to add to Zuul's configuration
+	GitLabConns []GitLabConnection `json:"gitlabconns,omitempty"`
 	// Configuration of the executor microservices
 	Executor ZuulExecutorSpec `json:"executor,omitempty"`
 	// Configuration of the scheduler microservice
@@ -248,6 +276,14 @@ func GetGerritConnectionsName(spec *ZuulSpec) []string {
 func GetGitHubConnectionsName(spec *ZuulSpec) []string {
 	var res []string
 	for _, conn := range spec.GitHubConns {
+		res = append(res, conn.Name)
+	}
+	return res
+}
+
+func GetGitLabConnectionsName(spec *ZuulSpec) []string {
+	var res []string
+	for _, conn := range spec.GitLabConns {
 		res = append(res, conn.Name)
 	}
 	return res

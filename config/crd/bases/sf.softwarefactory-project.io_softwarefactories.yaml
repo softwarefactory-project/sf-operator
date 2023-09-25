@@ -421,6 +421,48 @@ spec:
                       - name
                       type: object
                     type: array
+                  gitlabconns:
+                    description: The list of GitLab-based connections to add to Zuul's
+                      configuration
+                    items:
+                      description: Describes a Zuul connection using the [gitlab driver](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#gitlab).
+                      properties:
+                        apiTokenName:
+                          description: the [apiTokenName](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name)
+                          type: string
+                        baseUrl:
+                          description: the (baseUrl)[https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.baseurl)
+                          type: string
+                        canonicalHostname:
+                          description: the [canonicalHostname](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.canonical_hostname)
+                          type: string
+                        cloneUrl:
+                          description: the [cloneUrl](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.cloneurl)
+                          type: string
+                        disableConnectionPool:
+                          description: the [disableConnectionPool](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.disable_connection_pool)
+                          type: boolean
+                        keepAlive:
+                          description: the [keepAlive](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.keepalive)
+                          minimum: 0
+                          type: integer
+                        name:
+                          description: How the connection will be named in Zuul's
+                            configuration and appear in zuul-web
+                          type: string
+                        secrets:
+                          description: 'Name of the secret which containes the following
+                            keys: the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token)
+                            the [api_token_name](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name)
+                            the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.webhook_token)'
+                          type: string
+                        server:
+                          description: the [server](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.server)
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   merger:
                     description: Configuration of the merger microservice
                     properties:

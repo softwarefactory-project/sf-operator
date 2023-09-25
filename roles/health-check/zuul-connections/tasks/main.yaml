@@ -8,6 +8,9 @@
     dummy_githubconns:
       - name: dummy-github-conn
         secrets: githubconnectionsecret
+    dummy_gitlabconns:
+      - name: dummy-gitlab-conn
+        secrets: gitlabconnectionsecret
 
 - name: Create GitHub Connection Secret
   kubernetes.core.k8s:
@@ -21,6 +24,21 @@
       data:
         webhook_token: "{{ '0000000000000000000000000000000000000000' | b64encode }}"
         api_token: "{{ 'ghp_51abcFzcvf3GxOJpPFUKxsT6JIL3Nnbf39E' | b64encode }}"
+
+- name: Create GitLab Connection Secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: gitlabconnectionsecret
+        namespace: sf
+      data:
+        api_token: "{{ '0000000000000000000000000000000000000000' | b64encode }}"
+        api_token_name: "{{ 'apiTokenName' | b64encode }}"
+        webhook_token: "{{ '0000000000000000000000000000000000000000' | b64encode }}"
+        sshkey: "{{ '0000000000000000000000000000000000000000' | b64encode }}"
 
 - name: Get current Zuul gerrit connections
   command: kubectl get sf my-sf -o jsonpath='{.spec.zuul.gerritconns}'
@@ -38,6 +56,7 @@
           zuul:
             gerritconns: "{{ gerritconns_orig + dummy_gerritconn }}"
             githubconns: "{{ dummy_githubconns }}"
+            gitlabconns: "{{ dummy_gitlabconns }}"
 
     - name: Wait for the new Zuul connections to appear in the Zuul API
       ansible.builtin.uri:
@@ -49,6 +68,7 @@
       until:
         - "'dummy-gerrit-conn' in this.content"
         - "'dummy-github-conn' in this.content"
+        - "'dummy-gitlab-conn' in this.content"
       retries: "{{ retries }}"
       delay: "{{ delay }}"
 
@@ -60,6 +80,7 @@
           zuul:
             gerritconns: "{{ gerritconns_orig }}"
             githubconns: []
+            gitlabconns: []
 
     - name: Wait for the dummy Zuul connections to be removed from the API
       ansible.builtin.uri:
@@ -71,8 +92,10 @@
       until:
         - "'dummy-gerrit-conn' not in this.content"
         - "'dummy-github-conn' not in this.content"
+        - "'dummy-gitlab-conn' not in this.content"
       retries: "{{ retries }}"
       delay: "{{ delay }}"
+
   always:
     - name: Delete GitHub Connection Secret
       kubernetes.core.k8s:
@@ -81,3 +104,11 @@
         kind: Secret
         namespace: sf
         name: githubconnectionsecret
+
+    - name: Delete GitLab Connection Secret
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Secret
+        namespace: sf
+        name: gitlabconnectionsecret

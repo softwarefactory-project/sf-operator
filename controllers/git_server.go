@@ -40,7 +40,12 @@ func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
 	}
 	for _, name := range sfv1.GetGitHubConnectionsName(spec) {
 		sb.WriteString(fmt.Sprintf("[connection %s]\n", name))
-		sb.WriteString("driver=git\n")
+		sb.WriteString("driver=gitlab\n")
+		sb.WriteString("baseurl=localhost\n\n")
+	}
+	for _, name := range sfv1.GetGitLabConnectionsName(spec) {
+		sb.WriteString(fmt.Sprintf("[connection %s]\n", name))
+		sb.WriteString("driver=github\n")
 		sb.WriteString("baseurl=localhost\n\n")
 	}
 	return sb.String()
