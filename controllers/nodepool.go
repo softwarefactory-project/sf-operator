@@ -22,6 +22,9 @@ var generateConfigScript string
 //go:embed static/nodepool/logging.yaml.tmpl
 var loggingConfigTemplate string
 
+//go:embed static/nodepool/dib-ansible.py
+var dibAnsibleWrapper string
+
 const launcherIdent = "nodepool-launcher"
 const launcherPortName = "nlwebapp"
 const launcherPort = 8006
@@ -40,6 +43,7 @@ var configScriptVolumeMount = apiv1.VolumeMount{
 func (r *SFController) setNodepoolTooling() {
 	toolingData := make(map[string]string)
 	toolingData["generate-config.sh"] = generateConfigScript
+	toolingData["dib-ansible.py"] = dibAnsibleWrapper
 	r.EnsureConfigMap("nodepool-tooling", toolingData)
 }
 
@@ -107,11 +111,16 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 			MountPath: "/var/log/nodepool",
 		},
 		configScriptVolumeMount,
+		{
+			Name:      "nodepool-tooling-vol",
+			SubPath:   "dib-ansible.py",
+			MountPath: "/usr/local/bin/dib-ansible",
+		},
 	}
 
 	annotations := map[string]string{
 		"nodepool.yaml": utils.Checksum([]byte(generateConfigScript)),
-		"serial":        "3",
+		"serial":        "4",
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", BusyboxImage)
