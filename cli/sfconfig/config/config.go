@@ -28,7 +28,7 @@ func GetSFConfigOrDie() SFConfig {
 
 	// Setting configuration defaults
 	viper.SetDefault("ansible_microshift_role_path", "~/src/github.com/openstack-k8s-operators/ansible-microshift-role")
-	viper.SetDefault("fqdn", "sftests.com")
+	viper.SetDefault("fqdn", "sfop.dev")
 	viper.SetDefault("microshift.host", "microshift.dev")
 	viper.SetDefault("microshift.user", "cloud-user")
 	viper.SetDefault("nodepool.clouds_file", "/etc/sf-operator/nodepool/clouds.yaml")

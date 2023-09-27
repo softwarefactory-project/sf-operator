@@ -3,7 +3,7 @@ kind: SoftwareFactory
 metadata:
   name: my-sf
 spec:
-  fqdn: "sftests.com"
+  fqdn: "sfop.dev"
   config-location:
     base-url: "http://gerrit-httpd/"
     name: config
@@ -13,7 +13,7 @@ spec:
       - name: gerrit
         username: zuul
         hostname: gerrit-sshd
-        puburl: "https://gerrit.sftests.com"
+        puburl: "https://gerrit.sfop.dev"
   logserver:
     loopDelay: 5
     storage:

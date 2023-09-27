@@ -51,7 +51,7 @@
       output_logs_dir: ~/zuul-output/logs
       # dnsmasq
       microshift_additional_addresses:
-        - "sftests.com"
+        - "sfop.dev"
       etcd_on_ramdisk: true
       cloudprovider_dns:
         - 199.204.44.24
@@ -87,7 +87,7 @@
       output_logs_dir: ~/zuul-output/logs
       # dnsmasq
       microshift_additional_addresses:
-        - "sftests.com"
+        - "sfop.dev"
 
 # Images publication job
 - job:

@@ -1,3 +1,4 @@
 ---
+fqdn: sfop.dev
 random: dummy
-zuul_host: zuul.sftests.com
+zuul_host: zuul.{{ fqdn }}

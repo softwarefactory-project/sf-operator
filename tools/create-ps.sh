@@ -21,18 +21,18 @@ fi
 
 git clone \
     -c user.name="Admin" \
-    -c user.email="admin@sftests.com" \
+    -c user.email="admin@sfop.dev" \
     -c http.sslVerify=false \
-    "https://admin:${GERRIT_ADMIN_API_KEY}@gerrit.sftests.com/a/config" "$TMP_DIR/config"
+    "https://admin:${GERRIT_ADMIN_API_KEY}@gerrit.sfop.dev/a/config" "$TMP_DIR/config"
 
 cd "$TMP_DIR/config"
 mkdir -p "$TMP_DIR/config/playbooks"
 mkdir -p "$TMP_DIR/config/zuul.d"
 
 git config user.name "Admin"
-git config user.email admin@sftests.com
+git config user.email admin@sfop.dev
 git config http.sslVerify false
-git remote add gerrit "https://admin:${GERRIT_ADMIN_API_KEY}@gerrit.sftests.com/a/config"
+git remote add gerrit "https://admin:${GERRIT_ADMIN_API_KEY}@gerrit.sfop.dev/a/config"
 
 cat << EOF > zuul.d/config.yaml
 ---
