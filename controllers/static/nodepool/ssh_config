@@ -1,0 +1,2 @@
+Host *
+    IdentityFile /var/lib/nodepool-ssh-key/priv

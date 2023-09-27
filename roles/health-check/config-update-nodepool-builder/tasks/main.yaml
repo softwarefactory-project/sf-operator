@@ -38,10 +38,39 @@
   args:
     chdir: "{{ config_path }}"
 
+# As nodepool builder will connected to the image-builder node (which is the microshift node in CI usecase)
+# here we ensure that the nodepool-builder pod can connect
+- name: Get nodepool-builder public SSH key
+  shell: kubectl get secret nodepool-builder-ssh-key -n sf -o jsonpath={.data.pub} | base64 -d
+  register: nodepool_get_key
+
+- name: Ensure nodepool user available on the controller
+  delegate_to: "{{ os_host }}"
+  become: true
+  ansible.builtin.user:
+    name: nodepool
+    comment: nodepool account is used by nodepool-builder to host account to build cloud images
+
+- name: Set nodepool user authorized_keys
+  delegate_to: "{{ os_host }}"
+  become: true
+  ansible.posix.authorized_key:
+    user: nodepool
+    state: present
+    key: "{{ nodepool_get_key.stdout }}"
+
+- name: Ensure nodepool-builder pod can connect via SSH using the 'nodepool' user to the image-builder machine
+  command: >
+    kubectl exec -it nodepool-builder-0 -c nodepool-builder
+    -- ssh -o StrictHostKeyChecking=no nodepool@{{ microshift_host }} hostname
+
 - name: Ensure nodepool directory exists
   ansible.builtin.file:
-    path: "{{ config_path }}/nodepool"
+    path: "{{ item }}"
     state: directory
+  loop:
+    - "{{ config_path }}/nodepool"
+    - "{{ config_path }}/nodepool/dib-ansible"
 
 - name: Define nodepool-builder.yaml default content
   ansible.builtin.copy:
@@ -55,12 +84,23 @@
           username: zuul-worker
     dest: "{{ config_path }}/nodepool/nodepool-builder.yaml"
 
+- name: Define the inventory file
+  ansible.builtin.copy:
+    content: |
+      ---
+      ungrouped:
+        hosts:
+          image-builder:
+            ansible_host: {{ microshift_host }}
+            ansible_user: nodepool
+    dest: "{{ config_path }}/nodepool/dib-ansible/inventory.yaml"
+
 - name: Define dummy cloud image playbook dummy.yaml
   ansible.builtin.copy:
     content: |
       ---
-      - name: Build a centos 9 cloud image suitable for Zuul
-        hosts: localhost
+      - name: Dummy cloud image build playbook
+        hosts: image-builder
         tasks:
           - debug:
               msg: "Hello from build of {{ nodepool_diskimage_name }}"
@@ -73,6 +113,7 @@
   loop:
     - "git add {{ config_path }}/nodepool/nodepool-builder.yaml"
     - "git add {{ config_path }}/nodepool/dib-ansible/dummy.yaml"
+    - "git add {{ config_path }}/nodepool/dib-ansible/inventory.yaml"
     - "git commit -m 'Add nodepool builder image config'"
 
 - name: Update config repo change
@@ -85,8 +126,16 @@
 
 - name: "Check that witness message is available in build logs"
   ansible.builtin.shell: |
-    kubectl exec nodepool-builder-0 -- bash -c "cat /var/log/nodepool/builds/* | grep 'Hello from build of {{ nodepool_diskimage_name }}'"
+    kubectl exec nodepool-builder-0 -- bash -c "grep 'Hello from build of {{ nodepool_diskimage_name }}' /var/log/nodepool/builds/*"
   register: witness
   until: witness is success
+  delay: 5
+  retries: 3
+
+- name: "Check that nodepool dib-image-list reports the new image"
+  ansible.builtin.shell: |
+    kubectl exec nodepool-builder-0 -- bash -c "nodepool dib-image-list | grep {{ nodepool_diskimage_name }} | grep ready"
+  register: dib_image_list
+  until: dib_image_list is success
   delay: 5
   retries: 3
