@@ -36,62 +36,77 @@ type LetsEncryptSpec struct {
 type StorageSpec struct {
 	//+kubebuilder:validation:Required
 	//+kubebuilder:validation:XValidation:rule="self >= oldSelf",message="Storage shrinking is not supported"
-	Size      resource.Quantity `json:"size"`
-	ClassName string            `json:"className,omitempty"`
+	// Storage space to allocate to the resource, expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/
+	Size resource.Quantity `json:"size"`
+	// Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case.
+	ClassName string `json:"className,omitempty"`
 }
 
+// TODO rename to ConfigRepositoryLocationSpec?
+
 type ConfigLocationSpec struct {
-	// Base URL of the code-review provider where the `Name` can be fetch by Git
+	// Base URL to use to perform git-related actions on the config repository. For example, if hosted on GitHub, the Base URL would be `https://github.com/<username>/`
 	// +kubebuilder:validation:Pattern:=`^https?:\/\/.+$`
 	BaseURL string `json:"base-url"`
-	// Name of the `config` repository where the SF config workflow is applied
+	// The name of the `config` repository. This value is appended to `base-url` to clone the repository
 	// +kubebuilder:validation:MinLength:=1
 	Name string `json:"name"`
-	// Name of the Zuul connection where the `config` exists
+	// Name of the Zuul connection through which Zuul can handle git events on the config repository
 	// +kubebuilder:validation:MinLength:=1
 	ZuulConnectionName string `json:"zuul-connection-name"`
 }
 
+// Describes a Zuul connection using the `gerrit` driver: https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#connection-configuration
 type GerritConnection struct {
-	Name     string `json:"name"`
+	// How the connection will be named in Zuul's configuration and appear in zuul-web
+	Name string `json:"name"`
+	// The gerrit server hostname. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.server
 	Hostname string `json:"hostname"`
-	// SSH port number to connect on the Gerrit instance
+	// SSH port number to the Gerrit instance. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.port
 	// +kubebuilder:default:=29418
 	Port uint16 `json:"port,omitempty"`
-	// URL to Gerrit web interface
+	// URL to Gerrit's web interface. https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.baseurl
 	// +kubebuilder:validation:Pattern:=`^https?:\/\/.+$`
 	Puburl string `json:"puburl,omitempty"`
-	// Username to authenticate on the Gerrit instance
+	// Username that Zuul will use to authenticate on the Gerrit instance. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.user
 	// +kubebuilder:default:=zuul
 	Username string `json:"username,omitempty"`
-	// The canonical hostname associated with the git repos on the Gerrit server.
+	// The canonical hostname associated with the git repositories on the Gerrit server. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.canonical_hostname
 	Canonicalhostname string `json:"canonicalhostname,omitempty"`
-	// API Password secret name
+	// The name of a Kubernetes secret holding the Gerrit user's API Password. The secret's data must have a key called "password". Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.password
 	Password string `json:"password,omitempty"`
-	// This forces git operation over SSH even if the password attribute is set.
+	// Set to true to force git operations over SSH even if the password attribute is set. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.git_over_ssh
 	// +kubebuilder:default:=false
 	GitOverSSH bool `json:"git-over-ssh,omitempty"`
-	// Disable SSL certificate verification when set to false.
+	// Disable SSL certificate verification with the Gerrit instance when set to false. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.verify_ssl
 	// +kubebuilder:default:=true
 	VerifySSL bool `json:"verifyssl,omitempty"`
 }
 
+// Spec for the pool of executor microservices
 type ZuulExecutorSpec struct {
-	Storage  StorageSpec `json:"storage,omitempty"`
-	Replicas int32       `json:"replicas,omitempty"`
+	// Storage-related settings
+	Storage StorageSpec `json:"storage,omitempty"`
+	// How many executor pods to run
+	Replicas int32 `json:"replicas,omitempty"`
 }
 
+// Spec for the scheduler microservice
 type ZuulSchedulerSpec struct {
+	// Storage-related settings
 	Storage StorageSpec `json:"storage,omitempty"`
 }
 
 // TODO: make sure to update the GetConnectionsName when adding new connection type.
 
-// TODO should be ExecutorS / SchedulerS
+// Configuration of the Zuul service
 type ZuulSpec struct {
+	// The list of Gerrit-based connections to add to Zuul's configuration
 	GerritConns []GerritConnection `json:"gerritconns,omitempty"`
-	Executor    ZuulExecutorSpec   `json:"executor,omitempty"`
-	Scheduler   ZuulSchedulerSpec  `json:"scheduler,omitempty"`
+	// Configuration of the executor microservices
+	Executor ZuulExecutorSpec `json:"executor,omitempty"`
+	// Configuration of the scheduler microservice
+	Scheduler ZuulSchedulerSpec `json:"scheduler,omitempty"`
 }
 
 func GetConnectionsName(spec *ZuulSpec) []string {
@@ -120,11 +135,12 @@ const (
 )
 
 type NodepoolLauncherSpec struct {
-	// Specify the Log Level of the nodepool launcher process.
+	// Specify the Log Level of the nodepool launcher service.
 	// Valid values are:
 	// - "INFO" (default)
 	// - "WARN"
 	// - "DEBUG"
+	// Changing this value will restart the service.
 	// +optional
 	LogLevel LogLevel `json:"logLevel,omitempty"`
 }
@@ -138,7 +154,9 @@ type ZookeeperSpec struct {
 }
 
 type MariaDBSpec struct {
-	DBStorage  StorageSpec `json:"dbStorage"`
+	// Storage parameters related to mariaDB's data
+	DBStorage StorageSpec `json:"dbStorage"`
+	// Storage parameters related to the database's logging
 	LogStorage StorageSpec `json:"logStorage"`
 }
 
@@ -163,6 +181,8 @@ type SecretRef struct {
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
 
+	// The fully qualified domain name to use with the deployment. Relevant services will be served
+	// at https://`service`.`FQDN`
 	FQDN string `json:"fqdn"`
 
 	// LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS
@@ -193,13 +213,18 @@ type SoftwareFactorySpec struct {
 	GitServer GitServerSpec `json:"gitserver,omitempty"`
 }
 
+// TODO the exact same struct exists as `LogServerStatus`, we could merge them.
+
 // SoftwareFactoryStatus defines the observed state of SoftwareFactory
 type SoftwareFactoryStatus struct {
 	// The deployment status.
-	Ready              bool               `json:"ready,omitempty"`
-	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
-	ReconciledBy       string             `json:"reconciledBy,omitempty"`
-	Conditions         []metav1.Condition `json:"conditions,omitempty" optional:"true"`
+	Ready bool `json:"ready,omitempty"`
+	// The Generation of the related Custom Resource that was last processed by the operator controller
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// The name of the operator handling this Custom Resource's reconciliation
+	ReconciledBy string `json:"reconciledBy,omitempty"`
+	// Information about ongoing or completed reconciliation processes between the Log server spec and the observed state of the cluster
+	Conditions []metav1.Condition `json:"conditions,omitempty" optional:"true"`
 }
 
 //+kubebuilder:object:root=true

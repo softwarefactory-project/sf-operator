@@ -63,28 +63,41 @@ spec:
                 - server
                 type: object
               authorizedSSHKey:
-                description: SSH authorized key as base64 data
+                description: The SSH public key, encoded as base64, to use to authorize
+                  file transfers on the log server
                 type: string
               fqdn:
+                description: The fully qualified domain name to use with the log server.
+                  Logs will be served at https://logserver.`FQDN`
                 type: string
               settings:
+                description: General runtime settings for the log server
                 properties:
                   loopDelay:
-                    description: Logs Check. Log will be checked every "X" seconds
-                      ( default 3600 s ~= 1 hour )
+                    description: The frequency, in seconds, at which the log pruning
+                      cronjob is running. Defaults to 3600s, i.e. logs are checked
+                      for pruning every hour
                     type: integer
                   retentionDays:
-                    description: Logs Older that "x" days will be purge ( default
-                      60 days )
+                    description: Logs retention time in days. Logs older than this
+                      setting in days will be purged by a pruning cronjob. Defaults
+                      to 60 days
                     type: integer
                   storage:
+                    description: Storage-related settings
                     properties:
                       className:
+                        description: Default storage class to use with Persistent
+                          Volume Claims issued by this resource. Consult your cluster's
+                          configuration to see what storage classes are available
+                          and recommended for your use case.
                         type: string
                       size:
                         anyOf:
                         - type: integer
                         - type: string
+                        description: 'Storage space to allocate to the resource, expressed
+                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                         x-kubernetes-validations:
@@ -100,16 +113,22 @@ spec:
                 - message: loopDelay must be a positive integer if set
                   rule: '!has(self.loopDelay) || self.loopDelay > 0'
               storageClassName:
-                description: Default storage class to use by Persistent Volume Claims
+                description: Default storage class to use with Persistent Volume Claims
+                  issued by this resource. Consult your cluster's configuration to
+                  see what storage classes are available and recommended for your
+                  use case.
                 type: string
             required:
             - authorizedSSHKey
             - fqdn
             type: object
           status:
-            description: LogServerStatus defines the observed state of LogServer
+            description: LogServerStatus defines the observed state of a Log server
             properties:
               conditions:
+                description: Information about ongoing or completed reconciliation
+                  processes between the Log server spec and the observed state of
+                  the cluster
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -178,12 +197,16 @@ spec:
                   type: object
                 type: array
               observedGeneration:
+                description: The Generation of the related Custom Resource that was
+                  last processed by the operator controller
                 format: int64
                 type: integer
               ready:
                 description: The deployment status.
                 type: boolean
               reconciledBy:
+                description: The name of the operator handling this Custom Resource's
+                  reconciliation
                 type: string
             type: object
         type: object
