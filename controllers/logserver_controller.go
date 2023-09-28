@@ -28,7 +28,7 @@ import (
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
+	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
 
@@ -100,8 +100,8 @@ func (r *LogServerController) ensureLogserverPodMonitor() bool {
 			"run": logserverIdent,
 		},
 	}
-	nePort := GetNodeexporterPortName(logserverIdent)
-	desiredLsPodmonitor := monitoring.MkPodMonitor(logserverIdent+"-monitor", r.ns, nePort, selector)
+	nePort := sfmonitoring.GetTruncatedPortName(logserverIdent, sfmonitoring.NodeExporterPortNameSuffix)
+	desiredLsPodmonitor := sfmonitoring.MkPodMonitor(logserverIdent+"-monitor", r.ns, []string{nePort}, selector)
 	// add annotations so we can handle lifecycle
 	annotations := map[string]string{
 		"version": "1",
@@ -137,7 +137,7 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 		"description": "Log server only has at most three days' worth ({{ $value | humanize1024 }}) of free disk available.",
 		"summary":     "Log server running out of disk",
 	}
-	diskFull := monitoring.MkPrometheusAlertRule(
+	diskFull := sfmonitoring.MkPrometheusAlertRule(
 		"OutOfDiskNow",
 		intstr.FromString(
 			"(node_filesystem_avail_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} * 100 /"+
@@ -147,7 +147,7 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 		diskFullLabels,
 		diskFullAnnotations,
 	)
-	diskFullIn3days := monitoring.MkPrometheusAlertRule(
+	diskFullIn3days := sfmonitoring.MkPrometheusAlertRule(
 		"OutOfDiskInThreeDays",
 		intstr.FromString(
 			"(node_filesystem_avail_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} * 100 /"+
@@ -158,10 +158,10 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 		map[string]string{},
 		diskFull3daysAnnotations,
 	)
-	lsDiskRuleGroup := monitoring.MkPrometheusRuleGroup(
+	lsDiskRuleGroup := sfmonitoring.MkPrometheusRuleGroup(
 		"disk.rules",
 		[]monitoringv1.Rule{diskFull, diskFullIn3days})
-	desiredLsPromRule := monitoring.MkPrometheusRuleCR(logserverIdent+".rules", r.ns)
+	desiredLsPromRule := sfmonitoring.MkPrometheusRuleCR(logserverIdent+".rules", r.ns)
 	desiredLsPromRule.Spec.Groups = append(desiredLsPromRule.Spec.Groups, lsDiskRuleGroup)
 
 	// add annotations so we can handle lifecycle
@@ -345,7 +345,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		},
 	}
 
-	statsExporter := createNodeExporterSideCarContainer(logserverIdent, volumeMountsStatsExporter)
+	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(logserverIdent, volumeMountsStatsExporter)
 	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, statsExporter)
 
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
@@ -378,7 +378,8 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	sshdService := base.MkService(sshdPortName, r.ns, logserverIdent, sshdServicePorts, sshdPortName)
 	r.GetOrCreate(&sshdService)
 
-	r.getOrCreateNodeExporterSideCarService(logserverIdent)
+	nodeExporterSidecarService := sfmonitoring.MkNodeExporterSideCarService(logserverIdent, r.ns)
+	r.GetOrCreate(&nodeExporterSidecarService)
 
 	pvcReadiness := r.reconcileExpandPVC(logserverIdent, r.cr.Spec.Settings.Storage)
 

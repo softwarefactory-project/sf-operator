@@ -251,6 +251,7 @@ spec:
                         type: object
                     type: object
                   launcher:
+                    description: Nodepool-launcher related settings
                     properties:
                       logLevel:
                         description: 'Specify the Log Level of the nodepool launcher
@@ -262,6 +263,10 @@ spec:
                         - DEBUG
                         type: string
                     type: object
+                  statsdTarget:
+                    description: The address to forward statsd metrics to (optional),
+                      in the form "host:port"
+                    type: string
                 type: object
               storageClassName:
                 description: Default storage class to use by Persistent Volume Claims
@@ -456,6 +461,10 @@ spec:
                   scheduler:
                     description: Configuration of the scheduler microservice
                     properties:
+                      statsdTarget:
+                        description: The address to forward statsd metrics to (optional),
+                          in the form "host:port"
+                        type: string
                       storage:
                         description: Storage-related settings
                         properties:

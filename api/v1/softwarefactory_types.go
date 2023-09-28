@@ -127,6 +127,8 @@ type ZuulExecutorSpec struct {
 type ZuulSchedulerSpec struct {
 	// Storage-related settings
 	Storage StorageSpec `json:"storage,omitempty"`
+	// The address to forward statsd metrics to (optional), in the form "host:port"
+	StatsdTarget string `json:"statsdTarget,omitempty"`
 }
 
 // TODO: make sure to update the GetConnectionsName when adding new connection type.
@@ -193,9 +195,12 @@ type NodepoolBuilderSpec struct {
 }
 
 type NodepoolSpec struct {
+	// Nodepool-launcher related settings
 	Launcher NodepoolLauncherSpec `json:"launcher,omitempty"`
 	// Nodepool-builder related settings
 	Builder NodepoolBuilderSpec `json:"builder,omitempty"`
+	// The address to forward statsd metrics to (optional), in the form "host:port"
+	StatsdTarget string `json:"statsdTarget,omitempty"`
 }
 
 type ZookeeperSpec struct {

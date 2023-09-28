@@ -96,10 +96,11 @@ Examples:
 		buf := &bytes.Buffer{}
 		errBuf := &bytes.Buffer{}
 		request := kubeClientSet.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(zuulwebcontainer.Name).SubResource("exec").VersionedParams(&v1.PodExecOptions{
-			Command: zuulClientArgs,
-			Stdin:   false,
-			Stdout:  true,
-			Stderr:  true,
+			Container: "zuul-web",
+			Command:   zuulClientArgs,
+			Stdin:     false,
+			Stdout:    true,
+			Stderr:    true,
 		}, scheme.ParameterCodec)
 
 		exec, _ := remotecommand.NewSPDYExecutor(kubeConfig, "POST", request.URL())

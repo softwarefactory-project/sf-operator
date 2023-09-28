@@ -1,0 +1,48 @@
+# TODO This is not nearly complete, maybe an existing mapping of
+# https://zuul-ci.org/docs/zuul/latest/monitoring.html#metrics exists somewhere?
+
+mappings:
+  - match: zuul.nodepool.requests.*
+    name: zuul_nodepool_requests
+    help: Zuul requests and responses from Nodepool
+    labels:
+      state: "$1"
+
+  - match: zuul.nodepool.requests.*.label.*
+    name: zuul_nodepool_requests_state_by_label
+    help: Zuul requests and responses from Nodepool
+    labels:
+      state: "$1"
+      label: "$2"
+
+  - match: zuul.tenant.*.management_events
+    name: zuul_tenant_management_events
+    help: Size of the tenant's management event queue
+    labels:
+      tenant: "$1"
+
+  - match: zuul.tenant.*.pipeline.*.current_changes
+    name: zuul_tenant_pipeline_current_changes
+    help: Number of items currently being processed by this pipeline
+    labels:
+      tenant: "$1"
+      pipeline: "$2"
+
+  - match: zuul.executors.online
+    name: zuul_executors_online
+    help: Number of Zuul executor processes online
+  
+  - match: zuul.executors.accepting
+    name: zuul_executors_accepting
+    help: Number of Zuul executor processes accepting new jobs
+
+  - match: zuul.executors.accepting
+    name: zuul_executors_accepting
+    help: Number of Zuul executor processes accepting new jobs
+
+  # Drop all non-matching metrics to avoid spamming prometheus with
+  # eventually unmatched metrics.
+  - match: .
+    match_type: regex
+    action: drop
+    name: "dropped"

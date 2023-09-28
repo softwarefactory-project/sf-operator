@@ -1,0 +1,124 @@
+# TODO Parsed manually from nodepool's source code. Look for calls of
+# recordLaunchStats, updateNodeStats, updateProviderLimits and updateTenantLimits.
+
+mappings:
+
+# recordLaunchStats
+  - match: nodepool.launch.provider.*.ready
+    name: nodepool_launch_provider_ready
+    help: launch success counter per provider
+    labels:
+      provider: "$1"
+
+  - match: nodepool.launch.provider.*.error.*
+    name: nodepool_launch_provider_error
+    help: launch error counter per provider and error type
+    labels:
+      provider: "$1"
+      error: "$2"
+
+  - match: nodepool.launch.provider.*.*.ready
+    name: nodepool_launch_provider_az_ready
+    help: launch success counter per provider and az
+    labels:
+      provider: "$1"
+      az: "$2"
+
+  - match: nodepool.launch.requestor.*.ready
+    name: nodepool_launch_requestor_ready
+    help: launch success counter per requestor
+    labels:
+      requestor: "$1"
+
+  - match: nodepool.launch.ready
+    name: nodepool_launch_ready
+    help: launch success counter
+
+  - match: nodepool.launch.provider.*.*.error.*
+    name: nodepool_launch_provider_az_error
+    help: launch error counter per provider, az and error type
+    labels:
+      provider: "$1"
+      az: "$2"
+      error: "$3"
+
+  - match: nodepool.launch.requestor.*.error.*
+    name: nodepool_launch_requestor_error
+    help: launch error counter per requestor and error type
+    labels:
+      requestor: "$1"
+      error: "$2"
+
+  - match: nodepool.launch.error.*
+    name: nodepool_launch_error
+    help: launch error counter per error type
+    labels:
+      error: "$1"
+
+# updateNodeStats
+  - match: nodepool.nodes.*
+    name: nodepool_nodes_state
+    labels:
+      state: "$1"
+
+  - match: nodepool.provider.*.nodes.*
+    name: nodepool_provider_nodes_state
+    labels:
+      provider: "$1"
+      state: "$2"
+
+  - match: nodepool.label.*.nodes.*
+    name: nodepool_label_nodes_state
+    labels:
+      label: "$1"
+      state: "$2"
+
+# updateProviderLimits
+  - match: nodepool.provider.*.max_servers
+    name: nodepool_provider_max_servers
+    labels:
+      provider: "$1"
+
+  - match: nodepool.tenant_limits.*.*
+    name: nodepool_tenant_limits
+    labels:
+      tenant: "$1"
+      resource: "$2"
+
+# nodepool/builder.py
+  - match: nodepool.image_build_requests
+    name: nodepool_image_build_requests
+
+  - match: nodepool.dib_image_build.*.status.duration
+    name: nodepool_dib_image_build_status_duration
+    labels:
+      name: "$1"
+
+  - match: nodepool.dib_image_build.*.status.rc
+    name: nodepool_dib_image_build_status_rc
+    labels:
+      name: "$1"
+
+  - match: nodepool.dib_image_build.*.status.last_build
+    name: nodepool_dib_image_build_status_last_build
+    labels:
+      name: "$1"
+
+  - match: nodepool.dib_image_build.*.*.size
+    name: nodepool_dib_image_build_size
+    labels:
+      name: "$1"
+      image_type: "$2"
+
+  - match: nodepool.image_update.*.*
+    name: nodepool_image_update
+    labels:
+      name: "$1"
+      provider: "$2"
+
+  # Drop all non-matching metrics to avoid spamming prometheus with
+  # eventually unmatched metrics.
+  - match: .
+    match_type: regex
+    action: drop
+    name: "dropped"

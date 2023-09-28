@@ -72,10 +72,11 @@ administrative actions on a specified tenant.`,
 		buffer := &bytes.Buffer{}
 		errorBuffer := &bytes.Buffer{}
 		request := kubeClientSet.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(zuulSchedulerContainer.Name).SubResource("exec").VersionedParams(&v1.PodExecOptions{
-			Command: zuulAdminArgs,
-			Stdin:   false,
-			Stdout:  true,
-			Stderr:  true,
+			Container: "zuul-scheduler",
+			Command:   zuulAdminArgs,
+			Stdin:     false,
+			Stdout:    true,
+			Stderr:    true,
 		}, scheme.ParameterCodec)
 
 		exec, _ := remotecommand.NewSPDYExecutor(kubeConfig, "POST", request.URL())

@@ -32,8 +32,13 @@ const zuulExecutorPort = 7900
 const zuulPrometheusPort = 9090
 const zuulPrometheusPortName = "zuul-metrics"
 
+var zuulStatsdExporterPortName = monitoring.GetStatsdExporterPort("zuul")
+
 //go:embed static/zuul/zuul.conf
 var zuulDotconf string
+
+//go:embed static/zuul/statsd_mapping.yaml
+var zuulStatsdMappingConfig string
 
 //go:embed static/zuul/generate-tenant-config.sh
 var zuulGenerateTenantConfig string
@@ -120,6 +125,7 @@ func mkZuulVolumes(service string) []apiv1.Volume {
 				},
 			},
 		},
+		base.MkVolumeCM("statsd-config", "zuul-statsd-config-map"),
 	}
 	if !isStatefulset(service) {
 		// statefulset already has a PV for the service-name,
@@ -177,6 +183,7 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	authSections := utils.IniGetSectionNamesByPrefix(cfg, "auth")
 	sections = append(sections, authSections...)
+	// TODO add statsd section in followup patch
 	sections = append(sections, "scheduler")
 
 	annotations := map[string]string{
@@ -192,9 +199,19 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 			r.cr.Spec.ConfigLocation.Name
 	}
 
+	var relayAddress *string
+	if r.cr.Spec.Zuul.Scheduler.StatsdTarget != "" {
+		relayAddress = &r.cr.Spec.Zuul.Scheduler.StatsdTarget
+	}
+
+	zuulContainers := r.mkZuulContainer("zuul-scheduler")
+	statsdSidecar := monitoring.MkStatsdExporterSideCarContainer("zuul", "statsd-config", relayAddress)
+
+	zuulContainers = append(zuulContainers, statsdSidecar)
+
 	var setAdditionalContainers = func(sts *appsv1.StatefulSet) {
 		sts.Spec.Template.Spec.InitContainers = append(initContainers, r.mkInitSchedulerConfigContainer())
-		sts.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-scheduler")
+		sts.Spec.Template.Spec.Containers = zuulContainers
 	}
 
 	schedulerToolingData := make(map[string]string)
@@ -356,10 +373,10 @@ func (r *SFController) EnsureZuulPodMonitor() bool {
 			},
 		},
 	}
-	desiredZuulPodMonitor := monitoring.MkPodMonitor("zuul-monitor", r.ns, zuulPrometheusPortName, selector)
+	desiredZuulPodMonitor := monitoring.MkPodMonitor("zuul-monitor", r.ns, []string{zuulPrometheusPortName, zuulStatsdExporterPortName}, selector)
 	// add annotations so we can handle lifecycle
 	annotations := map[string]string{
-		"version": "1",
+		"version": "2",
 	}
 	desiredZuulPodMonitor.ObjectMeta.Annotations = annotations
 	currentZPM := monitoringv1.PodMonitor{}
@@ -506,6 +523,11 @@ func (r *SFController) DeployZuul() bool {
 		return false
 	}
 
+	// create statsd exporter config map
+	r.EnsureConfigMap("zuul-statsd", map[string]string{
+		monitoring.StatsdExporterConfigFile: zuulStatsdMappingConfig,
+	})
+
 	// Update base config to add connections
 	cfgINI := LoadConfigINI(zuulDotconf)
 	for _, conn := range r.cr.Spec.Zuul.GerritConns {
@@ -557,6 +579,8 @@ func (r *SFController) DeployZuul() bool {
 	}
 	cfgINI.Section("auth zuul_client").NewKey("secret", string(cliAuthSecret))
 	cfgINI.Section("auth zuul_client").NewKey("realm", "zuul."+r.cr.Spec.FQDN)
+	// Configure statsd common config
+	cfgINI.Section("statsd").NewKey("port", strconv.Itoa(int(monitoring.StatsdExporterPortListen)))
 
 	r.EnsureZuulConfigSecret(cfgINI)
 	r.EnsureZuulComponentsFrontServices()
