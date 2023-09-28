@@ -185,7 +185,8 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	services["Logserver"] = r.DeployLogserverResource()
 
 	if services["Zookeeper"] {
-		services["NodePool"] = r.DeployNodepool()
+		services["NodePoolLauncher"] = r.DeployNodepoolLauncher()
+		services["NodePoolBuilder"] = r.DeployNodepoolBuilder()
 	}
 
 	if services["Zuul"] {

@@ -22,12 +22,17 @@ var generateConfigScript string
 //go:embed static/nodepool/logging.yaml.tmpl
 var loggingConfigTemplate string
 
+//go:embed static/nodepool/builder.yaml
+var builderConfigFile string
+
 const launcherIdent = "nodepool-launcher"
 const launcherPortName = "nlwebapp"
 const launcherPort = 8006
 const NodepoolProvidersSecretsName = "nodepool-providers-secrets"
-
 const nodepoolLauncherImage = "quay.io/software-factory/" + launcherIdent + ":9.0.0-1"
+
+const builderIdent = "nodepool-builder"
+const nodepoolBuilderImage = "quay.io/software-factory/" + builderIdent + ":9.0.0-1"
 
 var configScriptVolumeMount = apiv1.VolumeMount{
 	Name:      "nodepool-launcher-tooling-vol",
@@ -49,7 +54,84 @@ func (r *SFController) getNodepoolConfigEnvs() []apiv1.EnvVar {
 	}
 }
 
-func (r *SFController) DeployNodepool() bool {
+func (r *SFController) DeployNodepoolBuilder() bool {
+
+	builderConfig := make(map[string]string)
+	builderConfig["nodepool.yaml"] = builderConfigFile
+
+	r.EnsureConfigMap("nodepool-builder-config", builderConfig)
+
+	volumes := []apiv1.Volume{
+		base.MkVolumeSecret("zookeeper-client-tls"),
+		base.MkEmptyDirVolume("nodepool-config"),
+		base.MkEmptyDirVolume("nodepool-home"),
+		base.MkEmptyDirVolume("nodepool-home-dib"),
+		base.MkEmptyDirVolume("nodepool-home-build"),
+		base.MkVolumeCM("nodepool-builder-config-vol",
+			"nodepool-builder-config-config-map"),
+	}
+
+	volumeMount := []apiv1.VolumeMount{
+		{
+			Name:      "zookeeper-client-tls",
+			MountPath: "/tls/client",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "nodepool-config",
+			MountPath: "/etc/nodepool/",
+		},
+		{
+			Name:      "nodepool-home",
+			MountPath: "/var/lib/nodepool",
+		},
+		{
+			Name:      "nodepool-home-dib",
+			MountPath: "/var/lib/nodepool/dib",
+		},
+		{
+			Name:      "nodepool-home-build",
+			MountPath: "/var/lib/nodepool/build",
+		},
+		{
+			Name:      "nodepool-builder-config-vol",
+			SubPath:   "nodepool.yaml",
+			MountPath: "/etc/nodepool/nodepool.yaml",
+		},
+	}
+
+	annotations := map[string]string{
+		"serial": "2",
+	}
+
+	replicas := int32(1)
+	storageSpec := base.StorageConfig{
+		StorageClassName: "topolvm-provisioner",
+		Size:             utils.Qty1Gi(),
+	}
+	nb := r.mkStatefulSet(builderIdent, nodepoolBuilderImage, storageSpec, replicas, apiv1.ReadWriteOnce)
+
+	nb.Spec.Template.ObjectMeta.Annotations = annotations
+	nb.Spec.Template.Spec.Volumes = volumes
+	nb.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMount
+
+	current := appsv1.StatefulSet{}
+	if r.GetM(builderIdent, &current) {
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("Nodepool-builder configuration changed, rollout pods ...")
+			current.Spec = nb.DeepCopy().Spec
+			r.UpdateR(&current)
+			return false
+		}
+	} else {
+		current := nb
+		r.CreateR(&current)
+	}
+
+	return r.IsStatefulSetReady(&current)
+}
+
+func (r *SFController) DeployNodepoolLauncher() bool {
 
 	launcheToolingData := make(map[string]string)
 	launcheToolingData["generate-launcher-config.sh"] = generateConfigScript
@@ -166,6 +248,7 @@ func (r *SFController) DeployNodepool() bool {
 		base.MkEnvVar("HOME", "/var/lib/nodepool"))
 
 	initContainer := base.MkContainer("nodepool-launcher-init", BusyboxImage)
+
 	initContainer.Command = []string{"/usr/local/bin/generate-launcher-config.sh"}
 	initContainer.Env = append(r.getNodepoolConfigEnvs(),
 		base.MkEnvVar("HOME", "/var/lib/nodepool"))
