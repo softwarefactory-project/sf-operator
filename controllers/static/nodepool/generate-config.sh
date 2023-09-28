@@ -2,6 +2,12 @@
 
 set -ex
 
+# The script expects by default to find the 'nodepool.yaml' file in
+# the config repository. However the same for nodepool-builder the script
+# must find the 'nodepool-builder.yaml' in the config repo. Thus, this script
+# can be parameterized via the NODEPOOL_CONFIG_FILE environment variable.
+NODEPOOL_CONFIG_FILE="${NODEPOOL_CONFIG_FILE:-nodepool.yaml}"
+
 # Generate the default tenants configuration file
 cat << EOF > ~/nodepool.yaml
 ---
@@ -14,6 +20,8 @@ zookeeper-tls:
   ca: /tls/client/ca.crt
   cert: /tls/client/tls.crt
   key: /tls/client/tls.key
+# images-dir is mandatory key for nodepool-builder process
+images-dir: /var/lib/nodepool/dib
 EOF
 
 if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
@@ -37,8 +45,8 @@ if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
   fi
 
   # Append the config repo provided config file to the default one
-  if [ -f ~/${CONFIG_REPO_NAME}/nodepool/nodepool.yaml ]; then
-    cat ~/${CONFIG_REPO_NAME}/nodepool/nodepool.yaml >> ~/nodepool.yaml
+  if [ -f ~/${CONFIG_REPO_NAME}/nodepool/${NODEPOOL_CONFIG_FILE} ]; then
+    cat ~/${CONFIG_REPO_NAME}/nodepool/${NODEPOOL_CONFIG_FILE} >> ~/nodepool.yaml
   fi
 
 fi

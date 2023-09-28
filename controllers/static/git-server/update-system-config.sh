@@ -229,8 +229,9 @@ cat << EOF > playbooks/config/check.yaml
   vars:
     config_root: "{{ zuul.executor.work_root }}/{{ zuul.project.src_dir }}"
     zuul_config: "{{ config_root }}/zuul/main.yaml"
-    nodepool_config: "{{ config_root }}/nodepool/nodepool.yaml"
     zuul_connections: "{{ lookup('file', 'zuul-connections.txt') }}"
+    nodepool_launcher_config: "{{ config_root }}/nodepool/nodepool.yaml"
+    nodepool_builder_config: "{{ config_root }}/nodepool/nodepool-builder.yaml"
   tasks:
     - name: Ensure Zuul tenant config exists
       shell: |
@@ -257,15 +258,25 @@ cat << EOF > playbooks/config/check.yaml
       # clearing the env fixes that issue.
       command: env - PATH=/usr/local/bin:/bin zuul-admin -c "{{ zuul_config }}.conf" tenant-conf-check
 
-    - name: Ensure Nodepool config exists
+    - name: Ensure Nodepool launcher config exists
       shell: |
-        if ! test -f "{{ nodepool_config }}"; then
-          mkdir -p "{{ config_root }}/nodepool/nodepool"
-          echo {} > "{{ nodepool_config }}"
+        if ! test -f "{{ nodepool_launcher_config }}"; then
+          mkdir -p "{{ config_root }}/nodepool/"
+          echo {} > "{{ nodepool_launcher_config }}"
         fi
 
-    - name: Validate Nodepool config
-      command: env - PATH=/usr/local/bin:/bin nodepool -c "{{ nodepool_config }}" config-validate
+    - name: Validate Nodepool launcher config
+      command: env - PATH=/usr/local/bin:/bin nodepool -c "{{ nodepool_launcher_config }}" config-validate
+
+    - name: Ensure Nodepool builder config exists
+      shell: |
+        if ! test -f "{{ nodepool_builder_config }}"; then
+          mkdir -p "{{ config_root }}/nodepool/"
+          echo {} > "{{ nodepool_builder_config }}"
+        fi
+
+    - name: Validate Nodepool builder config
+      command: env - PATH=/usr/local/bin:/bin nodepool -c "{{ nodepool_builder_config }}" config-validate
 EOF
 
 cat << EOF > playbooks/config/update.yaml
@@ -290,7 +301,17 @@ cat << EOF > playbooks/config/update.yaml
     ansible_python_interpreter: /usr/bin/python3.11
   tasks:
     - name: "Update nodepool-launcher config"
-      command: /usr/local/bin/generate-launcher-config.sh "{{ config_ref }}"
+      command: /usr/local/bin/generate-config.sh "{{ config_ref }}"
+
+- hosts: nodepool-builder
+  vars:
+    config_ref: "{{ zuul.newrev | default('origin/master') }}"
+    ansible_python_interpreter: /usr/bin/python3.11
+  tasks:
+    - name: "Update nodepool-builder config"
+      command: /usr/local/bin/generate-config.sh "{{ config_ref }}"
+      environment:
+        NODEPOOL_CONFIG_FILE: nodepool-builder.yaml
 
 EOF
 
@@ -317,6 +338,12 @@ cat << EOF > roles/add-k8s-hosts/tasks/main.yaml
     ansible_connection: kubectl
     ansible_kubectl_pod: "{{ nodepool_launcher_info.resources[0].metadata.name }}"
     ansible_kubectl_container: launcher
+
+- ansible.builtin.add_host:
+    name: "nodepool-builder"
+    ansible_connection: kubectl
+    ansible_kubectl_container: nodepool-builder
+    ansible_kubectl_pod: "nodepool-builder-0"
 
 EOF
 

@@ -20,6 +20,7 @@
     - zuul-connections
     - config-update-zuul
     - config-update-nodepool-launcher
+    - config-update-nodepool-builder
     - pod-spawning
     - test-volumestats-sidecar
     - test-crd
