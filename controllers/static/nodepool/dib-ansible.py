@@ -25,6 +25,9 @@ import os
 
 def main():
     # Fake dib interface
+
+    inventory_path = "/var/lib/nodepool/config/nodepool/dib-ansible/inventory.yaml"
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-x", action='store_true', help="noop")
     parser.add_argument("-t", help="Image types")
@@ -34,10 +37,14 @@ def main():
     parser.add_argument("-o", help="Image output")
     parser.add_argument("playbook", help="noop")
     args = parser.parse_args()
-    cmd = ["/usr/bin/ansible-playbook", "-v"]
+    cmd = ["/usr/bin/ansible-playbook", "-v", "-i", inventory_path]
 
     playbook = args.playbook
     playbook_path = None
+
+    if not os.path.exists(inventory_path):
+        print("No inventory file provided in nodepool/dib-ansible/")
+        exit(1)
 
     if os.path.exists(playbook):
         playbook_path = playbook

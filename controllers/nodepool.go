@@ -25,6 +25,9 @@ var loggingConfigTemplate string
 //go:embed static/nodepool/dib-ansible.py
 var dibAnsibleWrapper string
 
+//go:embed static/nodepool/ssh_config
+var builderSSHConfig string
+
 const launcherIdent = "nodepool-launcher"
 const launcherPortName = "nlwebapp"
 const launcherPort = 8006
@@ -44,10 +47,11 @@ func (r *SFController) setNodepoolTooling() {
 	toolingData := make(map[string]string)
 	toolingData["generate-config.sh"] = generateConfigScript
 	toolingData["dib-ansible.py"] = dibAnsibleWrapper
+	toolingData["ssh_config"] = builderSSHConfig
 	r.EnsureConfigMap("nodepool-tooling", toolingData)
 }
 
-func (r *SFController) toolingVolume() apiv1.Volume {
+func (r *SFController) commonToolingVolume() apiv1.Volume {
 	return apiv1.Volume{
 		Name: "nodepool-tooling-vol",
 		VolumeSource: apiv1.VolumeSource{
@@ -77,15 +81,28 @@ func (r *SFController) getNodepoolConfigEnvs() []apiv1.EnvVar {
 
 func (r *SFController) DeployNodepoolBuilder() bool {
 
+	r.EnsureSSHKeySecret("nodepool-builder-ssh-key")
+
 	r.setNodepoolTooling()
 
+	var mod int32 = 256 // decimal for 0400 octal
 	volumes := []apiv1.Volume{
 		base.MkVolumeSecret("zookeeper-client-tls"),
 		base.MkEmptyDirVolume("nodepool-config"),
 		base.MkEmptyDirVolume("nodepool-home"),
 		base.MkEmptyDirVolume("nodepool-home-dib"),
+		base.MkEmptyDirVolume("nodepool-home-ssh"),
 		base.MkEmptyDirVolume("nodepool-log"),
-		r.toolingVolume(),
+		r.commonToolingVolume(),
+		{
+			Name: "nodepool-builder-ssh-key",
+			VolumeSource: apiv1.VolumeSource{
+				Secret: &apiv1.SecretVolumeSource{
+					SecretName:  "nodepool-builder-ssh-key",
+					DefaultMode: &mod,
+				},
+			},
+		},
 	}
 
 	volumeMount := []apiv1.VolumeMount{
@@ -107,6 +124,10 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 			MountPath: "/var/lib/nodepool/dib",
 		},
 		{
+			Name:      "nodepool-home-ssh",
+			MountPath: "/var/lib/nodepool/.ssh",
+		},
+		{
 			Name:      "nodepool-log",
 			MountPath: "/var/log/nodepool",
 		},
@@ -116,11 +137,24 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 			SubPath:   "dib-ansible.py",
 			MountPath: "/usr/local/bin/dib-ansible",
 		},
+		{
+			Name:      "nodepool-builder-ssh-key",
+			MountPath: "/var/lib/nodepool-ssh-key",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "nodepool-tooling-vol",
+			SubPath:   "ssh_config",
+			MountPath: "/var/lib/nodepool/.ssh/config",
+			ReadOnly:  true,
+		},
 	}
 
 	annotations := map[string]string{
-		"nodepool.yaml": utils.Checksum([]byte(generateConfigScript)),
-		"serial":        "4",
+		"nodepool.yaml":  utils.Checksum([]byte(generateConfigScript)),
+		"dib-ansible.py": utils.Checksum([]byte(dibAnsibleWrapper)),
+		"ssh_config":     utils.Checksum([]byte(builderSSHConfig)),
+		"serial":         "5",
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", BusyboxImage)
@@ -198,7 +232,7 @@ func (r *SFController) DeployNodepoolLauncher() bool {
 		base.MkVolumeSecret(NodepoolProvidersSecretsName),
 		base.MkEmptyDirVolume("nodepool-config"),
 		base.MkEmptyDirVolume("nodepool-home"),
-		r.toolingVolume(),
+		r.commonToolingVolume(),
 		base.MkVolumeCM("nodepool-launcher-extra-config-vol",
 			"nodepool-launcher-extra-config-config-map"),
 	}
