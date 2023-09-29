@@ -1,10 +1,10 @@
-<img src ="https://zuul-ci.org/gated.svg" />
-<img src="https://softwarefactory-project.io/zuul/api/tenant/local/badge?project=software-factory/sf-operator&pipeline=post" />
-<a href="https://matrix.to/#/#softwarefactory-project:matrix.org"><img src="https://img.shields.io/badge/matrix-%23softwarefactory--project-8A2BE2" alt="Matrix Channel" /></a>
-<img src="https://img.shields.io/github/v/tag/softwarefactory-project/sf-operator" />
-<img src="https://img.shields.io/badge/project%20status-ALPHA-FF2060" alt="Testing only; use in production at your own risks" />
-
 # SF-Operator: a Zuul-based CI infrastructure for OpenShift
+
+<a href="https://zuul-ci.org" ><img src ="https://zuul-ci.org/gated.svg" /></a>
+<a href="https://softwarefactory-project.io/zuul/t/local/buildsets?project=software-factory%2Fsf-operator&pipeline=post&skip=0" ><img src="https://softwarefactory-project.io/zuul/api/tenant/local/badge?project=software-factory/sf-operator&pipeline=post" /></a>
+<a href="https://matrix.to/#/#softwarefactory-project:matrix.org"><img src="https://img.shields.io/badge/matrix-%23softwarefactory--project-8A2BE2" alt="Matrix Channel" /></a>
+<a href="https://github.com/softwarefactory-project/sf-operator/tags" ><img src="https://img.shields.io/github/v/tag/softwarefactory-project/sf-operator" /></a>
+<img src="https://img.shields.io/badge/project%20status-ALPHA-FF2060" alt="Testing only; use in production at your own risks" />
 
 ## About
 
