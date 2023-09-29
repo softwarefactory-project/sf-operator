@@ -4,6 +4,10 @@
     - include_role:
         name: roles/post/get-logserver-content
 
+    # Fetch nodepool-builder build image logs
+    - include_role:
+        name: roles/post/get-nodepool-builds-logs
+
     # Fetch k8s cluster wide resources
     - include_role:
         name: roles/post/get-k8s-cluster-resources
