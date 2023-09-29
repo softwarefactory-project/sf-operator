@@ -1,8 +1,8 @@
 ---
 - name: "Collect executor log before the scaleup"
   shell: |
-    mkdir -p ~/zuul-output/logs/k8s-resources/
-    kubectl logs zuul-executor-0 > ~/zuul-output/logs/k8s-resources/zuul-executor-42-zuul-executor-logs.txt
+    mkdir -p ~/zuul-output/logs/k8s-resources/sf/pod
+    kubectl logs zuul-executor-0 > ~/zuul-output/logs/k8s-resources/sf/pod/zuul-executor-0-zuul-executor-logs0.txt
 
 - name: "Scale {{ operation }} on statefulset {{ service.name }}"
   ansible.builtin.include_role:
