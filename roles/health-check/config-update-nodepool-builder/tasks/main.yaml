@@ -104,6 +104,12 @@
         tasks:
           - debug:
               msg: "Hello from build of {{ nodepool_diskimage_name }}"
+      - hosts: localhost
+        tasks:
+          - name: Simulate fetching the built image from the image-builder host
+            file:
+              path: "{{ '{{' }} image_output {{ '}}' }}.raw"
+              state: touch
     dest: "{{ config_path }}/nodepool/dib-ansible/dummy.yaml"
 
 - name: Commit file in the config repo
