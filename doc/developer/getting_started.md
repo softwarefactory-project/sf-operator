@@ -54,6 +54,7 @@ the microshift context:
 ```sh
 kubectl config current-context
 # Must be microshift, if not:
+kubectl create namespace sf
 kubectl config set-context microshift --namespace=sf
 ```
 
