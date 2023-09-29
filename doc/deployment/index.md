@@ -12,5 +12,6 @@ and managing a Software Factory Custom Resource through SF-Operator.
     1. [Zuul](./zuul.md)
     1. Logserver
 1. [Setting up certificates](./certificates.md)
+1. [Monitoring](./monitoring.md)
 1. [Deleting a deployment](./delete.md)
 1. [Custom Resource Definitions reference](./crds.md)

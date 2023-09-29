@@ -46,6 +46,14 @@ You can read about [how to deploy a MicroShift instance here](./microshift.md).
 
 ## Deploy test resources
 
+With `sfconfig`, you can quickly deploy a demo deployment consisting of the following:
+
+* a SoftwareFactory resource (Zuul, Nodepool, Log server and backend services)
+* a companion Gerrit service hosting:
+    * the deployment's config repository
+    * a demo repository
+* a companion Prometheus instance for monitoring
+
 The operator will automatically use the current context in your kubeconfig file
 (i.e. whatever cluster `kubectl cluster-info` shows).
 Make sure that your current context is the right one for development. In this example, we are using
@@ -60,9 +68,7 @@ kubectl config set-context microshift --namespace=sf
 
 Edit the [sfconfig.yaml](./../../sfconfig.yaml) configuration file to your liking, for example by setting up a custom FQDN.
 
-Then run the `sfconfig` command to deploy a SoftwareFactory resource, a companion Gerrit service 
-preconfigured to host the deployment's config repository and a demo repository, and a companion
-Prometheus:
+Then run the `sfconfig` command:
 
 ```sh
 go run ./cli/sfconfig
