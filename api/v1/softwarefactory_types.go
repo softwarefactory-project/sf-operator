@@ -181,15 +181,21 @@ type NodepoolLauncherSpec struct {
 	LogLevel LogLevel `json:"logLevel,omitempty"`
 }
 
+type NodepoolBuilderSpec struct {
+	// Storage related settings
+	Storage StorageSpec `json:"storage,omitempty"`
+	// Specify the Log Level of the nodepool launcher process.
+	// Valid values are:
+	// - "INFO" (default)
+	// - "WARN"
+	// - "DEBUG"
+	LogLevel LogLevel `json:"logLevel,omitempty"`
+}
+
 type NodepoolSpec struct {
 	Launcher NodepoolLauncherSpec `json:"launcher,omitempty"`
 	// Nodepool-builder related settings
 	Builder NodepoolBuilderSpec `json:"builder,omitempty"`
-}
-
-type NodepoolBuilderSpec struct {
-	// Storage related settings
-	Storage StorageSpec `json:"storage"`
 }
 
 type ZookeeperSpec struct {

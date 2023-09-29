@@ -79,11 +79,30 @@ func (r *SFController) getNodepoolConfigEnvs() []apiv1.EnvVar {
 	}
 }
 
+func mkLoggingTemplate(logLevel v1.LogLevel) (string, error) {
+	// Unfortunatly I'm unable to leverage default value set at API validation
+	selectedLogLevel := v1.InfoLogLevel
+	if logLevel != "" {
+		selectedLogLevel = logLevel
+	}
+
+	loggingConfig, err := utils.ParseString(
+		loggingConfigTemplate, struct{ LogLevel string }{LogLevel: string(selectedLogLevel)})
+
+	return loggingConfig, err
+}
+
 func (r *SFController) DeployNodepoolBuilder() bool {
 
 	r.EnsureSSHKeySecret("nodepool-builder-ssh-key")
 
 	r.setNodepoolTooling()
+
+	loggingConfig, _ := mkLoggingTemplate(r.cr.Spec.Nodepool.Builder.LogLevel)
+
+	builderExtraConfigData := make(map[string]string)
+	builderExtraConfigData["logging.yaml"] = loggingConfig
+	r.EnsureConfigMap("nodepool-builder-extra-config", builderExtraConfigData)
 
 	var mod int32 = 256 // decimal for 0400 octal
 	volumes := []apiv1.Volume{
@@ -101,6 +120,8 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 				},
 			},
 		},
+		base.MkVolumeCM("nodepool-builder-extra-config-vol",
+			"nodepool-builder-extra-config-config-map"),
 	}
 
 	volumeMount := []apiv1.VolumeMount{
@@ -142,13 +163,19 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 			MountPath: "/var/lib/nodepool/.ssh/config",
 			ReadOnly:  true,
 		},
+		{
+			Name:      "nodepool-builder-extra-config-vol",
+			SubPath:   "logging.yaml",
+			MountPath: "/etc/nodepool-logging/logging.yaml",
+		},
 	}
 
 	annotations := map[string]string{
-		"nodepool.yaml":  utils.Checksum([]byte(generateConfigScript)),
-		"dib-ansible.py": utils.Checksum([]byte(dibAnsibleWrapper)),
-		"ssh_config":     utils.Checksum([]byte(builderSSHConfig)),
-		"serial":         "7",
+		"nodepool.yaml":         utils.Checksum([]byte(generateConfigScript)),
+		"nodepool-logging.yaml": utils.Checksum([]byte(loggingConfig)),
+		"dib-ansible.py":        utils.Checksum([]byte(dibAnsibleWrapper)),
+		"ssh_config":            utils.Checksum([]byte(builderSSHConfig)),
+		"serial":                "7",
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", BusyboxImage)
@@ -178,6 +205,8 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 	nb.Spec.Template.ObjectMeta.Annotations = annotations
 	nb.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nb.Spec.Template.Spec.Volumes = volumes
+	nb.Spec.Template.Spec.Containers[0].Command = []string{"/usr/local/bin/dumb-init", "--",
+		"/usr/local/bin/nodepool-builder", "-f", "-l", "/etc/nodepool-logging/logging.yaml"}
 	nb.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMount
 	nb.Spec.Template.Spec.Containers[0].Env = append(r.getNodepoolConfigEnvs(),
 		base.MkEnvVar("HOME", "/var/lib/nodepool"))
@@ -206,14 +235,7 @@ func (r *SFController) DeployNodepoolLauncher() bool {
 
 	r.setNodepoolTooling()
 
-	// Unfortunatly I'm unable to leverage default value set at API validation
-	logLevel := v1.InfoLogLevel
-	if r.cr.Spec.Nodepool.Launcher.LogLevel != "" {
-		logLevel = r.cr.Spec.Nodepool.Launcher.LogLevel
-	}
-
-	loggingConfig, _ := utils.ParseString(
-		loggingConfigTemplate, struct{ LogLevel string }{LogLevel: string(logLevel)})
+	loggingConfig, _ := mkLoggingTemplate(r.cr.Spec.Nodepool.Launcher.LogLevel)
 
 	launcherExtraConfigData := make(map[string]string)
 	launcherExtraConfigData["logging.yaml"] = loggingConfig

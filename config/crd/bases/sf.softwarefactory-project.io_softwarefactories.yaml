@@ -217,6 +217,15 @@ spec:
                   builder:
                     description: Nodepool-builder related settings
                     properties:
+                      logLevel:
+                        description: 'Specify the Log Level of the nodepool launcher
+                          process. Valid values are: - "INFO" (default) - "WARN" -
+                          "DEBUG"'
+                        enum:
+                        - INFO
+                        - WARN
+                        - DEBUG
+                        type: string
                       storage:
                         description: Storage related settings
                         properties:
@@ -240,8 +249,6 @@ spec:
                         required:
                         - size
                         type: object
-                    required:
-                    - storage
                     type: object
                   launcher:
                     properties:
