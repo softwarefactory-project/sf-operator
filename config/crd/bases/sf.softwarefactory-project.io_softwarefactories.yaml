@@ -52,17 +52,19 @@ spec:
                 description: Config repository spec
                 properties:
                   base-url:
-                    description: Base URL of the code-review provider where the `Name`
-                      can be fetch by Git
+                    description: Base URL to use to perform git-related actions on
+                      the config repository. For example, if hosted on GitHub, the
+                      Base URL would be `https://github.com/<username>/`
                     pattern: ^https?:\/\/.+$
                     type: string
                   name:
-                    description: Name of the `config` repository where the SF config
-                      workflow is applied
+                    description: The name of the `config` repository. This value is
+                      appended to `base-url` to clone the repository
                     minLength: 1
                     type: string
                   zuul-connection-name:
-                    description: Name of the Zuul connection where the `config` exists
+                    description: Name of the Zuul connection through which Zuul can
+                      handle git events on the config repository
                     minLength: 1
                     type: string
                 required:
@@ -71,6 +73,8 @@ spec:
                 - zuul-connection-name
                 type: object
               fqdn:
+                description: The fully qualified domain name to use with the deployment.
+                  Relevant services will be served at https://`service`.`FQDN`
                 type: string
               gitserver:
                 description: Git server spec
@@ -78,11 +82,17 @@ spec:
                   storage:
                     properties:
                       className:
+                        description: Default storage class to use with Persistent
+                          Volume Claims issued by this resource. Consult your cluster's
+                          configuration to see what storage classes are available
+                          and recommended for your use case.
                         type: string
                       size:
                         anyOf:
                         - type: integer
                         - type: string
+                        description: 'Storage space to allocate to the resource, expressed
+                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                         x-kubernetes-validations:
@@ -110,21 +120,30 @@ spec:
                 description: Logserver service spec
                 properties:
                   loopDelay:
-                    description: Logs Check. Log will be checked every "X" seconds
-                      ( default 3600 s ~= 1 hour )
+                    description: The frequency, in seconds, at which the log pruning
+                      cronjob is running. Defaults to 3600s, i.e. logs are checked
+                      for pruning every hour
                     type: integer
                   retentionDays:
-                    description: Logs Older that "x" days will be purge ( default
-                      60 days )
+                    description: Logs retention time in days. Logs older than this
+                      setting in days will be purged by a pruning cronjob. Defaults
+                      to 60 days
                     type: integer
                   storage:
+                    description: Storage-related settings
                     properties:
                       className:
+                        description: Default storage class to use with Persistent
+                          Volume Claims issued by this resource. Consult your cluster's
+                          configuration to see what storage classes are available
+                          and recommended for your use case.
                         type: string
                       size:
                         anyOf:
                         - type: integer
                         - type: string
+                        description: 'Storage space to allocate to the resource, expressed
+                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                         x-kubernetes-validations:
@@ -143,13 +162,20 @@ spec:
                 description: MariaDB service spec
                 properties:
                   dbStorage:
+                    description: Storage parameters related to mariaDB's data
                     properties:
                       className:
+                        description: Default storage class to use with Persistent
+                          Volume Claims issued by this resource. Consult your cluster's
+                          configuration to see what storage classes are available
+                          and recommended for your use case.
                         type: string
                       size:
                         anyOf:
                         - type: integer
                         - type: string
+                        description: 'Storage space to allocate to the resource, expressed
+                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                         x-kubernetes-validations:
@@ -159,13 +185,20 @@ spec:
                     - size
                     type: object
                   logStorage:
+                    description: Storage parameters related to the database's logging
                     properties:
                       className:
+                        description: Default storage class to use with Persistent
+                          Volume Claims issued by this resource. Consult your cluster's
+                          configuration to see what storage classes are available
+                          and recommended for your use case.
                         type: string
                       size:
                         anyOf:
                         - type: integer
                         - type: string
+                        description: 'Storage space to allocate to the resource, expressed
+                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                         x-kubernetes-validations:
@@ -185,8 +218,8 @@ spec:
                     properties:
                       logLevel:
                         description: 'Specify the Log Level of the nodepool launcher
-                          process. Valid values are: - "INFO" (default) - "WARN" -
-                          "DEBUG"'
+                          service. Valid values are: - "INFO" (default) - "WARN" -
+                          "DEBUG" Changing this value will restart the service.'
                         enum:
                         - INFO
                         - WARN
@@ -203,11 +236,17 @@ spec:
                   storage:
                     properties:
                       className:
+                        description: Default storage class to use with Persistent
+                          Volume Claims issued by this resource. Consult your cluster's
+                          configuration to see what storage classes are available
+                          and recommended for your use case.
                         type: string
                       size:
                         anyOf:
                         - type: integer
                         - type: string
+                        description: 'Storage space to allocate to the resource, expressed
+                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                         x-kubernetes-validations:
@@ -223,18 +262,27 @@ spec:
                 description: Zuul service spec
                 properties:
                   executor:
+                    description: Configuration of the executor microservices
                     properties:
                       replicas:
+                        description: How many executor pods to run
                         format: int32
                         type: integer
                       storage:
+                        description: Storage-related settings
                         properties:
                           className:
+                            description: Default storage class to use with Persistent
+                              Volume Claims issued by this resource. Consult your
+                              cluster's configuration to see what storage classes
+                              are available and recommended for your use case.
                             type: string
                           size:
                             anyOf:
                             - type: integer
                             - type: string
+                            description: 'Storage space to allocate to the resource,
+                              expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                             x-kubernetes-validations:
@@ -245,40 +293,51 @@ spec:
                         type: object
                     type: object
                   gerritconns:
+                    description: The list of Gerrit-based connections to add to Zuul's
+                      configuration
                     items:
+                      description: 'Describes a Zuul connection using the `gerrit`
+                        driver: https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#connection-configuration'
                       properties:
                         canonicalhostname:
                           description: The canonical hostname associated with the
-                            git repos on the Gerrit server.
+                            git repositories on the Gerrit server. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.canonical_hostname
                           type: string
                         git-over-ssh:
                           default: false
-                          description: This forces git operation over SSH even if
-                            the password attribute is set.
+                          description: Set to true to force git operations over SSH
+                            even if the password attribute is set. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.git_over_ssh
                           type: boolean
                         hostname:
+                          description: The gerrit server hostname. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.server
                           type: string
                         name:
+                          description: How the connection will be named in Zuul's
+                            configuration and appear in zuul-web
                           type: string
                         password:
-                          description: API Password secret name
+                          description: The name of a Kubernetes secret holding the
+                            Gerrit user's API Password. The secret's data must have
+                            a key called "password". Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.password
                           type: string
                         port:
                           default: 29418
-                          description: SSH port number to connect on the Gerrit instance
+                          description: SSH port number to the Gerrit instance. Equivalent
+                            to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.port
                           type: integer
                         puburl:
-                          description: URL to Gerrit web interface
+                          description: URL to Gerrit's web interface. https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.baseurl
                           pattern: ^https?:\/\/.+$
                           type: string
                         username:
                           default: zuul
-                          description: Username to authenticate on the Gerrit instance
+                          description: Username that Zuul will use to authenticate
+                            on the Gerrit instance. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.user
                           type: string
                         verifyssl:
                           default: true
-                          description: Disable SSL certificate verification when set
-                            to false.
+                          description: Disable SSL certificate verification with the
+                            Gerrit instance when set to false. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.verify_ssl
                           type: boolean
                       required:
                       - hostname
@@ -286,15 +345,23 @@ spec:
                       type: object
                     type: array
                   scheduler:
+                    description: Configuration of the scheduler microservice
                     properties:
                       storage:
+                        description: Storage-related settings
                         properties:
                           className:
+                            description: Default storage class to use with Persistent
+                              Volume Claims issued by this resource. Consult your
+                              cluster's configuration to see what storage classes
+                              are available and recommended for your use case.
                             type: string
                           size:
                             anyOf:
                             - type: integer
                             - type: string
+                            description: 'Storage space to allocate to the resource,
+                              expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                             x-kubernetes-validations:
@@ -312,6 +379,9 @@ spec:
             description: SoftwareFactoryStatus defines the observed state of SoftwareFactory
             properties:
               conditions:
+                description: Information about ongoing or completed reconciliation
+                  processes between the Log server spec and the observed state of
+                  the cluster
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -380,12 +450,16 @@ spec:
                   type: object
                 type: array
               observedGeneration:
+                description: The Generation of the related Custom Resource that was
+                  last processed by the operator controller
                 format: int64
                 type: integer
               ready:
                 description: The deployment status.
                 type: boolean
               reconciledBy:
+                description: The name of the operator handling this Custom Resource's
+                  reconciliation
                 type: string
             type: object
         type: object

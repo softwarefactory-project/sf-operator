@@ -12,36 +12,42 @@ import (
 
 // LogServerSpec defines the desired state of LogServer
 type LogServerSpec struct {
+	// The fully qualified domain name to use with the log server. Logs will be served at https://logserver.`FQDN`
 	FQDN string `json:"fqdn"`
 	// LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS
 	LetsEncrypt *LetsEncryptSpec `json:"LetsEncrypt,omitempty"`
-	// Default storage class to use by Persistent Volume Claims
+	// Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case.
 	StorageClassName string `json:"storageClassName,omitempty"`
-	// SSH authorized key as base64 data
-	AuthorizedSSHKey string                `json:"authorizedSSHKey"`
-	Settings         LogServerSpecSettings `json:"settings,omitempty"`
+	// The SSH public key, encoded as base64, to use to authorize file transfers on the log server
+	AuthorizedSSHKey string `json:"authorizedSSHKey"`
+	// General runtime settings for the log server
+	Settings LogServerSpecSettings `json:"settings,omitempty"`
 }
 
 // +kubebuilder:validation:Required
 // +kubebuilder:validation:XValidation:rule="!has(self.retentionDays) || self.retentionDays > 0",message="retentionDays must be a positive integer if set"
 // +kubebuilder:validation:XValidation:rule="!has(self.loopDelay) || self.loopDelay > 0",message="loopDelay must be a positive integer if set"
 type LogServerSpecSettings struct {
-	// Logs Older that "x" days will be purge ( default 60 days )
+	// Logs retention time in days. Logs older than this setting in days will be purged by a pruning cronjob. Defaults to 60 days
 	// +optional
 	RetentionDays int `json:"retentionDays,omitempty"`
-	// Logs Check. Log will be checked every "X" seconds ( default 3600 s ~= 1 hour )
+	// The frequency, in seconds, at which the log pruning cronjob is running. Defaults to 3600s, i.e. logs are checked for pruning every hour
 	// +optional
-	LoopDelay int         `json:"loopDelay,omitempty"`
-	Storage   StorageSpec `json:"storage,omitempty"`
+	LoopDelay int `json:"loopDelay,omitempty"`
+	// Storage-related settings
+	Storage StorageSpec `json:"storage,omitempty"`
 }
 
-// LogServerStatus defines the observed state of LogServer
+// LogServerStatus defines the observed state of a Log server
 type LogServerStatus struct {
 	// The deployment status.
-	Ready              bool               `json:"ready,omitempty"`
-	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
-	ReconciledBy       string             `json:"reconciledBy,omitempty"`
-	Conditions         []metav1.Condition `json:"conditions,omitempty" optional:"true"`
+	Ready bool `json:"ready,omitempty"`
+	// The Generation of the related Custom Resource that was last processed by the operator controller
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// The name of the operator handling this Custom Resource's reconciliation
+	ReconciledBy string `json:"reconciledBy,omitempty"`
+	// Information about ongoing or completed reconciliation processes between the Log server spec and the observed state of the cluster
+	Conditions []metav1.Condition `json:"conditions,omitempty" optional:"true"`
 }
 
 //+kubebuilder:object:root=true
