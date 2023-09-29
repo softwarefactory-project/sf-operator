@@ -214,6 +214,35 @@ spec:
               nodepool:
                 description: Nodepool services spec
                 properties:
+                  builder:
+                    description: Nodepool-builder related settings
+                    properties:
+                      storage:
+                        description: Storage related settings
+                        properties:
+                          className:
+                            description: Default storage class to use with Persistent
+                              Volume Claims issued by this resource. Consult your
+                              cluster's configuration to see what storage classes
+                              are available and recommended for your use case.
+                            type: string
+                          size:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: 'Storage space to allocate to the resource,
+                              expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                            x-kubernetes-validations:
+                            - message: Storage shrinking is not supported
+                              rule: self >= oldSelf
+                        required:
+                        - size
+                        type: object
+                    required:
+                    - storage
+                    type: object
                   launcher:
                     properties:
                       logLevel:
