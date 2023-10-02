@@ -121,6 +121,25 @@ type ZuulExecutorSpec struct {
 	Storage StorageSpec `json:"storage,omitempty"`
 	// How many executor pods to run
 	Replicas int32 `json:"replicas,omitempty"`
+	// Specify the Log Level of the zuul-executor service.
+	// Valid values are:
+	// - "INFO" (default)
+	// - "WARN"
+	// - "DEBUG"
+	// Changing this value will restart the service.
+	// +optional
+	LogLevel LogLevel `json:"logLevel,omitempty"`
+}
+
+type ZuulWebSpec struct {
+	// Specify the Log Level of the zuul-web launcher service.
+	// Valid values are:
+	// - "INFO" (default)
+	// - "WARN"
+	// - "DEBUG"
+	// Changing this value will restart the service.
+	// +optional
+	LogLevel LogLevel `json:"logLevel,omitempty"`
 }
 
 // Spec for the scheduler microservice
@@ -129,6 +148,14 @@ type ZuulSchedulerSpec struct {
 	Storage StorageSpec `json:"storage,omitempty"`
 	// The address to forward statsd metrics to (optional), in the form "host:port"
 	StatsdTarget string `json:"statsdTarget,omitempty"`
+	// Specify the Log Level of the zuul-scheduler service.
+	// Valid values are:
+	// - "INFO" (default)
+	// - "WARN"
+	// - "DEBUG"
+	// Changing this value will restart the service.
+	// +optional
+	LogLevel LogLevel `json:"logLevel,omitempty"`
 }
 
 // TODO: make sure to update the GetConnectionsName when adding new connection type.
@@ -145,6 +172,8 @@ type ZuulSpec struct {
 	Executor ZuulExecutorSpec `json:"executor,omitempty"`
 	// Configuration of the scheduler microservice
 	Scheduler ZuulSchedulerSpec `json:"scheduler,omitempty"`
+	// Configuration of the web microservice
+	Web ZuulWebSpec `json:"web,omitempty"`
 }
 
 func GetConnectionsName(spec *ZuulSpec) []string {

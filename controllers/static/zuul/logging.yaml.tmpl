@@ -1,0 +1,37 @@
+version: 1
+formatters:
+  console:
+    class: 'zuul.lib.logutil.MultiLineFormatter'
+    format: '%(levelname)7s %(name)s: %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: console
+    level: {{.LogLevel}}
+    stream: ext://sys.stdout
+loggers:
+  zuul.GerritConnection.io:
+    handlers:
+      - console
+    level: {{ .LogLevel }}
+    propagate: 0
+  sqlalchemy.engine:
+    handlers:
+      - console
+    level: {{ .LogLevel }}
+    propagate: 0
+  connection:
+    handlers:
+      - console
+    level: {{ .LogLevel }}
+    propagate: 0
+  zuul:
+    handlers:
+      - console
+    level: {{ .LogLevel }}
+    propagate: 0
+root:
+  handlers:
+    - console
+  level: {{ .LogLevel }}
+

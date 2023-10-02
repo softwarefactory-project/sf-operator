@@ -44,6 +44,9 @@ var zuulStatsdMappingConfig string
 //go:embed static/zuul/generate-tenant-config.sh
 var zuulGenerateTenantConfig string
 
+//go:embed static/zuul/logging.yaml.tmpl
+var zuulLoggingConfig string
+
 // Common config sections for all Zuul components
 var commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
 
@@ -53,6 +56,14 @@ func ZuulImage(service string) string {
 
 func isStatefulset(service string) bool {
 	return service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger"
+}
+
+func mkZuulLoggingMount(service string) apiv1.VolumeMount {
+	return apiv1.VolumeMount{
+		Name:      "zuul-logging-config",
+		MountPath: "/var/lib/zuul/" + service + "-logging.yaml",
+		SubPath:   service + "-logging.yaml",
+	}
 }
 
 func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
@@ -95,8 +106,10 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
 		)
 		envs = append(envs, r.getTenantsEnvs()...)
-
 	}
+
+	volumes = append(volumes, mkZuulLoggingMount(service))
+
 	command := []string{
 		"sh", "-c",
 		fmt.Sprintf("exec %s -f -d", service),
@@ -117,6 +130,7 @@ func mkZuulVolumes(service string) []apiv1.Volume {
 		base.MkVolumeSecret("ca-cert"),
 		base.MkVolumeSecret("zuul-config"),
 		base.MkVolumeSecret("zookeeper-client-tls"),
+		base.MkVolumeCM("zuul-logging-config", "zuul-logging-config-map"),
 		{
 			Name: "zuul-ssh-key",
 			VolumeSource: apiv1.VolumeSource{
@@ -180,6 +194,56 @@ func (r *SFController) mkInitSchedulerConfigContainer() apiv1.Container {
 	return container
 }
 
+func (r *SFController) setZuulLoggingfile() {
+	loggingData := make(map[string]string)
+
+	zuulExecutorLogLevel := sfv1.InfoLogLevel
+	zuulSchedulerLogLevel := sfv1.InfoLogLevel
+	zuulWebLogLevel := sfv1.InfoLogLevel
+	zuulMergerLogLevel := sfv1.InfoLogLevel
+
+	if r.cr.Spec.Zuul.Executor.LogLevel != "" {
+		zuulExecutorLogLevel = r.cr.Spec.Zuul.Executor.LogLevel
+	}
+	if r.cr.Spec.Zuul.Scheduler.LogLevel != "" {
+		zuulSchedulerLogLevel = r.cr.Spec.Zuul.Scheduler.LogLevel
+	}
+	if r.cr.Spec.Zuul.Web.LogLevel != "" {
+		zuulWebLogLevel = r.cr.Spec.Zuul.Web.LogLevel
+	}
+	// TODO: Uncomment when Zuul Merger is added
+	//if r.cr.Spec.Zuul.Merger.LogLevel != "" {
+	//	zuulMerverLogLevel = r.cr.Spec.Zuul.Web.LogLevel
+	//}
+
+	loggingData["zuul-executor-logging.yaml"], _ = utils.ParseString(zuulLoggingConfig, struct {
+		LogLevel string
+	}{string(zuulExecutorLogLevel)})
+
+	loggingData["zuul-scheduler-logging.yaml"], _ = utils.ParseString(zuulLoggingConfig, struct {
+		LogLevel string
+	}{string(zuulSchedulerLogLevel)})
+
+	loggingData["zuul-web-logging.yaml"], _ = utils.ParseString(zuulLoggingConfig, struct {
+		LogLevel string
+	}{string(zuulWebLogLevel)})
+
+	loggingData["zuul-merger-logging.yaml"], _ = utils.ParseString(zuulLoggingConfig, struct {
+		LogLevel string
+	}{string(zuulMergerLogLevel)})
+
+	r.EnsureConfigMap("zuul-logging", loggingData)
+
+}
+
+func (r *SFController) getZuulLoggingString(service string) string {
+	var loggingcm apiv1.ConfigMap
+	if !r.GetM("zuul-logging-config-map", &loggingcm) {
+		return ""
+	}
+	return loggingcm.Data[service+"-logging.yaml"]
+}
+
 func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg *ini.File) bool {
 	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	authSections := utils.IniGetSectionNamesByPrefix(cfg, "auth")
@@ -193,6 +257,7 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 		"zuul-image":            ZuulImage("zuul-scheduler"),
 		"statsd_mapping":        utils.Checksum([]byte(zuulStatsdMappingConfig)),
 		"serial":                "3",
+		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
 	}
 
 	if r.isConfigRepoSet() {
@@ -218,6 +283,7 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 
 	schedulerToolingData := make(map[string]string)
 	schedulerToolingData["generate-zuul-tenant-yaml.sh"] = zuulGenerateTenantConfig
+
 	r.EnsureConfigMap("zuul-scheduler-tooling", schedulerToolingData)
 
 	zsVolumes := mkZuulVolumes("zuul-scheduler")
@@ -261,6 +327,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-image":            ZuulImage("zuul-executor"),
 		"replicas":              strconv.Itoa(int(r.cr.Spec.Zuul.Executor.Replicas)),
 		"serial":                "1",
+		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 	}
 
 	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), int32(r.cr.Spec.Zuul.Executor.Replicas), apiv1.ReadWriteOnce)
@@ -307,6 +374,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            ZuulImage("zuul-web"),
 		"serial":                "1",
+		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
 	}
 
 	zw := base.MkDeployment("zuul-web", r.ns, "")
@@ -353,6 +421,7 @@ func (r *SFController) EnsureZuulComponentsFrontServices() {
 func (r *SFController) EnsureZuulComponents(initContainers []apiv1.Container, cfg *ini.File) bool {
 
 	zuulServices := map[string]bool{}
+	r.setZuulLoggingfile()
 	zuulServices["scheduler"] = r.EnsureZuulScheduler(initContainers, cfg)
 	zuulServices["executor"] = r.EnsureZuulExecutor(cfg)
 	zuulServices["web"] = r.EnsureZuulWeb(cfg)

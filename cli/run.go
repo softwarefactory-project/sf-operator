@@ -208,6 +208,7 @@ func EnsureCR(env *utils.ENV, sfconfig *config.SFConfig) {
 			Puburl:   "https://gerrit." + sfconfig.FQDN,
 		},
 	}
+
 	cr.Spec.StorageClassName = "topolvm-provisioner"
 	logserverVolumeSize, _ := resource.ParseQuantity("2Gi")
 	cr.Spec.Logserver.Storage.Size = logserverVolumeSize
