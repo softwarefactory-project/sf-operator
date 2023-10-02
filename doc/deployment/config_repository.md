@@ -3,7 +3,7 @@
 ## Table of Contents
 
 1. [Concept](#concept)
-1. [Repository Structure](#repository-structure)
+1. [Repository content](#repository-content)
 1. [Setting up the repository](#setting-up-the-repository)
     1. [Gerrit](#gerrit)
         1. [Prerequisites](#prerequisites-on-gerrit)
@@ -33,22 +33,8 @@ Below you can find more details about the default jobs running against the confi
 
 This setup enables GitOps workflows on the configuration of your Zuul-based CI infrastructure.
 
-## Repository structure
-
-For the config-check and config-update to work as intended, a specific file structure is expected in the config repository:
-
-```
-/
-|_ zuul/
-|     |_ main.yaml
-|
-|_nodepool/
-      |_ nodepool.yaml
-```
-
-The file `zuul/main.yaml` holds the [tenants configuration](https://zuul-ci.org/docs/zuul/latest/tenants.html) that will be applied on the deployment.
-
-The file `nodepool.yaml` holds [the diskimages, labels and node providers configuration](https://zuul-ci.org/docs/nodepool/latest/configuration.html).
+The config repository is expected to follow a specific file structure for the automation to work properly. Please refer to the [user documentation](../user/index.md)
+to learn more about the expected repository file structure and its usage.
 
 Any other file or folder will be ignored.
 
@@ -87,11 +73,11 @@ ssh -p29418 <gerrit_host> gerrit set-members --add zuul@example.com "Service Use
 ##### Repository ACLs and Labels
 
 > Access controls and labels management with Gerrit is out of the scope of this documentation. Please refer to
-Gerrit's documentation for further details, for example 
+Gerrit's documentation for further details, for example
 [here](https://gerrit-review.googlesource.com/Documentation/access-control.html) for ACLs
 or [here](https://gerrit-review.googlesource.com/Documentation/config-labels.html) for labels.
 
-The config repository must be set with specific ACLs to allow Zuul to interact with it:
+The repository must be set with specific ACLs to allow Zuul to interact with it:
 
 ```INI
 [access "refs/heads/*"]
@@ -101,7 +87,7 @@ submit = group Service Users
 
 Zuul triggers events based on specific labels, so these must be configured as well.
 
-Here are the required labels to define in the config repository's *Access* settings (*meta/config*) on Gerrit:
+Here are the required labels to define in the repository's *Access* settings (*meta/config*) on Gerrit:
 
 ```INI
 [label "Code-Review"]

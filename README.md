@@ -8,13 +8,13 @@
 
 ## About
 
-SF-Operator is an Operator that simplifies the deployment and operation of [Zuul](https://zuul-ci.org) and its dependencies (NodePool, Zookeeper, MariaDB, Log Server) on the OpenShift Container Platform.
+SF-Operator is an Operator that simplifies the deployment and operation of Software Factory instances on the OpenShift Container Platform. An instance of Software Factory is composed of [Zuul](https://zuul-ci.org) and its dependencies ([NodePool](https://zuul-ci.org/docs/nodepool/latest/), Zookeeper, MariaDB, Log Server).
 
 It is the natural evolution of the [Software Factory project](https://softwarefactory-project.io): the 3.8.x release of Software Factory saw the containerization of every major service, but was still delivered as RPM packages, in the form of a custom CentOS 7 distribution.
 SF-Operator builds upon this containerization effort to move from a distro-centric approach to a cloud-native deployment.
 This is also an opportunity to focus on the leanest service suite needed to provide a working gated CI infrastructure; hence a scope reduced to Zuul and its dependencies only.
 
-SF-Operator is built mostly in Go upon the [Operator Framework](https://operatorframework.io), with the aim of reaching the highest capability level that can be achieved, in order to bring a modern, scalable gated CI alternative to OpenShift users, with the least friction from operation as possible. 
+SF-Operator is built mostly in Go upon the [Operator Framework](https://operatorframework.io), with the aim of reaching the highest capability level that can be achieved, in order to bring a modern, scalable gated CI alternative to OpenShift users, with the least friction from operation as possible.
 
 Furthermore, SF-Operator takes advantage of some of the specificities of OpenShift as a container orchestration platform:
 
@@ -37,7 +37,7 @@ The current project status is: **Alpha - NOT PRODUCTION READY**
     - Zuul Web: ✅
     - Zuul Merger: ❌
     - Nodepool Launcher: ✅
-    - Nodepool Builder: ❌
+    - Nodepool Builder: ✅
     - Zookeeper: ✅
     - MariaDB: ✅
     - Log Server: ✅
@@ -70,7 +70,9 @@ The current project status is: **Alpha - NOT PRODUCTION READY**
 * [Operator documentation](https://softwarefactory-project.github.io/sf-operator/operator/): for OpenShift cluster administrators, this documentation covers installing SF-Operator and managing the operator's lifecycle.
 * [Deployment documentation](https://softwarefactory-project.github.io/sf-operator/deployment/): this documentation covers the essentials for people or teams who intend to deploy and manage Zuul and its dependencies through the SF-Operator.
 * [Developer documentation](https://softwarefactory-project.github.io/sf-operator/developer/): this documentation describes how to set up a development and testing environment to develop the SF-Operator.
+* [End User documentation](https://softwarefactory-project.github.io/sf-operator/user/): for users of a Software Factory instance. This documentation mostly describes the `Software Factory's config repository` usage (configuration-as-code).
 * [CLI refererence](https://softwarefactory-project.github.io/sf-operator/cli/)
+
 ## Getting Help
 
 Should you have any questions or feedback concerning the SF-Operator, you can:

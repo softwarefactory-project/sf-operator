@@ -9,9 +9,10 @@ but addresses specificities and idiosyncrasies induced by deploying Nodepool wit
 1. [Architecture](#architecture)
 1. [Services configuration](#services-configuration)
 1. [Setting up providers secrets](#setting-up-providers-secrets)
-1. [Using a cloud image in an OpenStack cloud](#using-a-cloud-image-in-an-openstack-cloud)
+1. [Get the builder's SSH public key](#get-the-builders-ssh-public-key)
 1. [Using the openshifpods driver with your cluster](#using-the-openshiftpods-driver-with-your-cluster)
 1. [Using the Nodepool CLI](#using-the-nodepool-cli)
+1. [Troubleshooting](#troubleshooting)
 
 ## Architecture
 
@@ -20,6 +21,14 @@ Nodepool is deployed by SF-Operator as micro-services:
 | Service | Kubernetes resource type | Scalable Y/N |
 |---------|--------------------------|-------------|
 | nodepool-launcher | deployment | N |
+| nodepool-builder | statefulset | N |
+
+`nodepool-builder` requires access to at least one `image-builder` machine that is to be deployed out-of-band. Due to security limitations,
+it is impossible (or at least very hard) to build Nodepool images on a pod, which is why this process must be delegated remotely to an `image-builder` machine.
+
+> The only requirement for the `image-builder` machine is that the `nodepool-builder` is able to run Ansible tasks via SSH. Please refer to sections [Get the builder's SSH public key](#get-the-builders-ssh-public-key) and [Configuring Nodepool builder](../user/nodepool_config_repository#configuring-nodepool-builder).
+
+> There is no assumption about the processes and toolings used to build images on the `image-builder`, except that the workflow must be driven by an Ansible playbook from the `nodepool-builder`.
 
 The operator also includes backing services with bare bones support:
 
@@ -75,60 +84,15 @@ When your deployment is ready, the provider secrets have been updated in Nodepoo
 which will copy the configuration files from Nodepool into the files defined in sfconfig.yaml. Be careful not to erase
 important data!
 
-## Using a cloud image in an OpenStack cloud
+## Get the builder's SSH public key
 
-There is a simple way to provision a cloud image with Zuul's SSH key, so that Zuul can run jobs on images in an OpenStack cloud.
+The Nodepool builder component should be used with at least one `image-builder` companion machine.
+It must have the capablility to connect via SSH to the builder machine.
 
-1. If not done already, clone the [config repository for your deployment](./config_repository.md).
-2. Edit `nodepool/nodepool.yaml` to add labels and providers:
-
-```yaml
-labels:
--   name: my-cloud-image-label
-    # min-ready: 1
-providers:
-- name: default
-  cloud: default
-  clean-floating-ips: true
-  image-name-format: '{image_name}-{timestamp}'
-  boot-timeout: 120 # default 60
-  cloud-images:
-    - name: my-cloud-image
-      username: cloud-user
-  pools:
-    - name: main
-      max-servers: 10
-      networks:
-        - $public_network_name
-      labels:
-        - cloud-image: cloud-centos-9-stream
-          name: cloud-centos-9-stream
-          flavor-name: $flavor
-          userdata: |
-            #cloud-config
-            package_update: true
-            users:
-              - name: cloud-user
-                ssh_authorized_keys:
-                  - $zuul-ssh-key
-```
-
-3. Save, commit, propose a review and merge the change.
-4. Wait for the **config-update** job to complete.
-5. If the `min-ready` property is over 0, you can validate that an instance is available with:
+Here is the command to fetch the builder SSH public key:
 
 ```sh
-$ kubectl exec -ti nodepool-launcher-$uuid -c launcher -- nodepool list
-```
-
-An instance with your new image label should appear in the list. You can take note of its public IP for the next step.
-
-6. You can also make sure a Zuul Executor pod can connect to the instance:
-
-```sh
-$kubectl exec -ti zuul-executor-0 -- ssh -o "StrictHostKeyChecking no" -i /var/lib/zuul-ssh/..data/priv cloud-user@$public_ip hostname
-Warning: Permanently added '$public_ip' (ED25519) to the list of known hosts.
-np0000000001
+kubectl get secret nodepool-builder-ssh-key -n sf -o jsonpath={.data.pub} | base64 -d
 ```
 
 ## Using the Openshiftpods driver with your cluster
@@ -178,3 +142,28 @@ kubectl exec --stdin --tty nodepool-launcher-XYZ -- /bin/sh
 ```
 
 Then from that shell, run the `nodepool` command.
+
+## Troubleshooting
+
+### How to connect on a ready node from the launcher pod
+
+`nodepool list` is used to list all node managed by the launcher and their current status.
+
+```sh
+$ kubectl exec -ti nodepool-launcher-$uuid -c launcher -- nodepool list
+```
+
+Look for the node's IP address then from the Zuul executor pod, run:
+
+```sh
+$kubectl exec -ti zuul-executor-0 -- ssh -o "StrictHostKeyChecking no" -i /var/lib/zuul-ssh/..data/priv <user>@<ip>
+Warning: Permanently added '$public_ip' (ED25519) to the list of known hosts.
+$ hostname
+np0000000001
+```
+
+### Accessing the Nodepool API
+
+Nodepool exposes some [API endpoints](https://zuul-ci.org/docs/nodepool/latest/operation.html#web-interface).
+
+For instance, to reach the `image-list` endpoint a user can access the following URL: `https://nodepool.<fqdn>/image-list`.
