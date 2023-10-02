@@ -14,6 +14,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -396,6 +397,49 @@ func (r *SFController) EnsureZuulPodMonitor() bool {
 	return true
 }
 
+// create default alerts
+func (r *SFController) ensureZuulPromRule() bool {
+	configUpdateFailureInPostAnnotations := map[string]string{
+		"description": "A config-update job failed in the post pipeline. Latest changes might not have been applied. Please check services configurations",
+		"summary":     "config-update failure post merge",
+	}
+
+	configUpdateFailureInPost := monitoring.MkPrometheusAlertRule(
+		"ConfigUpdateFailureInPostPipeline",
+		intstr.FromString(
+			"increase(zuul_tenant_pipeline_project_job_count"+
+				"{jobname=\"config-update\",tenant=\"internal\",pipeline=\"post\",result!~\"SUCCESS|wait_time\"}[1m]) > 0"),
+		"0m",
+		monitoring.CriticalSeverityLabel,
+		configUpdateFailureInPostAnnotations,
+	)
+
+	configRepoRuleGroup := monitoring.MkPrometheusRuleGroup(
+		"config-repository_default.rules",
+		[]monitoringv1.Rule{configUpdateFailureInPost})
+	desiredZuulPromRule := monitoring.MkPrometheusRuleCR("zuul-default.rules", r.ns)
+	desiredZuulPromRule.Spec.Groups = append(desiredZuulPromRule.Spec.Groups, configRepoRuleGroup)
+
+	annotations := map[string]string{
+		"version": "1",
+	}
+	desiredZuulPromRule.ObjectMeta.Annotations = annotations
+	currentPromRule := monitoringv1.PrometheusRule{}
+	if !r.GetM(desiredZuulPromRule.Name, &currentPromRule) {
+		r.CreateR(&desiredZuulPromRule)
+		return false
+	} else {
+		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("Zuul default Prometheus rules changed, updating...")
+			currentPromRule.Spec = desiredZuulPromRule.Spec
+			currentPromRule.ObjectMeta.Annotations = annotations
+			r.UpdateR(&currentPromRule)
+			return false
+		}
+	}
+	return true
+}
+
 func (r *SFController) EnsureZuulConfigSecret(cfg *ini.File) {
 	r.EnsureSecret(&apiv1.Secret{
 		Data: map[string][]byte{
@@ -587,6 +631,8 @@ func (r *SFController) DeployZuul() bool {
 	r.EnsureZuulComponentsFrontServices()
 	// We could condition readiness to the state of the PodMonitor, but we don't.
 	r.EnsureZuulPodMonitor()
+	r.ensureZuulPromRule()
+
 	return r.EnsureZuulComponents(initContainers, cfgINI) && r.setupZuulIngress()
 }
 

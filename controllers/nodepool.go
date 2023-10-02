@@ -18,6 +18,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 //go:embed static/nodepool/generate-config.sh
@@ -141,6 +142,106 @@ func (r *SFController) EnsureNodepoolPodMonitor() bool {
 			currentNPM.Spec = desiredNodepoolMonitor.Spec
 			currentNPM.ObjectMeta.Annotations = annotations
 			r.UpdateR(&currentNPM)
+			return false
+		}
+	}
+	return true
+}
+
+// create default alerts
+func (r *SFController) ensureNodepoolPromRule() bool {
+	/* Alert when more than 5% of node launches resulted in failure in the last hour with any provider */
+	highLaunchErrorRateAnnotations := map[string]string{
+		"description": "More than 5% ({{ $value }}%) of node launch events for provider {{ $labels.provider }} were failures in the last hour",
+		"summary":     "Too many nodes failing to launch on provider {{ $labels.provider }}",
+	}
+
+	highLaunchErrorRate := monitoring.MkPrometheusAlertRule(
+		"HighNodeLaunchErrorRate",
+		intstr.FromString(
+			"sum(rate(nodepool_launch_provider_error{error=~'.*'}[1h]))"+
+				" / (sum(rate(nodepool_launch_provider_ready[1h])) + "+
+				"sum(rate(nodepool_launch_provider_error{error=~'.*'}[1h]))) * 100 > 5"),
+		"1h",
+		monitoring.CriticalSeverityLabel,
+		highLaunchErrorRateAnnotations,
+	)
+
+	/* Alert when a DIB build failed */
+	dibImageBuildFailureAnnotations := map[string]string{
+		"summary":     "DIB failure: {{ $labels.diskimage }}",
+		"description": "DIB could not build image {{ $labels.diskimage }}, check build logs",
+	}
+	dibImageBuildFailure := monitoring.MkPrometheusAlertRule(
+		"DIBImageBuildFailure",
+		intstr.FromString(
+			"nodepool_dib_image_build_status_rc != 0"),
+		"0m",
+		monitoring.WarningSeverityLabel,
+		dibImageBuildFailureAnnotations,
+	)
+
+	/* Alert when more than 5% of nodes are in "failed" state for more than 1h with any provider */
+	highFailedStateRateAnnotations := map[string]string{
+		"description": "More than 5% ({{ $value }}%) of nodes were in failed state in the last hour on provider {{ $labels.provider }}",
+		"summary":     "Too many failed nodes on provider {{ $labels.provider }}",
+	}
+
+	highFailedStateRate := monitoring.MkPrometheusAlertRule(
+		"HighFailedStateRate",
+		intstr.FromString(
+			"sum(rate(nodepool_provider_nodes{state='failed'}[1h]))"+
+				" / sum(rate(nodepool_launch_provider_error{state=~'.*'}[1h])) * 100 > 5"),
+		"1h",
+		monitoring.CriticalSeverityLabel,
+		highFailedStateRateAnnotations,
+	)
+
+	/* Alert when more than 5% of OpenStack API calls return with status 5xx */
+	highOpenStackAPIError5xxRateAnnotations := map[string]string{
+		"description": "More than 5% ({{ $value }}%) of API calls to service {{ $labels.service }} / {{ $labels.method }} / {{ $labels.operation }} resulted in HTTP error code 5xx on provider {{ $labels.provider }}",
+		"summary":     "Too many OpenStack API errors on provider {{ $labels.provider }}",
+	}
+
+	highOpenStackAPIError5xxRate := monitoring.MkPrometheusAlertRule(
+		"HighOpenStackAPIError5xxRate",
+		intstr.FromString(
+			"sum(rate(nodepool_task_openstack{status=~'5..'}[15m]))"+
+				" / sum(rate(nodepool_task_openstack{status=~'.*'}[15m])) * 100 > 5"),
+		"15m",
+		monitoring.CriticalSeverityLabel,
+		highOpenStackAPIError5xxRateAnnotations,
+	)
+
+	launcherRuleGroup := monitoring.MkPrometheusRuleGroup(
+		"launcher_default.rules",
+		[]monitoringv1.Rule{
+			highLaunchErrorRate,
+			highFailedStateRate,
+			highOpenStackAPIError5xxRate,
+		})
+	builderRuleGroup := monitoring.MkPrometheusRuleGroup(
+		"builder_default.rules",
+		[]monitoringv1.Rule{
+			dibImageBuildFailure,
+		})
+	desiredNodepoolPromRule := monitoring.MkPrometheusRuleCR(nodepoolIdent+"-default.rules", r.ns)
+	desiredNodepoolPromRule.Spec.Groups = append(desiredNodepoolPromRule.Spec.Groups, launcherRuleGroup, builderRuleGroup)
+
+	annotations := map[string]string{
+		"version": "1",
+	}
+	desiredNodepoolPromRule.ObjectMeta.Annotations = annotations
+	currentPromRule := monitoringv1.PrometheusRule{}
+	if !r.GetM(desiredNodepoolPromRule.Name, &currentPromRule) {
+		r.CreateR(&desiredNodepoolPromRule)
+		return false
+	} else {
+		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("Nodepool default Prometheus rules changed, updating...")
+			currentPromRule.Spec = desiredNodepoolPromRule.Spec
+			currentPromRule.ObjectMeta.Annotations = annotations
+			r.UpdateR(&currentPromRule)
 			return false
 		}
 	}
@@ -462,8 +563,9 @@ func (r *SFController) DeployNodepool() map[string]bool {
 	})
 	statsdVolume := base.MkVolumeCM("statsd-config", "np-statsd-config-map")
 
-	// Ensure monitoring
+	// Ensure monitoring - TODO add to condition
 	r.EnsureNodepoolPodMonitor()
+	r.ensureNodepoolPromRule()
 
 	deployments := make(map[string]bool)
 	deployments[LauncherIdent] = r.DeployNodepoolLauncher(statsdVolume)

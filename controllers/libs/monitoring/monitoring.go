@@ -140,6 +140,14 @@ func MkPrometheusRuleGroup(name string, rules []monitoringv1.Rule) monitoringv1.
 	}
 }
 
+var CriticalSeverityLabel = map[string]string{
+	"severity": "critical",
+}
+
+var WarningSeverityLabel = map[string]string{
+	"severity": "warning",
+}
+
 func MkPrometheusAlertRule(name string, expr intstr.IntOrString, forDuration string, labels map[string]string, annotations map[string]string) monitoringv1.Rule {
 	f := monitoringv1.Duration(forDuration)
 	return monitoringv1.Rule{

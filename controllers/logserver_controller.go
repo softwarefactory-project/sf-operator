@@ -125,10 +125,6 @@ func (r *LogServerController) ensureLogserverPodMonitor() bool {
 
 // Create some default, interesting alerts
 func (r *LogServerController) ensureLogserverPromRule() bool {
-	diskFullLabels := map[string]string{
-		"lasttime": "{{ $value | humanizeTimestamp }}",
-		"severity": "critical",
-	}
 	diskFullAnnotations := map[string]string{
 		"description": "Log server only has {{ $value | humanize1024 }} free disk available.",
 		"summary":     "Log server out of disk",
@@ -144,7 +140,7 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 				" node_filesystem_size_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} < 10) and "+
 				"(node_filesystem_avail_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} < 20 * 1024 ^ 3)"),
 		"30m",
-		diskFullLabels,
+		sfmonitoring.CriticalSeverityLabel,
 		diskFullAnnotations,
 	)
 	diskFullIn3days := sfmonitoring.MkPrometheusAlertRule(
@@ -155,19 +151,25 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 				"(predict_linear(node_filesystem_avail_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"}[1d], 3 * 24 * 3600) < 0) and "+
 				"(node_filesystem_size_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} <= 1e+11)"),
 		"12h",
-		map[string]string{},
+		sfmonitoring.WarningSeverityLabel,
 		diskFull3daysAnnotations,
 	)
 	lsDiskRuleGroup := sfmonitoring.MkPrometheusRuleGroup(
-		"disk.rules",
+		"disk_default.rules",
 		[]monitoringv1.Rule{diskFull, diskFullIn3days})
-	desiredLsPromRule := sfmonitoring.MkPrometheusRuleCR(logserverIdent+".rules", r.ns)
+	desiredLsPromRule := sfmonitoring.MkPrometheusRuleCR(logserverIdent+"-default.rules", r.ns)
 	desiredLsPromRule.Spec.Groups = append(desiredLsPromRule.Spec.Groups, lsDiskRuleGroup)
 
 	// add annotations so we can handle lifecycle
 	annotations := map[string]string{
-		"version": "1",
+		"version": "2",
 	}
+	// delete badly named, previous rule - TODO remove this after next release
+	badPromRule := monitoringv1.PrometheusRule{}
+	if r.GetM(logserverIdent+".rules", &badPromRule) {
+		r.DeleteR(&badPromRule)
+	}
+
 	desiredLsPromRule.ObjectMeta.Annotations = annotations
 	currentPromRule := monitoringv1.PrometheusRule{}
 	if !r.GetM(desiredLsPromRule.Name, &currentPromRule) {
