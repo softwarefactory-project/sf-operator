@@ -19,9 +19,34 @@
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
-- name: Checking "zuul-client -h" command result
+- name: Checking "zuul-client autohold-list" command result
   ansible.builtin.assert:
      that:
        - '"No autohold requests found" in _zuul_client.stdout'
      fail_msg: "Something wrong with zuul-client subcommand, run 'tools/sfconfig zuul-client -h' manually or check the container"
      success_msg: "zuul-client subcommand output return successfully"
+
+- name: Check CLI Token generation with sfconfig tool
+  ansible.builtin.shell: >
+    tools/sfconfig zuul create-auth-token --tenant internal --user testCI -x 99999
+  register: bearer_token
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- debug:
+    msg: "{{ bearer_token }}"
+
+# FIXME: sfconfig zuul-client doesn't parse args correctly; --reason "X Y Z" will result in an error "unknown parameter Y"
+- name: Create a autohold request with zuul-client proxy
+  ansible.builtin.command: |
+    tools/sfconfig zuul-client --auth-token {{ bearer_token.stdout_lines[-1] | split(' ') | last }} autohold --tenant internal --project config --job config-update --reason CI_TEST
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Ensure autohold was set properly
+  ansible.builtin.command: |
+    tools/sfconfig zuul-client autohold-list --tenant internal
+  register: _ah_list
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+  failed_when: "\"CI_TEST\" not in _ah_list.stdout"
