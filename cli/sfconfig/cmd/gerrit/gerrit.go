@@ -517,5 +517,5 @@ var GerritCmd = &cobra.Command{
 func init() {
 	GerritCmd.Flags().BoolP("deploy", "", false, "Deploy Gerrit")
 	GerritCmd.Flags().BoolP("wipe", "", false, "Wipe Gerrit deployment")
-	GerritCmd.PersistentFlags().StringP("fqdn", "f", "sftests.com", "The FQDN of gerrit (gerrit.<FQDN>)")
+	GerritCmd.PersistentFlags().StringP("fqdn", "f", "sfop.dev", "The FQDN of gerrit (gerrit.<FQDN>)")
 }

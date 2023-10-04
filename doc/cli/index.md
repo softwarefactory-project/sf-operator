@@ -37,7 +37,7 @@ ansible_microshift_role_path: ~/src/github.com/openstack-k8s-operators/ansible-m
 microshift:
   host: microshift.dev
   user: cloud-user
-fqdn: sftests.com
+fqdn: sfop.dev
 nodepool:
   clouds_file: /etc/sf-operator/nodepool/clouds.yaml
   kube_file: /etc/sf-operator/nodepool/kubeconfig.yaml
@@ -245,7 +245,7 @@ Flags:
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
 |      --deploy |  boolean   |  Deploy Gerrit on the cluster|-|
-|  -f, --fqdn| string |  The FQDN of gerrit (gerrit.FQDN)|sftests.com|
+|  -f, --fqdn| string |  The FQDN of gerrit (gerrit.FQDN)|sfop.dev|
 |      --wipe |   boolean    |  Wipe Gerrit deployment|-|
 
 ### microshift
@@ -276,7 +276,7 @@ sfconfig prometheus [flags]
 Flags:
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
-|  -f, --fqdn| string |  The FQDN for prometheus (prometheus.FQDN)|sftests.com|
+|  -f, --fqdn| string |  The FQDN for prometheus (prometheus.FQDN)|sfop.dev|
 |      --skip-operator-installation |   boolean    | Do not attempt to install the prometheus operator prior to deploying a Prometheus instance|-|
 
 ### runTests

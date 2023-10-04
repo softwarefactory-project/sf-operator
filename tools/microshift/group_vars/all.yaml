@@ -1,7 +1,7 @@
 ---
 microshift_ip: "{{ hostvars.microshift.ansible_host }}"
 microshift_fqdn: microshift.dev
-sf_fqdn: sftests.com
+sf_fqdn: sfop.dev
 disk_file_sparsed: true
 standard_user: false
 create_pv: false

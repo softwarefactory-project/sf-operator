@@ -47,7 +47,7 @@
     metadata:
       name: my-sf-bad-ld
     spec:
-      fqdn: "sftests.com"
+      fqdn: "{{ fqdn }}"
       logserver:
         loopDelay: -3
         storage:
@@ -65,7 +65,7 @@
     metadata:
       name: my-sf-bad-rd
     spec:
-      fqdn: "sftests.com"
+      fqdn: "{{ fqdn }}"
       logserver:
         retentionDays: -3
         storage:

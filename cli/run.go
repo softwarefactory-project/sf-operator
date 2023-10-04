@@ -108,7 +108,7 @@ func PushRepoIfNeeded(path string) {
 
 func EnsureRepo(sfconfig *config.SFConfig, apiKey string, name string) {
 	path := filepath.Join("deploy", name)
-	origin := fmt.Sprintf("https://admin:%s@gerrit.sftests.com/a/%s", apiKey, name)
+	origin := fmt.Sprintf("https://admin:%s@gerrit.%s/a/%s", apiKey, sfconfig.FQDN, name)
 	if _, err := os.Stat(filepath.Join(path, ".git")); os.IsNotExist(err) {
 		utils.RunCmd("git", "-c", "http.sslVerify=false", "clone", origin, path)
 	} else {
@@ -205,7 +205,7 @@ func EnsureCR(env *utils.ENV, sfconfig *config.SFConfig) {
 			Name:     "gerrit",
 			Username: "zuul",
 			Hostname: "gerrit-sshd",
-			Puburl:   "https://gerrit.sftests.com",
+			Puburl:   "https://gerrit." + sfconfig.FQDN,
 		},
 	}
 	cr.Spec.StorageClassName = "topolvm-provisioner"
