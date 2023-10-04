@@ -183,6 +183,13 @@ type NodepoolLauncherSpec struct {
 
 type NodepoolSpec struct {
 	Launcher NodepoolLauncherSpec `json:"launcher,omitempty"`
+	// Nodepool-builder related settings
+	Builder NodepoolBuilderSpec `json:"builder,omitempty"`
+}
+
+type NodepoolBuilderSpec struct {
+	// Storage related settings
+	Storage StorageSpec `json:"storage"`
 }
 
 type ZookeeperSpec struct {

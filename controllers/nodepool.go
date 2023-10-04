@@ -148,7 +148,7 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 		"nodepool.yaml":  utils.Checksum([]byte(generateConfigScript)),
 		"dib-ansible.py": utils.Checksum([]byte(dibAnsibleWrapper)),
 		"ssh_config":     utils.Checksum([]byte(builderSSHConfig)),
-		"serial":         "6",
+		"serial":         "7",
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", BusyboxImage)
@@ -171,11 +171,9 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 	}
 
 	replicas := int32(1)
-	storageSpec := base.StorageConfig{
-		StorageClassName: "topolvm-provisioner",
-		Size:             utils.Qty1Gi(),
-	}
-	nb := r.mkStatefulSet(builderIdent, nodepoolBuilderImage, storageSpec, replicas, apiv1.ReadWriteOnce)
+	nb := r.mkStatefulSet(
+		builderIdent, nodepoolBuilderImage, r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage),
+		replicas, apiv1.ReadWriteOnce)
 
 	nb.Spec.Template.ObjectMeta.Annotations = annotations
 	nb.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
