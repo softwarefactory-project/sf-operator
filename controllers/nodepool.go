@@ -89,8 +89,6 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 	volumes := []apiv1.Volume{
 		base.MkVolumeSecret("zookeeper-client-tls"),
 		base.MkEmptyDirVolume("nodepool-config"),
-		base.MkEmptyDirVolume("nodepool-home"),
-		base.MkEmptyDirVolume("nodepool-home-dib"),
 		base.MkEmptyDirVolume("nodepool-home-ssh"),
 		base.MkEmptyDirVolume("nodepool-log"),
 		r.commonToolingVolume(),
@@ -113,19 +111,11 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 		},
 		{
 			Name:      "nodepool-config",
-			MountPath: "/etc/nodepool/",
+			MountPath: "/etc/nodepool",
 		},
 		{
-			Name:      "nodepool-home",
+			Name:      builderIdent,
 			MountPath: "/var/lib/nodepool",
-		},
-		{
-			Name:      "nodepool-home-dib",
-			MountPath: "/var/lib/nodepool/dib",
-		},
-		{
-			Name:      "nodepool-home-ssh",
-			MountPath: "/var/lib/nodepool/.ssh",
 		},
 		{
 			Name:      "nodepool-log",
@@ -143,6 +133,10 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 			ReadOnly:  true,
 		},
 		{
+			Name:      "nodepool-home-ssh",
+			MountPath: "/var/lib/nodepool/.ssh",
+		},
+		{
 			Name:      "nodepool-tooling-vol",
 			SubPath:   "ssh_config",
 			MountPath: "/var/lib/nodepool/.ssh/config",
@@ -154,12 +148,12 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 		"nodepool.yaml":  utils.Checksum([]byte(generateConfigScript)),
 		"dib-ansible.py": utils.Checksum([]byte(dibAnsibleWrapper)),
 		"ssh_config":     utils.Checksum([]byte(builderSSHConfig)),
-		"serial":         "5",
+		"serial":         "6",
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", BusyboxImage)
 
-	initContainer.Command = []string{"/usr/local/bin/generate-config.sh"}
+	initContainer.Command = []string{"bash", "-c", "mkdir -p ~/dib; /usr/local/bin/generate-config.sh"}
 	initContainer.Env = append(r.getNodepoolConfigEnvs(),
 		base.MkEnvVar("HOME", "/var/lib/nodepool"),
 		base.MkEnvVar("NODEPOOL_CONFIG_FILE", "nodepool-builder.yaml"),
@@ -170,7 +164,7 @@ func (r *SFController) DeployNodepoolBuilder() bool {
 			MountPath: "/etc/nodepool/",
 		},
 		{
-			Name:      "nodepool-home",
+			Name:      builderIdent,
 			MountPath: "/var/lib/nodepool",
 		},
 		configScriptVolumeMount,

@@ -1,0 +1,3 @@
+---
+output_logs_dir: ~/zuul-output/logs
+output_dir: "{{ output_logs_dir }}/nodepool-builder-builds"
