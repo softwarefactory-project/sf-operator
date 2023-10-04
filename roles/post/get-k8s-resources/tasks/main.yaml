@@ -4,11 +4,6 @@
     namespace_opt: "-n {{ namespace }}"
     dest_dir: "{{ output_dir }}/{{ namespace }}"
 
-- name: "Ensure removal of {{ dest_dir }}"
-  ansible.builtin.file:
-    path: "{{ dest_dir }}"
-    state: absent
-
 - name: "Ensure {{ dest_dir }}"
   ansible.builtin.file:
     path: "{{ dest_dir }}"
