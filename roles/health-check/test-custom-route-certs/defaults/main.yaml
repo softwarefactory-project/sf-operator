@@ -4,7 +4,8 @@ organizational_unit_name: Test
 country_name: PL
 state_or_province_name: Dolnoslaskie
 locality_name: Wroclaw
-ca_common_name: sfop.dev
+fqdn: sfop.dev
+ca_common_name: "{{ fqdn }}"
 common_name: "{{ service_name_custom_ssl }}.{{ ca_common_name }}"
 common_name_alt: "{{ ca_common_name }}"
 

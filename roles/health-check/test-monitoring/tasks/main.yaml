@@ -23,7 +23,7 @@
     - "logserver-nodeexporter"
 
 - name: Fetch defined alerts for logserver
-  ansible.builtin.shell: curl -k https://prometheus.sfop.dev/api/v1/rules | jq '.data.groups[] | select(.name == "disk.rules") | .rules[] | select(.name == "{{ item }}") | .health'
+  ansible.builtin.shell: curl -k https://{{ prometheus_host }}/api/v1/rules | jq '.data.groups[] | select(.name == "disk.rules") | .rules[] | select(.name == "{{ item }}") | .health'
   register: logserver_alert
   failed_when: "\"ok\" not in logserver_alert.stdout"
   loop:

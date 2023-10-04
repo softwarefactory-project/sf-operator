@@ -34,7 +34,7 @@
       args:
         chdir: "{{ config_path }}"
       loop:
-        - git config user.email "admin@sfop.dev"
+        - git config user.email "admin@{{ fqdn }}"
         - git config user.name "admin"
       loop_control:
         loop_var: git_user
