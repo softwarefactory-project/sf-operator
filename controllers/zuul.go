@@ -211,10 +211,9 @@ func (r *SFController) setZuulLoggingfile() {
 	if r.cr.Spec.Zuul.Web.LogLevel != "" {
 		zuulWebLogLevel = r.cr.Spec.Zuul.Web.LogLevel
 	}
-	// TODO: Uncomment when Zuul Merger is added
-	//if r.cr.Spec.Zuul.Merger.LogLevel != "" {
-	//	zuulMerverLogLevel = r.cr.Spec.Zuul.Web.LogLevel
-	//}
+	if r.cr.Spec.Zuul.Merger.LogLevel != "" {
+		zuulMergerLogLevel = r.cr.Spec.Zuul.Web.LogLevel
+	}
 
 	loggingData["zuul-executor-logging.yaml"], _ = utils.ParseString(zuulLoggingConfig, struct {
 		LogLevel string
@@ -364,6 +363,49 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	return isStatefulSet
 }
 
+func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
+
+	service := "zuul-merger"
+
+	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
+	sections = append(sections, "merger")
+
+	annotations := map[string]string{
+		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
+		"zuul-image":            ZuulImage(service),
+		"replicas":              strconv.Itoa(int(r.cr.Spec.Zuul.Merger.MinReplicas)),
+	}
+
+	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), int32(r.cr.Spec.Zuul.Merger.MinReplicas), apiv1.ReadWriteOnce)
+	zm.Spec.Template.ObjectMeta.Annotations = annotations
+	zm.Spec.Template.Spec.Containers = r.mkZuulContainer(service)
+	zm.Spec.Template.Spec.Volumes = mkZuulVolumes(service)
+	zm.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
+	zm.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessHTTPProbe("/health/live", zuulPrometheusPort)
+	zm.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+		base.MkContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
+	}
+
+	current := appsv1.StatefulSet{}
+	if r.GetM(service, &current) {
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("zuul-merger configuration changed, rollout zuul-merger pods ...")
+			current.Spec = zm.DeepCopy().Spec
+			r.UpdateR(&current)
+			return false
+		}
+	} else {
+		current := zm
+		r.CreateR(&current)
+	}
+
+	isStatefulSet := r.IsStatefulSetReady(&current)
+	conds.UpdateConditions(&r.cr.Status.Conditions, service, isStatefulSet)
+
+	return isStatefulSet
+}
+
 func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	authSections := utils.IniGetSectionNamesByPrefix(cfg, "auth")
@@ -425,8 +467,9 @@ func (r *SFController) EnsureZuulComponents(initContainers []apiv1.Container, cf
 	zuulServices["scheduler"] = r.EnsureZuulScheduler(initContainers, cfg)
 	zuulServices["executor"] = r.EnsureZuulExecutor(cfg)
 	zuulServices["web"] = r.EnsureZuulWeb(cfg)
+	zuulServices["merger"] = r.EnsureZuulMerger(cfg)
 
-	return zuulServices["scheduler"] && zuulServices["executor"] && zuulServices["web"]
+	return zuulServices["scheduler"] && zuulServices["executor"] && zuulServices["web"] && zuulServices["merger"]
 }
 
 func (r *SFController) EnsureZuulPodMonitor() bool {
@@ -726,11 +769,28 @@ func (r *SFController) DeployZuul() bool {
 	}
 
 	// Enable prometheus metrics
-	for _, srv := range []string{"web", "executor", "scheduler"} {
+	for _, srv := range []string{"web", "executor", "scheduler", "merger"} {
 		cfgINI.Section(srv).NewKey("prometheus_port", strconv.Itoa(zuulPrometheusPort))
 	}
 	// Set Zuul web public URL
 	cfgINI.Section("web").NewKey("root", "https://zuul."+r.cr.Spec.FQDN)
+
+	// Set Zuul Merger Configurations
+	if r.cr.Spec.Zuul.Merger.GitUserName != "" {
+		cfgINI.Section("merger").NewKey("git_user_name", r.cr.Spec.Zuul.Merger.GitUserName)
+	}
+	if r.cr.Spec.Zuul.Merger.GitUserEmail != "" {
+		cfgINI.Section("merger").NewKey("git_user_email", r.cr.Spec.Zuul.Merger.GitUserEmail)
+	}
+	if r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedLimit >= 0 {
+		cfgINI.Section("merger").NewKey("git_http_low_speed_limit", fmt.Sprint(r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedLimit))
+	}
+	if r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedTime >= 0 {
+		cfgINI.Section("merger").NewKey("git_http_low_speed_time", fmt.Sprint(r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedTime))
+	}
+	if r.cr.Spec.Zuul.Merger.GitTimeout > 0 {
+		cfgINI.Section("merger").NewKey("git_timeout", fmt.Sprint(r.cr.Spec.Zuul.Merger.GitTimeout))
+	}
 
 	// Set Database DB URI
 	cfgINI.Section("database").NewKey("dburi", fmt.Sprintf("mysql+pymysql://zuul:%s@mariadb/zuul", dbPassword.Data["password"]))

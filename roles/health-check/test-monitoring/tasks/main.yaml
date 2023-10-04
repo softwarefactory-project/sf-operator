@@ -20,6 +20,7 @@
     - "zuul-web"
     - "zuul-executor"
     - "zuul-scheduler"
+    - "zuul-merger"
     - "logserver-nodeexporter"
 
 - name: Fetch defined alerts for logserver

@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Alpha-2]
 
+- [X] Add Zuul Merger
 - [X] Add Zuul Log Levels to CRD
 - [X] Add Zuul Bootstrap Zuul Tenant Config subcommand to sfconfig cli
 - [X] Create ADR for sfconfig binary
