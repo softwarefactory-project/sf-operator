@@ -175,6 +175,8 @@ func (r *SFController) mkInitSchedulerConfigContainer() apiv1.Container {
 
 func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg *ini.File) bool {
 	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
+	authSections := utils.IniGetSectionNamesByPrefix(cfg, "auth")
+	sections = append(sections, authSections...)
 	sections = append(sections, "scheduler")
 
 	annotations := map[string]string{
@@ -278,6 +280,8 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 
 func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
+	authSections := utils.IniGetSectionNamesByPrefix(cfg, "auth")
+	sections = append(sections, authSections...)
 	sections = append(sections, "scheduler")
 	annotations := map[string]string{
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
@@ -392,6 +396,40 @@ func (r *SFController) readSecretContent(name string) string {
 	return string(secret.Data[name])
 }
 
+func (r *SFController) AddOIDCAuthenticator(cfg *ini.File, authenticator sfv1.ZuulOIDCAuthenticatorSpec) {
+	section := "auth " + authenticator.Name
+	cfg.NewSection(section)
+	cfg.Section(section).NewKey("driver", "OpenIDConnect")
+	cfg.Section(section).NewKey("realm", authenticator.Realm)
+	cfg.Section(section).NewKey("client_id", authenticator.ClientID)
+	cfg.Section(section).NewKey("issuer_id", authenticator.IssuerID)
+	if authenticator.UIDClaim != "sub" {
+		cfg.Section(section).NewKey("uid_claim", authenticator.UIDClaim)
+	}
+	if authenticator.MaxValidityTime != 0 {
+		cfg.Section(section).NewKey("max_validity_time", strconv.Itoa(int(authenticator.MaxValidityTime)))
+	}
+	if authenticator.Skew != 0 {
+		cfg.Section(section).NewKey("skew", strconv.Itoa(int(authenticator.Skew)))
+	}
+	if authenticator.Scope != "openid profile" {
+		cfg.Section(section).NewKey("scope", authenticator.Scope)
+	}
+	if authenticator.Authority != "" {
+		cfg.Section(section).NewKey("authority", authenticator.Authority)
+	}
+	if authenticator.Audience != "" {
+		cfg.Section(section).NewKey("audience", authenticator.Audience)
+	}
+	if !authenticator.LoadUserInfo {
+		cfg.Section(section).NewKey("load_user_info", strconv.FormatBool(authenticator.LoadUserInfo))
+	}
+	if authenticator.KeysURL != "" {
+		cfg.Section(section).NewKey("keys_url", authenticator.KeysURL)
+	}
+
+}
+
 func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnection) {
 	section := "connection " + conn.Name
 	cfg.NewSection(section)
@@ -475,6 +513,20 @@ func (r *SFController) DeployZuul() bool {
 	}
 	// Add default connections
 	r.AddDefaultConnections(cfgINI)
+
+	// Add OIDC authenticators
+	for _, authenticator := range r.cr.Spec.Zuul.OIDCAuthenticators {
+		r.AddOIDCAuthenticator(cfgINI, authenticator)
+	}
+	var defaultAuthSection *string
+	if len(r.cr.Spec.Zuul.OIDCAuthenticators) == 1 {
+		defaultAuthSection = &r.cr.Spec.Zuul.OIDCAuthenticators[0].Name
+	} else if r.cr.Spec.Zuul.DefaultAuthenticator != "" {
+		defaultAuthSection = &r.cr.Spec.Zuul.DefaultAuthenticator
+	}
+	if defaultAuthSection != nil {
+		cfgINI.Section("auth "+*defaultAuthSection).NewKey("default", "true")
+	}
 
 	// Enable prometheus metrics
 	for _, srv := range []string{"web", "executor", "scheduler"} {

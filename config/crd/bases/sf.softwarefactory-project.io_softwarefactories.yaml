@@ -261,6 +261,10 @@ spec:
               zuul:
                 description: Zuul service spec
                 properties:
+                  defaultAuthenticator:
+                    description: The name of the default authenticator to use if no
+                      authenticator is bound explicitly to a tenant with zuul-web
+                    type: string
                   executor:
                     description: Configuration of the executor microservices
                     properties:
@@ -342,6 +346,75 @@ spec:
                       required:
                       - hostname
                       - name
+                      type: object
+                    type: array
+                  oidcAuthenticators:
+                    description: A list of OpenID Connect authenticators that will
+                      enable admin API access on zuul-web
+                    items:
+                      description: The description of an OpenIDConnect authenticator,
+                        see https://zuul-ci.org/docs/zuul/latest/configuration.html#authentication
+                      properties:
+                        audience:
+                          description: Optionally provide the claim where the audience
+                            is set if not in `aud`, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-audience
+                          type: string
+                        authority:
+                          description: Optionally provide the claim where the authority
+                            is set if not in `iss`, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-authority
+                          type: string
+                        clientID:
+                          description: The client ID, as exposed in the `aud` claim
+                            of a JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.client_id
+                          type: string
+                        issuerID:
+                          description: The issuer ID, as exposed in the `iss` claim
+                            of a JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.issuer_id
+                          type: string
+                        keysURL:
+                          description: Optionally provide a URL to fetch the Identity
+                            Provider's key set, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-keys_url
+                          type: string
+                        loadUserInfo:
+                          default: true
+                          description: If set to false, zuul-web will skip loading
+                            the Identity Provider's `userinfo` endpoint and rely on
+                            what's available in the JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-load_user_info
+                          type: boolean
+                        maxValidityTime:
+                          description: Optionally override the `expires_at` claim
+                            in a JWT to enforce a custom expiration time on a token.
+                            Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.max_validity_time
+                          format: int32
+                          type: integer
+                        name:
+                          description: The name of the authenticator in Zuul's configuration,
+                            see https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E
+                          type: string
+                        realm:
+                          description: Authentication realm, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.realm
+                          type: string
+                        scope:
+                          default: openid profile
+                          description: The scope used to fetch a user's details, equivalent
+                            to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scope
+                          type: string
+                        skew:
+                          default: 0
+                          description: Optionally compensate for skew between Zuul's
+                            and the Identity Provider's clocks, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.skew
+                          format: int32
+                          type: integer
+                        uidClaim:
+                          default: sub
+                          description: The JWT claim to use as a unique identifier
+                            in audit logs, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.issuer_id
+                          type: string
+                      required:
+                      - clientID
+                      - issuerID
+                      - name
+                      - realm
                       type: object
                     type: array
                   scheduler:

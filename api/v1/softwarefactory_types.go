@@ -83,6 +83,38 @@ type GerritConnection struct {
 	VerifySSL bool `json:"verifyssl,omitempty"`
 }
 
+// The description of an OpenIDConnect authenticator, see https://zuul-ci.org/docs/zuul/latest/configuration.html#authentication
+type ZuulOIDCAuthenticatorSpec struct {
+	// The name of the authenticator in Zuul's configuration, see https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E
+	Name string `json:"name"`
+	// Authentication realm, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.realm
+	Realm string `json:"realm"`
+	// The client ID, as exposed in the `aud` claim of a JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.client_id
+	ClientID string `json:"clientID"`
+	// The issuer ID, as exposed in the `iss` claim of a JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.issuer_id
+	IssuerID string `json:"issuerID"`
+	// +kubebuilder:default:=sub
+	// The JWT claim to use as a unique identifier in audit logs, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.issuer_id
+	UIDClaim string `json:"uidClaim,omitempty"`
+	// Optionally override the `expires_at` claim in a JWT to enforce a custom expiration time on a token. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.max_validity_time
+	MaxValidityTime int32 `json:"maxValidityTime,omitempty"`
+	// +kubebuilder:default:=0
+	// Optionally compensate for skew between Zuul's and the Identity Provider's clocks, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.skew
+	Skew int32 `json:"skew,omitempty"`
+	// Optionally provide a URL to fetch the Identity Provider's key set, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-keys_url
+	KeysURL string `json:"keysURL,omitempty"`
+	// +kubebuilder:default:="openid profile"
+	// The scope used to fetch a user's details, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scope
+	Scope string `json:"scope,omitempty"`
+	// Optionally provide the claim where the authority is set if not in `iss`, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-authority
+	Authority string `json:"authority,omitempty"`
+	// Optionally provide the claim where the audience is set if not in `aud`, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-audience
+	Audience string `json:"audience,omitempty"`
+	// +kubebuilder:default:=true
+	// If set to false, zuul-web will skip loading the Identity Provider's `userinfo` endpoint and rely on what's available in the JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-load_user_info
+	LoadUserInfo bool `json:"loadUserInfo,omitempty"`
+}
+
 // Spec for the pool of executor microservices
 type ZuulExecutorSpec struct {
 	// Storage-related settings
@@ -101,6 +133,10 @@ type ZuulSchedulerSpec struct {
 
 // Configuration of the Zuul service
 type ZuulSpec struct {
+	// A list of OpenID Connect authenticators that will enable admin API access on zuul-web
+	OIDCAuthenticators []ZuulOIDCAuthenticatorSpec `json:"oidcAuthenticators,omitempty"`
+	// The name of the default authenticator to use if no authenticator is bound explicitly to a tenant with zuul-web
+	DefaultAuthenticator string `json:"defaultAuthenticator,omitempty"`
 	// The list of Gerrit-based connections to add to Zuul's configuration
 	GerritConns []GerritConnection `json:"gerritconns,omitempty"`
 	// Configuration of the executor microservices

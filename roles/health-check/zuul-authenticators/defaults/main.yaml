@@ -1,0 +1,5 @@
+---
+kubeconfig: "~/.kube/config"
+retries: 12
+delay: 5
+validate_certs: false
