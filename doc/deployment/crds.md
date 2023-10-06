@@ -5,7 +5,6 @@ This document gives details about the Custom Resource Definitions (CRDs) that th
 ## Table of Contents
 
 1. [CRDs](#crds)
-1. [Common properties](#common-properties)
 
 ## CRDs
 

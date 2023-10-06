@@ -19,7 +19,7 @@ This removes the `my-sf` Custom Resource instance.
 ./tools/sfconfig sf delete -i
 ```
 
-However, **Persistent Volumes Claims** linked to the resource are not cleaned after the deletion of the software factory instance.
+However, **Persistent Volume Claims** linked to the resource are not cleaned after the deletion of the software factory instance.
 
 > This is intended, so that it is easy to re-spin an instance with the same configuration and data.
 

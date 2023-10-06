@@ -77,6 +77,7 @@ sfconfig operator delete [flags]
 ```
 
 Flags:
+
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
 |  -a, --all   |      boolean           | executes all options in sequence|-|
@@ -121,6 +122,7 @@ sfconfig sf delete [flags]
 ```
 
 Flags:
+
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
 |  -a, --all  |  boolean  |  executes --delete and --remove options in sequence|-|
@@ -167,6 +169,7 @@ sfconfig nodepool-providers-secrets [flags]
 ```
 
 Flags:
+
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
 |  -d, --dump  |       boolean     |    Dump the providers secrets from the sf namespace to the local config (exclusive with '-u')|-|
@@ -191,6 +194,7 @@ sfconfig zuul create-auth-token [flags]
 ```
 
 Flags:
+
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
 |  -x, --expires-in| int32 |  The lifespan in seconds of the token. | 15 minutes (900s)|
@@ -224,6 +228,7 @@ sfconfig bootstrap-tenant-config-repo [...]
 ```
 
 Flags:
+
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
 |      --connection |string  | Name of the connection or a source|-|
@@ -242,6 +247,7 @@ sfconfig gerrit [flags]
 ```
 
 Flags:
+
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
 |      --deploy |  boolean   |  Deploy Gerrit on the cluster|-|
@@ -257,6 +263,7 @@ Usage:
   sfconfig microshift [flags]
 
 Flags:
+
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
 |  -i, --inventory |string  | Specify ansible playbook inventory|-|
@@ -274,6 +281,7 @@ sfconfig prometheus [flags]
 ```
 
 Flags:
+
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
 |  -f, --fqdn| string |  The FQDN for prometheus (prometheus.FQDN)|sfop.dev|
@@ -289,6 +297,7 @@ sfconfig runTests [flags]
 ```
 
 Flags:
+
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
 |  -e, --extra-var |string |  Set extra variables, the format of each variable must be `key`=`value`|-|

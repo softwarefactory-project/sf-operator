@@ -35,7 +35,7 @@ This setup enables GitOps workflows on the configuration of your Zuul-based CI i
 
 ## Repository structure
 
-For the config-check and config-update to work as expected, a specific file structure is expected in the config repository:
+For the config-check and config-update to work as intended, a specific file structure is expected in the config repository:
 
 ```
 /
@@ -46,9 +46,11 @@ For the config-check and config-update to work as expected, a specific file stru
       |_ nodepool.yaml
 ```
 
-The file `zuul/main.yaml` holds the [tenants configuration](https://zuul-ci.org/docs/zuul/latest/tenants.html) that will be applied the deployment.
+The file `zuul/main.yaml` holds the [tenants configuration](https://zuul-ci.org/docs/zuul/latest/tenants.html) that will be applied on the deployment.
 
 The file `nodepool.yaml` holds [the diskimages, labels and node providers configuration](https://zuul-ci.org/docs/nodepool/latest/configuration.html).
+
+Any other file or folder will be ignored.
 
 ## Setting up the repository
 

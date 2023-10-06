@@ -62,15 +62,15 @@ The current project status is: **Alpha - NOT PRODUCTION READY**
 
 ## Getting Started
 
-* [Installing the Operator ](doc/operator/getting_started.md)
-* [Deploying Zuul and dependencies with SF-Operator](doc/deployment/getting_started.md)
+* [Installing the Operator ](https://softwarefactory-project.github.io/sf-operator/operator/getting_started.html)
+* [Deploying Zuul and dependencies with SF-Operator](https://softwarefactory-project.github.io/sf-operator/deployment/getting_started.html)
 
 ## Documentation
 
-* [Operator documentation](doc/operator/index.md): for OpenShift cluster administrators, this documentation covers installing SF-Operator and managing the operator's lifecycle.
-* [Deployment documentation](doc/deployment/index.md): this documentation covers the essentials for people or teams who intend to deploy and manage Zuul and its dependencies through the SF-Operator.
-* [Developer documentation](doc/developer/index.md): this documentation describes how to set up a development and testing environment to develop the SF-Operator.
-* [CLI refererence](doc/cli/index.md)
+* [Operator documentation](https://softwarefactory-project.github.io/sf-operator/operator/): for OpenShift cluster administrators, this documentation covers installing SF-Operator and managing the operator's lifecycle.
+* [Deployment documentation](https://softwarefactory-project.github.io/sf-operator/deployment/): this documentation covers the essentials for people or teams who intend to deploy and manage Zuul and its dependencies through the SF-Operator.
+* [Developer documentation](https://softwarefactory-project.github.io/sf-operator/developer/): this documentation describes how to set up a development and testing environment to develop the SF-Operator.
+* [CLI refererence](https://softwarefactory-project.github.io/sf-operator/cli/)
 ## Getting Help
 
 Should you have any questions or feedback concerning the SF-Operator, you can:
@@ -81,8 +81,8 @@ Should you have any questions or feedback concerning the SF-Operator, you can:
 
 ## Contributing
 
-Refer to [CONTRIBUTING.md](CONTRIBUTING.md).
+Refer to [CONTRIBUTING.md](https://github.com/softwarefactory-project/sf-operator/blob/master/CONTRIBUTING.md).
 
 ## Licence
 
-Sf-operator is distributed under the [Apache License](LICENSE).
+Sf-operator is distributed under the [Apache License](https://www.apache.org/licenses/LICENSE-2.0.txt).

@@ -5,4 +5,4 @@ Welcome to the operator documentation. It covers information about installing an
 ## Table of Contents
 
 1. [Getting started](./getting_started.md)
-1. [Operator removal](./uninstall.md)
+1. [Uninstall the Operator](./uninstall.md)

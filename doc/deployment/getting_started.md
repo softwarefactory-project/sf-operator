@@ -22,7 +22,7 @@ We recommend using a dedicated namespace to deploy your Software Factory. Furthe
 > Currently, the namespace must allow `privileged` containers to run. Indeed the `zuul-executor` container requires
 extra privileges because of [bubblewrap](https://github.com/containers/bubblewrap).
 
-For this example we will create **sf** namespace. The last three commands below configure privileged access on this namespace; modify the commands accordingly if using an existing namespace.
+In this example we will create a dedicated namespace called **sf**. Then the next three commands below configure privileged access on this namespace; modify the commands as needed if using a different namespace.
 
 > Note that these commands might need to be run by a user with enough privileges to create and modify namespaces and policies.
 
@@ -33,7 +33,7 @@ kubectl label --overwrite ns sf pod-security.kubernetes.io/enforce-version=v1.24
 oc adm policy add-scc-to-user privileged system:serviceaccount:sf:default
 ```
 
-Create a **SoftwareFactory** Custom Resource as a file named `my-sf.yaml`. Here is a minimal example that uses a default configuration; only the FQDN of the services is mandatory:
+Create a **SoftwareFactory** Custom Resource as a file named `my-sf.yaml`. Here is a minimal example that uses a default configuration; only the base FQDN for the services is mandatory:
 
 ```yaml
 apiVersion: sf.softwarefactory-project.io/v1

@@ -29,6 +29,7 @@ The operator also includes backing services with bare bones support:
 
 > Although Zookeeper is deployed as a statefulset, modifying its replica count directly in its manifest
 will have no effect on the service itself - besides eventually creating unused pods.
+
 ## Services configuration
 
 Configuring the Nodepool micro-services is done through the SoftwareFactory deployment's manifest. Many configuration parameters are exposed by The [SoftwareFactory Custom Resource spec](./../../config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml).

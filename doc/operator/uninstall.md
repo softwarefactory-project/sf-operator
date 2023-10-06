@@ -6,7 +6,7 @@ The `sfconfig` command offers the following option:
 ./tools/sfconfig operator delete [OPTIONS]
 
 OPTIONS
-  --subscription, -s - deletes Software Factory Operator's Subscription
+  --subscription, -s - deletes Software Factory Operator Subscription
   --catalogsource, -S - deletes Software Factory Catalog Source
   --clusterserviceversion, -c - deletes Software Factory Cluster Service Version
   --all, -a - executes all options in sequence
