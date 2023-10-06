@@ -20,7 +20,7 @@ The CLI can be run with
 ./tools/sfconfig
 ```
 
-And contextual help is available with 
+And contextual help is available with
 
 ```sh
 ./tools/sfconfig [COMMAND] --help
@@ -37,7 +37,7 @@ ansible_microshift_role_path: ~/src/github.com/openstack-k8s-operators/ansible-m
 microshift:
   host: microshift.dev
   user: cloud-user
-fqdn: sfop.dev
+fqdn: sfop.me
 nodepool:
   clouds_file: /etc/sf-operator/nodepool/clouds.yaml
   kube_file: /etc/sf-operator/nodepool/kubeconfig.yaml
@@ -134,7 +134,7 @@ Flags:
 ### Nodepool
 #### create-namespace-for-nodepool
 
-This command creates 
+This command creates
 
 * a suitable namespace on the OpenShift cluster,
 * a kube configuration set to this namespace,
@@ -251,7 +251,7 @@ Flags:
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
 |      --deploy |  boolean   |  Deploy Gerrit on the cluster|-|
-|  -f, --fqdn| string |  The FQDN of gerrit (gerrit.FQDN)|sfop.dev|
+|  -f, --fqdn| string |  The FQDN of gerrit (gerrit.FQDN)|sfop.me|
 |      --wipe |   boolean    |  Wipe Gerrit deployment|-|
 
 ### microshift
@@ -284,7 +284,7 @@ Flags:
 
 | Argument | Type | Description | Default |
 |----------|------|-------|----|
-|  -f, --fqdn| string |  The FQDN for prometheus (prometheus.FQDN)|sfop.dev|
+|  -f, --fqdn| string |  The FQDN for prometheus (prometheus.FQDN)|sfop.me|
 |      --skip-operator-installation |   boolean    | Do not attempt to install the prometheus operator prior to deploying a Prometheus instance|-|
 
 ### runTests

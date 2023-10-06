@@ -42,7 +42,7 @@ metadata:
   name: my-sf
   namespace: sf
 spec:
-  fqdn: "sfop.dev"
+  fqdn: "sfop.me"
 ```
 
 then create the resource with:
@@ -65,12 +65,12 @@ The following `Routes` (or `Ingresses`) are created:
 kubectl -n sf get routes -o custom-columns=HOST:.spec.host
 
 HOST
-zuul.sfop.dev
-logserver.sfop.dev
-nodepool.sfop.dev
+zuul.sfop.me
+logserver.sfop.me
+nodepool.sfop.me
 ```
 
-At that point you have successfully deployed a **SoftwareFactory** instance. You can access the Zuul Web UI at https://zuul.sfop.dev .
+At that point you have successfully deployed a **SoftwareFactory** instance. You can access the Zuul Web UI at https://zuul.sfop.me .
 
 ## Next steps
 

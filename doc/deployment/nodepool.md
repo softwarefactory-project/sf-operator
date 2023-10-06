@@ -51,7 +51,7 @@ ansible_microshift_role_path: ~/src/github.com/openstack-k8s-operators/ansible-m
 microshift:
   host: microshift.dev
   user: cloud-user
-fqdn: sfop.dev
+fqdn: sfop.me
 nodepool:
   clouds_file: /path/to/clouds.yaml
   kube_file: /path/to/kube/config
