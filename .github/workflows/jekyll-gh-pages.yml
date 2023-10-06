@@ -22,6 +22,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Move README and CONTRIBUTING into the documentation
+        run: |
+          cp "${GITHUB_WORKSPACE}/README.md" "${GITHUB_WORKSPACE}/doc/README.md"
+          cp "${GITHUB_WORKSPACE}/CONTRIBUTING.md" "${GITHUB_WORKSPACE}/doc/developer/CONTRIBUTING.md"
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Build with Jekyll

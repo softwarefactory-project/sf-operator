@@ -35,6 +35,7 @@
     irrelevant-files:
       - ".*.md$"
       - "doc/.*"
+      - ".github/.*"
     required-projects:
       - name: software-factory/sf-infra
     roles:
@@ -71,6 +72,7 @@
     irrelevant-files:
       - ".*.md$"
       - "doc/.*"
+      - ".github/.*"
     required-projects:
       - name: software-factory/sf-infra
     roles:
