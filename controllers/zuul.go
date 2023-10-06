@@ -399,11 +399,11 @@ func (r *SFController) EnsureZuulPodMonitor() bool {
 
 // create default alerts
 func (r *SFController) ensureZuulPromRule() bool {
+	/* Alert when a config-update job fails on the config repository */
 	configUpdateFailureInPostAnnotations := map[string]string{
 		"description": "A config-update job failed in the post pipeline. Latest changes might not have been applied. Please check services configurations",
 		"summary":     "config-update failure post merge",
 	}
-
 	configUpdateFailureInPost := monitoring.MkPrometheusAlertRule(
 		"ConfigUpdateFailureInPostPipeline",
 		intstr.FromString(
@@ -413,15 +413,68 @@ func (r *SFController) ensureZuulPromRule() bool {
 		monitoring.CriticalSeverityLabel,
 		configUpdateFailureInPostAnnotations,
 	)
-
 	configRepoRuleGroup := monitoring.MkPrometheusRuleGroup(
 		"config-repository_default.rules",
 		[]monitoringv1.Rule{configUpdateFailureInPost})
+
+	/* Alert when executors are saturated */
+	notEnoughExecutorsAnnotations := map[string]string{
+		"description": "Some jobs have been waiting for an executor to run on in the last hour",
+		"summary":     "Not enough executors",
+	}
+	notEnoughExecutors := monitoring.MkPrometheusAlertRule(
+		"NotEnoughExecutors",
+		intstr.FromString(
+			"rate(zuul_executors_jobs_queued[1h]) > 0"),
+		"1h",
+		monitoring.WarningSeverityLabel,
+		notEnoughExecutorsAnnotations,
+	)
+
+	/* Alert when mergers are saturated */
+	notEnoughMergersAnnotations := map[string]string{
+		"description": "Some merge jobs have been waiting for a merger to run on in the last hour",
+		"summary":     "Not enough mergers",
+	}
+	notEnoughMergers := monitoring.MkPrometheusAlertRule(
+		"NotEnoughMergers",
+		intstr.FromString(
+			"rate(zuul_mergers_jobs_queued[1h]) > 0"),
+		"1h",
+		monitoring.WarningSeverityLabel,
+		notEnoughMergersAnnotations,
+	)
+
+	/* Alert when node requests are saturated */
+	notEnoughNodesAnnotations := map[string]string{
+		"description": "Nodepool had outstanding node requests in the last hour",
+		"summary":     "Not enough testing nodes",
+	}
+	notEnoughNodes := monitoring.MkPrometheusAlertRule(
+		"NotEnoughTestNodes",
+		intstr.FromString(
+			"rate(zuul_nodepool_current_requests[1h]) > 0"),
+		"1h",
+		monitoring.WarningSeverityLabel,
+		notEnoughNodesAnnotations,
+	)
+
+	zuulRuleGroup := monitoring.MkPrometheusRuleGroup(
+		"zuul_default.rules",
+		[]monitoringv1.Rule{
+			notEnoughExecutors,
+			notEnoughMergers,
+			notEnoughNodes,
+		})
+
 	desiredZuulPromRule := monitoring.MkPrometheusRuleCR("zuul-default.rules", r.ns)
-	desiredZuulPromRule.Spec.Groups = append(desiredZuulPromRule.Spec.Groups, configRepoRuleGroup)
+	desiredZuulPromRule.Spec.Groups = append(
+		desiredZuulPromRule.Spec.Groups,
+		configRepoRuleGroup,
+		zuulRuleGroup)
 
 	annotations := map[string]string{
-		"version": "1",
+		"version": "2",
 	}
 	desiredZuulPromRule.ObjectMeta.Annotations = annotations
 	currentPromRule := monitoringv1.PrometheusRule{}

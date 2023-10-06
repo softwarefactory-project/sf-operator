@@ -87,7 +87,16 @@ The following alerting rules are created automatically at deployment time:
 | `OutOfDiskNow` | critical | Log server | disk_default.rules | The Log server has less than 10% free storage space left |
 | `OutOfDiskInThreeDays` | warning | Log server | disk_default.rules | Assuming a linear trend, the Log server's storage space will fill up in less than three days |
 | `ConfigUpdateFailureInPostPipeline` | critical | Zuul | config-repository_default.rules | A `config-update` job failed in the `post` pipeline, meaning a configuration change was not applied properly to the Software Factory deployment's services |
+| `NotEnoughExecutors` | warning | Zuul | zuul_default.rules | Lack of resources is throttling performance in the last hour; in that case some jobs are waiting for an available executor to run on |
+| `NotEnoughMergers` | warning | Zuul | zuul_default.rules | Lack of resources is throttling performance in the last hour; in that case some merge jobs are waiting for an available merger to run on |
+| `NotEnoughTestNodes` | warning | Zuul | zuul_default.rules | Lack of resources is throttling performance in the last hour; in that case Nodepool could not fulfill node requests |
 | `DIBImageBuildFailure` | warning | nodepool-builder | builder_default.rules | the disk-image-builder service (DIB) failed to build an image |
 | `HighOpenStackAPIError5xxRate` | critical | nodepool-launcher | launcher_default.rules | Triggers when more than 5% of API calls on an OpenStack provider return a status code of 5xx (server-side error) over a period of 15 minutes |
 | `HighFailedStateRate` | critical | nodepool-launcher | launcher_default.rules | Triggers when more than 5% of nodes on a provider are in failed state over a period of one hour |
 | `HighNodeLaunchErrorRate` | critical | nodepool-launcher | launcher_default.rules | Triggers when more than 5% of node launch events end in an error state over a period of one hour |
+
+Note that these alerts are generic and might not be relevant to your deployment's specificities.
+For instance, it may be normal to hit the `NotEnoughTestNodes` alert if resource quotas are in place
+on your Nodepool providers.
+
+You are encouraged to [create your own alerts](https://prometheus-operator.dev/docs/user-guides/alerting/#deploying-prometheus-rules), using these ones as a base.
