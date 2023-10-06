@@ -1,4 +1,4 @@
-theme: cayman
+# theme: cayman
 source: doc/
 exclude:
   - adr/adr-template.md
