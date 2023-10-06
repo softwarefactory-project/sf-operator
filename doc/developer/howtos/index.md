@@ -40,10 +40,10 @@ First checkout the **config** repository.
 # Get the Gerrit admin user API key
 gerrit_admin_api_key=$(./tools/get-secret.sh gerrit-admin-api-key)
 # Then checkout the config repository
-git -c http.sslVerify=false clone "https://admin:${gerrit_admin_api_key}@gerrit.sfop.dev/a/config" /tmp/config
+git -c http.sslVerify=false clone "https://admin:${gerrit_admin_api_key}@gerrit.sfop.me/a/config" /tmp/config
 cd /tmp/config
 git config http.sslverify false
-git remote add gerrit "https://admin:${gerrit_admin_api_key}@gerrit.sfop.dev/a/config"
+git remote add gerrit "https://admin:${gerrit_admin_api_key}@gerrit.sfop.me/a/config"
 ```
 
 Then add a change and send the review:

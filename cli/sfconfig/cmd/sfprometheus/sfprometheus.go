@@ -292,7 +292,7 @@ The prometheus dashboard will be accessible at https://prometheus.<fqdn>.`,
 }
 
 func init() {
-	PrometheusCmd.Flags().StringP("fqdn", "f", "sfop.dev", "The FQDN for prometheus (prometheus.<FQDN>)")
+	PrometheusCmd.Flags().StringP("fqdn", "f", "sfop.me", "The FQDN for prometheus (prometheus.<FQDN>)")
 	PrometheusCmd.Flags().BoolP("skip-operator-setup", "", false, "do not check if the prometheus operator is present and do not install it")
 	// TODO we may want to deploy prometheus in a different namespace
 }

@@ -1,6 +1,6 @@
 ---
 config_path: /tmp/config
-fqdn: sfop.dev
+fqdn: sfop.me
 
 validate_certs: false
 

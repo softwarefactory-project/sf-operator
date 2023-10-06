@@ -13,7 +13,7 @@ sed -i 's/port: 443/port: 8443/g' recommended.yaml
 
 kubectl apply -f recommended.yaml
 
-oc create route passthrough kubernetes-dashboard --service=kubernetes-dashboard --port=8443 --hostname=dashboards.sfop.dev
+oc create route passthrough kubernetes-dashboard --service=kubernetes-dashboard --port=8443 --hostname=dashboards.sfop.me
 kubectl adm policy add-scc-to-user privileged -z kubernetes-dashboard
 
 kubectl apply -f - <<EOF
@@ -72,9 +72,9 @@ rules:
     verbs: ["get", "list", "watch"]
 EOF
 
-# Print token to login into: dashboards.sfop.dev
-# Remember to add dashboards.sfop.dev into /etc/hosts!
+# Print token to login into: dashboards.sfop.me
+# Remember to add dashboards.sfop.me into /etc/hosts!
 kubectl create token kubernetes-dashboard
 
 # Now use the token to reach:
-curl https://dashboards.sfop.dev/#/workloads?namespace=sf
+curl https://dashboards.sfop.me/#/workloads?namespace=sf
