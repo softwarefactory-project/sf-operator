@@ -1,5 +1,5 @@
 title: SF-Operator Documentation
-# description:
+description:
 
 remote_theme: pages-themes/cayman@v0.2.0
 plugins:
@@ -7,3 +7,7 @@ plugins:
 source: doc/
 exclude:
   - adr/adr-template.md
+# Github excludes these files by default
+include:
+  - developer/CONTRIBUTING.md
+  - README.md
