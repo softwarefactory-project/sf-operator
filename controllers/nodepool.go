@@ -32,10 +32,10 @@ const launcherIdent = "nodepool-launcher"
 const launcherPortName = "nlwebapp"
 const launcherPort = 8006
 const NodepoolProvidersSecretsName = "nodepool-providers-secrets"
-const nodepoolLauncherImage = "quay.io/software-factory/" + launcherIdent + ":9.0.0-1"
+const nodepoolLauncherImage = "quay.io/software-factory/" + launcherIdent + ":9.0.0-3"
 
 const builderIdent = "nodepool-builder"
-const nodepoolBuilderImage = "quay.io/software-factory/" + builderIdent + ":9.0.0-1"
+const nodepoolBuilderImage = "quay.io/software-factory/" + builderIdent + ":9.0.0-3"
 
 var configScriptVolumeMount = apiv1.VolumeMount{
 	Name:      "nodepool-tooling-vol",
