@@ -248,6 +248,42 @@ func (r *SFController) ensureNodepoolPromRule() bool {
 	return true
 }
 
+func (r *SFController) setProviderSecrets(volumeMount []apiv1.VolumeMount) (apiv1.Secret, []apiv1.VolumeMount, bool) {
+	// We set a place holder secret to ensure that the Secret is owned by the SoftwareFactory instance (ControllerReference)
+	var nodepoolProvidersSecrets apiv1.Secret
+	if !r.GetM(NodepoolProvidersSecretsName, &nodepoolProvidersSecrets) {
+		r.CreateR(&apiv1.Secret{
+			Data:       map[string][]byte{},
+			ObjectMeta: metav1.ObjectMeta{Name: NodepoolProvidersSecretsName, Namespace: r.ns}})
+	} else {
+		if len(nodepoolProvidersSecrets.GetOwnerReferences()) == 0 {
+			r.log.V(1).Info("Adopting the providers secret to set the owner reference", "secret", NodepoolProvidersSecretsName)
+			if !r.UpdateR(&nodepoolProvidersSecrets) {
+				return nodepoolProvidersSecrets, volumeMount, false
+			}
+		}
+	}
+
+	if data, ok := nodepoolProvidersSecrets.Data["clouds.yaml"]; ok && len(data) > 0 {
+		volumeMount = append(volumeMount, apiv1.VolumeMount{
+			Name:      "nodepool-providers-secrets",
+			SubPath:   "clouds.yaml",
+			MountPath: "/var/lib/nodepool/.config/openstack/clouds.yaml",
+			ReadOnly:  true,
+		})
+	}
+
+	if data, ok := nodepoolProvidersSecrets.Data["kube.config"]; ok && len(data) > 0 {
+		volumeMount = append(volumeMount, apiv1.VolumeMount{
+			Name:      "nodepool-providers-secrets",
+			SubPath:   "kube.config",
+			MountPath: "/var/lib/nodepool/.kube/config",
+			ReadOnly:  true,
+		})
+	}
+	return nodepoolProvidersSecrets, volumeMount, true
+}
+
 func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume) bool {
 
 	r.EnsureSSHKeySecret("nodepool-builder-ssh-key")
@@ -269,6 +305,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume) 
 
 	volumes := []apiv1.Volume{
 		base.MkVolumeSecret("zookeeper-client-tls"),
+		base.MkVolumeSecret(NodepoolProvidersSecretsName),
 		base.MkEmptyDirVolume("nodepool-config"),
 		base.MkEmptyDirVolume("nodepool-home-ssh"),
 		base.MkEmptyDirVolume("nodepool-log"),
@@ -333,13 +370,20 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume) 
 		},
 	}
 
+	nodepoolProvidersSecrets, volumeMount, ready := r.setProviderSecrets(volumeMount)
+	if !ready {
+		return false
+	}
+
 	annotations := map[string]string{
 		"nodepool.yaml":         utils.Checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml": utils.Checksum([]byte(loggingConfig)),
 		"dib-ansible.py":        utils.Checksum([]byte(dibAnsibleWrapper)),
 		"ssh_config":            utils.Checksum([]byte(builderSSHConfig)),
 		"statsd_mapping":        utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
-		"serial":                "7",
+		// When the Secret ResourceVersion field change (when edited) we force a nodepool-builder restart
+		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),
+		"serial":                     "7",
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", BusyboxImage)
@@ -446,37 +490,9 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume)
 		configScriptVolumeMount,
 	}
 
-	// We set a place holder secret to ensure that the Secret is owned by the SoftwareFactory instance (ControllerReference)
-	var nodepoolProvidersSecrets apiv1.Secret
-	if !r.GetM(NodepoolProvidersSecretsName, &nodepoolProvidersSecrets) {
-		r.CreateR(&apiv1.Secret{
-			Data:       map[string][]byte{},
-			ObjectMeta: metav1.ObjectMeta{Name: NodepoolProvidersSecretsName, Namespace: r.ns}})
-	} else {
-		if len(nodepoolProvidersSecrets.GetOwnerReferences()) == 0 {
-			r.log.V(1).Info("Adopting the providers secret to set the owner reference", "secret", NodepoolProvidersSecretsName)
-			if !r.UpdateR(&nodepoolProvidersSecrets) {
-				return false
-			}
-		}
-	}
-
-	if data, ok := nodepoolProvidersSecrets.Data["clouds.yaml"]; ok && len(data) > 0 {
-		volumeMount = append(volumeMount, apiv1.VolumeMount{
-			Name:      "nodepool-providers-secrets",
-			SubPath:   "clouds.yaml",
-			MountPath: "/var/lib/nodepool/.config/openstack/clouds.yaml",
-			ReadOnly:  true,
-		})
-	}
-
-	if data, ok := nodepoolProvidersSecrets.Data["kube.config"]; ok && len(data) > 0 {
-		volumeMount = append(volumeMount, apiv1.VolumeMount{
-			Name:      "nodepool-providers-secrets",
-			SubPath:   "kube.config",
-			MountPath: "/var/lib/nodepool/.kube/config",
-			ReadOnly:  true,
-		})
+	nodepoolProvidersSecrets, volumeMount, ready := r.setProviderSecrets(volumeMount)
+	if !ready {
+		return false
 	}
 
 	annotations := map[string]string{
