@@ -123,22 +123,23 @@ Here is an example of an image build playbook:
         msg: "Building {{ image_output }}"
     # Insert here your build steps
     - set_fact:
-        image_name: "{{ image_output }}.raw"
+        final_image_path: "{{ image_output }}.raw"
       when: raw_type
     - set_fact:
-        image_name: "{{ image_output }}.qcow2"
+        final_image_path: "{{ image_output }}.qcow2"
       when: qcow2_type
     # Synchronize back the image from the image-builder to the nodepool-builder
     - ansible.posix.synchronize:
         mode: pull
+        # src: is on the image-builder
         src: "{{ built_image_path }}"
-        dest: /var/lib/nodepool/dib/{{image_name }}
+        # dest: is on the nodepool-builder pod
+        dest: "{{ final_image_path }}"
 ```
 
 Here are the available variables and their meaning:
 
-- image_output: contains the name of the image the builder expects to find into `/var/lib/nodepool/dib/` after
-  a successful build.
+- image_output: contains the path of the image the builder expects to find under its build directory. The file suffix is not part of the provided path.
 - qcow2_type: is a boolean specifying if the built image format is `qcow2`.
 - raw_type: is a boolean specifying if the built image format is `raw`.
 

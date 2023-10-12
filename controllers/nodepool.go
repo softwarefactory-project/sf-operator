@@ -42,10 +42,13 @@ const shortIdent = "np"
 const launcherPortName = "nlwebapp"
 const launcherPort = 8006
 const NodepoolProvidersSecretsName = "nodepool-providers-secrets"
-const nodepoolLauncherImage = "quay.io/software-factory/" + LauncherIdent + ":9.0.0-3"
+
+const version = "9.0.0-6"
+
+const nodepoolLauncherImage = "quay.io/software-factory/" + LauncherIdent + ":" + version
 
 const BuilderIdent = nodepoolIdent + "-builder"
-const nodepoolBuilderImage = "quay.io/software-factory/" + BuilderIdent + ":9.0.0-3"
+const nodepoolBuilderImage = "quay.io/software-factory/" + BuilderIdent + ":" + version
 
 var nodepoolStatsdExporterPortName = monitoring.GetStatsdExporterPort(shortIdent)
 

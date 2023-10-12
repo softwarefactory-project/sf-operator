@@ -104,12 +104,15 @@
         tasks:
           - debug:
               msg: "Hello from build of {{ nodepool_diskimage_name }}"
-      - hosts: localhost
-        tasks:
-          - name: Simulate fetching the built image from the image-builder host
+          - name: Simulate an image built on the image-builder host
             file:
-              path: "{{ '{{' }} image_output {{ '}}' }}.raw"
+              path: /tmp/dummy-cloud-image.raw
               state: touch
+          - name: Fetch the image on nodepool
+            ansible.posix.synchronize:
+              mode: pull
+              src: /tmp/dummy-cloud-image.raw
+              dest: "{{ '{{' }} image_output {{ '}}' }}.raw"
     dest: "{{ config_path }}/nodepool/dib-ansible/dummy.yaml"
 
 - name: Commit file in the config repo
