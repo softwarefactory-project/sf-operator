@@ -13,6 +13,7 @@ package monitoring
 import (
 	"math"
 	"strconv"
+	"strings"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
@@ -74,6 +75,19 @@ const StatsdExporterPortListen = int32(9125)
 const statsdExporterPortExpose = int32(9102)
 const StatsdExporterConfigFile = "statsd_mapping.yaml"
 const statsdExporterImage = "quay.io/prometheus/statsd-exporter:v0.24.0"
+
+type StatsdMetricMappingLabel struct {
+	LabelName  string
+	LabelValue string
+}
+
+type StatsdMetricMapping struct {
+	Name         string
+	ProviderName string
+	Match        string
+	Help         string
+	Labels       []StatsdMetricMappingLabel
+}
 
 func getStatsdExporterArgs(configPath string, relayAddress *string) []string {
 	args := []string{
@@ -157,6 +171,81 @@ func MkPrometheusAlertRule(name string, expr intstr.IntOrString, forDuration str
 		Labels:      labels,
 		Annotations: annotations,
 	}
+}
+
+func MkAlertRuleChecksumString(alertRule monitoringv1.Rule) string {
+	var checksumable string
+	checksumable += alertRule.Alert
+	checksumable += alertRule.Expr.String()
+	if alertRule.For != nil {
+		_for := *alertRule.For
+		checksumable += string(_for)
+	}
+	for k, v := range alertRule.Labels {
+		checksumable += k + "." + v
+	}
+	for k, v := range alertRule.Annotations {
+		checksumable += k + ":" + v
+	}
+	return checksumable
+}
+
+func MkStatsdMappingsFromCloudsYaml(extraMappings []StatsdMetricMapping, cloudsYaml map[string]interface{}) []StatsdMetricMapping {
+	// Default prefix used by openstacksdk if not set in clouds.yaml
+	var globalPrefix = "openstack.api"
+
+	// Parse clouds.yaml for statsd prefixes
+	if globalMetricsConf, ok := cloudsYaml["metrics"]; ok {
+		gmc := globalMetricsConf.(map[string]interface{})
+		if globalStatsdConf, ok := gmc["statsd"]; ok {
+			gsc := globalStatsdConf.(map[string]string)
+			if prefix, ok := gsc["prefix"]; ok {
+				globalPrefix = prefix
+			}
+		}
+	}
+	if cloudConfigs, ok := cloudsYaml["clouds"]; ok {
+		cCs := cloudConfigs.(map[string]interface{})
+		for cloudName, cloudConfig := range cCs {
+			cC := cloudConfig.(map[string]interface{})
+			if metricsConf, ok := cC["metrics"]; ok {
+				mC := metricsConf.(map[string]interface{})
+				if statsdConf, ok := mC["statsd"]; ok {
+					sC := statsdConf.(map[string]string)
+					if prefix, ok := sC["prefix"]; ok {
+						var extraMapping = StatsdMetricMapping{
+							Name:         strings.Replace(prefix, ".", "_", -1),
+							ProviderName: cloudName,
+							Match:        prefix + ".*.*.*.*",
+							Help:         "API calls metrics issued by openstacksdk for cloud " + cloudName,
+							Labels: []StatsdMetricMappingLabel{
+								{LabelName: "service", LabelValue: "$1"},
+								{LabelName: "method", LabelValue: "$2"},
+								{LabelName: "resource", LabelValue: "$3"},
+								{LabelName: "status", LabelValue: "$4"},
+							},
+						}
+						extraMappings = append(extraMappings, extraMapping)
+					}
+				}
+			}
+		}
+	}
+
+	// Add default openstacksdk metric emission
+	extraMappings = append(extraMappings, StatsdMetricMapping{
+		Name:         strings.Replace(globalPrefix, ".", "_", -1),
+		ProviderName: "ALL",
+		Match:        globalPrefix + ".*.*.*.*",
+		Help:         "API calls metrics issued by openstacksdk",
+		Labels: []StatsdMetricMappingLabel{
+			{LabelName: "service", LabelValue: "$1"},
+			{LabelName: "method", LabelValue: "$2"},
+			{LabelName: "resource", LabelValue: "$3"},
+			{LabelName: "status", LabelValue: "$4"},
+		},
+	})
+	return extraMappings
 }
 
 //lint:ignore U1000 this function will be used in a followup change
