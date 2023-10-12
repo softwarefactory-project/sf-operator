@@ -160,9 +160,17 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 	desiredLsPromRule := sfmonitoring.MkPrometheusRuleCR(logserverIdent+"-default.rules", r.ns)
 	desiredLsPromRule.Spec.Groups = append(desiredLsPromRule.Spec.Groups, lsDiskRuleGroup)
 
+	var checksumable string
+	for _, group := range desiredLsPromRule.Spec.Groups {
+		for _, rule := range group.Rules {
+			checksumable += sfmonitoring.MkAlertRuleChecksumString(rule)
+		}
+	}
+
 	// add annotations so we can handle lifecycle
 	annotations := map[string]string{
-		"version": "2",
+		"version":       "2",
+		"rulesChecksum": utils.Checksum([]byte(checksumable)),
 	}
 	// delete badly named, previous rule - TODO remove this after next release
 	badPromRule := monitoringv1.PrometheusRule{}

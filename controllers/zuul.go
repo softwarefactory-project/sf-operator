@@ -542,8 +542,16 @@ func (r *SFController) ensureZuulPromRule() bool {
 		configRepoRuleGroup,
 		zuulRuleGroup)
 
+	var checksumable string
+	for _, group := range desiredZuulPromRule.Spec.Groups {
+		for _, rule := range group.Rules {
+			checksumable += monitoring.MkAlertRuleChecksumString(rule)
+		}
+	}
+
 	annotations := map[string]string{
-		"version": "2",
+		"version":       "2",
+		"rulesChecksum": utils.Checksum([]byte(checksumable)),
 	}
 	desiredZuulPromRule.ObjectMeta.Annotations = annotations
 	currentPromRule := monitoringv1.PrometheusRule{}

@@ -200,15 +200,15 @@ mappings:
     hostname: "$1"
   match: nodepool.launcher.*.zk.image_cache.playback_queue
   name: nodepool_launcher_zk_image_cache_playback_queue
-- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#openstack-api-metrics
+{{- range . }}
+- name: {{ .Name }}
+  match: {{ .Match }}
+  help: {{ .Help }}, see https://zuul-ci.org/docs/nodepool/latest/operation.html#openstack-api-metrics
   labels:
-    method: "$3"
-    operation: "$4"
-    provider: "$1"
-    service: "$2"
-    status: "$5"
-  match: nodepool.task.*.*.*.*.*
-  name: nodepool_task_openstack
+{{- range .Labels }}
+    {{ .LabelName }}: "{{ .LabelValue -}}"
+{{- end }}
+{{- end }}
 - action: drop
   match: .
   match_type: regex

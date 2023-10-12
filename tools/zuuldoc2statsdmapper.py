@@ -131,21 +131,20 @@ if __name__ == "__main__":
                 mappings += mapping
 
     # Nodepool: Append OpenStack API metrics issued by openstacksdk
-    if stat_chain[0][0].startswith('nodepool'):
-        mappings.append(
-            {
-                'match': 'nodepool.task.*.*.*.*.*',
-                'name': 'nodepool_task_openstack',
-                'help': 'Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#openstack-api-metrics',
-                'labels': {
-                    'provider': quoted('$1'),
-                    'service': quoted('$2'),
-                    'method': quoted('$3'),
-                    'operation': quoted('$4'),
-                    'status': quoted('$5'),
-                }
-            }
-        )
+    # if stat_chain[0][0].startswith('nodepool'):
+    #     mappings.append(
+    #         {
+    #             'match': 'openstack.api.*.*.*.*',
+    #             'name': 'openstack_api',
+    #             'help': 'Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#openstack-api-metrics',
+    #             'labels': {
+    #                 'service': quoted('$1'),
+    #                 'method': quoted('$2'),
+    #                 'operation': quoted('$3'),
+    #                 'status': quoted('$4'),
+    #             }
+    #         }
+    #     )
 
     # Drop all non-matching metrics to avoid spamming
     mappings.append(

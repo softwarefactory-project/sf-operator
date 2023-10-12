@@ -19,6 +19,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 //go:embed static/nodepool/generate-config.sh
@@ -33,8 +34,8 @@ var dibAnsibleWrapper string
 //go:embed static/nodepool/ssh_config
 var builderSSHConfig string
 
-//go:embed static/nodepool/statsd_mapping.yaml
-var nodepoolStatsdMappingConfig string
+//go:embed static/nodepool/statsd_mapping.yaml.tmpl
+var nodepoolStatsdMappingConfigTemplate string
 
 const nodepoolIdent = "nodepool"
 const LauncherIdent = nodepoolIdent + "-launcher"
@@ -111,6 +112,16 @@ func mkLoggingTemplate(logLevel v1.LogLevel) (string, error) {
 	return loggingConfig, err
 }
 
+func mkStatsdMappingConfig(cloudsYaml map[string]interface{}) (string, error) {
+	var extraMappings []monitoring.StatsdMetricMapping
+
+	extraMappings = monitoring.MkStatsdMappingsFromCloudsYaml(extraMappings, cloudsYaml)
+
+	statsdMappingConfig, err := utils.ParseString(
+		nodepoolStatsdMappingConfigTemplate, extraMappings)
+	return statsdMappingConfig, err
+}
+
 func (r *SFController) EnsureNodepoolPodMonitor() bool {
 	selector := metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -149,7 +160,11 @@ func (r *SFController) EnsureNodepoolPodMonitor() bool {
 }
 
 // create default alerts
-func (r *SFController) ensureNodepoolPromRule() bool {
+func (r *SFController) ensureNodepoolPromRule(cloudsYaml map[string]interface{}) bool {
+	var extraOpenStackMappings []monitoring.StatsdMetricMapping
+
+	extraOpenStackMappings = monitoring.MkStatsdMappingsFromCloudsYaml(extraOpenStackMappings, cloudsYaml)
+
 	/* Alert when more than 5% of node launches resulted in failure in the last hour with any provider */
 	highLaunchErrorRateAnnotations := map[string]string{
 		"description": "More than 5% ({{ $value }}%) of node launch events for provider {{ $labels.provider }} were failures in the last hour",
@@ -198,38 +213,60 @@ func (r *SFController) ensureNodepoolPromRule() bool {
 	)
 
 	/* Alert when more than 5% of OpenStack API calls return with status 5xx */
-	highOpenStackAPIError5xxRateAnnotations := map[string]string{
-		"description": "More than 5% ({{ $value }}%) of API calls to service {{ $labels.service }} / {{ $labels.method }} / {{ $labels.operation }} resulted in HTTP error code 5xx on provider {{ $labels.provider }}",
-		"summary":     "Too many OpenStack API errors on provider {{ $labels.provider }}",
+	var openstackAPIRules = []monitoringv1.Rule{}
+	for _, mapping := range extraOpenStackMappings {
+		var alertName = "HighOpenStackAPIError5xxRate"
+		error5xxRateAnnotations := make(map[string]string)
+		error5xxRateAnnotations["description"] = "More than 5% ({{ $value }}%) of API calls to service {{ $labels.service }} / {{ $labels.method }} / {{ $labels.operation }} resulted in HTTP error code 5xx"
+		if mapping.ProviderName == "ALL" {
+			error5xxRateAnnotations["summary"] = "Too many OpenStack API errors"
+		} else {
+			alertName += "_" + mapping.ProviderName
+			error5xxRateAnnotations["summary"] = "Too many OpenStack API errors on cloud " + mapping.ProviderName
+		}
+		error5xxRateAlert := monitoring.MkPrometheusAlertRule(
+			alertName,
+			intstr.FromString(
+				"sum(rate("+mapping.Name+"{status=~'5..'}[15m]))"+
+					" / sum(rate("+mapping.Name+"{status=~'.*'}[15m])) * 100 > 5"),
+			"15m",
+			monitoring.CriticalSeverityLabel,
+			error5xxRateAnnotations,
+		)
+		openstackAPIRules = append(openstackAPIRules, error5xxRateAlert)
 	}
-
-	highOpenStackAPIError5xxRate := monitoring.MkPrometheusAlertRule(
-		"HighOpenStackAPIError5xxRate",
-		intstr.FromString(
-			"sum(rate(nodepool_task_openstack{status=~'5..'}[15m]))"+
-				" / sum(rate(nodepool_task_openstack{status=~'.*'}[15m])) * 100 > 5"),
-		"15m",
-		monitoring.CriticalSeverityLabel,
-		highOpenStackAPIError5xxRateAnnotations,
-	)
 
 	launcherRuleGroup := monitoring.MkPrometheusRuleGroup(
 		"launcher_default.rules",
 		[]monitoringv1.Rule{
 			highLaunchErrorRate,
 			highFailedStateRate,
-			highOpenStackAPIError5xxRate,
 		})
 	builderRuleGroup := monitoring.MkPrometheusRuleGroup(
 		"builder_default.rules",
 		[]monitoringv1.Rule{
 			dibImageBuildFailure,
 		})
+	providersAPIRuleGroup := monitoring.MkPrometheusRuleGroup(
+		"providersAPI_default.rules",
+		openstackAPIRules)
 	desiredNodepoolPromRule := monitoring.MkPrometheusRuleCR(nodepoolIdent+"-default.rules", r.ns)
-	desiredNodepoolPromRule.Spec.Groups = append(desiredNodepoolPromRule.Spec.Groups, launcherRuleGroup, builderRuleGroup)
+	desiredNodepoolPromRule.Spec.Groups = append(
+		desiredNodepoolPromRule.Spec.Groups,
+		launcherRuleGroup,
+		builderRuleGroup,
+		providersAPIRuleGroup)
+
+	var checksumable string
+	for _, group := range desiredNodepoolPromRule.Spec.Groups {
+		for _, rule := range group.Rules {
+			checksumable += monitoring.MkAlertRuleChecksumString(rule)
+		}
+	}
 
 	annotations := map[string]string{
-		"version": "1",
+		"version":       "1",
+		"rulesChecksum": utils.Checksum([]byte(checksumable)),
 	}
 	desiredNodepoolPromRule.ObjectMeta.Annotations = annotations
 	currentPromRule := monitoringv1.PrometheusRule{}
@@ -284,7 +321,7 @@ func (r *SFController) setProviderSecrets(volumeMount []apiv1.VolumeMount) (apiv
 	return nodepoolProvidersSecrets, volumeMount, true
 }
 
-func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume) bool {
+func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, nodepoolStatsdMappingConfig string) bool {
 
 	r.EnsureSSHKeySecret("nodepool-builder-ssh-key")
 
@@ -441,7 +478,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume) 
 	return isReady
 }
 
-func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume) bool {
+func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume, nodepoolProvidersSecrets apiv1.Secret, nodepoolStatsdMappingConfig string) bool {
 
 	r.setNodepoolTooling()
 
@@ -573,6 +610,24 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume)
 
 func (r *SFController) DeployNodepool() map[string]bool {
 
+	deployments := make(map[string]bool)
+
+	// We need to initialize the providers secrets early
+	var v []apiv1.VolumeMount
+	var nodepoolProvidersSecrets, _, ready = r.setProviderSecrets(v)
+	if !ready {
+		deployments[LauncherIdent] = false
+		deployments[BuilderIdent] = false
+		return deployments
+	}
+
+	cloudsData, ok := nodepoolProvidersSecrets.Data["clouds.yaml"]
+	var cloudsYaml = make(map[string]interface{})
+	if ok && len(cloudsData) > 0 {
+		yaml.Unmarshal(cloudsData, &cloudsYaml)
+	}
+	nodepoolStatsdMappingConfig, _ := mkStatsdMappingConfig(cloudsYaml)
+
 	// create statsd exporter config map
 	r.EnsureConfigMap("np-statsd", map[string]string{
 		monitoring.StatsdExporterConfigFile: nodepoolStatsdMappingConfig,
@@ -581,10 +636,9 @@ func (r *SFController) DeployNodepool() map[string]bool {
 
 	// Ensure monitoring - TODO add to condition
 	r.EnsureNodepoolPodMonitor()
-	r.ensureNodepoolPromRule()
+	r.ensureNodepoolPromRule(cloudsYaml)
 
-	deployments := make(map[string]bool)
-	deployments[LauncherIdent] = r.DeployNodepoolLauncher(statsdVolume)
-	deployments[BuilderIdent] = r.DeployNodepoolBuilder(statsdVolume)
+	deployments[LauncherIdent] = r.DeployNodepoolLauncher(statsdVolume, nodepoolProvidersSecrets, nodepoolStatsdMappingConfig)
+	deployments[BuilderIdent] = r.DeployNodepoolBuilder(statsdVolume, nodepoolStatsdMappingConfig)
 	return deployments
 }
