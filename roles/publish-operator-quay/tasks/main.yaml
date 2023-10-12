@@ -32,6 +32,7 @@
     target: bundle
     chdir: "{{ zuul.project.src_dir }}"
     params:
+      VERSION: "{{ zuul.tag }}"
       BUNDLE_GEN_FLAGS: "--version {{ zuul.tag }}"
 
 - name: Build the Operator and Bundle images
