@@ -60,7 +60,7 @@ nodepool:
 2. Run sfconfig:
 
 ```sh
-./tools/sfconfig nodepool-providers-secrets --upload
+./tools/sfconfig nodepool-providers-secrets --update
 ```
 
 3. Wait until your deployment becomes ready again:

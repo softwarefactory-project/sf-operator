@@ -56,3 +56,46 @@
 - fail:
     msg: Unexpected value for nodepool_launch_ready
   when: metric_dict.nlr | float < 1
+
+- name: set a fake clouds.yaml configuration
+  ansible.builtin.copy:
+    src: clouds.yaml
+    dest: /tmp/test-clouds.yaml
+  become: true
+
+- name: configure clouds.yaml in sfconfig.yaml
+  ansible.builtin.lineinfile:
+    path: "{{ zuul.project.src_dir }}/sfconfig.yaml"
+    regexp: '^  clouds_file:'
+    line: "  clouds_file: /tmp/test-clouds.yaml"
+
+- name: Upload clouds secrets to nodepool
+  command: "tools/sfconfig nodepool-providers-secrets --update"
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Wait for secrets to be updated
+  ansible.builtin.include_role:
+    name: "roles/health-check/check-sf-resource-ready"
+
+- name: Ensure statsd mapping config has custom mappings from clouds.yaml
+  ansible.builtin.command: kubectl get configmap np-statsd-config-map -o jsonpath='{.data}'
+  register: statsd_mappings
+  
+- name: Ensure statsd mapping config has custom mappings from clouds.yaml
+  fail:
+    msg: "statsd mapping configuration has no reference to clouds config"
+  when: ("nodepool.openstack.nimbus" not in statsd_mappings.stdout) or
+        ("nodepool.openstack.cumulus" not in statsd_mappings.stdout) or
+        ("nodepool.openstack.*.*.*.*" not in statsd_mappings.stdout)
+
+- name: Fetch OpenStack API alerts
+  ansible.builtin.shell: curl -k https://{{ prometheus_host }}/api/v1/rules | jq '.data.groups[] | select(.name == "providersAPI_default.rules") | .rules[] | select(.name == "{{ item }}") | .health'
+  register: logserver_alert
+  until: "\"ok\" in logserver_alert.stdout"
+  loop:
+    - "HighOpenStackAPIError5xxRate"
+    - "HighOpenStackAPIError5xxRate_nimbus"
+    - "HighOpenStackAPIError5xxRate_cumulus"
+  retries: 6
+  delay: 10
