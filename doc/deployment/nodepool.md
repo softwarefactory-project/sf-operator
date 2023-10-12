@@ -30,15 +30,6 @@ it is impossible (or at least very hard) to build Nodepool images on a pod, whic
 
 > There is no assumption about the processes and toolings used to build images on the `image-builder`, except that the workflow must be driven by an Ansible playbook from the `nodepool-builder`.
 
-The operator also includes backing services with bare bones support:
-
-| Service | Kubernetes resource type | Scalable Y/N |
-|---------|--------------------------|-------------|
-| zookeeper | statefulset | N |
-
-> Although Zookeeper is deployed as a statefulset, modifying its replica count directly in its manifest
-will have no effect on the service itself - besides eventually creating unused pods.
-
 ## Services configuration
 
 Configuring the Nodepool micro-services is done through the SoftwareFactory deployment's manifest. Many configuration parameters are exposed by The [SoftwareFactory Custom Resource spec](./../../config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml).
@@ -46,7 +37,7 @@ Configuring the Nodepool micro-services is done through the SoftwareFactory depl
 The spec is constantly evolving during alpha development, and should be considered
 unstable but the ultimate source of truth for documentation about its properties.
 
-## Setting up provider secrets
+## Setting up providers secrets
 
 Currently the SF Operator supports OpenStack (`clouds.yaml`) and Kubernetes (`kube.config`) configuration files. These files are used by Nodepool to manage resources on its providers.
 They are managed by the SF Operator in a secret called `nodepool-providers-secrets`.
