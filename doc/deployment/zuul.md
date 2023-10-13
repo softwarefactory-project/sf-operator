@@ -23,15 +23,6 @@ Zuul is deployed by SF-Operator as micro-services:
 | zuul-executor | statefulset | Y |
 | zuul-web | deployment | N |
 
-The operator also includes backing services with bare bones support:
-
-| Service | Kubernetes resource type | Scalable Y/N |
-|---------|--------------------------|-------------|
-| zookeeper | statefulset | N |
-| mariadb | statefulset | N |
-
-> For services deployed as statefulsets, it is always possible to modify the replicas amount directly in their manifests, but SF-Operator will not act upon it - for example increasing mariadb's replicas will not set up a primary node and replica nodes like a dedicated mariadb operator would. You will only end up with one node being used by Zuul, and the rest using up resources for nothing.
-
 ## Services configuration
 
 Configuring the Zuul micro-services is done through the SoftwareFactory deployment's manifest. Many configuration parameters are exposed by The [SoftwareFactory Custom Resource spec](./../../config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml).
