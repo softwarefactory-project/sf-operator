@@ -26,8 +26,8 @@ if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
   REF=${REF:-origin/master}
 
   # Clone or fetch config repository
-  if [ -d ~/${CONFIG_REPO_NAME}/.git ]; then
-    pushd ~/${CONFIG_REPO_NAME}
+  if [ -d ~/config/.git ]; then
+    pushd ~/config
     git remote | grep origin && git remote remove origin
     git remote add origin ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME}
     if [ "$INIT_CONTAINER" == "1" ]; then
@@ -41,9 +41,9 @@ if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
   else
     pushd ~/
     if [ "$INIT_CONTAINER" == "1" ]; then
-      git clone ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME} || true
+      git clone ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME} config || true
     else
-      git clone ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME}
+      git clone ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME} config
     fi
     popd
   fi
@@ -56,8 +56,8 @@ if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
 EOF
 
   # Append the config repo provided tenant file to the default one
-  if [ -f ~/${CONFIG_REPO_NAME}/zuul/main.yaml ]; then
-    cat ~/${CONFIG_REPO_NAME}/zuul/main.yaml >> ~/main.yaml
+  if [ -f ~/config/zuul/main.yaml ]; then
+    cat ~/config/zuul/main.yaml >> ~/main.yaml
   fi
 
 fi

@@ -31,8 +31,8 @@ if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
   REF=${REF:-origin/master}
 
   # Clone or fetch config repository
-  if [ -d ~/${CONFIG_REPO_NAME}/.git ]; then
-    pushd ~/${CONFIG_REPO_NAME}
+  if [ -d ~/config/.git ]; then
+    pushd ~/config
     git remote remove origin
     git remote add origin ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME}
     git fetch origin
@@ -40,13 +40,13 @@ if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
     popd
   else
     pushd ~/
-    git clone ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME}
+    git clone ${CONFIG_REPO_BASE_URL}/${CONFIG_REPO_NAME} config
     popd
   fi
 
   # Append the config repo provided config file to the default one
-  if [ -f ~/${CONFIG_REPO_NAME}/nodepool/${NODEPOOL_CONFIG_FILE} ]; then
-    cat ~/${CONFIG_REPO_NAME}/nodepool/${NODEPOOL_CONFIG_FILE} >> ~/nodepool.yaml
+  if [ -f ~/config/nodepool/${NODEPOOL_CONFIG_FILE} ]; then
+    cat ~/config/nodepool/${NODEPOOL_CONFIG_FILE} >> ~/nodepool.yaml
   fi
 
 fi
