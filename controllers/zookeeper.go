@@ -38,8 +38,6 @@ const zkServerPort = 2888
 const zkIdent = "zookeeper"
 const zkPIMountPath = "/config-scripts"
 
-const zkImage = "quay.io/software-factory/" + zkIdent + ":3.8.0-5"
-
 func (r *SFController) DeployZookeeper() bool {
 	dnsNames := r.MkClientDNSNames(zkIdent)
 	privateKey := certv1.CertificatePrivateKey{
@@ -93,7 +91,7 @@ func (r *SFController) DeployZookeeper() bool {
 		},
 	}
 
-	container := base.MkContainer(zkIdent, zkImage)
+	container := base.MkContainer(zkIdent, base.ZookeeperImage)
 	container.Command = []string{"/bin/bash", "/config-scripts/run.sh"}
 	container.VolumeMounts = volumes
 

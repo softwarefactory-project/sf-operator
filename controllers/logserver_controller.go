@@ -47,8 +47,6 @@ var logserverEntrypoint string
 const sshdPort = 2222
 const sshdPortName = "logserver-sshd"
 
-const sshdImage = "quay.io/software-factory/sshd:0.1-2"
-
 const httpdBaseDir = "/opt/rh/httpd24/root"
 
 const httpdData = "/var/www"
@@ -57,7 +55,6 @@ const httpdData = "/var/www"
 var logserverRun string
 
 const purgelogIdent = "purgelogs"
-const purgeLogsImage = "quay.io/software-factory/purgelogs:0.2.3-2"
 const purgelogsLogsDir = "/home/logs"
 
 //go:embed static/logserver/logserver.conf.tmpl
@@ -240,7 +237,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	// Create the deployment
-	dep := base.MkDeployment(logserverIdent, r.ns, HTTPDImage)
+	dep := base.MkDeployment(logserverIdent, r.ns, base.HTTPDImage)
 
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
@@ -300,7 +297,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	r.GetOrCreate(&httpdService)
 
 	// Setup the sidecar container for sshd
-	sshdContainer := base.MkContainer(sshdPortName, sshdImage)
+	sshdContainer := base.MkContainer(sshdPortName, base.SSHDImage)
 	sshdContainer.Command = []string{"bash", "/conf/run.sh"}
 	sshdContainer.Env = []apiv1.EnvVar{
 		base.MkEnvVar("AUTHORIZED_KEY", r.cr.Spec.AuthorizedSSHKey),
@@ -328,7 +325,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	loopdelay, retentiondays := getLogserverSettingsOrDefault(r.cr.Spec.Settings)
 
-	purgelogsContainer := base.MkContainer(purgelogIdent, purgeLogsImage)
+	purgelogsContainer := base.MkContainer(purgelogIdent, base.PurgeLogsImage)
 	purgelogsContainer.Command = []string{
 		"/usr/local/bin/purgelogs",
 		"--retention-days",

@@ -18,8 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const DBImage = "quay.io/software-factory/mariadb:10.5.16-4"
-
 const mariadbPort = 3306
 const mariaDBPortName = "mariadb-port"
 
@@ -37,7 +35,7 @@ type ZuulDBOpts struct {
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
 	c := "CREATE DATABASE IF NOT EXISTS " + dbname + " CHARACTER SET utf8 COLLATE utf8_general_ci; "
 	g := "GRANT ALL PRIVILEGES ON " + dbname + ".* TO '" + username + "'@'%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
-	container := base.MkContainer("mariadb-client", DBImage)
+	container := base.MkContainer("mariadb-client", base.MariabDBImage)
 	container.Command = []string{"sh", "-c", `
 	echo 'Running: mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
 	ATTEMPT=0
@@ -126,7 +124,7 @@ func (r *SFController) DeployMariadb() bool {
 	r.EnsureSecretUUID(passName)
 
 	replicas := int32(1)
-	dep := r.mkStatefulSet("mariadb", DBImage, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), replicas, apiv1.ReadWriteOnce)
+	dep := r.mkStatefulSet("mariadb", base.MariabDBImage, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), replicas, apiv1.ReadWriteOnce)
 
 	dep.Spec.VolumeClaimTemplates = append(
 		dep.Spec.VolumeClaimTemplates,

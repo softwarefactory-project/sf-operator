@@ -23,7 +23,6 @@ import (
 const gsIdent = "git-server"
 const gsGitPort = 9418
 const gsGitPortName = "git-server-port"
-const gsImage = "quay.io/software-factory/git-deamon:2.39.1-3"
 const gsGitMountPath = "/git"
 const gsPiMountPath = "/entry"
 
@@ -66,7 +65,7 @@ func (r *SFController) DeployGitServer() bool {
 
 	// Create the deployment
 	replicas := int32(1)
-	dep := r.mkStatefulSet(gsIdent, gsImage, r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), replicas, apiv1.ReadWriteOnce)
+	dep := r.mkStatefulSet(gsIdent, base.GitServerImage, r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), replicas, apiv1.ReadWriteOnce)
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 		{
@@ -84,7 +83,7 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Define initContainer
-	initContainer := base.MkContainer("init-config", gsImage)
+	initContainer := base.MkContainer("init-config", base.GitServerImage)
 	initContainer.Command = []string{"/bin/bash", "/entry/pre-init.sh"}
 	initContainer.Env = []apiv1.EnvVar{
 		base.MkEnvVar("FQDN", r.cr.Spec.FQDN),

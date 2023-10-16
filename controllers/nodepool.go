@@ -41,7 +41,6 @@ var nodepoolStatsdMappingConfigTemplate string
 var httpdBuildLogsDirConfig string
 
 const (
-	version                      = "9.0.0-6"
 	nodepoolIdent                = "nodepool"
 	launcherIdent                = nodepoolIdent + "-launcher"
 	shortIdent                   = "np"
@@ -51,8 +50,6 @@ const (
 	buildLogsHttpdPortName       = "buildlogs-http"
 	NodepoolProvidersSecretsName = "nodepool-providers-secrets"
 	builderIdent                 = nodepoolIdent + "-builder"
-	nodepoolLauncherImage        = "quay.io/software-factory/" + launcherIdent + ":" + version
-	nodepoolBuilderImage         = "quay.io/software-factory/" + builderIdent + ":" + version
 )
 
 var nodepoolStatsdExporterPortName = monitoring.GetStatsdExporterPort(shortIdent)
@@ -432,7 +429,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"serial":                     "7",
 	}
 
-	initContainer := base.MkContainer("nodepool-builder-init", BusyboxImage)
+	initContainer := base.MkContainer("nodepool-builder-init", base.BusyboxImage)
 
 	initContainer.Command = []string{"bash", "-c", "mkdir -p ~/dib; /usr/local/bin/generate-config.sh"}
 	initContainer.Env = append(r.getNodepoolConfigEnvs(),
@@ -452,7 +449,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	replicas := int32(1)
 	nb := r.mkStatefulSet(
-		builderIdent, nodepoolBuilderImage, r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage),
+		builderIdent, base.NodepoolBuilderImage, r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage),
 		replicas, apiv1.ReadWriteOnce)
 
 	nb.Spec.Template.ObjectMeta.Annotations = annotations
@@ -581,7 +578,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		"serial":                "6",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),
-		"nodepool-launcher-image":    nodepoolLauncherImage,
+		"nodepool-launcher-image":    base.NodepoolLauncherImage,
 	}
 
 	if r.isConfigRepoSet() {
@@ -590,13 +587,13 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 
 	nl := base.MkDeployment("nodepool-launcher", r.ns, "")
 
-	container := base.MkContainer("launcher", nodepoolLauncherImage)
+	container := base.MkContainer("launcher", base.NodepoolLauncherImage)
 	container.VolumeMounts = volumeMount
 	container.Command = []string{"/usr/local/bin/dumb-init", "--",
 		"/usr/local/bin/nodepool-launcher", "-f", "-l", "/etc/nodepool-logging/logging.yaml"}
 	container.Env = r.getNodepoolConfigEnvs()
 
-	initContainer := base.MkContainer("nodepool-launcher-init", BusyboxImage)
+	initContainer := base.MkContainer("nodepool-launcher-init", base.BusyboxImage)
 
 	initContainer.Command = []string{"/usr/local/bin/generate-config.sh"}
 	initContainer.Env = r.getNodepoolConfigEnvs()

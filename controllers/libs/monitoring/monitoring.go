@@ -37,8 +37,6 @@ const NodeExporterNameSuffix = "-nodeexporter"
 const NodeExporterPortNameSuffix = "-ne"
 const nodeExporterPort = 9100
 
-const NodeExporterImage = "quay.io/prometheus/node-exporter:latest"
-
 // Fun fact: arrays cannot be consts, so we define our args in this function.
 func getNodeExporterArgs(volumeMounts []apiv1.VolumeMount) []string {
 	var excludePaths = "^(/etc/hosts|/etc/hostname|/etc/passwd|/etc/resolv.conf|/run/.containerenv|/run/secrets|/dev|/proc|/sys)($|/)"
@@ -50,7 +48,7 @@ func getNodeExporterArgs(volumeMounts []apiv1.VolumeMount) []string {
 }
 
 func MkNodeExporterSideCarContainer(serviceName string, volumeMounts []apiv1.VolumeMount) apiv1.Container {
-	container := base.MkContainer(serviceName+NodeExporterNameSuffix, NodeExporterImage)
+	container := base.MkContainer(serviceName+NodeExporterNameSuffix, base.NodeExporterImage)
 	container.Args = getNodeExporterArgs(volumeMounts)
 	container.Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(nodeExporterPort, GetTruncatedPortName(serviceName, NodeExporterPortNameSuffix)),
@@ -74,7 +72,6 @@ const statsdExporterPortNameSuffix = "-se"
 const StatsdExporterPortListen = int32(9125)
 const statsdExporterPortExpose = int32(9102)
 const StatsdExporterConfigFile = "statsd_mapping.yaml"
-const statsdExporterImage = "quay.io/prometheus/statsd-exporter:v0.24.0"
 
 type StatsdMetricMappingLabel struct {
 	LabelName  string
@@ -132,7 +129,7 @@ func MkStatsdExporterSideCarContainer(serviceName string, configVolumeName strin
 			ContainerPort: statsdExporterPortExpose,
 		},
 	}
-	sidecar := base.MkContainer(serviceName+statsdExporterNameSuffix, statsdExporterImage)
+	sidecar := base.MkContainer(serviceName+statsdExporterNameSuffix, base.StatsdExporterImage)
 	sidecar.Args = args
 	sidecar.VolumeMounts = volumeMounts
 	sidecar.Ports = ports
