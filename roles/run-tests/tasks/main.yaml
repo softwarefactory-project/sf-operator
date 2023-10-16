@@ -30,6 +30,7 @@
     - test-custom-route-certs
     - test-cert-manager-letsencrypt
     - zuul-client-api
+    - zuul-components
     - test-monitoring
   loop_control:
     loop_var: role

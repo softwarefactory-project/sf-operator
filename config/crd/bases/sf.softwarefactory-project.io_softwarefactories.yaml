@@ -398,6 +398,68 @@ spec:
                       - name
                       type: object
                     type: array
+                  merger:
+                    description: Configuration of the merger microservice
+                    properties:
+                      gitHttpLowSpeedLimit:
+                        description: https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_limit
+                        format: int32
+                        minimum: 0
+                        type: integer
+                      gitHttpLowSpeedTime:
+                        description: https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_time
+                        format: int32
+                        minimum: 0
+                        type: integer
+                      gitTimeout:
+                        description: https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_timeout
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      gitUserEmail:
+                        description: https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_email
+                        type: string
+                      gitUserName:
+                        description: https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_name
+                        type: string
+                      logLevel:
+                        description: 'Specify the Log Level of the nodepool launcher
+                          service. Valid values are: - "INFO" (default) - "WARN" -
+                          "DEBUG" Changing this value will restart the service.'
+                        enum:
+                        - INFO
+                        - WARN
+                        - DEBUG
+                        type: string
+                      minReplicas:
+                        default: 1
+                        description: How many merger pods to run
+                        format: int32
+                        type: integer
+                      storage:
+                        description: Storage-related settings
+                        properties:
+                          className:
+                            description: Default storage class to use with Persistent
+                              Volume Claims issued by this resource. Consult your
+                              cluster's configuration to see what storage classes
+                              are available and recommended for your use case.
+                            type: string
+                          size:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: 'Storage space to allocate to the resource,
+                              expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                            x-kubernetes-validations:
+                            - message: Storage shrinking is not supported
+                              rule: self >= oldSelf
+                        required:
+                        - size
+                        type: object
+                    type: object
                   oidcAuthenticators:
                     description: A list of OpenID Connect authenticators that will
                       enable admin API access on zuul-web

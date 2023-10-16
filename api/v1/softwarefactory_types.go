@@ -158,6 +158,38 @@ type ZuulSchedulerSpec struct {
 	LogLevel LogLevel `json:"logLevel,omitempty"`
 }
 
+// Some of the Zuul Merger Configurations can be found at https://zuul-ci.org/docs/zuul/latest/configuration.html#merger
+type ZuulMergerSpec struct {
+	// https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_name
+	// +optional
+	GitUserName string `json:"gitUserName,omitempty"`
+	// https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_email
+	// +optional
+	GitUserEmail string `json:"gitUserEmail,omitempty"`
+	// https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_limit
+	// +kubebuilder:validation:Minimum:=0
+	GitHTTPLowSpeedLimit int32 `json:"gitHttpLowSpeedLimit,omitempty"`
+	// https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_time
+	// +kubebuilder:validation:Minimum:=0
+	GitHTTPLowSpeedTime int32 `json:"gitHttpLowSpeedTime,omitempty"`
+	// https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_timeout
+	// +kubebuilder:validation:Minimum:=1
+	GitTimeout int32 `json:"gitTimeout,omitempty"`
+	// Storage-related settings
+	Storage StorageSpec `json:"storage,omitempty"`
+	// How many merger pods to run
+	// +kubebuilder:default:=1
+	MinReplicas int32 `json:"minReplicas,omitempty"`
+	// Specify the Log Level of the nodepool launcher service.
+	// Valid values are:
+	// - "INFO" (default)
+	// - "WARN"
+	// - "DEBUG"
+	// Changing this value will restart the service.
+	// +optional
+	LogLevel LogLevel `json:"logLevel,omitempty"`
+}
+
 // TODO: make sure to update the GetConnectionsName when adding new connection type.
 
 // Configuration of the Zuul service
@@ -174,6 +206,8 @@ type ZuulSpec struct {
 	Scheduler ZuulSchedulerSpec `json:"scheduler,omitempty"`
 	// Configuration of the web microservice
 	Web ZuulWebSpec `json:"web,omitempty"`
+	// Configuration of the merger microservice
+	Merger ZuulMergerSpec `json:"merger,omitempty"`
 }
 
 func GetConnectionsName(spec *ZuulSpec) []string {
