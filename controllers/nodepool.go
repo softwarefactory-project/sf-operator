@@ -37,19 +37,23 @@ var builderSSHConfig string
 //go:embed static/nodepool/statsd_mapping.yaml.tmpl
 var nodepoolStatsdMappingConfigTemplate string
 
-const nodepoolIdent = "nodepool"
-const LauncherIdent = nodepoolIdent + "-launcher"
-const shortIdent = "np"
-const launcherPortName = "nlwebapp"
-const launcherPort = 8006
-const NodepoolProvidersSecretsName = "nodepool-providers-secrets"
+//go:embed static/nodepool/httpd-build-logs-dir.conf
+var httpdBuildLogsDirConfig string
 
-const version = "9.0.0-6"
-
-const nodepoolLauncherImage = "quay.io/software-factory/" + LauncherIdent + ":" + version
-
-const BuilderIdent = nodepoolIdent + "-builder"
-const nodepoolBuilderImage = "quay.io/software-factory/" + BuilderIdent + ":" + version
+const (
+	version                      = "9.0.0-6"
+	nodepoolIdent                = "nodepool"
+	launcherIdent                = nodepoolIdent + "-launcher"
+	shortIdent                   = "np"
+	launcherPortName             = "nlwebapp"
+	launcherPort                 = 8006
+	buildLogsHttpdPort           = 8080
+	buildLogsHttpdPortName       = "buildlogs-http"
+	NodepoolProvidersSecretsName = "nodepool-providers-secrets"
+	builderIdent                 = nodepoolIdent + "-builder"
+	nodepoolLauncherImage        = "quay.io/software-factory/" + launcherIdent + ":" + version
+	nodepoolBuilderImage         = "quay.io/software-factory/" + builderIdent + ":" + version
+)
 
 var nodepoolStatsdExporterPortName = monitoring.GetStatsdExporterPort(shortIdent)
 
@@ -131,7 +135,7 @@ func (r *SFController) EnsureNodepoolPodMonitor() bool {
 			{
 				Key:      "run",
 				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{LauncherIdent, BuilderIdent},
+				Values:   []string{launcherIdent, builderIdent},
 			},
 			{
 				Key:      "app",
@@ -334,6 +338,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	builderExtraConfigData := make(map[string]string)
 	builderExtraConfigData["logging.yaml"] = loggingConfig
+	builderExtraConfigData["httpd-build-logs-dir.conf"] = httpdBuildLogsDirConfig
 	r.EnsureConfigMap("nodepool-builder-extra-config", builderExtraConfigData)
 
 	var mod int32 = 256 // decimal for 0400 octal
@@ -375,7 +380,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 			MountPath: "/etc/nodepool",
 		},
 		{
-			Name:      BuilderIdent,
+			Name:      builderIdent,
 			MountPath: "/var/lib/nodepool",
 		},
 		{
@@ -416,11 +421,12 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	}
 
 	annotations := map[string]string{
-		"nodepool.yaml":         utils.Checksum([]byte(generateConfigScript)),
-		"nodepool-logging.yaml": utils.Checksum([]byte(loggingConfig)),
-		"dib-ansible.py":        utils.Checksum([]byte(dibAnsibleWrapper)),
-		"ssh_config":            utils.Checksum([]byte(builderSSHConfig)),
-		"statsd_mapping":        utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
+		"nodepool.yaml":          utils.Checksum([]byte(generateConfigScript)),
+		"nodepool-logging.yaml":  utils.Checksum([]byte(loggingConfig)),
+		"dib-ansible.py":         utils.Checksum([]byte(dibAnsibleWrapper)),
+		"ssh_config":             utils.Checksum([]byte(builderSSHConfig)),
+		"buildlogs_httpd_config": utils.Checksum([]byte(httpdBuildLogsDirConfig)),
+		"statsd_mapping":         utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-builder restart
 		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),
 		"serial":                     "7",
@@ -438,7 +444,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 			MountPath: "/etc/nodepool/",
 		},
 		{
-			Name:      BuilderIdent,
+			Name:      builderIdent,
 			MountPath: "/var/lib/nodepool",
 		},
 		configScriptVolumeMount,
@@ -446,7 +452,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	replicas := int32(1)
 	nb := r.mkStatefulSet(
-		BuilderIdent, nodepoolBuilderImage, r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage),
+		builderIdent, nodepoolBuilderImage, r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage),
 		replicas, apiv1.ReadWriteOnce)
 
 	nb.Spec.Template.ObjectMeta.Annotations = annotations
@@ -456,13 +462,41 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"/usr/local/bin/nodepool-builder", "-f", "-l", "/etc/nodepool-logging/logging.yaml"}
 	nb.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMount
 	nb.Spec.Template.Spec.Containers[0].Env = r.getNodepoolConfigEnvs()
+
 	// Append statsd exporter sidecar
 	nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers,
 		monitoring.MkStatsdExporterSideCarContainer(shortIdent, "statsd-config", relayAddress),
 	)
 
+	// Append image build logs HTTPD sidecar
+	buildLogsContainer := base.MkContainer("build-logs-httpd", HTTPDImage)
+	buildLogsContainer.VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      "nodepool-log",
+			MountPath: "/var/www/html/dib",
+		},
+		{
+			Name:      "nodepool-builder-extra-config-vol",
+			SubPath:   "httpd-build-logs-dir.conf",
+			MountPath: "/etc/httpd/conf.d/build-logs-dir.conf",
+		},
+	}
+	buildLogsContainer.Ports = []apiv1.ContainerPort{
+		base.MkContainerPort(buildLogsHttpdPort, buildLogsHttpdPortName),
+	}
+	buildLogsContainer.ReadinessProbe = base.MkReadinessHTTPProbe("/dib", buildLogsHttpdPort)
+	buildLogsContainer.StartupProbe = base.MkStartupHTTPProbe("/dib", buildLogsHttpdPort)
+	buildLogsContainer.LivenessProbe = base.MkLiveHTTPProbe("/dib", buildLogsHttpdPort)
+	nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers,
+		buildLogsContainer,
+	)
+
+	httpdService := base.MkService(
+		buildLogsHttpdPortName, r.ns, builderIdent, []int32{buildLogsHttpdPort}, buildLogsHttpdPortName)
+	r.GetOrCreate(&httpdService)
+
 	current := appsv1.StatefulSet{}
-	if r.GetM(BuilderIdent, &current) {
+	if r.GetM(builderIdent, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("Nodepool-builder configuration changed, rollout pods ...")
 			current.Spec = nb.DeepCopy().Spec
@@ -474,9 +508,14 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		r.CreateR(&current)
 	}
 
+	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-builder", "nodepool", buildLogsHttpdPortName, "/builds",
+		buildLogsHttpdPort, map[string]string{
+			"haproxy.router.openshift.io/rewrite-target": "/dib",
+		}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
+
 	var isReady = r.IsStatefulSetReady(&current)
 
-	conds.UpdateConditions(&r.cr.Status.Conditions, BuilderIdent, isReady)
+	conds.UpdateConditions(&r.cr.Status.Conditions, builderIdent, isReady && routeReady)
 
 	return isReady
 }
@@ -587,7 +626,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	}
 
 	current := appsv1.Deployment{}
-	if r.GetM(LauncherIdent, &current) {
+	if r.GetM(launcherIdent, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("Nodepool-launcher configuration changed, rollout pods ...")
 			current.Spec = nl.DeepCopy().Spec
@@ -599,14 +638,14 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		r.CreateR(&current)
 	}
 
-	srv := base.MkService(LauncherIdent, r.ns, LauncherIdent, []int32{launcherPort}, LauncherIdent)
+	srv := base.MkService(launcherIdent, r.ns, launcherIdent, []int32{launcherPort}, launcherIdent)
 	r.GetOrCreate(&srv)
 
-	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-launcher", "nodepool", LauncherIdent, "/",
+	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-launcher", "nodepool", launcherIdent, "/",
 		launcherPort, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
 	isDeploymentReady := r.IsDeploymentReady(&current)
-	conds.UpdateConditions(&r.cr.Status.Conditions, LauncherIdent, isDeploymentReady)
+	conds.UpdateConditions(&r.cr.Status.Conditions, launcherIdent, isDeploymentReady)
 
 	return isDeploymentReady && routeReady
 }
@@ -619,8 +658,8 @@ func (r *SFController) DeployNodepool() map[string]bool {
 	var v []apiv1.VolumeMount
 	var nodepoolProvidersSecrets, _, ready = r.setProviderSecrets(v)
 	if !ready {
-		deployments[LauncherIdent] = false
-		deployments[BuilderIdent] = false
+		deployments[launcherIdent] = false
+		deployments[builderIdent] = false
 		return deployments
 	}
 
@@ -641,7 +680,7 @@ func (r *SFController) DeployNodepool() map[string]bool {
 	r.EnsureNodepoolPodMonitor()
 	r.ensureNodepoolPromRule(cloudsYaml)
 
-	deployments[LauncherIdent] = r.DeployNodepoolLauncher(statsdVolume, nodepoolProvidersSecrets, nodepoolStatsdMappingConfig)
-	deployments[BuilderIdent] = r.DeployNodepoolBuilder(statsdVolume, nodepoolStatsdMappingConfig)
+	deployments[launcherIdent] = r.DeployNodepoolLauncher(statsdVolume, nodepoolProvidersSecrets, nodepoolStatsdMappingConfig)
+	deployments[builderIdent] = r.DeployNodepoolBuilder(statsdVolume, nodepoolStatsdMappingConfig)
 	return deployments
 }

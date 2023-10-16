@@ -41,10 +41,6 @@ const logserverIdent = "logserver"
 const httpdPort = 8080
 const httpdPortName = "logserver-httpd"
 
-// Use pinned/ubi8 based image for httpd
-// https://catalog.redhat.com/software/containers/ubi8/httpd-24/6065b844aee24f523c207943?q=httpd&architecture=amd64&image=651f274c8ce9242f7bb3e011
-const image = "registry.access.redhat.com/ubi8/httpd-24:1-284.1696531168"
-
 //go:embed static/logserver/logserver-entrypoint.sh
 var logserverEntrypoint string
 
@@ -244,7 +240,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	// Create the deployment
-	dep := base.MkDeployment(logserverIdent, r.ns, image)
+	dep := base.MkDeployment(logserverIdent, r.ns, HTTPDImage)
 
 	// Setup the main container
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts

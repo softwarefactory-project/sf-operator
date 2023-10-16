@@ -40,6 +40,10 @@ import (
 
 const BusyboxImage = "quay.io/software-factory/sf-op-busybox:1.5-3"
 
+// HTTPDImage uses pinned/ubi8 based image for httpd
+// https://catalog.redhat.com/software/containers/ubi8/httpd-24/6065b844aee24f523c207943?q=httpd&architecture=amd64&image=651f274c8ce9242f7bb3e011
+const HTTPDImage = "registry.access.redhat.com/ubi8/httpd-24:1-284.1696531168"
+
 type SFUtilContext struct {
 	Client     client.Client
 	Scheme     *runtime.Scheme
