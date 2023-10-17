@@ -58,6 +58,7 @@ var configScriptVolumeMount = apiv1.VolumeMount{
 	Name:      "nodepool-tooling-vol",
 	SubPath:   "generate-config.sh",
 	MountPath: "/usr/local/bin/generate-config.sh",
+	ReadOnly:  true,
 }
 
 func (r *SFController) setNodepoolTooling() {
@@ -359,6 +360,19 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 				},
 			},
 		},
+		{
+			Name: "zuul-ssh-key",
+			VolumeSource: apiv1.VolumeSource{
+				Secret: &apiv1.SecretVolumeSource{
+					SecretName: "zuul-ssh-key",
+					Items: []apiv1.KeyToPath{{
+						Key:  "pub",
+						Path: "pub",
+					}},
+					DefaultMode: &mod,
+				},
+			},
+		},
 		base.MkVolumeCM("nodepool-builder-extra-config-vol",
 			"nodepool-builder-extra-config-config-map"),
 		statsdExporterVolume,
@@ -383,10 +397,16 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 			Name:      "nodepool-tooling-vol",
 			SubPath:   "dib-ansible.py",
 			MountPath: "/usr/local/bin/dib-ansible",
+			ReadOnly:  true,
 		},
 		{
 			Name:      "nodepool-builder-ssh-key",
 			MountPath: "/var/lib/nodepool-ssh-key",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "zuul-ssh-key",
+			MountPath: "/var/lib/zuul-ssh-key",
 			ReadOnly:  true,
 		},
 		{
@@ -399,6 +419,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 			Name:      "nodepool-builder-extra-config-vol",
 			SubPath:   "logging.yaml",
 			MountPath: "/etc/nodepool-logging/logging.yaml",
+			ReadOnly:  true,
 		},
 	}
 
@@ -416,7 +437,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"statsd_mapping":         utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-builder restart
 		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),
-		"serial":                     "9",
+		"serial":                     "10",
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", base.BusyboxImage)
