@@ -21,7 +21,7 @@
   register: result
   until:
     - result is success
-    - "'DNS problem: NXDOMAIN' in result.stdout"
+    - "'DNS problem: NXDOMAIN' in result.stdout or 'Waiting for HTTP-01 challenge propagation' in result.stdout or 'no such host' in result.stdout"
   retries: 6
   delay: 10
 
@@ -30,7 +30,7 @@
   register: result
   until:
     - result is success
-    - "'DNS problem: NXDOMAIN' in result.stdout"
+    - "'DNS problem: NXDOMAIN' in result.stdout or 'Waiting for HTTP-01 challenge propagation' in result.stdout or 'no such host' in result.stdout"
   retries: 6
   delay: 10
 
@@ -39,7 +39,7 @@
   register: result
   until:
     - result is success
-    - "'DNS problem: NXDOMAIN' in result.stdout"
+    - "'DNS problem: NXDOMAIN' in result.stdout or 'Waiting for HTTP-01 challenge propagation' in result.stdout or 'no such host' in result.stdout"
   retries: 6
   delay: 10
 
