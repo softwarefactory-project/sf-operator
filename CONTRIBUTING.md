@@ -33,5 +33,23 @@ Before submitting a change or a patch chain for review, please consider the foll
 
 1. Are the commit messages clear and explanatory?
 1. Do the changes need to be documented in the changelog?
-1. Do the changes cover any required modification of the existing documentation?
+1. Do the changes cover any required modification of the existing documentation? (see [guidelines](#documentation-guidelines) below)
 1. Are the changes tested? We do not require unit testing but do expect functional testing coverage.
+
+## Documentation guidelines
+
+The documentation is written in Markdown, as implemented by GitHub Pages. Please refer to
+[this documentation](https://www.markdownguide.org/tools/github-pages/) to check what elements are supported.
+
+Any change that implements a new feature or significantly changes an existing one must be reflected
+in the documentation, in the impacted section(s).
+
+### API Documentation
+
+The API documentation is auto-generated with [crd-ref-docs](https://github.com/elastic/crd-ref-docs).
+
+Running `make` or `make build` or `make build-api-doc` will update the API documentation if needed.
+
+### CLI Documentation
+
+For now the CLI documentation must be updated by hand.

@@ -71,7 +71,7 @@ The current project status is: **Alpha - NOT PRODUCTION READY**
 * [Deployment documentation](https://softwarefactory-project.github.io/sf-operator/deployment/): this documentation covers the essentials for people or teams who intend to deploy and manage Zuul and its dependencies through the SF-Operator.
 * [Developer documentation](https://softwarefactory-project.github.io/sf-operator/developer/): this documentation describes how to set up a development and testing environment to develop the SF-Operator.
 * [End User documentation](https://softwarefactory-project.github.io/sf-operator/user/): for users of a Software Factory instance. This documentation mostly describes the `Software Factory's config repository` usage (configuration-as-code).
-* [CLI refererence](https://softwarefactory-project.github.io/sf-operator/cli/)
+* [CLI refererence](https://softwarefactory-project.github.io/sf-operator/reference/cli/)
 
 ## Getting Help
 
