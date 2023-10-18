@@ -58,16 +58,17 @@ type ConfigLocationSpec struct {
 type GitHubConnection struct {
 	// How the connection will be named in Zuul's configuration and appear in zuul-web
 	Name string `json:"name"`
-	// the [app_id](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_id) parameter
-	AppID string `json:"appId"`
-	// the [app_key](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key) parameter
-	AppKey string `json:"appKey"`
-	// the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token) parameter
-	APIToken string `json:"apiToken"`
-	// the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token) parameter
+	// GitHub [appID](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_id)
 	// +optional
-	WebhookToken string `json:"webHookToken,omitempty"`
-	// the [server](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.server) parameter
+	AppID int `json:"appID,omitempty"`
+	// Name of the secret which contains the following keys:
+	// [app_key](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key) must be defined if appId is defined
+	// [api_token(optional)](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token)
+	// [webhook_token (optional)](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token)
+	// The keys must have the same name as above
+	// +optional
+	Secrets string `json:"secrets,omitempty"`
+	// the [server](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.server)
 	// +optional
 	Server string `json:"server,omitempty"`
 	// the [canonical_hostname](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.canonical_hostname) parameter
@@ -319,12 +320,12 @@ type Secret struct {
 	// More info on [kubernetes' documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names).
 	Name string `json:"name"`
 	// The key of the secret to select from. Must be a valid secret key.
-	Key string `json:"key"`
+	Key string `json:"key,omitempty"`
 }
 
 type SecretRef struct {
 	//Selects a key of a secret in the pod's namespace
-	SecretKeyRef Secret `json:"secretKeyRef"`
+	SecretKeyRef *Secret `json:"secretKeyRef"`
 }
 
 // SoftwareFactorySpec defines the desired state of SoftwareFactory

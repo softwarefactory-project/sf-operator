@@ -62,6 +62,18 @@ func mkZuulLoggingMount(service string) apiv1.VolumeMount {
 	}
 }
 
+func mkZuulGitHubSecretsMounts(r *SFController) []apiv1.VolumeMount {
+	zuulGitHubMounts := []apiv1.VolumeMount{}
+	for _, connection := range r.cr.Spec.Zuul.GitHubConns {
+		zuulGitHubMounts = append(zuulGitHubMounts, apiv1.VolumeMount{
+			Name:      connection.Secrets,
+			MountPath: "/var/lib/zuul/" + connection.Secrets + "/app_key",
+			SubPath:   "app_key",
+		})
+	}
+	return zuulGitHubMounts
+}
+
 func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 	volumes := []apiv1.VolumeMount{
 		{
@@ -105,6 +117,7 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 	}
 
 	volumes = append(volumes, mkZuulLoggingMount(service))
+	volumes = append(volumes, mkZuulGitHubSecretsMounts(r)...)
 
 	command := []string{
 		"sh", "-c",
@@ -120,8 +133,9 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 	return []apiv1.Container{container}
 }
 
-func mkZuulVolumes(service string) []apiv1.Volume {
+func mkZuulVolumes(service string, r *SFController) []apiv1.Volume {
 	var mod int32 = 256 // decimal for 0400 octal
+
 	volumes := []apiv1.Volume{
 		base.MkVolumeSecret("ca-cert"),
 		base.MkVolumeSecret("zuul-config"),
@@ -157,6 +171,9 @@ func mkZuulVolumes(service string) []apiv1.Volume {
 		}
 		volumes = append(volumes, toolingVol)
 	}
+
+	volumes = append(volumes, mkZuulGitHubSecretsVolumes(r)...)
+
 	return volumes
 }
 
@@ -239,6 +256,20 @@ func (r *SFController) getZuulLoggingString(service string) string {
 	return loggingcm.Data[service+"-logging.yaml"]
 }
 
+func mkZuulGitHubSecretsVolumes(r *SFController) []apiv1.Volume {
+
+	gitHubSecretVolumes := []apiv1.Volume{}
+	for _, gitHubConnection := range r.cr.Spec.Zuul.GitHubConns {
+		if _, err := r.GetSecretbyNameRef(gitHubConnection.Secrets); err != nil {
+			r.log.V(1).Error(err, "Error while getting secret "+gitHubConnection.Secrets)
+			continue
+		}
+
+		gitHubSecretVolumes = append(gitHubSecretVolumes, base.MkVolumeSecret(gitHubConnection.Secrets))
+	}
+	return gitHubSecretVolumes
+}
+
 func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg *ini.File) bool {
 	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	authSections := utils.IniGetSectionNamesByPrefix(cfg, "auth")
@@ -247,12 +278,13 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 	sections = append(sections, "scheduler")
 
 	annotations := map[string]string{
-		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            base.ZuulImage("zuul-scheduler"),
-		"statsd_mapping":        utils.Checksum([]byte(zuulStatsdMappingConfig)),
-		"serial":                "3",
-		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
+		"zuul-common-config":      utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config":   utils.IniSectionsChecksum(cfg, sections),
+		"zuul-image":              base.ZuulImage("zuul-scheduler"),
+		"statsd_mapping":          utils.Checksum([]byte(zuulStatsdMappingConfig)),
+		"serial":                  "3",
+		"zuul-logging":            utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
+		"zuul-github-connections": utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
 	if r.isConfigRepoSet() {
@@ -281,7 +313,7 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 
 	r.EnsureConfigMap("zuul-scheduler-tooling", schedulerToolingData)
 
-	zsVolumes := mkZuulVolumes("zuul-scheduler")
+	zsVolumes := mkZuulVolumes("zuul-scheduler", r)
 	zsReplicas := int32(1)
 	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), zsReplicas, apiv1.ReadWriteOnce)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
@@ -317,18 +349,19 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	sections = append(sections, "executor")
 	annotations := map[string]string{
-		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            base.ZuulImage("zuul-executor"),
-		"replicas":              strconv.Itoa(int(r.cr.Spec.Zuul.Executor.Replicas)),
-		"serial":                "1",
-		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
+		"zuul-common-config":      utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config":   utils.IniSectionsChecksum(cfg, sections),
+		"zuul-image":              base.ZuulImage("zuul-executor"),
+		"replicas":                strconv.Itoa(int(r.cr.Spec.Zuul.Executor.Replicas)),
+		"serial":                  "1",
+		"zuul-logging":            utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
+		"zuul-github-connections": utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
 	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), int32(r.cr.Spec.Zuul.Executor.Replicas), apiv1.ReadWriteOnce)
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-executor")
-	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor")
+	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor", r)
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
 	ze.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessHTTPProbe("/health/live", zuulPrometheusPort)
 	ze.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
@@ -367,16 +400,17 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 	sections = append(sections, "merger")
 
 	annotations := map[string]string{
-		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            base.ZuulImage(service),
-		"replicas":              strconv.Itoa(int(r.cr.Spec.Zuul.Merger.MinReplicas)),
+		"zuul-common-config":      utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config":   utils.IniSectionsChecksum(cfg, sections),
+		"zuul-image":              base.ZuulImage(service),
+		"replicas":                strconv.Itoa(int(r.cr.Spec.Zuul.Merger.MinReplicas)),
+		"zuul-github-connections": utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
 	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), int32(r.cr.Spec.Zuul.Merger.MinReplicas), apiv1.ReadWriteOnce)
 	zm.Spec.Template.ObjectMeta.Annotations = annotations
 	zm.Spec.Template.Spec.Containers = r.mkZuulContainer(service)
-	zm.Spec.Template.Spec.Volumes = mkZuulVolumes(service)
+	zm.Spec.Template.Spec.Volumes = mkZuulVolumes(service, r)
 	zm.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
 	zm.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessHTTPProbe("/health/live", zuulPrometheusPort)
 	zm.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
@@ -406,19 +440,20 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	authSections := utils.IniGetSectionNamesByPrefix(cfg, "auth")
 	sections = append(sections, authSections...)
-	sections = append(sections, "scheduler")
+	sections = append(sections, "web")
 	annotations := map[string]string{
-		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            base.ZuulImage("zuul-web"),
-		"serial":                "1",
-		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
+		"zuul-common-config":      utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config":   utils.IniSectionsChecksum(cfg, sections),
+		"zuul-image":              base.ZuulImage("zuul-web"),
+		"serial":                  "1",
+		"zuul-logging":            utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
+		"zuul-github-connections": utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
 	zw := base.MkDeployment("zuul-web", r.ns, "")
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
 	zw.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-web")
-	zw.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-web")
+	zw.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-web", r)
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/api/info", zuulWEBPort)
@@ -685,7 +720,33 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	cfg.Section(section).NewKey("git_over_ssh", strconv.FormatBool(conn.GitOverSSH))
 }
 
-func (r *SFController) AddGitHubConnection(cfg *ini.File, conn sfv1.GitHubConnection) {
+func (r *SFController) AddGitHubConnection(cfg *ini.File, conn sfv1.GitHubConnection) error {
+
+	appID := fmt.Sprintf("%d", conn.AppID)
+	appKey := "/var/lib/zuul/" + conn.Secrets + "/app_key"
+
+	_, err := r.GetSecretDataFromKey(conn.Secrets, "app_key")
+	if err != nil {
+		r.log.V(1).Info(err.Error(), "app_key", conn.Secrets)
+		appKey = ""
+	}
+
+	if appKey == "" || appID == "0" {
+		r.log.V(1).Info("app_key or app_id is not defined", "app_key", appKey, "app_id", appID)
+		appKey = ""
+		appID = ""
+	}
+
+	apiToken, err := r.GetSecretDataFromKey(conn.Secrets, "api_token")
+	if err != nil {
+		r.log.V(1).Info(err.Error(), "api_token", conn.Secrets)
+	}
+
+	webhookToken, err := r.GetSecretDataFromKey(conn.Secrets, "webhook_token")
+	if err != nil {
+		r.log.V(1).Info(err.Error(), "webhook_token", conn.Secrets)
+	}
+
 	section := "connection " + conn.Name
 	cfg.NewSection(section)
 
@@ -694,12 +755,13 @@ func (r *SFController) AddGitHubConnection(cfg *ini.File, conn sfv1.GitHubConnec
 			cfg.Section(section).NewKey(fieldKey, fieldValue)
 		}
 	}
+
 	for key, value := range map[string]string{
 		"driver":             "github",
-		"app_id":             conn.AppID,
-		"app_key":            conn.AppKey,
-		"app_token":          conn.APIToken,
-		"webhook_token":      conn.WebhookToken,
+		"app_id":             appID,
+		"app_key":            appKey,
+		"api_token":          string(apiToken),
+		"webhook_token":      string(webhookToken),
 		"sshkey":             "/var/lib/zuul-ssh/..data/priv",
 		"server":             conn.Server,
 		"canonical_hostname": conn.Canonicalhostname,
@@ -708,6 +770,7 @@ func (r *SFController) AddGitHubConnection(cfg *ini.File, conn sfv1.GitHubConnec
 		addKey(key, value)
 	}
 
+	return nil
 }
 
 func AddGitConnection(cfg *ini.File, name string, baseurl string) {

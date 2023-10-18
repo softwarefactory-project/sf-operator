@@ -90,7 +90,7 @@ func isOperatorReady(services map[string]bool) bool {
 }
 
 func (r *SFController) DeployLogserverResource() bool {
-	pubKey, err := r.getSecretDataFromKey("zuul-ssh-key", "pub")
+	pubKey, err := r.GetSecretDataFromKey("zuul-ssh-key", "pub")
 	if err != nil {
 		return false
 	}

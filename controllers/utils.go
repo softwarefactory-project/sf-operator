@@ -522,8 +522,8 @@ func (r *SFUtilContext) extractTLSFromLECertificateSecret(name string, host stri
 	}
 }
 
-// Gets Secret by Name Reference
-func (r *SFUtilContext) getSecretbyNameRef(name string) (apiv1.Secret, error) {
+// GetSecretbyNameRef Get Secret by Name Reference
+func (r *SFUtilContext) GetSecretbyNameRef(name string) (apiv1.Secret, error) {
 	var dep apiv1.Secret
 	if r.GetM(name, &dep) {
 		return dep, nil
@@ -541,8 +541,8 @@ func GetValueFromKeySecret(secret apiv1.Secret, keyname string) ([]byte, error) 
 	return keyvalue, nil
 }
 
-func (r *SFUtilContext) getSecretDataFromKey(name string, key string) ([]byte, error) {
-	secret, err := r.getSecretbyNameRef(name)
+func (r *SFUtilContext) GetSecretDataFromKey(name string, key string) ([]byte, error) {
+	secret, err := r.GetSecretbyNameRef(name)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -561,7 +561,7 @@ func (r *SFUtilContext) getSecretDataFromKey(name string, key string) ([]byte, e
 
 // Gets Secret Data in which the Keyname is the same as the Secret Name
 func (r *SFUtilContext) getSecretData(name string) ([]byte, error) {
-	return r.getSecretDataFromKey(name, "")
+	return r.GetSecretDataFromKey(name, "")
 }
 
 func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName string) base.StorageConfig {

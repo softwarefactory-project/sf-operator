@@ -71,3 +71,4 @@ kubectl exec --stdin --tty zuul-scheduler-0 -- /bin/sh
 ```
 
 Then from that shell, run the `zuul-admin` command.
+

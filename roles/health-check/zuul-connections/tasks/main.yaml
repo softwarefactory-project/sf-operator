@@ -7,10 +7,20 @@
         username: zuul
     dummy_githubconns:
       - name: dummy-github-conn
-        appId: githubId
-        appKey: githubKey
-        apiToken: githubToken
-        webHookToken: githubwebtoken
+        secrets: githubconnectionsecret
+
+- name: Create GitHub Connection Secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: githubconnectionsecret
+        namespace: sf
+      data:
+        webhook_token: "{{ '0000000000000000000000000000000000000000' | b64encode }}"
+        api_token: "{{ 'ghp_51abcFzcvf3GxOJpPFUKxsT6JIL3Nnbf39E' | b64encode }}"
 
 - name: Get current Zuul gerrit connections
   command: kubectl get sf my-sf -o jsonpath='{.spec.zuul.gerritconns}'
@@ -19,46 +29,55 @@
 - set_fact:
     gerritconns_orig: "{{ gerritconns.stdout | from_json }}"
 
-- name: Add a dummy Zuul Gerrit connection
-  ansible.builtin.include_role:
-    name: "update-custom-resource"
-  vars:
-    cr_spec:
-      zuul:
-        gerritconns: "{{ gerritconns_orig + dummy_gerritconn }}"
-        githubconns: "{{ dummy_githubconns }}"
+- block:
+    - name: Add dummy Zuul connections
+      ansible.builtin.include_role:
+        name: "update-custom-resource"
+      vars:
+        cr_spec:
+          zuul:
+            gerritconns: "{{ gerritconns_orig + dummy_gerritconn }}"
+            githubconns: "{{ dummy_githubconns }}"
 
-- name: Wait for the new Zuul connection to appear in the Zuul API
-  ansible.builtin.uri:
-    url: "https://{{ zuul_host }}/api/connections"
-    method: GET
-    return_content: true
-    validate_certs: "{{ validate_certs }}"
-  register: this
-  until:
-    - "'dummy-gerrit-conn' in this.content"
-    - "'dummy-github-conn' in this.content"
-  retries: "{{ retries }}"
-  delay: "{{ delay }}"
+    - name: Wait for the new Zuul connections to appear in the Zuul API
+      ansible.builtin.uri:
+        url: "https://{{ zuul_host }}/api/connections"
+        method: GET
+        return_content: true
+        validate_certs: "{{ validate_certs }}"
+      register: this
+      until:
+        - "'dummy-gerrit-conn' in this.content"
+        - "'dummy-github-conn' in this.content"
+      retries: "{{ retries }}"
+      delay: "{{ delay }}"
 
-- name: Delete the dummy Zuul Gerrit connection
-  ansible.builtin.include_role:
-    name: "update-custom-resource"
-  vars:
-    cr_spec:
-      zuul:
-        gerritconns: "{{ gerritconns_orig }}"
-        githubconns: []
+    - name: Delete the dummy Zuul connections
+      ansible.builtin.include_role:
+        name: "update-custom-resource"
+      vars:
+        cr_spec:
+          zuul:
+            gerritconns: "{{ gerritconns_orig }}"
+            githubconns: []
 
-- name: Wait for the dummy Zuul connection to be removed from the API
-  ansible.builtin.uri:
-    url: "https://{{ zuul_host }}/api/connections"
-    method: GET
-    return_content: true
-    validate_certs: "{{ validate_certs }}"
-  register: this
-  until:
-    - "'dummy-gerrit-conn' not in this.content"
-    - "'dummy-github-conn' not in this.content"
-  retries: "{{ retries }}"
-  delay: "{{ delay }}"
+    - name: Wait for the dummy Zuul connections to be removed from the API
+      ansible.builtin.uri:
+        url: "https://{{ zuul_host }}/api/connections"
+        method: GET
+        return_content: true
+        validate_certs: "{{ validate_certs }}"
+      register: this
+      until:
+        - "'dummy-gerrit-conn' not in this.content"
+        - "'dummy-github-conn' not in this.content"
+      retries: "{{ retries }}"
+      delay: "{{ delay }}"
+  always:
+    - name: Delete GitHub Connection Secret
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Secret
+        namespace: sf
+        name: githubconnectionsecret
