@@ -40,7 +40,10 @@ import (
 const logserverIdent = "logserver"
 const httpdPort = 8080
 const httpdPortName = "logserver-httpd"
-const image = "registry.access.redhat.com/rhscl/httpd-24-rhel7:latest"
+
+// Use pinned/ubi8 based image for httpd
+// https://catalog.redhat.com/software/containers/ubi8/httpd-24/6065b844aee24f523c207943?q=httpd&architecture=amd64&image=651f274c8ce9242f7bb3e011
+const image = "registry.access.redhat.com/ubi8/httpd-24:1-284.1696531168"
 
 //go:embed static/logserver/logserver-entrypoint.sh
 var logserverEntrypoint string
@@ -361,7 +364,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
 	annotations := map[string]string{
 		"fqdn":           r.cr.Spec.FQDN,
-		"serial":         "2",
+		"serial":         "3",
 		"httpd-conf":     utils.Checksum([]byte(logserverConf)),
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(retentiondays) + " loopDelay:" + strconv.Itoa(loopdelay),
 	}
