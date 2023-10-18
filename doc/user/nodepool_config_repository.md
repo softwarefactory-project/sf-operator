@@ -159,3 +159,5 @@ ungrouped:
 Once these three files `nodepool/dib-ansible/inventory.yaml`, `nodepool/dib-ansible/my-cloud-image.yaml` and `nodepool/nodepool-builder.yaml` are merged into the Software Factory `config` repository and the `config-update` has succeeded then Nodepool will run the build proces.
 
 The image builds status can be consulted by accessing this endpoint: `https://nodepool.<fqdn>/dib-image-list`.
+
+The image builds logs can be consulted by accessing this endpoint: `https://nodepool.<fqdn>/builds`.
