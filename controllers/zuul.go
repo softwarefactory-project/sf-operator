@@ -50,10 +50,6 @@ var zuulLoggingConfig string
 // Common config sections for all Zuul components
 var commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
 
-func ZuulImage(service string) string {
-	return "quay.io/software-factory/" + service + ":9.2.0-1"
-}
-
 func isStatefulset(service string) bool {
 	return service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger"
 }
@@ -116,7 +112,7 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 	}
 	container := apiv1.Container{
 		Name:         service,
-		Image:        ZuulImage(service),
+		Image:        base.ZuulImage(service),
 		Command:      command,
 		Env:          envs,
 		VolumeMounts: volumes,
@@ -180,7 +176,7 @@ func (r *SFController) getTenantsEnvs() []apiv1.EnvVar {
 }
 
 func (r *SFController) mkInitSchedulerConfigContainer() apiv1.Container {
-	container := base.MkContainer("init-scheduler-config", BusyboxImage)
+	container := base.MkContainer("init-scheduler-config", base.BusyboxImage)
 	container.Command = []string{"/usr/local/bin/generate-zuul-tenant-yaml.sh"}
 	container.Env = append(r.getTenantsEnvs(),
 		base.MkEnvVar("HOME", "/var/lib/zuul"), base.MkEnvVar("INIT_CONTAINER", "1"))
@@ -253,7 +249,7 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 	annotations := map[string]string{
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            ZuulImage("zuul-scheduler"),
+		"zuul-image":            base.ZuulImage("zuul-scheduler"),
 		"statsd_mapping":        utils.Checksum([]byte(zuulStatsdMappingConfig)),
 		"serial":                "3",
 		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
@@ -323,7 +319,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            ZuulImage("zuul-executor"),
+		"zuul-image":            base.ZuulImage("zuul-executor"),
 		"replicas":              strconv.Itoa(int(r.cr.Spec.Zuul.Executor.Replicas)),
 		"serial":                "1",
 		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
@@ -373,7 +369,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            ZuulImage(service),
+		"zuul-image":            base.ZuulImage(service),
 		"replicas":              strconv.Itoa(int(r.cr.Spec.Zuul.Merger.MinReplicas)),
 	}
 
@@ -414,7 +410,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            ZuulImage("zuul-web"),
+		"zuul-image":            base.ZuulImage("zuul-web"),
 		"serial":                "1",
 		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
 	}
