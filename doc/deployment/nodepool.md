@@ -86,6 +86,14 @@ Here is the command to fetch the builder SSH public key:
 kubectl get secret nodepool-builder-ssh-key -n sf -o jsonpath={.data.pub} | base64 -d
 ```
 
+## Accept an image-builder's SSH Host key
+
+Once an account has been created to an `image-builder` host the `nodepool-builder` must trust the SSH Host key before being able to connect. Run the following command to initiate a SSH connection and trust the host key:
+
+```sh
+kubectl exec -it nodepool-builder-0 -c nodepool-builder -- ssh nodepool@<image-builder-hostname> hostname
+```
+
 ## Using the Openshiftpods driver with your cluster
 
 Nodepool's [Openshiftpods driver](https://zuul-ci.org/docs/nodepool/latest/openshift-pods.html) enables

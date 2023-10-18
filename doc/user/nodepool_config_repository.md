@@ -121,13 +121,19 @@ Here is an example of an image build playbook:
   tasks:
     - debug:
         msg: "Building {{ image_output }}"
-    # Insert here your build steps
+    # Build steps begin from here
+    # - name: Build task 1
+    #   shell: true
+    # - name: Build task 2
+    #   shell: true
+    # Build steps end here
+    # Set final image path based on the expected image type
     - set_fact:
         final_image_path: "{{ image_output }}.raw"
-      when: raw_type
+      when: raw_type | default(false)
     - set_fact:
         final_image_path: "{{ image_output }}.qcow2"
-      when: qcow2_type
+      when: qcow2_type | default(false)
     # Synchronize back the image from the image-builder to the nodepool-builder
     - ansible.posix.synchronize:
         mode: pull
@@ -157,6 +163,8 @@ ungrouped:
 > Nodepool builder must be able to connect via SSH to your image-builder machine. Thus please refer to the section [Get the Nodepool builder SSH public key](../deployment/nodepool#get-the-builders-ssh-public-key).
 
 Once these three files `nodepool/dib-ansible/inventory.yaml`, `nodepool/dib-ansible/my-cloud-image.yaml` and `nodepool/nodepool-builder.yaml` are merged into the Software Factory `config` repository and the `config-update` has succeeded then Nodepool will run the build proces.
+
+> At the first connection attempt of the `nodepool-builder` to an `image-builder` host, Ansible will refuse to connect because the SSH Host key is not known. Please refer to the section [Accept an image-builder's SSH Host key](../deployment/nodepool#accept-an-image-builders-ssh-host-key).
 
 The image builds status can be consulted by accessing this endpoint: `https://nodepool.<fqdn>/dib-image-list`.
 
