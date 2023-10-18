@@ -505,14 +505,16 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		r.CreateR(&current)
 	}
 
+	pvcReadiness := r.reconcileExpandPVC(builderIdent+"-"+builderIdent+"-0", r.cr.Spec.Nodepool.Builder.Storage)
+
 	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-builder", "nodepool", buildLogsHttpdPortName, "/builds",
 		buildLogsHttpdPort, map[string]string{
 			"haproxy.router.openshift.io/rewrite-target": "/dib",
 		}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
-	var isReady = r.IsStatefulSetReady(&current)
+	var isReady = r.IsStatefulSetReady(&current) && routeReady && pvcReadiness
 
-	conds.UpdateConditions(&r.cr.Status.Conditions, builderIdent, isReady && routeReady)
+	conds.UpdateConditions(&r.cr.Status.Conditions, builderIdent, isReady)
 
 	return isReady
 }
