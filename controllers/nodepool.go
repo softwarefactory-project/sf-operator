@@ -349,7 +349,6 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		base.MkVolumeSecret("zookeeper-client-tls"),
 		base.MkVolumeSecret(NodepoolProvidersSecretsName),
 		base.MkEmptyDirVolume("nodepool-config"),
-		base.MkEmptyDirVolume("nodepool-home-ssh"),
 		r.commonToolingVolume(),
 		{
 			Name: "nodepool-builder-ssh-key",
@@ -391,10 +390,6 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 			ReadOnly:  true,
 		},
 		{
-			Name:      "nodepool-home-ssh",
-			MountPath: "/var/lib/nodepool/.ssh",
-		},
-		{
 			Name:      "nodepool-tooling-vol",
 			SubPath:   "ssh_config",
 			MountPath: "/var/lib/nodepool/.ssh/config",
@@ -421,7 +416,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"statsd_mapping":         utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-builder restart
 		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),
-		"serial":                     "8",
+		"serial":                     "9",
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", base.BusyboxImage)

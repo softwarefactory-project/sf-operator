@@ -1,2 +1,3 @@
 Host *
     IdentityFile /var/lib/nodepool-ssh-key/priv
+    UserKnownHostsFile /var/lib/nodepool/known_hosts
