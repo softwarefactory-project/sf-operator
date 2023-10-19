@@ -95,9 +95,6 @@ spec:
                           as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                        x-kubernetes-validations:
-                        - message: Storage shrinking is not supported
-                          rule: self >= oldSelf
                     required:
                     - size
                     type: object
@@ -146,9 +143,6 @@ spec:
                           as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                        x-kubernetes-validations:
-                        - message: Storage shrinking is not supported
-                          rule: self >= oldSelf
                     required:
                     - size
                     type: object
@@ -178,9 +172,6 @@ spec:
                           as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                        x-kubernetes-validations:
-                        - message: Storage shrinking is not supported
-                          rule: self >= oldSelf
                     required:
                     - size
                     type: object
@@ -201,9 +192,6 @@ spec:
                           as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                        x-kubernetes-validations:
-                        - message: Storage shrinking is not supported
-                          rule: self >= oldSelf
                     required:
                     - size
                     type: object
@@ -243,9 +231,6 @@ spec:
                               expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
-                            x-kubernetes-validations:
-                            - message: Storage shrinking is not supported
-                              rule: self >= oldSelf
                         required:
                         - size
                         type: object
@@ -290,9 +275,6 @@ spec:
                           as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                        x-kubernetes-validations:
-                        - message: Storage shrinking is not supported
-                          rule: self >= oldSelf
                     required:
                     - size
                     type: object
@@ -339,9 +321,6 @@ spec:
                               expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
-                            x-kubernetes-validations:
-                            - message: Storage shrinking is not supported
-                              rule: self >= oldSelf
                         required:
                         - size
                         type: object
@@ -493,9 +472,6 @@ spec:
                               expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
-                            x-kubernetes-validations:
-                            - message: Storage shrinking is not supported
-                              rule: self >= oldSelf
                         required:
                         - size
                         type: object
@@ -602,9 +578,6 @@ spec:
                               expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
-                            x-kubernetes-validations:
-                            - message: Storage shrinking is not supported
-                              rule: self >= oldSelf
                         required:
                         - size
                         type: object

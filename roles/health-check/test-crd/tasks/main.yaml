@@ -20,12 +20,6 @@
   # The default storage size asked by the SF controller is 1GB
   failed_when: logserver_capacity.stdout == '1Gi'
 
-- name: Ensure it is impossible to shrink storage size in sf CR
-  ansible.builtin.command: |
-    kubectl patch SoftwareFactory my-sf --type=merge -p '{"spec": {"logserver": {"storage": {"size": "1Gi"}}}}'
-  register: patch_result
-  failed_when: "('shrinking is not supported' not in patch_result.stderr) and ('shrinking is not supported' not in patch_result.stdout)"
-
 - name: Ensure it is impossible to set a negative loopDelay
   ansible.builtin.command: |
     kubectl patch SoftwareFactory my-sf --type=merge -p '{"spec": {"logserver": {"loopDelay": -1}}}'

@@ -34,8 +34,6 @@ type LetsEncryptSpec struct {
 }
 
 type StorageSpec struct {
-	//+kubebuilder:validation:Required
-	//+kubebuilder:validation:XValidation:rule="self >= oldSelf",message="Storage shrinking is not supported"
 	// Storage space to allocate to the resource, expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/
 	Size resource.Quantity `json:"size"`
 	// Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case.
