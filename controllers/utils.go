@@ -239,14 +239,30 @@ func (r *SFUtilContext) ensureRoute(route apiroutev1.Route, name string) bool {
 		return false
 	} else {
 		// Route already exist - check if we need to update the Route
-		// Use the String repr of the RouteSpec to compare for changes
+		needUpdate := false
+
+		// First check the route annotations
+		if (len(route.Annotations) == 0 && len(current.Annotations) != 0) || (len(route.Annotations) != 0 && len(current.Annotations) == 0) {
+			current.Annotations = route.Annotations
+			needUpdate = true
+		}
+		if len(route.Annotations) != 0 && len(current.Annotations) != 0 {
+			if !utils.MapEquals(&route.Annotations, &current.Annotations) {
+				current.Annotations = route.Annotations
+				needUpdate = true
+			}
+		}
+
+		// Use the String repr of the RouteSpec to compare for Spec changes
 		// This comparaison mechanics may fail in case of some Route Spec default values
 		// not specified in the wanted version.
-		wantedRepr := route.Spec.String()
-		currentRepr := current.Spec.String()
-		if wantedRepr != currentRepr {
-			r.log.V(1).Info("Updating route...", "name", name)
+		if route.Spec.String() != current.Spec.String() {
 			current.Spec = route.Spec
+			needUpdate = true
+		}
+
+		if needUpdate {
+			r.log.V(1).Info("Updating route...", "name", name)
 			r.UpdateR(&current)
 			return false
 		}

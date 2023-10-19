@@ -350,7 +350,6 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		base.MkVolumeSecret(NodepoolProvidersSecretsName),
 		base.MkEmptyDirVolume("nodepool-config"),
 		base.MkEmptyDirVolume("nodepool-home-ssh"),
-		base.MkEmptyDirVolume("nodepool-log"),
 		r.commonToolingVolume(),
 		{
 			Name: "nodepool-builder-ssh-key",
@@ -379,10 +378,6 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		{
 			Name:      builderIdent,
 			MountPath: "/var/lib/nodepool",
-		},
-		{
-			Name:      "nodepool-log",
-			MountPath: "/var/log/nodepool",
 		},
 		configScriptVolumeMount,
 		{
@@ -426,12 +421,12 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"statsd_mapping":         utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-builder restart
 		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),
-		"serial":                     "7",
+		"serial":                     "8",
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", base.BusyboxImage)
 
-	initContainer.Command = []string{"bash", "-c", "mkdir -p ~/dib; /usr/local/bin/generate-config.sh"}
+	initContainer.Command = []string{"bash", "-c", "mkdir -p ~/dib ~/builds; /usr/local/bin/generate-config.sh"}
 	initContainer.Env = append(r.getNodepoolConfigEnvs(),
 		base.MkEnvVar("NODEPOOL_CONFIG_FILE", "nodepool-builder.yaml"),
 	)
@@ -469,8 +464,9 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	buildLogsContainer := base.MkContainer("build-logs-httpd", HTTPDImage)
 	buildLogsContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
-			Name:      "nodepool-log",
-			MountPath: "/var/www/html/dib",
+			Name:      builderIdent,
+			SubPath:   "builds",
+			MountPath: "/var/www/html/builds",
 		},
 		{
 			Name:      "nodepool-builder-extra-config-vol",
@@ -481,9 +477,9 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	buildLogsContainer.Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(buildLogsHttpdPort, buildLogsHttpdPortName),
 	}
-	buildLogsContainer.ReadinessProbe = base.MkReadinessHTTPProbe("/dib", buildLogsHttpdPort)
-	buildLogsContainer.StartupProbe = base.MkStartupHTTPProbe("/dib", buildLogsHttpdPort)
-	buildLogsContainer.LivenessProbe = base.MkLiveHTTPProbe("/dib", buildLogsHttpdPort)
+	buildLogsContainer.ReadinessProbe = base.MkReadinessHTTPProbe("/builds", buildLogsHttpdPort)
+	buildLogsContainer.StartupProbe = base.MkStartupHTTPProbe("/builds", buildLogsHttpdPort)
+	buildLogsContainer.LivenessProbe = base.MkLiveHTTPProbe("/builds", buildLogsHttpdPort)
 	nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers,
 		buildLogsContainer,
 	)
@@ -508,9 +504,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	pvcReadiness := r.reconcileExpandPVC(builderIdent+"-"+builderIdent+"-0", r.cr.Spec.Nodepool.Builder.Storage)
 
 	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-builder", "nodepool", buildLogsHttpdPortName, "/builds",
-		buildLogsHttpdPort, map[string]string{
-			"haproxy.router.openshift.io/rewrite-target": "/dib",
-		}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
+		buildLogsHttpdPort, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
 	var isReady = r.IsStatefulSetReady(&current) && routeReady && pvcReadiness
 

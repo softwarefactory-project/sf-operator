@@ -22,6 +22,7 @@ zookeeper-tls:
   key: /tls/client/tls.key
 # images-dir is mandatory key for nodepool-builder process
 images-dir: /var/lib/nodepool/dib
+build-log-dir: /var/lib/nodepool/builds/logs
 EOF
 
 if [ "$CONFIG_REPO_SET" == "TRUE" ]; then

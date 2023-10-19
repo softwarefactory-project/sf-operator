@@ -135,7 +135,7 @@
 
 - name: "Check that witness message is available in build logs"
   ansible.builtin.shell: |
-    kubectl exec nodepool-builder-0 -- bash -c "grep 'Hello from build of {{ nodepool_diskimage_name }}' /var/log/nodepool/builds/*"
+    kubectl exec nodepool-builder-0 -- bash -c "grep 'Hello from build of {{ nodepool_diskimage_name }}' /var/lib/nodepool/builds/logs/*"
   register: witness
   until: witness is success
   delay: 5
