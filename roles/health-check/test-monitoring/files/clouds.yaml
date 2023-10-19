@@ -1,0 +1,31 @@
+cache:
+  expiration:
+    server: 5
+    port: 5
+    floating-ip: 5
+metrics:
+  statsd:
+    prefix: nodepool.openstack
+clouds:
+  nimbus:
+    api_timeout: 60
+    auth:
+      username: user1
+      password: password1
+      auth_url: https://keystone.nimbus/v2.0
+      project_name: my-project
+    image_format: 'raw'
+    metrics:
+      statsd:
+        prefix: nodepool.openstack.nimbus
+  cumulus:
+    api_timeout: 60
+    auth:
+      username: user2
+      password: password2
+      auth_url: https://keystone.cumulus/v2.0
+      project_name: my-other-project
+    image_format: 'raw'
+    metrics:
+      statsd:
+        prefix: nodepool.openstack.cumulus

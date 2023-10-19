@@ -195,9 +195,9 @@ func MkStatsdMappingsFromCloudsYaml(extraMappings []StatsdMetricMapping, cloudsY
 	if globalMetricsConf, ok := cloudsYaml["metrics"]; ok {
 		gmc := globalMetricsConf.(map[string]interface{})
 		if globalStatsdConf, ok := gmc["statsd"]; ok {
-			gsc := globalStatsdConf.(map[string]string)
+			gsc := globalStatsdConf.(map[string]interface{})
 			if prefix, ok := gsc["prefix"]; ok {
-				globalPrefix = prefix
+				globalPrefix = prefix.(string)
 			}
 		}
 	}
@@ -208,8 +208,9 @@ func MkStatsdMappingsFromCloudsYaml(extraMappings []StatsdMetricMapping, cloudsY
 			if metricsConf, ok := cC["metrics"]; ok {
 				mC := metricsConf.(map[string]interface{})
 				if statsdConf, ok := mC["statsd"]; ok {
-					sC := statsdConf.(map[string]string)
-					if prefix, ok := sC["prefix"]; ok {
+					sC := statsdConf.(map[string]interface{})
+					if prefx, ok := sC["prefix"]; ok {
+						prefix := prefx.(string)
 						var extraMapping = StatsdMetricMapping{
 							Name:         strings.Replace(prefix, ".", "_", -1),
 							ProviderName: cloudName,
