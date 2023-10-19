@@ -84,8 +84,12 @@ dev-deployment:
 ##@ Build
 
 .PHONY: build
-build: generate fmt vet sc ## Build manager binary.
+build: generate fmt vet sc build-api-doc ## Build manager binary.
 	go build -o bin/manager main.go
+
+.PHONY: build-api-doc
+build-api-doc: # Build the API documentation.
+	./tools/build-api-doc.sh
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.

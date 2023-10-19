@@ -1,0 +1,11 @@
+processor:
+  ignoreFields:
+    - "status$"
+    - "TypeMeta$"
+
+render:
+  kubernetesVersion: 1.24
+  knownTypes:
+    - name: Quantity
+      package: k8s.io/apimachinery/pkg/api/resource
+      link: https://pkg.go.dev/k8s.io/apimachinery@v0.28.2/pkg/api/resource#Quantity
