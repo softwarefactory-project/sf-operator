@@ -26,7 +26,6 @@ import (
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
 
 type SoftwareFactoryReconciler struct {
@@ -91,69 +90,28 @@ func isOperatorReady(services map[string]bool) bool {
 }
 
 func (r *SFController) DeployLogserverResource() bool {
-
-	current := sfv1.LogServer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      logserverIdent,
-			Namespace: r.ns,
-		},
-	}
-
-	loopdelay, retentiondays := getLogserverSettingsOrDefault(r.cr.Spec.Logserver)
-	storage := r.cr.Spec.Logserver.Storage
-	if storage.Size.IsZero() {
-		storage.Size = utils.Qty1Gi()
-	}
-	logServerSpecSettings := sfv1.LogServerSpecSettings{
-		LoopDelay:     loopdelay,
-		RetentionDays: retentiondays,
-		Storage:       storage,
-	}
-
-	if r.GetM(logserverIdent, &current) {
-		needUpdate := false
-		if current.Spec.Settings != logServerSpecSettings {
-			current.Spec.Settings = logServerSpecSettings
-			needUpdate = true
-		}
-		if r.cr.Spec.LetsEncrypt == nil && current.Spec.LetsEncrypt != nil {
-			current.Spec.LetsEncrypt = nil
-			needUpdate = true
-		}
-		if r.cr.Spec.LetsEncrypt != nil && current.Spec.LetsEncrypt == nil {
-			current.Spec.LetsEncrypt = r.cr.Spec.LetsEncrypt
-			needUpdate = true
-		}
-		if r.cr.Spec.LetsEncrypt != nil && current.Spec.LetsEncrypt != nil {
-			if *r.cr.Spec.LetsEncrypt != *current.Spec.LetsEncrypt {
-				current.Spec.LetsEncrypt = r.cr.Spec.LetsEncrypt
-				needUpdate = true
-			}
-		}
-		if needUpdate {
-			r.log.V(1).Info("Updating the logserver resource", "name", logserverIdent)
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		pubKey, err := r.getSecretDataFromKey("zuul-ssh-key", "pub")
-		if err != nil {
-			return false
-		}
-		pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
-		current.Spec = sfv1.LogServerSpec{
-			FQDN:             r.cr.Spec.FQDN,
-			StorageClassName: r.cr.Spec.StorageClassName,
-			LetsEncrypt:      r.cr.Spec.LetsEncrypt,
-			AuthorizedSSHKey: pubKeyB64,
-			Settings:         logServerSpecSettings,
-		}
-		r.log.V(1).Info("Creating the logserver resource", "name", logserverIdent)
-		r.CreateR(&current)
+	pubKey, err := r.getSecretDataFromKey("zuul-ssh-key", "pub")
+	if err != nil {
 		return false
 	}
-
-	return isLogserverReady(current)
+	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
+	cr := sfv1.LogServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: logserverIdent,
+		},
+		Spec: sfv1.LogServerSpec{
+			FQDN:             r.cr.Spec.FQDN,
+			LetsEncrypt:      r.cr.Spec.LetsEncrypt,
+			StorageClassName: r.cr.Spec.Logserver.Storage.ClassName,
+			AuthorizedSSHKey: pubKeyB64,
+			Settings:         r.cr.Spec.Logserver,
+		},
+	}
+	var logserverController = LogServerController{
+		SFUtilContext: r.SFUtilContext,
+		cr:            cr,
+	}
+	return logserverController.DeployLogserver().Ready
 }
 
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {

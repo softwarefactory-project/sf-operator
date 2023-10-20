@@ -72,10 +72,6 @@ type LogServerController struct {
 	cr sfv1.LogServer
 }
 
-func isLogserverReady(logserver sfv1.LogServer) bool {
-	return logserver.Status.ObservedGeneration == logserver.Generation && logserver.Status.Ready
-}
-
 func getLogserverSettingsOrDefault(settings sfv1.LogServerSpecSettings) (int, int) {
 	loopdelay := 3600
 	if settings.LoopDelay > 0 {
