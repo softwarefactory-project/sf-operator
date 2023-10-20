@@ -24,15 +24,14 @@ type LogServerSpec struct {
 	Settings LogServerSpecSettings `json:"settings,omitempty"`
 }
 
-// +kubebuilder:validation:Required
-// +kubebuilder:validation:XValidation:rule="!has(self.retentionDays) || self.retentionDays > 0",message="retentionDays must be a positive integer if set"
-// +kubebuilder:validation:XValidation:rule="!has(self.loopDelay) || self.loopDelay > 0",message="loopDelay must be a positive integer if set"
 type LogServerSpecSettings struct {
 	// Logs retention time in days. Logs older than this setting in days will be purged by a pruning cronjob. Defaults to 60 days
-	// +optional
+	// +kubebuilder:default:=60
+	// +kubebuilder:validation:Minimum:=1
 	RetentionDays int `json:"retentionDays,omitempty"`
 	// The frequency, in seconds, at which the log pruning cronjob is running. Defaults to 3600s, i.e. logs are checked for pruning every hour
-	// +optional
+	// +kubebuilder:default:=3600
+	// +kubebuilder:validation:Minimum:=1
 	LoopDelay int `json:"loopDelay,omitempty"`
 	// Storage-related settings
 	Storage StorageSpec `json:"storage,omitempty"`

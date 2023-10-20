@@ -24,7 +24,6 @@
     - config-update-nodepool-builder
     - pod-spawning
     - test-volumestats-sidecar
-    - test-crd
     - expand-volume
     - validate-purgelogs
     - test-custom-route-certs
