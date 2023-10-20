@@ -54,7 +54,7 @@ spec:
                 properties:
                   server:
                     description: 'Specify the Lets encrypt server. Valid values are:
-                      - "staging" - "prod"'
+                      "staging", "prod"'
                     enum:
                     - prod
                     - staging
@@ -96,8 +96,8 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
-                        description: 'Storage space to allocate to the resource, expressed
-                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                        description: Storage space to allocate to the resource, expressed
+                          as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                     required:

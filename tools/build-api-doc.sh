@@ -31,7 +31,7 @@ git clone --depth=1 "file://${REPO_ROOT}" "$GITDIR"
 pushd "$GITDIR"
 # go mod vendor
 
-go get github.com/elastic/crd-ref-docs
+go get github.com/elastic/crd-ref-docs@master
 go install github.com/elastic/crd-ref-docs
 
 mkdir -p "${docstmpdir}/apidocs/"
@@ -39,6 +39,7 @@ ${GOBIN}/crd-ref-docs \
     --config "${DOC_ROOT}/_apidoc/config.yaml" \
     --source-path "./api" \
     --output-path "${docstmpdir}/apidocs/index.md" \
+    --templates-dir "${DOC_ROOT}/_apidoc/templates" \
     --renderer=markdown
 
 popd

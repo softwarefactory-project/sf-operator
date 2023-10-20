@@ -28,13 +28,13 @@ const (
 type LetsEncryptSpec struct {
 	// Specify the Lets encrypt server.
 	// Valid values are:
-	// - "staging"
-	// - "prod"
+	// "staging",
+	// "prod"
 	Server LEServer `json:"server"`
 }
 
 type StorageSpec struct {
-	// Storage space to allocate to the resource, expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/
+	// Storage space to allocate to the resource, expressed as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
 	Size resource.Quantity `json:"size"`
 	// Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case.
 	ClassName string `json:"className,omitempty"`
@@ -54,87 +54,87 @@ type ConfigLocationSpec struct {
 	ZuulConnectionName string `json:"zuul-connection-name"`
 }
 
-// Describes a Zuul connection using the `github` driver: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#
+// Describes a Zuul connection using the [github driver](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#).
 type GitHubConnection struct {
 	// How the connection will be named in Zuul's configuration and appear in zuul-web
 	Name string `json:"name"`
-	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_id
+	// the [app_id](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_id) parameter
 	AppID string `json:"appId"`
-	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key
+	// the [app_key](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key) parameter
 	AppKey string `json:"appKey"`
-	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token
+	// the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token) parameter
 	APIToken string `json:"apiToken"`
-	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token
+	// the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token) parameter
 	// +optional
 	WebhookToken string `json:"webHookToken,omitempty"`
-	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.server
+	// the [server](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.server) parameter
 	// +optional
 	Server string `json:"server,omitempty"`
-	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.canonical_hostname
+	// the [canonical_hostname](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.canonical_hostname) parameter
 	// +optional
 	Canonicalhostname string `json:"canonicalHostname,omitempty"`
-	// https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.verify_ssl
+	// the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.verify_ssl) parameter
 	// +kubebuilder:default:=true
 	// +optional
 	VerifySSL bool `json:"verifySsl,omitempty"`
 }
 
-// Describes a Zuul connection using the `gerrit` driver: https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#connection-configuration
+// Describes a Zuul connection using the [gerrit driver](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#connection-configuration)
 type GerritConnection struct {
 	// How the connection will be named in Zuul's configuration and appear in zuul-web
 	Name string `json:"name"`
-	// The gerrit server hostname. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.server
+	// The gerrit server hostname. Equivalent to the [server](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.server) parameter.
 	Hostname string `json:"hostname"`
-	// SSH port number to the Gerrit instance. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.port
+	// SSH port number to the Gerrit instance. Equivalent to the [port](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.port) parameter.
 	// +kubebuilder:default:=29418
 	Port uint16 `json:"port,omitempty"`
-	// URL to Gerrit's web interface. https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.baseurl
+	// URL to Gerrit's web interface. the [baseurl](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.baseurl) parameter.
 	// +kubebuilder:validation:Pattern:=`^https?:\/\/.+$`
 	Puburl string `json:"puburl,omitempty"`
-	// Username that Zuul will use to authenticate on the Gerrit instance. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.user
+	// Username that Zuul will use to authenticate on the Gerrit instance. Equivalent to the [user](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.user) parameter.
 	// +kubebuilder:default:=zuul
 	Username string `json:"username,omitempty"`
-	// The canonical hostname associated with the git repositories on the Gerrit server. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.canonical_hostname
+	// The canonical hostname associated with the git repositories on the Gerrit server. Equivalent to the [canonical_hostname](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.canonical_hostname) parameter.
 	Canonicalhostname string `json:"canonicalhostname,omitempty"`
-	// The name of a Kubernetes secret holding the Gerrit user's API Password. The secret's data must have a key called "password". Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.password
+	// The name of a Kubernetes secret holding the Gerrit user's API Password. The secret's data must have a key called "password". Equivalent to the [password](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.password) parameter.
 	Password string `json:"password,omitempty"`
-	// Set to true to force git operations over SSH even if the password attribute is set. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.git_over_ssh
+	// Set to true to force git operations over SSH even if the password attribute is set. Equivalent to the [git_over_ssh](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.git_over_ssh) parameter.
 	// +kubebuilder:default:=false
 	GitOverSSH bool `json:"git-over-ssh,omitempty"`
-	// Disable SSL certificate verification with the Gerrit instance when set to false. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.verify_ssl
+	// Disable SSL certificate verification with the Gerrit instance when set to false. Equivalent to the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.verify_ssl) parameter.
 	// +kubebuilder:default:=true
 	VerifySSL bool `json:"verifyssl,omitempty"`
 }
 
-// The description of an OpenIDConnect authenticator, see https://zuul-ci.org/docs/zuul/latest/configuration.html#authentication
+// The description of an OpenIDConnect authenticator, see [Zuul's authentication documentation](https://zuul-ci.org/docs/zuul/latest/configuration.html#authentication)
 type ZuulOIDCAuthenticatorSpec struct {
-	// The name of the authenticator in Zuul's configuration, see https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E
+	// The [name of the authenticator in Zuul's configuration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E)
 	Name string `json:"name"`
-	// Authentication realm, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.realm
+	// Authentication realm, equivalent to the [realm](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.realm) parameter
 	Realm string `json:"realm"`
-	// The client ID, as exposed in the `aud` claim of a JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.client_id
+	// The client ID, as exposed in the `aud` claim of a JWT. Equivalent to the [client_id](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.client_id) parameter
 	ClientID string `json:"clientID"`
-	// The issuer ID, as exposed in the `iss` claim of a JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.issuer_id
+	// The issuer ID, as exposed in the `iss` claim of a JWT. Equivalent to the [issuer_id](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.issuer_id) parameter
 	IssuerID string `json:"issuerID"`
 	// +kubebuilder:default:=sub
-	// The JWT claim to use as a unique identifier in audit logs, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.issuer_id
+	// The JWT claim to use as a unique identifier in audit logs, equivalent to the [uid_claim](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.uid_claim) parameter
 	UIDClaim string `json:"uidClaim,omitempty"`
-	// Optionally override the `expires_at` claim in a JWT to enforce a custom expiration time on a token. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.max_validity_time
+	// Optionally override the `expires_at` claim in a JWT to enforce a custom expiration time on a token. Equivalent to the [max_validity_time](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.max_validity_time) parameter
 	MaxValidityTime int32 `json:"maxValidityTime,omitempty"`
 	// +kubebuilder:default:=0
-	// Optionally compensate for skew between Zuul's and the Identity Provider's clocks, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.skew
+	// Optionally compensate for skew between Zuul's and the Identity Provider's clocks, equivalent to the [skew](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.skew) parameter
 	Skew int32 `json:"skew,omitempty"`
-	// Optionally provide a URL to fetch the Identity Provider's key set, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-keys_url
+	// Optionally provide a URL to fetch the Identity Provider's key set, equivalent to the [keys_url](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-keys_url) parameter
 	KeysURL string `json:"keysURL,omitempty"`
 	// +kubebuilder:default:="openid profile"
-	// The scope used to fetch a user's details, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scope
+	// The scope used to fetch a user's details, equivalent to the [scope](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scope) parameter
 	Scope string `json:"scope,omitempty"`
-	// Optionally provide the claim where the authority is set if not in `iss`, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-authority
+	// Optionally provide the claim where the authority is set if not in `iss`, equivalent to the [authority](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-authority) parameter
 	Authority string `json:"authority,omitempty"`
-	// Optionally provide the claim where the audience is set if not in `aud`, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-audience
+	// Optionally provide the claim where the audience is set if not in `aud`, equivalent to the [audience](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-audience) parameter
 	Audience string `json:"audience,omitempty"`
 	// +kubebuilder:default:=true
-	// If set to false, zuul-web will skip loading the Identity Provider's `userinfo` endpoint and rely on what's available in the JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-load_user_info
+	// If set to false, zuul-web will skip loading the Identity Provider's `userinfo` endpoint and rely on what's available in the JWT. Equivalent to the [load_user_info](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-load_user_info) parameter
 	LoadUserInfo bool `json:"loadUserInfo,omitempty"`
 }
 
@@ -146,9 +146,9 @@ type ZuulExecutorSpec struct {
 	Replicas int32 `json:"replicas,omitempty"`
 	// Specify the Log Level of the zuul-executor service.
 	// Valid values are:
-	// - "INFO" (default)
-	// - "WARN"
-	// - "DEBUG"
+	// "INFO" (default),
+	// "WARN",
+	// "DEBUG".
 	// Changing this value will restart the service.
 	// +optional
 	LogLevel LogLevel `json:"logLevel,omitempty"`
@@ -157,9 +157,9 @@ type ZuulExecutorSpec struct {
 type ZuulWebSpec struct {
 	// Specify the Log Level of the zuul-web launcher service.
 	// Valid values are:
-	// - "INFO" (default)
-	// - "WARN"
-	// - "DEBUG"
+	// "INFO" (default),
+	// "WARN",
+	// "DEBUG".
 	// Changing this value will restart the service.
 	// +optional
 	LogLevel LogLevel `json:"logLevel,omitempty"`
@@ -173,29 +173,29 @@ type ZuulSchedulerSpec struct {
 	StatsdTarget string `json:"statsdTarget,omitempty"`
 	// Specify the Log Level of the zuul-scheduler service.
 	// Valid values are:
-	// - "INFO" (default)
-	// - "WARN"
-	// - "DEBUG"
+	// "INFO" (default),
+	// "WARN",
+	// "DEBUG".
 	// Changing this value will restart the service.
 	// +optional
 	LogLevel LogLevel `json:"logLevel,omitempty"`
 }
 
-// Some of the Zuul Merger Configurations can be found at https://zuul-ci.org/docs/zuul/latest/configuration.html#merger
+// Zuul Merger Configuration, see [Zuul's documentation](https://zuul-ci.org/docs/zuul/latest/configuration.html#merger)
 type ZuulMergerSpec struct {
-	// https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_name
+	// the [git_user_name](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_name) parameter
 	// +optional
 	GitUserName string `json:"gitUserName,omitempty"`
-	// https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_email
+	// the [git_user_email](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_email) parameter
 	// +optional
 	GitUserEmail string `json:"gitUserEmail,omitempty"`
-	// https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_limit
+	// the [git_http_low_speed_limit](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_limit) parameter
 	// +kubebuilder:validation:Minimum:=0
 	GitHTTPLowSpeedLimit int32 `json:"gitHttpLowSpeedLimit,omitempty"`
-	// https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_time
+	// the [git_http_low_speed_time](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_time) parameter
 	// +kubebuilder:validation:Minimum:=0
 	GitHTTPLowSpeedTime int32 `json:"gitHttpLowSpeedTime,omitempty"`
-	// https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_timeout
+	// the [git_timeout](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_timeout) parameter
 	// +kubebuilder:validation:Minimum:=1
 	GitTimeout int32 `json:"gitTimeout,omitempty"`
 	// Storage-related settings
@@ -205,9 +205,9 @@ type ZuulMergerSpec struct {
 	MinReplicas int32 `json:"minReplicas,omitempty"`
 	// Specify the Log Level of the nodepool launcher service.
 	// Valid values are:
-	// - "INFO" (default)
-	// - "WARN"
-	// - "DEBUG"
+	// "INFO" (default),
+	// "WARN",
+	// "DEBUG".
 	// Changing this value will restart the service.
 	// +optional
 	LogLevel LogLevel `json:"logLevel,omitempty"`
@@ -271,9 +271,9 @@ const (
 type NodepoolLauncherSpec struct {
 	// Specify the Log Level of the nodepool launcher service.
 	// Valid values are:
-	// - "INFO" (default)
-	// - "WARN"
-	// - "DEBUG"
+	// "INFO" (default),
+	// "WARN",
+	// "DEBUG".
 	// Changing this value will restart the service.
 	// +optional
 	LogLevel LogLevel `json:"logLevel,omitempty"`
@@ -284,9 +284,9 @@ type NodepoolBuilderSpec struct {
 	Storage StorageSpec `json:"storage,omitempty"`
 	// Specify the Log Level of the nodepool launcher process.
 	// Valid values are:
-	// - "INFO" (default)
-	// - "WARN"
-	// - "DEBUG"
+	// "INFO" (default),
+	// "WARN",
+	// "DEBUG".
 	LogLevel LogLevel `json:"logLevel,omitempty"`
 }
 
@@ -316,7 +316,7 @@ type GitServerSpec struct {
 
 type Secret struct {
 	// Name of the referent.
-	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+	// More info on [kubernetes' documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names).
 	Name string `json:"name"`
 	// The key of the secret to select from. Must be a valid secret key.
 	Key string `json:"key"`

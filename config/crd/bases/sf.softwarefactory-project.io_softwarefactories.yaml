@@ -91,8 +91,8 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
-                        description: 'Storage space to allocate to the resource, expressed
-                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                        description: Storage space to allocate to the resource, expressed
+                          as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                     required:
@@ -105,7 +105,7 @@ spec:
                 properties:
                   server:
                     description: 'Specify the Lets encrypt server. Valid values are:
-                      - "staging" - "prod"'
+                      "staging", "prod"'
                     enum:
                     - prod
                     - staging
@@ -139,8 +139,8 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
-                        description: 'Storage space to allocate to the resource, expressed
-                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                        description: Storage space to allocate to the resource, expressed
+                          as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                     required:
@@ -168,8 +168,8 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
-                        description: 'Storage space to allocate to the resource, expressed
-                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                        description: Storage space to allocate to the resource, expressed
+                          as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                     required:
@@ -188,8 +188,8 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
-                        description: 'Storage space to allocate to the resource, expressed
-                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                        description: Storage space to allocate to the resource, expressed
+                          as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                     required:
@@ -207,8 +207,7 @@ spec:
                     properties:
                       logLevel:
                         description: 'Specify the Log Level of the nodepool launcher
-                          process. Valid values are: - "INFO" (default) - "WARN" -
-                          "DEBUG"'
+                          process. Valid values are: "INFO" (default), "WARN", "DEBUG".'
                         enum:
                         - INFO
                         - WARN
@@ -227,8 +226,8 @@ spec:
                             anyOf:
                             - type: integer
                             - type: string
-                            description: 'Storage space to allocate to the resource,
-                              expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                            description: Storage space to allocate to the resource,
+                              expressed as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                         required:
@@ -240,8 +239,8 @@ spec:
                     properties:
                       logLevel:
                         description: 'Specify the Log Level of the nodepool launcher
-                          service. Valid values are: - "INFO" (default) - "WARN" -
-                          "DEBUG" Changing this value will restart the service.'
+                          service. Valid values are: "INFO" (default), "WARN", "DEBUG".
+                          Changing this value will restart the service.'
                         enum:
                         - INFO
                         - WARN
@@ -271,8 +270,8 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
-                        description: 'Storage space to allocate to the resource, expressed
-                          as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                        description: Storage space to allocate to the resource, expressed
+                          as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                     required:
@@ -293,8 +292,8 @@ spec:
                     properties:
                       logLevel:
                         description: 'Specify the Log Level of the zuul-executor service.
-                          Valid values are: - "INFO" (default) - "WARN" - "DEBUG"
-                          Changing this value will restart the service.'
+                          Valid values are: "INFO" (default), "WARN", "DEBUG". Changing
+                          this value will restart the service.'
                         enum:
                         - INFO
                         - WARN
@@ -317,8 +316,8 @@ spec:
                             anyOf:
                             - type: integer
                             - type: string
-                            description: 'Storage space to allocate to the resource,
-                              expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                            description: Storage space to allocate to the resource,
+                              expressed as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                         required:
@@ -329,20 +328,25 @@ spec:
                     description: The list of Gerrit-based connections to add to Zuul's
                       configuration
                     items:
-                      description: 'Describes a Zuul connection using the `gerrit`
-                        driver: https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#connection-configuration'
+                      description: Describes a Zuul connection using the [gerrit driver](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#connection-configuration)
                       properties:
                         canonicalhostname:
                           description: The canonical hostname associated with the
-                            git repositories on the Gerrit server. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.canonical_hostname
+                            git repositories on the Gerrit server. Equivalent to the
+                            [canonical_hostname](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.canonical_hostname)
+                            parameter.
                           type: string
                         git-over-ssh:
                           default: false
                           description: Set to true to force git operations over SSH
-                            even if the password attribute is set. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.git_over_ssh
+                            even if the password attribute is set. Equivalent to the
+                            [git_over_ssh](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.git_over_ssh)
+                            parameter.
                           type: boolean
                         hostname:
-                          description: The gerrit server hostname. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.server
+                          description: The gerrit server hostname. Equivalent to the
+                            [server](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.server)
+                            parameter.
                           type: string
                         name:
                           description: How the connection will be named in Zuul's
@@ -351,26 +355,31 @@ spec:
                         password:
                           description: The name of a Kubernetes secret holding the
                             Gerrit user's API Password. The secret's data must have
-                            a key called "password". Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.password
+                            a key called "password". Equivalent to the [password](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.password)
+                            parameter.
                           type: string
                         port:
                           default: 29418
                           description: SSH port number to the Gerrit instance. Equivalent
-                            to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.port
+                            to the [port](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.port)
+                            parameter.
                           type: integer
                         puburl:
-                          description: URL to Gerrit's web interface. https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.baseurl
+                          description: URL to Gerrit's web interface. the [baseurl](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.baseurl)
+                            parameter.
                           pattern: ^https?:\/\/.+$
                           type: string
                         username:
                           default: zuul
                           description: Username that Zuul will use to authenticate
-                            on the Gerrit instance. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.user
+                            on the Gerrit instance. Equivalent to the [user](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.user)
+                            parameter.
                           type: string
                         verifyssl:
                           default: true
                           description: Disable SSL certificate verification with the
-                            Gerrit instance when set to false. Equivalent to https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.verify_ssl
+                            Gerrit instance when set to false. Equivalent to the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.verify_ssl)
+                            parameter.
                           type: boolean
                       required:
                       - hostname
@@ -381,34 +390,40 @@ spec:
                     description: The list of GitHub-based connections to add to Zuul's
                       configuration
                     items:
-                      description: 'Describes a Zuul connection using the `github`
-                        driver: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#'
+                      description: Describes a Zuul connection using the [github driver](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#).
                       properties:
                         apiToken:
-                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token
+                          description: the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token)
+                            parameter
                           type: string
                         appId:
-                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_id
+                          description: the [app_id](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_id)
+                            parameter
                           type: string
                         appKey:
-                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key
+                          description: the [app_key](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key)
+                            parameter
                           type: string
                         canonicalHostname:
-                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.canonical_hostname
+                          description: the [canonical_hostname](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.canonical_hostname)
+                            parameter
                           type: string
                         name:
                           description: How the connection will be named in Zuul's
                             configuration and appear in zuul-web
                           type: string
                         server:
-                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.server
+                          description: the [server](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.server)
+                            parameter
                           type: string
                         verifySsl:
                           default: true
-                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.verify_ssl
+                          description: the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.verify_ssl)
+                            parameter
                           type: boolean
                         webHookToken:
-                          description: https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token
+                          description: the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token)
+                            parameter
                           type: string
                       required:
                       - apiToken
@@ -421,30 +436,35 @@ spec:
                     description: Configuration of the merger microservice
                     properties:
                       gitHttpLowSpeedLimit:
-                        description: https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_limit
+                        description: the [git_http_low_speed_limit](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_limit)
+                          parameter
                         format: int32
                         minimum: 0
                         type: integer
                       gitHttpLowSpeedTime:
-                        description: https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_time
+                        description: the [git_http_low_speed_time](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_time)
+                          parameter
                         format: int32
                         minimum: 0
                         type: integer
                       gitTimeout:
-                        description: https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_timeout
+                        description: the [git_timeout](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_timeout)
+                          parameter
                         format: int32
                         minimum: 1
                         type: integer
                       gitUserEmail:
-                        description: https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_email
+                        description: the [git_user_email](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_email)
+                          parameter
                         type: string
                       gitUserName:
-                        description: https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_name
+                        description: the [git_user_name](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_user_name)
+                          parameter
                         type: string
                       logLevel:
                         description: 'Specify the Log Level of the nodepool launcher
-                          service. Valid values are: - "INFO" (default) - "WARN" -
-                          "DEBUG" Changing this value will restart the service.'
+                          service. Valid values are: "INFO" (default), "WARN", "DEBUG".
+                          Changing this value will restart the service.'
                         enum:
                         - INFO
                         - WARN
@@ -468,8 +488,8 @@ spec:
                             anyOf:
                             - type: integer
                             - type: string
-                            description: 'Storage space to allocate to the resource,
-                              expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                            description: Storage space to allocate to the resource,
+                              expressed as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                         required:
@@ -481,62 +501,73 @@ spec:
                       enable admin API access on zuul-web
                     items:
                       description: The description of an OpenIDConnect authenticator,
-                        see https://zuul-ci.org/docs/zuul/latest/configuration.html#authentication
+                        see [Zuul's authentication documentation](https://zuul-ci.org/docs/zuul/latest/configuration.html#authentication)
                       properties:
                         audience:
                           description: Optionally provide the claim where the audience
-                            is set if not in `aud`, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-audience
+                            is set if not in `aud`, equivalent to the [audience](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-audience)
+                            parameter
                           type: string
                         authority:
                           description: Optionally provide the claim where the authority
-                            is set if not in `iss`, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-authority
+                            is set if not in `iss`, equivalent to the [authority](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-authority)
+                            parameter
                           type: string
                         clientID:
                           description: The client ID, as exposed in the `aud` claim
-                            of a JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.client_id
+                            of a JWT. Equivalent to the [client_id](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.client_id)
+                            parameter
                           type: string
                         issuerID:
                           description: The issuer ID, as exposed in the `iss` claim
-                            of a JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.issuer_id
+                            of a JWT. Equivalent to the [issuer_id](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.issuer_id)
+                            parameter
                           type: string
                         keysURL:
                           description: Optionally provide a URL to fetch the Identity
-                            Provider's key set, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-keys_url
+                            Provider's key set, equivalent to the [keys_url](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-keys_url)
+                            parameter
                           type: string
                         loadUserInfo:
                           default: true
                           description: If set to false, zuul-web will skip loading
                             the Identity Provider's `userinfo` endpoint and rely on
-                            what's available in the JWT. Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-load_user_info
+                            what's available in the JWT. Equivalent to the [load_user_info](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-load_user_info)
+                            parameter
                           type: boolean
                         maxValidityTime:
                           description: Optionally override the `expires_at` claim
                             in a JWT to enforce a custom expiration time on a token.
-                            Equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.max_validity_time
+                            Equivalent to the [max_validity_time](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.max_validity_time)
+                            parameter
                           format: int32
                           type: integer
                         name:
-                          description: The name of the authenticator in Zuul's configuration,
-                            see https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E
+                          description: The [name of the authenticator in Zuul's configuration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E)
                           type: string
                         realm:
-                          description: Authentication realm, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.realm
+                          description: Authentication realm, equivalent to the [realm](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.realm)
+                            parameter
                           type: string
                         scope:
                           default: openid profile
                           description: The scope used to fetch a user's details, equivalent
-                            to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scope
+                            to the [scope](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scope)
+                            parameter
                           type: string
                         skew:
                           default: 0
                           description: Optionally compensate for skew between Zuul's
-                            and the Identity Provider's clocks, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.skew
+                            and the Identity Provider's clocks, equivalent to the
+                            [skew](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.skew)
+                            parameter
                           format: int32
                           type: integer
                         uidClaim:
                           default: sub
                           description: The JWT claim to use as a unique identifier
-                            in audit logs, equivalent to https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.issuer_id
+                            in audit logs, equivalent to the [uid_claim](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E.uid_claim)
+                            parameter
                           type: string
                       required:
                       - clientID
@@ -550,8 +581,8 @@ spec:
                     properties:
                       logLevel:
                         description: 'Specify the Log Level of the zuul-scheduler
-                          service. Valid values are: - "INFO" (default) - "WARN" -
-                          "DEBUG" Changing this value will restart the service.'
+                          service. Valid values are: "INFO" (default), "WARN", "DEBUG".
+                          Changing this value will restart the service.'
                         enum:
                         - INFO
                         - WARN
@@ -574,8 +605,8 @@ spec:
                             anyOf:
                             - type: integer
                             - type: string
-                            description: 'Storage space to allocate to the resource,
-                              expressed as a Quantity: https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/'
+                            description: Storage space to allocate to the resource,
+                              expressed as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                         required:
@@ -587,8 +618,8 @@ spec:
                     properties:
                       logLevel:
                         description: 'Specify the Log Level of the zuul-web launcher
-                          service. Valid values are: - "INFO" (default) - "WARN" -
-                          "DEBUG" Changing this value will restart the service.'
+                          service. Valid values are: "INFO" (default), "WARN", "DEBUG".
+                          Changing this value will restart the service.'
                         enum:
                         - INFO
                         - WARN
