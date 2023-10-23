@@ -31,7 +31,7 @@ git clone --depth=1 "file://${REPO_ROOT}" "$GITDIR"
 pushd "$GITDIR"
 # go mod vendor
 
-go get github.com/elastic/crd-ref-docs@master
+go get github.com/elastic/crd-ref-docs@v0.0.10
 go install github.com/elastic/crd-ref-docs
 
 mkdir -p "${docstmpdir}/apidocs/"
