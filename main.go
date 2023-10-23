@@ -4,14 +4,14 @@
 package main
 
 import (
-	"flag"
+	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
@@ -26,28 +26,11 @@ func getWatchNamespace() (string, error) {
 	return utils.GetEnvVarValue("WATCH_NAMESPACE")
 }
 
-func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var probeAddr string
-	var ns string
-	var debugService string
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	// Since we are developing sf-operator on a shared host, we required a dedicated namespace
-	flag.StringVar(&ns, "namespace", "", "The namespace to listen to.")
-	flag.StringVar(&debugService, "debug-service", "", "The service to be restarted in debug mode.")
-	opts := zap.Options{
-		Development: true,
-	}
-	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
+func rootCmd(cmd *cobra.Command, args []string) {
+	ns, _ := cmd.Flags().GetString("ns")
+	metricsAddr, _ := cmd.Flags().GetString("metrics-bind-address")
+	probeAddr, _ := cmd.Flags().GetString("health-probe-bind-address")
+	enableLeaderElection, _ := cmd.Flags().GetBool("leader-elect")
 	if ns == "" {
 		var err error
 		ns, err = getWatchNamespace()
@@ -60,6 +43,35 @@ func main() {
 
 		}
 	}
-
 	controllers.Main(ns, metricsAddr, probeAddr, enableLeaderElection, false)
+}
+
+func main() {
+	var (
+		metricsAddr          string
+		enableLeaderElection bool
+		probeAddr            string
+		ns                   string
+
+		rootCmd = &cobra.Command{
+			Use:   "sf-operator",
+			Short: "Start the SF Operator",
+			Long:  `The root command starts the sf-operator using the controller-runtime.`,
+			Run:   rootCmd,
+		}
+	)
+
+	rootCmd.Flags().StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	rootCmd.Flags().StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	rootCmd.Flags().BoolVar(&enableLeaderElection, "leader-elect", false,
+		"Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
+	rootCmd.Flags().StringVar(&ns, "namespace", "", "The namespace to listen to.")
+
+	opts := zap.Options{
+		Development: true,
+	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	rootCmd.Execute()
 }
