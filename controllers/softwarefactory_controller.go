@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	corev1 "k8s.io/api/core/v1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -174,6 +175,25 @@ func (r *SFController) DebugService(debugService string) {
 	}
 }
 
+func (r *SoftwareFactoryReconciler) mkSFController(
+	ctx context.Context, ns string, owner client.Object, cr sfv1.SoftwareFactory,
+	standalone bool) SFController {
+	return SFController{
+		SFUtilContext: SFUtilContext{
+			Client:     r.Client,
+			Scheme:     r.Scheme,
+			RESTClient: r.RESTClient,
+			RESTConfig: r.RESTConfig,
+			ns:         ns,
+			log:        log.FromContext(ctx),
+			ctx:        ctx,
+			owner:      owner,
+			standalone: standalone,
+		},
+		cr: cr,
+	}
+}
+
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 //
@@ -198,23 +218,8 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	var utils = &SFUtilContext{
-		Client:     r.Client,
-		Scheme:     r.Scheme,
-		RESTClient: r.RESTClient,
-		RESTConfig: r.RESTConfig,
-		ns:         req.NamespacedName.Namespace,
-		log:        log,
-		ctx:        ctx,
-		owner:      &sf,
-	}
-
-	var controller = SFController{
-		SFUtilContext: *utils,
-		cr:            sf,
-	}
-
-	sf.Status = controller.Step()
+	sfCtrl := r.mkSFController(ctx, req.Namespace, &sf, sf, false)
+	sf.Status = sfCtrl.Step()
 
 	if err := r.Status().Update(ctx, &sf); err != nil {
 		log.Error(err, "unable to update Software Factory status")
@@ -233,6 +238,44 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		return ctrl.Result{}, nil
 	}
+
+}
+
+func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns string, sf sfv1.SoftwareFactory) {
+	d, _ := time.ParseDuration("5s")
+	log := log.FromContext(ctx)
+
+	// Create a fake resource that simulate the Resource Owner.
+	// A deletion to that resource Owner will cascade delete owned resources
+	controllerCMName := "sf-standalone-owner"
+	controllerCM := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      controllerCMName,
+			Namespace: ns,
+		}}
+	err := r.Client.Get(
+		ctx, client.ObjectKey{Name: controllerCMName, Namespace: ns}, &controllerCM)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		controllerCM.Data = nil
+		log.Info("Creating ConfigMap", "name", controllerCMName)
+		// Create the fake controller configMap
+		if err := r.Create(ctx, &controllerCM); err != nil {
+			log.Error(err, "Unable to create configMap", "name", controllerCMName)
+			return
+		}
+	}
+
+	sfCtrl := r.mkSFController(ctx, ns, &controllerCM, sf, true)
+
+	for {
+		status := sfCtrl.Step()
+		if status.Ready {
+			break
+		}
+		log.Info("Waiting 5s for the next reconcile call ...")
+		time.Sleep(d)
+	}
+	log.Info("Standalone reconcile done.")
 }
 
 // SetupWithManager sets up the controller with the Manager.

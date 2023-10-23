@@ -4,12 +4,14 @@
         - sf-operator-olm
         - sf-operator-upgrade
         - sf-operator-dev-multinode
+        - sf-operator-standalone
         - sf-operator-ansible-lint
     gate:
       jobs:
         - sf-operator-olm
         - sf-operator-upgrade
         - sf-operator-dev-multinode
+        - sf-operator-standalone
         - sf-operator-ansible-lint
     release:
       jobs:

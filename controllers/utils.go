@@ -53,9 +53,27 @@ type SFUtilContext struct {
 	log        logr.Logger
 	ctx        context.Context
 	owner      client.Object
+	standalone bool
 }
 
 // --- API Interact primitive functions ---
+
+// setOwnerReference set the Owner of a resources
+// Whether we are running the controller or standalone mode the owneship must
+// be managed differently
+func (r *SFUtilContext) setOwnerReference(controlled metav1.Object) error {
+	var err error
+	if r.standalone {
+		err = controllerutil.SetOwnerReference(r.owner, controlled, r.Scheme)
+	} else {
+		err = controllerutil.SetControllerReference(r.owner, controlled, r.Scheme)
+	}
+	if err != nil {
+		r.log.Error(err, "Unable to set controller reference", "name", controlled.GetName())
+
+	}
+	return err
+}
 
 // GetM gets a resource, returning if it was found
 func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
@@ -74,7 +92,7 @@ func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
 
 // CreateR creates a resource with the owner as the ownerReferences.
 func (r *SFUtilContext) CreateR(obj client.Object) {
-	controllerutil.SetControllerReference(r.owner, obj, r.Scheme)
+	r.setOwnerReference(obj)
 	if err := r.Client.Create(r.ctx, obj); err != nil && !errors.IsAlreadyExists(err) {
 		panic(err.Error())
 	}
@@ -89,7 +107,7 @@ func (r *SFUtilContext) DeleteR(obj client.Object) {
 
 // UpdateR updates resource with the owner as the ownerReferences.
 func (r *SFUtilContext) UpdateR(obj client.Object) bool {
-	controllerutil.SetControllerReference(r.owner, obj, r.Scheme)
+	r.setOwnerReference(obj)
 	r.log.V(1).Info("Updating object", "name", obj.GetName())
 	if err := r.Client.Update(r.ctx, obj); err != nil {
 		r.log.Error(err, "Unable to update the object")
@@ -652,8 +670,8 @@ func (r *SFController) isConfigRepoSet() bool {
 func (r *SFController) MkClientDNSNames(serviceName string) []string {
 	return []string{
 		serviceName,
-		fmt.Sprintf("%s.%s", serviceName, r.owner.GetName()),
+		fmt.Sprintf("%s.%s", serviceName, r.cr.GetName()),
 		fmt.Sprintf("%s.%s", serviceName, r.cr.Spec.FQDN),
-		r.owner.GetName(),
+		r.cr.GetName(),
 	}
 }

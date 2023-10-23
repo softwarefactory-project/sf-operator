@@ -8,6 +8,7 @@ This section covers the basic tools and the testing environment required to star
 1. [Deploy test resources](#deploy-test-resources)
 1. [Run the operator in dev mode](#run-the-operator-in-dev-mode)
 1. [Next steps](#next-steps)
+1. [Experiment a deployment with the standalone mode](#experiment-a-deployment-with-the-standalone-mode)
 
 ## Requirements
 
@@ -106,3 +107,39 @@ firefox https://nodepool.<FQDN>
 ```
 
 Next, you may want to [run the test suite on your modifications](./testing.md).
+
+## Experiment a deployment with the Standalone mode
+
+The purpose of this mode is to experiment a Software Factory deployment without the need
+to get the `sf-operators' CRDs` installed on the cluster. CRDs installation requires the `cluster-admin`
+right or the `sf-operator` being installed by your cluster's admin or via `OLM`.
+
+For instance, you might want to first experiment with a sandbox deployment of Software Factory before requesting
+an installation of the sf-operator to your cluster's administrator.
+
+To experiment with a deployment (assuming a valid `kube config` file and the right `context` set), run the following command:
+
+> `sf` namespace must have been created prior to the command below.
+
+```sh
+go run ./main.go standalone --cr config/samples/sf_v1_softwarefactory.yaml --namespace sf
+```
+
+Each change to the `CR`, passed as parameter, will require a new run of the command to `reconcile` the change.
+
+To go further, with that deployment, please refer to [set up a **config** repository](../deployment/config_repository.md).
+
+### Delete the sandbox deployment
+
+This deployment mode creates an owner `ConfigMap` Resource that can deleted to trigger the deletion
+of all SoftwareFactory's Resources created by the `standalone` command.
+
+```
+kubectl -n sf delete cm sf-standalone-owner
+```
+
+Then, delete the `PVCs`, with:
+
+```
+./tools/sfconfig sf delete --pvcs
+```
