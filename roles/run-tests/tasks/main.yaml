@@ -4,7 +4,7 @@
 
 - name: Iterate on preparation roles
   ansible.builtin.include_role:
-    name: "roles/utils/{{ role }}"
+    name: "utils/{{ role }}"
   loop:
     - manage-hosts
     - get-gerrit-admin-user-api-key
@@ -14,7 +14,7 @@
 
 - name: Iterate on tests
   ansible.builtin.include_role:
-    name: "roles/health-check/{{ role }}"
+    name: "health-check/{{ role }}"
   loop:
     - check-service-uri
     - zuul-connections
@@ -37,7 +37,7 @@
 
 - name: Check scaling
   ansible.builtin.include_role:
-    name: roles/health-check/scale-resources
+    name: health-check/scale-resources
   loop:
     - up
     - down

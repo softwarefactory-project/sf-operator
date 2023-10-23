@@ -1,6 +1,6 @@
 - name: Change logserver/purgelogs loop delay
   ansible.builtin.include_role:
-    name: "roles/update-custom-resource"
+    name: "update-custom-resource"
   vars:
     cr_spec:
       logserver:
@@ -8,7 +8,7 @@
 
 - name: Ensure job results exists in Logserver
   ansible.builtin.include_role:
-    name: "roles/health-check/ensure-job-result-artifacts"
+    name: "health-check/ensure-job-result-artifacts"
   vars:
     log_url: "{{ zuul_config_update_build_log_url }}"
 
@@ -44,7 +44,7 @@
 
 - name: Ensure job results do not exist in Logserver after purging
   ansible.builtin.include_role:
-    name: "roles/health-check/ensure-job-result-artifacts"
+    name: "health-check/ensure-job-result-artifacts"
   vars:
     log_url: "{{ zuul_config_update_build_log_url }}"
     status: 404
@@ -56,6 +56,6 @@
 
 - name: Ensure logserver content restoring worked
   ansible.builtin.include_role:
-    name: "roles/health-check/ensure-job-result-artifacts"
+    name: "health-check/ensure-job-result-artifacts"
   vars:
     log_url: "{{ zuul_config_update_build_log_url }}"

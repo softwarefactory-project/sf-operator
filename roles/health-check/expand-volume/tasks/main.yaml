@@ -12,7 +12,7 @@
 
 - name: Expand logserver volume
   ansible.builtin.include_role:
-    name: "roles/update-custom-resource"
+    name: "update-custom-resource"
   vars:
     cr_spec:
       logserver:

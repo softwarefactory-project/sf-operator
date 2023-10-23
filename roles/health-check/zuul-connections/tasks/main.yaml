@@ -21,7 +21,7 @@
 
 - name: Add a dummy Zuul Gerrit connection
   ansible.builtin.include_role:
-    name: "roles/update-custom-resource"
+    name: "update-custom-resource"
   vars:
     cr_spec:
       zuul:
@@ -43,7 +43,7 @@
 
 - name: Delete the dummy Zuul Gerrit connection
   ansible.builtin.include_role:
-    name: "roles/update-custom-resource"
+    name: "update-custom-resource"
   vars:
     cr_spec:
       zuul:
@@ -62,4 +62,3 @@
     - "'dummy-github-conn' not in this.content"
   retries: "{{ retries }}"
   delay: "{{ delay }}"
-

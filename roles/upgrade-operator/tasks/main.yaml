@@ -58,7 +58,7 @@
 
 - name: Ensure operator expected version ready
   ansible.builtin.include_role:
-    name: roles/check-operator-version
+    name: check-operator-version
   vars:
     upgrade_version: "v{{ gen_bundle_version.stdout }}.0.0"
 
@@ -68,6 +68,6 @@
 # by the new version 'reconciledBy' field.
 - name: Wait for operand ready
   ansible.builtin.include_role:
-    name: roles/health-check/check-sf-resource-ready
+    name: health-check/check-sf-resource-ready
   vars:
     reconciledBy: "sf-operator.v{{ gen_bundle_version.stdout }}.0.0"

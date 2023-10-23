@@ -1,7 +1,7 @@
 ---
 - name: Update SF CR to set Let's Encrypt
   ansible.builtin.include_role:
-    name: "roles/update-custom-resource"
+    name: "update-custom-resource"
   vars:
     check_sf_resource_ready: false
     cr_spec:
@@ -45,7 +45,7 @@
 
 - name: Update SF CR to unset Let's Encrypt
   ansible.builtin.include_role:
-    name: "roles/update-custom-resource"
+    name: "update-custom-resource"
   vars:
     cr_spec:
       letsEncrypt:

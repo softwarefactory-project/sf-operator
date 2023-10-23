@@ -9,7 +9,7 @@
 
 - name: Add the authenticator to spec
   ansible.builtin.include_role:
-    name: "roles/update-custom-resource"
+    name: "update-custom-resource"
   vars:
     cr_spec:
       zuul:
@@ -28,7 +28,7 @@
 
 - name: Remove the test authenticator from the spec
   ansible.builtin.include_role:
-    name: "roles/update-custom-resource"
+    name: "update-custom-resource"
   vars:
     cr_spec:
       zuul:

@@ -28,7 +28,7 @@
     - "git commit -m 'Add nodepool/nodepool-builder.yaml'"
 
 - ansible.builtin.include_role:
-    name: "roles/health-check/config-repo-submit-change"
+    name: "health-check/config-repo-submit-change"
   vars:
     ensure_config_check_failure: true
 
@@ -127,7 +127,7 @@
 
 - name: Update config repo change
   ansible.builtin.include_role:
-    name: "roles/health-check/config-repo-submit-change"
+    name: "health-check/config-repo-submit-change"
 
 - name: "Check that {{ nodepool_diskimage_name }} label exists in the destination file"
   ansible.builtin.shell: |

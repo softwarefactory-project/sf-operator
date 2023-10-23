@@ -25,7 +25,7 @@
     - "git commit -m 'Add nodepool/nodepool.yaml'"
 
 - ansible.builtin.include_role:
-    name: "roles/health-check/config-repo-submit-change"
+    name: "health-check/config-repo-submit-change"
   vars:
     ensure_config_check_failure: true
 
@@ -118,7 +118,7 @@
 
 - name: Update config repo change
   ansible.builtin.include_role:
-    name: "roles/health-check/config-repo-submit-change"
+    name: "health-check/config-repo-submit-change"
 
 - name: Get nodepool-launcher pod name
   ansible.builtin.shell: |

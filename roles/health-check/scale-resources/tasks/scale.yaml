@@ -6,7 +6,7 @@
 
 - name: "Scale {{ operation }} on statefulset {{ service.name }}"
   ansible.builtin.include_role:
-    name: "roles/update-custom-resource"
+    name: "update-custom-resource"
   vars:
     cr_spec: "{{ service['scale_' + operation + '_resources'] }}"
 

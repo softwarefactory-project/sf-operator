@@ -5,4 +5,4 @@
     chdir: "{{ zuul.project.src_dir }}"
 
 - ansible.builtin.include_role:
-    name: "roles/health-check/check-sf-resource-ready"
+    name: "health-check/check-sf-resource-ready"

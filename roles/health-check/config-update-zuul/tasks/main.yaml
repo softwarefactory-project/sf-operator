@@ -26,7 +26,7 @@
     tenant_name: "ichiban-tenant-{{ random }}"
 
 - ansible.builtin.include_role:
-    name: "roles/create-gerrit-repository"
+    name: "create-gerrit-repository"
 
 # First attempt a negative test where we expect a failure
 - name: Set bad Zuul tenant config
@@ -47,7 +47,7 @@
     - "git commit -m 'Add {{ config_path }}/zuul/main.yaml'"
 
 - ansible.builtin.include_role:
-    name: "roles/health-check/config-repo-submit-change"
+    name: "health-check/config-repo-submit-change"
   vars:
     ensure_config_check_failure: true
 
@@ -76,7 +76,7 @@
   vars:
     check_zuul_console: true
   ansible.builtin.include_role:
-    name: "roles/health-check/config-repo-submit-change"
+    name: "health-check/config-repo-submit-change"
 
 - ansible.builtin.set_fact:
     zuul_config_update_build_log_url: "{{ (zuul_job_result.json | list)[0].log_url }}"
@@ -84,7 +84,7 @@
 
 - name: Check that Zuul has pushed the job console on the logserver
   ansible.builtin.include_role:
-    name: "roles/health-check/ensure-job-result-artifacts"
+    name: "health-check/ensure-job-result-artifacts"
   vars:
     log_url: "{{ zuul_config_update_build_log_url }}"
 

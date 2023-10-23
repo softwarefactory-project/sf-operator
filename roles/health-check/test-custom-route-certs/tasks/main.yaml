@@ -71,7 +71,7 @@
   ansible.builtin.include_tasks: add_ssl_secret.yaml
 
 - ansible.builtin.include_role:
-    name: "roles/health-check/check-sf-resource-ready"
+    name: "health-check/check-sf-resource-ready"
 
 - name: Check SSL for the route
   ansible.builtin.include_tasks: check_route.yaml

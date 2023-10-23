@@ -15,7 +15,7 @@
 - name: Fetch defined Prometheus targets
   ansible.builtin.shell: curl -k https://{{ prometheus_host }}/api/v1/targets | jq '.data.activeTargets[] | select(.labels.container == "{{ item }}") | .health'
   register: target_health
-  failed_when: "\"up\" not in target_health.stdout"
+  failed_when: '"up" not in target_health.stdout'
   loop:
     - "zuul-web"
     - "zuul-executor"
@@ -26,7 +26,7 @@
 - name: Fetch defined alerts for logserver
   ansible.builtin.shell: curl -k https://{{ prometheus_host }}/api/v1/rules | jq '.data.groups[] | select(.name == "disk_default.rules") | .rules[] | select(.name == "{{ item }}") | .health'
   register: logserver_alert
-  failed_when: "\"ok\" not in logserver_alert.stdout"
+  failed_when: '"ok" not in logserver_alert.stdout'
   loop:
     - "OutOfDiskNow"
     - "OutOfDiskInThreeDays"
@@ -66,7 +66,7 @@
 - name: configure clouds.yaml in sfconfig.yaml
   ansible.builtin.lineinfile:
     path: "{{ zuul.project.src_dir }}/sfconfig.yaml"
-    regexp: '^  clouds_file:'
+    regexp: "^  clouds_file:"
     line: "  clouds_file: /tmp/test-clouds.yaml"
 
 - name: Upload clouds secrets to nodepool
@@ -76,23 +76,23 @@
 
 - name: Wait for secrets to be updated
   ansible.builtin.include_role:
-    name: "roles/health-check/check-sf-resource-ready"
+    name: "health-check/check-sf-resource-ready"
 
 - name: Ensure statsd mapping config has custom mappings from clouds.yaml
   ansible.builtin.command: kubectl get configmap np-statsd-config-map -o jsonpath='{.data}'
   register: statsd_mappings
-  
+
 - name: Ensure statsd mapping config has custom mappings from clouds.yaml
   fail:
     msg: "statsd mapping configuration has no reference to clouds config"
   when: ("nodepool.openstack.nimbus" not in statsd_mappings.stdout) or
-        ("nodepool.openstack.cumulus" not in statsd_mappings.stdout) or
-        ("nodepool.openstack.*.*.*.*" not in statsd_mappings.stdout)
+    ("nodepool.openstack.cumulus" not in statsd_mappings.stdout) or
+    ("nodepool.openstack.*.*.*.*" not in statsd_mappings.stdout)
 
 - name: Fetch OpenStack API alerts
   ansible.builtin.shell: curl -k https://{{ prometheus_host }}/api/v1/rules | jq '.data.groups[] | select(.name == "providersAPI_default.rules") | .rules[] | select(.name == "{{ item }}") | .health'
   register: logserver_alert
-  until: "\"ok\" in logserver_alert.stdout"
+  until: '"ok" in logserver_alert.stdout'
   loop:
     - "HighOpenStackAPIError5xxRate"
     - "HighOpenStackAPIError5xxRate_nimbus"

@@ -23,7 +23,7 @@
   block:
     - name: Setup local registry
       ansible.builtin.include_role:
-        name: "roles/setup-local-registry"
+        name: "setup-local-registry"
   when:
     - build_bundle | default(true)
 
