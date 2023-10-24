@@ -68,11 +68,9 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `name` _string_ | How the connection will be named in Zuul's configuration and appear in zuul-web | -|
-| `appId` _string_ | the [app_id](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_id) parameter | -|
-| `appKey` _string_ | the [app_key](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key) parameter | -|
-| `apiToken` _string_ | the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token) parameter | -|
-| `webHookToken` _string_ | the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token) parameter | -|
-| `server` _string_ | the [server](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.server) parameter | -|
+| `appID` _integer_ | GitHub [appID](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_id) | -|
+| `secrets` _string_ | Name of the secret which contains the following keys: [app_key](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key) must be defined if appId is defined [api_token(optional)](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token) [webhook_token (optional)](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token) The keys must have the same name as above | -|
+| `server` _string_ | the [server](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.server) | -|
 | `canonicalHostname` _string_ | the [canonical_hostname](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.canonical_hostname) parameter | -|
 | `verifySsl` _boolean_ | the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.verify_ssl) parameter | {true}|
 
