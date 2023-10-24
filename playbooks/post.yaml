@@ -1,32 +1,32 @@
 - hosts: "{{ hostname | default('controller') }}"
   tasks:
-    # Fetch zuul jobs artifacts stored in the logserver during the sf-operator functional test
-    - include_role:
-        name: roles/post/get-logserver-content
+      # Fetch zuul jobs artifacts stored in the logserver during the sf-operator functional test
+      - include_role:
+            name: post/get-logserver-content
 
-    # Fetch nodepool-builder build image logs
-    - include_role:
-        name: roles/post/get-nodepool-builds-logs
+      # Fetch nodepool-builder build image logs
+      - include_role:
+            name: post/get-nodepool-builds-logs
 
-    # Fetch k8s cluster wide resources
-    - include_role:
-        name: roles/post/get-k8s-cluster-resources
+      # Fetch k8s cluster wide resources
+      - include_role:
+            name: post/get-k8s-cluster-resources
 
-    # Fetch k8s resources for the sf namespace
-    - include_role:
-        name: roles/post/get-k8s-resources
-      vars:
-        namespace: sf
+      # Fetch k8s resources for the sf namespace
+      - include_role:
+            name: post/get-k8s-resources
+        vars:
+            namespace: sf
 
-    # Fetch k8s resources for the sf-operator namespace
-    - include_role:
-        name: roles/post/get-k8s-resources
-      vars:
-        namespace: operators
+      # Fetch k8s resources for the sf-operator namespace
+      - include_role:
+            name: post/get-k8s-resources
+        vars:
+            namespace: operators
 
-    # Fetch system-config repo
-    - include_role:
-        name: roles/post/get-system-config
+      # Fetch system-config repo
+      - include_role:
+            name: post/get-system-config
 
-    - include_role:
-        name: roles/post/get-system-logs
+      - include_role:
+            name: post/get-system-logs
