@@ -33,6 +33,7 @@
     - configmaps
     - jobs
     - pvc
+    - routes
     - csvs
     - installplans
     - sub
