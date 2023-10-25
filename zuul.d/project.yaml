@@ -1,21 +1,16 @@
 - project:
-    vars:
-      # NOTE(dpawlik): We don't need to add roles dir, due there is a symlink
-      # done in playbooks that is related to roles dir.
-      ansible_lint_playbooks_dir: playbooks
-      ansible_lint_check_all: false
     check:
       jobs:
         - sf-operator-olm
         - sf-operator-upgrade
         - sf-operator-dev-multinode
-        - ansible-lint
+        - sf-operator-ansible-lint
     gate:
       jobs:
         - sf-operator-olm
         - sf-operator-upgrade
         - sf-operator-dev-multinode
-        - ansible-lint
+        - sf-operator-ansible-lint
     release:
       jobs:
         - sf-operator-publish-olm-bundle-image

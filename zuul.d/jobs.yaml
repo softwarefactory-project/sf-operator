@@ -3,23 +3,6 @@
     name: sf-operator-publish-semaphore
     max: 1
 
-- secret:
-    name: zuul_quay_sf
-    data:
-      registry: "quay.io"
-      username: "software-factory+zuul"
-      password: !encrypted/pkcs1-oaep
-        - QuMV8wy2oAOP6dgwmEqUtkcykFaA8taTXr8+XJ8NdNiErK9J89IhPVnYthX1geqnfuZdf
-          IUvqo2LgB6cxw4cHEUXSZpfawyXT9WZOTv4s6bP0hI41eDpOVPFD/VG4QEf/oif/66ejf
-          K6wK+YfD6o5l06nltj9qZR7H9atdYCHrANteeQqv9hWqCmeA9kSguPtuc7tWYkzINkvY2
-          B/Nulc3D/bkAlmysiuhVX5eReJFJpX9L/jcNvPRcZehNLcVSRxSGTwz8OGO+xCNv7i0g0
-          SlIn0DiPDh2duzzs1JgHiK5d2HpbgpuhsvyyWTvvgICu5eYdAOikqHS/WaF4zVvCJIUq8
-          8VMWh+SD7DSpu9Zq2lyqMhuYwbvnl0TI0R1dYhBZV//vRqf8p2D46EIfVH/if8yn6sOq1
-          rNjQ8IVEGp3QKBV1UYjhAoHgj/8gHd6NU/eh0g00LxTtnYjwfjVNIpV40ykdyJNtltELT
-          QWVBfElXNFW8TDpd4zq43dA3VBgNjdEt+1cZmfzuxC8t8bgjRIaXLwhbeYBx7eIMDLRnT
-          RrPZHG3xuwyIq3bnqMcatGYufBUPH8j9OfzYQLLwM08V5YEq55H0OKAFW+CtpmkUhRTNt
-          clLXYqlBNOkutj4lrZLZLo1KdoaOEdOx+6A9Q29Ym3O4yp+Wf2a7rWJSdRNbtM=
-
 # Base CI job
 - job:
     name: sf-operator
@@ -128,3 +111,16 @@
     parent: sf-operator-multinode
     vars:
       mode: "dev"
+
+- job:
+    name: sf-operator-ansible-lint
+    parent: ansible-lint
+    vars:
+      # NOTE(dpawlik): We don't need to add roles dir, due there is a symlink
+      # done in playbooks that is related to roles dir.
+      ansible_lint_playbooks_dir: playbooks
+      ansible_lint_check_all: false
+    nodeset:
+      nodes:
+        - name: controller
+          label: cloud-centos-9-small
