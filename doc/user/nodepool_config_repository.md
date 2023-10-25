@@ -149,6 +149,9 @@ Here are the available variables and their meaning:
 - qcow2_type: is a boolean specifying if the built image format is `qcow2`.
 - raw_type: is a boolean specifying if the built image format is `raw`.
 
+> Zuul needs to authenticate via SSH onto Virtual Machines spawned from built cloud images. Thus, the Zuul SSH public key should be added as
+an authorized key for the user Zuul will connect to. The Zuul SSH public key is available on the `nodepool-builder` into the file
+`/var/lib/zuul-ssh-key/pub`. A cloud image build playbook can read that file to prepare a cloud image.
 
 Finally we need an `inventory.yaml` file. It must be defined into `nodepool/dib-ansible/inventory.yaml`:
 
