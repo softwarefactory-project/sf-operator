@@ -74,6 +74,23 @@
       microshift_additional_addresses:
         - "sfop.me"
 
+- secret:
+    name: zuul_quay_sf
+    data:
+      registry: "quay.io"
+      username: "software-factory+zuul"
+      password: !encrypted/pkcs1-oaep
+        - Gibh081fnfZqnPcUm99jpj5VlqQdRXSorujRCo1WdwbJ8041elXo8QYbHih2u1jIUbxUg
+          VD1vFVPzXBt10ajdJv8WA6Q6vLnRVuZhB7CUEZgD67Z4WAT8SbMoCTVOpOH4FZhd06rYr
+          0qSBh89B5KSGX1rwqFbaSjbtFcLCGfkyZdkAUaCLDwrUykM0DW8PDVGn8dJYTNvu2Ck5W
+          h1OGjFFwjF4Busy/rb/OJx1ndFafZAMvaxloXX8q0vEPsbKx2ba8jlac2kSd2XrXOaTFG
+          btIXhUgYNpqqF47bPeZ/HoYMuwdPRSPK0L96c55VFRkEN54K813GOFIP+Iyv/XVDBjzlj
+          7cz+ec+pMVsbulrF2vO8ZghTLrU89XT/8kRPYakGFBwKtZBZ5h2URSFG1VLWo6RZJe0aO
+          m3sLKB0/lgpPnpvXhdM+ZAwgmdNEM4BPHrnG1VWTWKl6uFMcRbxeO7sQXpn1OMDgGM2cN
+          XbIqXUos+IaxB7+jhN62RvDGRMCptiJdN1VF7swklM/MFAdewEXDtageyHoU55SDhLJ+7
+          OwHgAoLXvsYs6wSkKVL/1LsUmwtutFmNT13xBQrRJf3SgeUWlKtTTfBiBHytIiiVudN2n
+          OKoPhslAqI3QDy/3lR2A8Rj0tqFxr1YjNw7kQKhf6Sbcc00jXkpuAew9tPzy28=
+
 # Images publication job
 - job:
     name: sf-operator-publish-olm-bundle-image
