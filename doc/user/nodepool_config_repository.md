@@ -121,6 +121,10 @@ Here is an example of an image build playbook:
   tasks:
     - debug:
         msg: "Building {{ image_output }}"
+    - name: Copy Zuul public key on the image-builder to integrate it on the built cloud image
+      copy:
+        src: /var/lib/zuul-ssh-key/pub
+        dest: /tmp/zuul-ssh-key.pub
     # Build steps begin from here
     # - name: Build task 1
     #   shell: true

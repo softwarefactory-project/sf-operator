@@ -104,6 +104,10 @@
         tasks:
           - debug:
               msg: "Hello from build of {{ nodepool_diskimage_name }}"
+          - name: Copy Zuul public key on the image-builder
+            copy:
+              src: /var/lib/zuul-ssh-key/pub
+              dest: /tmp/zuul-ssh-key.pub
           - name: Simulate an image built on the image-builder host
             file:
               path: /tmp/dummy-cloud-image.raw
