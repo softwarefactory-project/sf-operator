@@ -81,29 +81,28 @@ type GitHubConnection struct {
 }
 
 // Describes a Zuul connection using the [gerrit driver](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#connection-configuration)
+// When an optional parameter is not specified then Zuul's defaults apply
 type GerritConnection struct {
 	// How the connection will be named in Zuul's configuration and appear in zuul-web
 	Name string `json:"name"`
 	// The gerrit server hostname. Equivalent to the [server](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.server) parameter.
 	Hostname string `json:"hostname"`
 	// SSH port number to the Gerrit instance. Equivalent to the [port](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.port) parameter.
-	// +kubebuilder:default:=29418
+	// +kubebuilder:validation:Minimum:=1024
+	// +kubebuilder:validation:Maximum:=65535
 	Port uint16 `json:"port,omitempty"`
 	// URL to Gerrit's web interface. the [baseurl](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.baseurl) parameter.
 	// +kubebuilder:validation:Pattern:=`^https?:\/\/.+$`
 	Puburl string `json:"puburl,omitempty"`
 	// Username that Zuul will use to authenticate on the Gerrit instance. Equivalent to the [user](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.user) parameter.
-	// +kubebuilder:default:=zuul
 	Username string `json:"username,omitempty"`
 	// The canonical hostname associated with the git repositories on the Gerrit server. Equivalent to the [canonical_hostname](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20connection%3E.canonical_hostname) parameter.
 	Canonicalhostname string `json:"canonicalhostname,omitempty"`
 	// The name of a Kubernetes secret holding the Gerrit user's API Password. The secret's data must have a key called "password". Equivalent to the [password](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.password) parameter.
 	Password string `json:"password,omitempty"`
 	// Set to true to force git operations over SSH even if the password attribute is set. Equivalent to the [git_over_ssh](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.git_over_ssh) parameter.
-	// +kubebuilder:default:=false
 	GitOverSSH bool `json:"git-over-ssh,omitempty"`
 	// Disable SSL certificate verification with the Gerrit instance when set to false. Equivalent to the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.verify_ssl) parameter.
-	// +kubebuilder:default:=true
 	VerifySSL bool `json:"verifyssl,omitempty"`
 }
 

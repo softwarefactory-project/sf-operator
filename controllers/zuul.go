@@ -704,8 +704,12 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	cfg.Section(section).NewKey("sshkey", "/var/lib/zuul-ssh/..data/priv")
 	cfg.Section(section).NewKey("gitweb_url_template", "{baseurl}/plugins/gitiles/{project.name}/+/{sha}^!/")
 	// Optional fields (set as omitempty in GerritConnection struct definition)
-	cfg.Section(section).NewKey("user", conn.Username)
-	cfg.Section(section).NewKey("port", strconv.Itoa(int(conn.Port)))
+	if conn.Username != "" {
+		cfg.Section(section).NewKey("user", conn.Username)
+	}
+	if conn.Port > 0 {
+		cfg.Section(section).NewKey("port", strconv.Itoa(int(conn.Port)))
+	}
 	if conn.Puburl != "" {
 		cfg.Section(section).NewKey("baseurl", conn.Puburl)
 	}
@@ -716,8 +720,13 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	if conn.Canonicalhostname != "" {
 		cfg.Section(section).NewKey("canonical_hostname", conn.Canonicalhostname)
 	}
-	cfg.Section(section).NewKey("verify_ssl", strconv.FormatBool(conn.VerifySSL))
-	cfg.Section(section).NewKey("git_over_ssh", strconv.FormatBool(conn.GitOverSSH))
+	if !conn.VerifySSL {
+		// Zuul default is true, so set that setting only when VerifySSL is disabled
+		cfg.Section(section).NewKey("verify_ssl", "false")
+	}
+	if conn.GitOverSSH {
+		cfg.Section(section).NewKey("git_over_ssh", "true")
+	}
 }
 
 func (r *SFController) AddGitHubConnection(cfg *ini.File, conn sfv1.GitHubConnection) error {
