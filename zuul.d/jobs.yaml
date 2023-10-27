@@ -36,6 +36,7 @@
       # dnsmasq
       microshift_additional_addresses:
         - "sfop.me"
+        - "microshift.dev"
       etcd_on_ramdisk: true
       cloudprovider_dns:
         - 199.204.44.24
@@ -73,6 +74,7 @@
       # dnsmasq
       microshift_additional_addresses:
         - "sfop.me"
+        - "microshift.dev"
 
 - secret:
     name: zuul_quay_sf
