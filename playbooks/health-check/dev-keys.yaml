@@ -1,0 +1,14 @@
+---
+- hosts: all
+  tasks:
+    - name: Set dev ssh keys
+      when: inject_dev_ssh_keys | default(false)
+      block:
+        - name: Clone SF devs pub keys repo
+          ansible.builtin.git:
+            repo: https://softwarefactory-project.io/r/SF_devs_public_keys
+            dest: SF_devs_public_keys
+
+        - name: Copy content to authorized keys
+          ansible.builtin.shell: |
+            cat SF_devs_public_keys/authorized_keys >> ~/.ssh/authorized_keys

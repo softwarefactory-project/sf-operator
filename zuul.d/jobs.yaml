@@ -9,6 +9,7 @@
     parent: sf-operator-microshift
     timeout: 3600
     pre-run:
+      - playbooks/health-check/dev-keys.yaml
       - playbooks/health-check/dstat-pre.yaml
     post-run:
       - playbooks/health-check/dstat-post.yaml
@@ -41,6 +42,7 @@
       cloudprovider_dns:
         - 199.204.44.24
         - 199.204.47.54
+      inject_dev_ssh_keys: false
 
 - job:
     name: sf-operator-multinode
