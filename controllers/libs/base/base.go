@@ -36,6 +36,9 @@ func MkSecurityContext(privileged bool) *apiv1.SecurityContext {
 				"ALL",
 			},
 		},
+		SeccompProfile: &apiv1.SeccompProfile{
+			Type: apiv1.SeccompProfileTypeRuntimeDefault,
+		},
 	}
 }
 
