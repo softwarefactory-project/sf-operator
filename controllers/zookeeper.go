@@ -11,6 +11,7 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -61,12 +62,13 @@ func (r *SFController) DeployZookeeper() bool {
 	r.EnsureConfigMap(zkIdent+"-pi", cmData)
 
 	annotations := map[string]string{
-		"ok":    utils.Checksum([]byte(zookeeperOk)),
-		"ready": utils.Checksum([]byte(zookeeperReady)),
-		"run":   utils.Checksum([]byte(zookeepeRun)),
+		"ok":     utils.Checksum([]byte(zookeeperOk)),
+		"ready":  utils.Checksum([]byte(zookeeperReady)),
+		"run":    utils.Checksum([]byte(zookeepeRun)),
+		"serial": "1",
 	}
 
-	volumes := []apiv1.VolumeMount{
+	volumeMounts := []apiv1.VolumeMount{
 		{
 			Name:      "zookeeper-server-tls",
 			MountPath: "/tls/server",
@@ -91,10 +93,6 @@ func (r *SFController) DeployZookeeper() bool {
 		},
 	}
 
-	container := base.MkContainer(zkIdent, base.ZookeeperImage)
-	container.Command = []string{"/bin/bash", "/config-scripts/run.sh"}
-	container.VolumeMounts = volumes
-
 	servicePorts := []int32{zkSSLPort}
 	srv := base.MkService(zkIdent, r.ns, zkIdent, servicePorts, zkIdent)
 	r.GetOrCreate(&srv)
@@ -104,11 +102,16 @@ func (r *SFController) DeployZookeeper() bool {
 	r.GetOrCreate(&srvZK)
 
 	replicas := int32(1)
-	zk := r.mkHeadlessSatefulSet(zkIdent, "", r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage), replicas, apiv1.ReadWriteOnce)
-	zk.Spec.VolumeClaimTemplates = append(
-		zk.Spec.VolumeClaimTemplates,
-		base.MkPVC(zkIdent+"-data", r.ns, r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage), apiv1.ReadWriteOnce))
-	zk.Spec.Template.Spec.Containers = []apiv1.Container{container}
+	storageConfig := r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage)
+	zk := r.mkHeadlessSatefulSet(
+		zkIdent, base.ZookeeperImage, storageConfig, replicas, apiv1.ReadWriteOnce)
+	// We overwrite the VolumeClaimTemplates set by MkHeadlessStatefulSet to keep the previous volume name
+	// Previously the default PVC created by MkHeadlessStatefulSet was not used by Zookeeper (not mounted). So to avoid having two Volumes
+	// and to ensure data persistence during the upgrade we keep the previous naming 'zkIdent + "-data"' and we discard the one
+	// created by MkHeadlessStatefulSet.
+	zk.Spec.VolumeClaimTemplates = []apiv1.PersistentVolumeClaim{base.MkPVC(zkIdent+"-data", r.ns, storageConfig, apiv1.ReadWriteOnce)}
+	zk.Spec.Template.Spec.Containers[0].Command = []string{"/bin/bash", "/config-scripts/run.sh"}
+	zk.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 	zk.Spec.Template.ObjectMeta.Annotations = annotations
 	zk.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkVolumeCM(zkIdent+"-pi", zkIdent+"-pi-config-map"),
@@ -125,19 +128,20 @@ func (r *SFController) DeployZookeeper() bool {
 		base.MkContainerPort(zkServerPort, zkServerPortName),
 	}
 
-	r.GetOrCreate(&zk)
-	zkDirty := false
-	if !utils.MapEquals(&zk.Spec.Template.ObjectMeta.Annotations, &annotations) {
-		zk.Spec.Template.ObjectMeta.Annotations = annotations
-		zkDirty = true
-	}
-	if zkDirty {
-		if !r.UpdateR(&zk) {
+	current := appsv1.StatefulSet{}
+	if r.GetM(zkIdent, &current) {
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("Zookeeper configuration changed, rollout pods ...")
+			current.Spec.Template = zk.DeepCopy().Spec.Template
+			r.UpdateR(&current)
 			return false
 		}
+	} else {
+		current := zk
+		r.CreateR(&current)
 	}
 
-	isStatefulSet := r.IsStatefulSetReady(&zk)
+	isStatefulSet := r.IsStatefulSetReady(&current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, zkIdent, isStatefulSet)
 
 	return isStatefulSet
