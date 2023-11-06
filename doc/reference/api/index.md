@@ -194,8 +194,8 @@ _Appears in:_
 
 | Field | Description | Default Value |
 | --- | --- | --- |
-| `retentionDays` _integer_ | Logs retention time in days. Logs older than this setting in days will be purged by a pruning cronjob. Defaults to 60 days | -|
-| `loopDelay` _integer_ | The frequency, in seconds, at which the log pruning cronjob is running. Defaults to 3600s, i.e. logs are checked for pruning every hour | -|
+| `retentionDays` _integer_ | Logs retention time in days. Logs older than this setting in days will be purged by a pruning cronjob. Defaults to 60 days | {60}|
+| `loopDelay` _integer_ | The frequency, in seconds, at which the log pruning cronjob is running. Defaults to 3600s, i.e. logs are checked for pruning every hour | {3600}|
 | `storage` _[StorageSpec](#storagespec)_ | Storage-related settings | -|
 
 

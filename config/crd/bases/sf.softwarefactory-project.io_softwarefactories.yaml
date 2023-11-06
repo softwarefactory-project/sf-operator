@@ -117,14 +117,18 @@ spec:
                 description: Logserver service spec
                 properties:
                   loopDelay:
+                    default: 3600
                     description: The frequency, in seconds, at which the log pruning
                       cronjob is running. Defaults to 3600s, i.e. logs are checked
                       for pruning every hour
+                    minimum: 1
                     type: integer
                   retentionDays:
+                    default: 60
                     description: Logs retention time in days. Logs older than this
                       setting in days will be purged by a pruning cronjob. Defaults
                       to 60 days
+                    minimum: 1
                     type: integer
                   storage:
                     description: Storage-related settings
@@ -147,11 +151,6 @@ spec:
                     - size
                     type: object
                 type: object
-                x-kubernetes-validations:
-                - message: retentionDays must be a positive integer if set
-                  rule: '!has(self.retentionDays) || self.retentionDays > 0'
-                - message: loopDelay must be a positive integer if set
-                  rule: '!has(self.loopDelay) || self.loopDelay > 0'
               mariadb:
                 description: MariaDB service spec
                 properties:

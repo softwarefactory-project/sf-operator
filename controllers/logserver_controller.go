@@ -72,19 +72,6 @@ type LogServerController struct {
 	cr sfv1.LogServer
 }
 
-func getLogserverSettingsOrDefault(settings sfv1.LogServerSpecSettings) (int, int) {
-	loopdelay := 3600
-	if settings.LoopDelay > 0 {
-		loopdelay = settings.LoopDelay
-	}
-
-	retentiondays := 60
-	if settings.RetentionDays > 0 {
-		retentiondays = settings.RetentionDays
-	}
-	return loopdelay, retentiondays
-}
-
 func (r *LogServerController) ensureLogserverPodMonitor() bool {
 	selector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
@@ -319,14 +306,12 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, sshdContainer)
 
-	loopdelay, retentiondays := getLogserverSettingsOrDefault(r.cr.Spec.Settings)
-
 	purgelogsContainer := base.MkContainer(purgelogIdent, base.PurgeLogsImage)
 	purgelogsContainer.Command = []string{
 		"/usr/local/bin/purgelogs",
 		"--retention-days",
-		strconv.Itoa(retentiondays),
-		"--loop", strconv.Itoa(loopdelay),
+		strconv.Itoa(r.cr.Spec.Settings.RetentionDays),
+		"--loop", strconv.Itoa(r.cr.Spec.Settings.LoopDelay),
 		"--log-path-dir",
 		purgelogsLogsDir,
 		"--debug"}
@@ -352,10 +337,11 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
 	annotations := map[string]string{
-		"fqdn":           r.cr.Spec.FQDN,
-		"serial":         "3",
-		"httpd-conf":     utils.Checksum([]byte(logserverConf)),
-		"purgeLogConfig": "retentionDays:" + strconv.Itoa(retentiondays) + " loopDelay:" + strconv.Itoa(loopdelay),
+		"fqdn":       r.cr.Spec.FQDN,
+		"serial":     "3",
+		"httpd-conf": utils.Checksum([]byte(logserverConf)),
+		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Settings.RetentionDays) +
+			" loopDelay:" + strconv.Itoa(r.cr.Spec.Settings.LoopDelay),
 	}
 
 	// do we have an existing deployment?
