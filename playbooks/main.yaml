@@ -5,30 +5,32 @@
     - setup-env
     - sanity-check
     - setup-namespaces
+    - start-gerrit
   tasks:
-    - name: >-
-        Simulates the "dev" process (start with 'go run' the operator)
-        that we describe in the CONTRIBUTING doc
-      ansible.builtin.include_role:
-        name: run-operator-dev
-      when: mode == 'dev'
+    - name: CI process(standalone)
+      block:
+        - community.general.make:
+            target: "{{ item }}"
+            chdir: "{{ zuul.project.src_dir }}"
+          loop:
+            - install-cert-manager
+            - install-prometheus-operator
+        - ansible.builtin.include_role:
+            name: start-prometheus
+      when: mode == 'standalone'
 
     - name: CI process(OLM install)
       ansible.builtin.include_role:
         name: "{{ item }}"
       loop:
         - microshift-workarounds
-        - start-gerrit
         - build-operator-assets
         - clean-installations
         - install-operator
         # we start prometheus after installing the operator, to ensure the prometheus-operator dependency was installed properly.
         - start-prometheus
+        - apply-custom-resources
       when: mode == 'olm'
-
-    - name: Apply custom resources
-      ansible.builtin.include_role:
-        name: apply-custom-resources
 
     - name: Run tests
       ansible.builtin.include_role:

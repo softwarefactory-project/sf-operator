@@ -1,15 +1,41 @@
 ---
-- name: "Update SoftwareFactory resource {{ cr_name }}"
-  kubernetes.core.k8s:
-    kubeconfig: "{{ kubeconfig }}"
-    definition:
-      kind: "{{ cr_kind }}"
-      namespace: "{{ cr_namespace }}"
-      metadata:
-        name: "{{ cr_name }}"
-        namespace: sf
-      spec: "{{ cr_spec }}"
+- name: "Update CRD"
+  when: mode == 'olm'
+  block:
+    - name: "Update SoftwareFactory resource {{ cr_name }}"
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubeconfig }}"
+        definition:
+          kind: "{{ cr_kind }}"
+          namespace: "{{ cr_namespace }}"
+          metadata:
+            name: "{{ cr_name }}"
+            namespace: sf
+          spec: "{{ cr_spec }}"
 
-- ansible.builtin.include_role:
-    name: "health-check/check-sf-resource-ready"
-  when: check_sf_resource_ready | default(true)
+    - ansible.builtin.include_role:
+        name: "health-check/check-sf-resource-ready"
+      when: check_sf_resource_ready | default(true)
+
+- name: "Update standalone"
+  when: mode == 'standalone'
+  block:
+    - name: read current crd
+      slurp:
+        src: "/tmp/current_cr.yaml"
+      register: base_cr
+
+    - name: merge the new cr
+      copy:
+        content: "{{ base_cr['content'] | b64decode | from_yaml | combine(new_cr, recursive=true) }}"
+        dest: "/tmp/current_cr.yaml"
+      vars:
+        new_cr:
+          spec: "{{ cr_spec }}"
+
+    - name: run the operator in standalone mode
+      ansible.builtin.include_role:
+        name: run-operator-standalone
+      vars:
+        cr_path: /tmp/current_cr.yaml
+        glue: false

@@ -14,8 +14,11 @@ spec:
         username: zuul
         hostname: gerrit-sshd
         puburl: "https://gerrit.sfop.me"
+    executor:
+      logLevel: DEBUG
   logserver:
     loopDelay: 5
+    retentionDays: 30
     storage:
       size: 2Gi
   # NOTE: use "crc-csi-hostpath-provisioner" in CRC deployment

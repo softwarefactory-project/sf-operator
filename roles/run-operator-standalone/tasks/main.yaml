@@ -1,6 +1,29 @@
 ---
+- name: Ensure ~/zuul-output/logs
+  ansible.builtin.file:
+    path: ~/zuul-output/logs
+    state: directory
+  when:
+    - glue
+
+# Empty the sf-operator.log output before the run
+- name: Ensure ~/zuul-output/logs
+  ansible.builtin.file:
+    path: ~/zuul-output/logs/sf-operator.log
+    state: absent
+  when:
+    - glue
+
 - name: Run the operator in standalone mode
   ansible.builtin.shell: |
-    go run ./main.go standalone --cr config/samples/sf_v1_softwarefactory.yaml --namespace sf
+    set -o pipefail
+    go run ./main.go standalone --cr {{ cr_path }} --namespace sf 2>&1 | tee -a ~/zuul-output/logs/sf-operator.log
   args:
     chdir: "{{ zuul.project.src_dir }}"
+
+- name: Copy current spec
+  ansible.builtin.shell: "cp {{ cr_path }} /tmp/current_cr.yaml"
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+  when:
+    - glue

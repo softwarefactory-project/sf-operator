@@ -41,7 +41,12 @@
         sshkey: "{{ '0000000000000000000000000000000000000000' | b64encode }}"
 
 - name: Get current Zuul gerrit connections
-  command: kubectl get sf my-sf -o jsonpath='{.spec.zuul.gerritconns}'
+  command: |
+    {% if mode == 'olm' %}
+    kubectl get sf my-sf -o jsonpath='{.spec.zuul.gerritconns}'
+    {% else %}
+    echo '[{"name": "gerrit", "username": "zuul", "hostname": "gerrit-sshd", "puburl": "https://gerrit.sfop.me"}]'
+    {% endif %}
   register: gerritconns
 
 - set_fact:

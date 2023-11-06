@@ -60,7 +60,7 @@ Run test_only tag
 			playbookYAML = "playbooks/main.yaml"
 			if testOnly {
 				ansiblePlaybookOptions.Tags = "test_only"
-				ansiblePlaybookOptions.AddExtraVar("mode", "dev")
+				ansiblePlaybookOptions.AddExtraVar("mode", "standalone")
 			} else {
 				ansiblePlaybookOptions.AddExtraVar("mode", "olm")
 			}

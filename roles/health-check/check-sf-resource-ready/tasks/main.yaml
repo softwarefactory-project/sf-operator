@@ -1,38 +1,51 @@
 ---
-- name: Wait for the custom resources to be reconciledBy {{ reconciledBy }}
-  ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.status}'
-  register: sf_ready
-  until:
-    - sf_ready.stdout != ""
-    - '"reconciledBy" in (sf_ready.stdout | from_json)'
-    - (sf_ready.stdout | from_json).reconciledBy == reconciledBy
-  retries: "{{ retries }}"
-  delay: "{{ delay }}"
-  when:
-    - reconciledBy is defined
-    - reconciledBy != ""
+- name: "Ensure CR Ready (olm)"
+  when: mode == 'olm'
+  block:
+    - name: Wait for the custom resources to be reconciledBy {{ reconciledBy }}
+      ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.status}'
+      register: sf_ready
+      until:
+        - sf_ready.stdout != ""
+        - '"reconciledBy" in (sf_ready.stdout | from_json)'
+        - (sf_ready.stdout | from_json).reconciledBy == reconciledBy
+      retries: "{{ retries }}"
+      delay: "{{ delay }}"
+      when:
+        - reconciledBy is defined
+        - reconciledBy != ""
 
-# This task is there by safety. From my understanding the generation field is updated
-# by k8s right after any object change
-# https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
-- name: Ensure 1 sec delay to let time for k8s to update the metadata.generation field
-  command: sleep 1
+    # This task is there by safety. From my understanding the generation field is updated
+    # by k8s right after any object change
+    # https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
+    - name: Ensure 1 sec delay to let time for k8s to update the metadata.generation field
+      command: sleep 1
 
-- name: Get current resource generation
-  ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.metadata.generation}'
-  register: cr_generation
-  until: cr_generation.stdout != ""
-  retries: "{{ retries }}"
-  delay: "{{ delay }}"
+    - name: Get current resource generation
+      ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.metadata.generation}'
+      register: cr_generation
+      until: cr_generation.stdout != ""
+      retries: "{{ retries }}"
+      delay: "{{ delay }}"
 
-- name: Wait for the custom resources to be ready
-  ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.status}'
-  register: sf_ready
-  until:
-    - sf_ready.stdout != ""
-    - '"ready" in (sf_ready.stdout | from_json)'
-    - '"observedGeneration" in (sf_ready.stdout | from_json)'
-    - (sf_ready.stdout | from_json).observedGeneration == (cr_generation.stdout | int)
-    - (sf_ready.stdout | from_json).ready == true
-  retries: "{{ retries }}"
-  delay: "{{ delay }}"
+    - name: Wait for the custom resources to be ready
+      ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.status}'
+      register: sf_ready
+      until:
+        - sf_ready.stdout != ""
+        - '"ready" in (sf_ready.stdout | from_json)'
+        - '"observedGeneration" in (sf_ready.stdout | from_json)'
+        - (sf_ready.stdout | from_json).observedGeneration == (cr_generation.stdout | int)
+        - (sf_ready.stdout | from_json).ready == true
+      retries: "{{ retries }}"
+      delay: "{{ delay }}"
+
+- name: "Ensure CR Ready (standalone)"
+  when: mode == 'standalone'
+  block:
+    - name: run the operator in standalone mode
+      ansible.builtin.include_role:
+        name: run-operator-standalone
+      vars:
+        cr_path: /tmp/current_cr.yaml
+        glue: false

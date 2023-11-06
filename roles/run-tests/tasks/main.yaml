@@ -1,37 +1,39 @@
 ---
-- ansible.builtin.include_role:
-    name: setup-variables
-
 - name: Iterate on preparation roles
   ansible.builtin.include_role:
-    name: "utils/{{ role }}"
+    name: "{{ role.name }}"
+  when: role.when | default(true)
   loop:
-    - manage-hosts
-    - get-gerrit-admin-user-api-key
-    - config-repo-get-or-reset
+    - name: setup-variables
+    - name: run-operator-standalone
+      when: "{{ mode == 'standalone' }}"
+    - name: utils/manage-hosts
+    - name: utils/get-gerrit-admin-user-api-key
+    - name: utils/config-repo-get-or-reset
   loop_control:
     loop_var: role
 
 - name: Iterate on tests
   ansible.builtin.include_role:
-    name: "health-check/{{ role }}"
+    name: "health-check/{{ role.name }}"
+  when: role.when | default(true)
   loop:
-    - check-service-uri
-    - zuul-connections
-    - scale-resources
-    - zuul-authenticators
-    - config-update-zuul
-    - config-update-nodepool-launcher
-    - config-update-nodepool-builder
-    - pod-spawning
-    - test-volumestats-sidecar
-    - expand-volume
-    - validate-purgelogs
-    - test-custom-route-certs
-    - test-cert-manager-letsencrypt
-    - zuul-client-api
-    - zuul-components
-    - test-monitoring
+    - name: check-service-uri
+    - name: scale-resources
+    - name: zuul-connections
+    - name: zuul-authenticators
+    - name: config-update-zuul
+    - name: config-update-nodepool-launcher
+    - name: config-update-nodepool-builder
+    - name: pod-spawning
+    - name: test-volumestats-sidecar
+    - name: expand-volume
+    - name: validate-purgelogs
+    - name: test-custom-route-certs
+    - name: test-cert-manager-letsencrypt
+      when: "{{ mode == 'olm' }}"
+    - name: zuul-client-api
+    - name: zuul-components
+    - name: test-monitoring
   loop_control:
     loop_var: role
-

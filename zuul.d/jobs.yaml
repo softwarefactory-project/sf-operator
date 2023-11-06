@@ -96,14 +96,16 @@
     timeout: 3600
     parent: sf-operator
     run: playbooks/upgrade.yaml
+    vars:
+      mode: "olm"
 
 - job:
-    name: sf-operator-dev-multinode
-    description: Validates a sf-operator multinode deployment
+    name: sf-operator-standalone
+    description: Validates a sf-operator standalone deployment in multinode
     timeout: 3600
     parent: sf-operator-multinode
     vars:
-      mode: "dev"
+      mode: "standalone"
 
 - job:
     name: sf-operator-ansible-lint
@@ -119,9 +121,3 @@
       nodes:
         - name: controller
           label: cloud-centos-9-small
-
-- job:
-    name: sf-operator-standalone
-    description: This test validates a sf-operator standalone deployment
-    parent: sf-operator
-    run: playbooks/standalone.yaml
