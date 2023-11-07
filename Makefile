@@ -83,8 +83,12 @@ dev-deployment:
 
 ##@ Build
 
+.PHONY: setenv
+setenv:
+	go env -w GOSUMDB="sum.golang.org" GOPROXY="https://proxy.golang.org,direct"
+
 .PHONY: build
-build: generate fmt vet sc build-api-doc ## Build manager binary.
+build: setenv generate fmt vet sc build-api-doc ## Build manager binary.
 	go build -o bin/manager main.go
 
 .PHONY: build-api-doc
