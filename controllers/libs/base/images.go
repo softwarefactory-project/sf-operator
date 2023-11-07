@@ -14,8 +14,8 @@ func ImageToString(i Image) string {
 }
 
 const (
-	nodepoolImageVersion = "9.0.0-6"
-	zuulImageVersion     = "9.2.0-1"
+	nodepoolImageVersion = "9.0.0-8"
+	zuulImageVersion     = "9.2.0-3"
 )
 
 var (

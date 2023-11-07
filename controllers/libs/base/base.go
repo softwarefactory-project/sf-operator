@@ -129,6 +129,17 @@ func MkEnvVar(env string, value string) apiv1.EnvVar {
 	}
 }
 
+func MkEnvVarFromFieldRef(env string, fieldPath string) apiv1.EnvVar {
+	return apiv1.EnvVar{
+		Name: env,
+		ValueFrom: &apiv1.EnvVarSource{
+			FieldRef: &apiv1.ObjectFieldSelector{
+				FieldPath: fieldPath,
+			},
+		},
+	}
+}
+
 // MkSecretFromFunc produces a Secret where data is the result of getData
 func MkSecretFromFunc(name string, namespace string, getData func() string) apiv1.Secret {
 	return apiv1.Secret{

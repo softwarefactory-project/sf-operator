@@ -12,6 +12,7 @@ import (
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
@@ -61,6 +62,13 @@ var configScriptVolumeMount = apiv1.VolumeMount{
 	ReadOnly:  true,
 }
 
+var nodepoolFluentBitLabels = []logging.FluentBitLabel{
+	{
+		Key:   "SERVICE",
+		Value: "nodepool",
+	},
+}
+
 func (r *SFController) setNodepoolTooling() {
 	toolingData := make(map[string]string)
 	toolingData["generate-config.sh"] = generateConfigScript
@@ -104,15 +112,33 @@ func (r *SFController) getNodepoolConfigEnvs() []apiv1.EnvVar {
 	return nodepoolEnvVars
 }
 
-func mkLoggingTemplate(logLevel v1.LogLevel) (string, error) {
+func (r *SFController) mkLoggingTemplate(serviceName string) (string, error) {
 	// Unfortunatly I'm unable to leverage default value set at API validation
 	selectedLogLevel := v1.InfoLogLevel
+	var logLevel v1.LogLevel
+	if serviceName == "builder" {
+		logLevel = r.cr.Spec.Nodepool.Builder.LogLevel
+	} else {
+		logLevel = r.cr.Spec.Nodepool.Launcher.LogLevel
+	}
 	if logLevel != "" {
 		selectedLogLevel = logLevel
 	}
 
+	var forwardLogs = false
+	var inputBaseURL = ""
+	if r.cr.Spec.FluentBitLogForwarding != nil {
+		forwardLogs = true
+		inputBaseURL = "http://" + r.cr.Spec.FluentBitLogForwarding.HTTPInputHost + ":" + strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort))
+	}
+
 	loggingConfig, err := utils.ParseString(
-		loggingConfigTemplate, struct{ LogLevel string }{LogLevel: string(selectedLogLevel)})
+		loggingConfigTemplate,
+		logging.PythonTemplateLoggingParams{
+			LogLevel:    string(selectedLogLevel),
+			ForwardLogs: forwardLogs,
+			BaseURL:     inputBaseURL,
+		})
 
 	return loggingConfig, err
 }
@@ -322,7 +348,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	r.setNodepoolTooling()
 
-	loggingConfig, _ := mkLoggingTemplate(r.cr.Spec.Nodepool.Builder.LogLevel)
+	loggingConfig, _ := r.mkLoggingTemplate("builder")
 
 	builderExtraConfigData := make(map[string]string)
 	builderExtraConfigData["logging.yaml"] = loggingConfig
@@ -453,13 +479,17 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		builderIdent, base.NodepoolBuilderImage, r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage),
 		replicas, apiv1.ReadWriteOnce)
 
-	nb.Spec.Template.ObjectMeta.Annotations = annotations
 	nb.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nb.Spec.Template.Spec.Volumes = volumes
 	nb.Spec.Template.Spec.Containers[0].Command = []string{"/usr/local/bin/dumb-init", "--",
 		"/usr/local/bin/nodepool-builder", "-f", "-l", "/etc/nodepool-logging/logging.yaml"}
 	nb.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMount
 	nb.Spec.Template.Spec.Containers[0].Env = r.getNodepoolConfigEnvs()
+
+	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-builder", r.cr.Spec.FluentBitLogForwarding, nodepoolFluentBitLabels, annotations)
+	nb.Spec.Template.Spec.Containers[0].Env = append(nb.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
+
+	nb.Spec.Template.ObjectMeta.Annotations = annotations
 
 	// Append statsd exporter sidecar
 	nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers,
@@ -523,7 +553,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 
 	r.setNodepoolTooling()
 
-	loggingConfig, _ := mkLoggingTemplate(r.cr.Spec.Nodepool.Launcher.LogLevel)
+	loggingConfig, _ := r.mkLoggingTemplate("launcher")
 
 	// get statsd relay if defined
 	var relayAddress *string
@@ -594,6 +624,9 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	container.Command = []string{"/usr/local/bin/dumb-init", "--",
 		"/usr/local/bin/nodepool-launcher", "-f", "-l", "/etc/nodepool-logging/logging.yaml"}
 	container.Env = r.getNodepoolConfigEnvs()
+
+	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-launcher", r.cr.Spec.FluentBitLogForwarding, nodepoolFluentBitLabels, annotations)
+	container.Env = append(container.Env, extraLoggingEnvVars...)
 
 	initContainer := base.MkContainer("nodepool-launcher-init", base.BusyboxImage)
 

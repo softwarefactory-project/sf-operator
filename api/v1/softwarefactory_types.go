@@ -33,6 +33,14 @@ type LetsEncryptSpec struct {
 	Server LEServer `json:"server"`
 }
 
+type FluentBitForwarderSpec struct {
+	// The Host for the Fluent Bit HTTP Input to forward logs to.
+	HTTPInputHost string `json:"httpInputHost"`
+	// The (optional) port on which to forward logs to, defaults to 80.
+	// +kubebuilder:default:=80
+	HTTPInputPort int32 `json:"httpInputPort,omitempty"`
+}
+
 type StorageSpec struct {
 	// Storage space to allocate to the resource, expressed as a [Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
 	Size resource.Quantity `json:"size"`
@@ -384,6 +392,9 @@ type SoftwareFactorySpec struct {
 
 	// LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS
 	LetsEncrypt *LetsEncryptSpec `json:"letsEncrypt,omitempty"`
+
+	// Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http)
+	FluentBitLogForwarding *FluentBitForwarderSpec `json:"FluentBitLogForwarding,omitempty"`
 
 	// Default storage class to use by Persistent Volume Claims
 	StorageClassName string `json:"storageClassName,omitempty"`
