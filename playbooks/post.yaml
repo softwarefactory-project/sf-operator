@@ -30,3 +30,6 @@
 
       - include_role:
             name: post/get-system-logs
+
+      - include_role:
+            name: post/get-loki-logs

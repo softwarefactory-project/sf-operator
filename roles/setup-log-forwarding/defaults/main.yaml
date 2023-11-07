@@ -1,0 +1,3 @@
+---
+loki_dir: "{{ zuul.project.src_dir }}/tools/loki"
+namespace: sf

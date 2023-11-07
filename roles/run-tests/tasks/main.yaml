@@ -18,6 +18,7 @@
     name: "health-check/{{ role.name }}"
   when: role.when | default(true)
   loop:
+    - name: initialize-log-forwarding
     - name: check-service-uri
     - name: scale-resources
     - name: zuul-connections
@@ -36,5 +37,6 @@
     - name: zuul-client-api
     - name: test-monitoring
     - name: zuul-components
+    - name: test-log-forwarding
   loop_control:
     loop_var: role

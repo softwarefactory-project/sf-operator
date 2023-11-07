@@ -1,0 +1,84 @@
+---
+apiVersion: v1
+data:
+  fluent-bit.conf: |-
+    [SERVICE]
+        http_server On
+        http_port   2020
+        log_level   debug
+
+    [INPUT]
+        name    http
+        port    5140
+
+    [OUTPUT]
+        name    stdout
+        match   *
+        format  json_lines
+
+    [OUTPUT]
+        name    loki
+        match   *
+        host    loki-http
+        labels  namespace=$namespace, podIP=$podip, nodeName=$nodename, application=$component, podName=$podname, labels_run=$labels_run, labels_app=sf
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: test-fluentbit-config
+  labels:
+    run: fluentbit
+    app: demo-logging
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: fluentbit
+    app: demo-logging
+  name: test-fluentbit
+spec:
+  containers:
+  - image: cr.fluentbit.io/fluent/fluent-bit:2.1.10-debug
+    name: test-fluentbit
+    resources: {}
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    volumeMounts:
+      - name: test-fluentbit-config
+        mountPath: "/fluent-bit/etc/fluent-bit.conf"
+        subPath: "fluent-bit.conf"
+    ports:
+      - name: fb-http-server
+        containerPort: 2020
+      - name: fb-http-input
+        containerPort: 5140
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  volumes:
+    - name: test-fluentbit-config
+      configMap:
+        name: test-fluentbit-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fluent-bit-http-input
+  labels:
+    run: fluentbit
+    app: demo-logging
+spec:
+  ports:
+    - name: fb-http-input
+      port: 5140
+      protocol: TCP
+      targetPort: 5140
+  selector:
+    run: fluentbit
+    app: demo-logging

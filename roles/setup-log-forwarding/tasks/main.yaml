@@ -1,0 +1,9 @@
+---
+- name: Deploy Loki via included role
+  ansible.builtin.include_tasks: deploy-loki.yaml
+
+- name: Deploy Fluent Bit via included role
+  ansible.builtin.include_tasks: deploy-fluentbit.yaml
+
+- name: Install LogCLI
+  ansible.builtin.include_tasks: install-logCLI.yaml
