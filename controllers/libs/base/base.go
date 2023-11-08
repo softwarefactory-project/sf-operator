@@ -195,8 +195,8 @@ func MkJob(name string, ns string, container apiv1.Container) batchv1.Job {
 		}}
 }
 
-// MkService produces a Service
-func MkService(name string, ns string, selector string, ports []int32, portName string) apiv1.Service {
+// mkServicePorts produces a ServicePort array
+func mkServicePorts(ports []int32, portName string) []apiv1.ServicePort {
 	servicePorts := []apiv1.ServicePort{}
 	for _, p := range ports {
 		servicePorts = append(
@@ -207,18 +207,39 @@ func MkService(name string, ns string, selector string, ports []int32, portName 
 				Port:     p,
 			})
 	}
+	return servicePorts
+}
+
+// MkService produces a Service
+func MkService(name string, ns string, selector string, ports []int32, portName string) apiv1.Service {
 	return apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 		},
 		Spec: apiv1.ServiceSpec{
-			Ports: servicePorts,
+			Ports: mkServicePorts(ports, portName),
 			Selector: map[string]string{
 				"app": "sf",
 				"run": selector,
 			},
 		}}
+}
+
+// MkServicePod produces a Service that target a single Pod by name
+func MkServicePod(name string, ns string, podName string, ports []int32, portName string) apiv1.Service {
+	return apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: mkServicePorts(ports, portName),
+			Selector: map[string]string{
+				"statefulset.kubernetes.io/pod-name": podName,
+			},
+		}}
+
 }
 
 // MkHeadlessService produces a headless service.
