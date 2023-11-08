@@ -141,8 +141,10 @@ func (r *SFController) DeployZookeeper() bool {
 		r.CreateR(&current)
 	}
 
-	isStatefulSet := r.IsStatefulSetReady(&current)
-	conds.UpdateConditions(&r.cr.Status.Conditions, zkIdent, isStatefulSet)
+	pvcReadiness := r.reconcileExpandPVC(zkIdent+"-data-"+zkIdent+"-0", r.cr.Spec.Zookeeper.Storage)
 
-	return isStatefulSet
+	isReady := r.IsStatefulSetReady(&current) && pvcReadiness
+	conds.UpdateConditions(&r.cr.Status.Conditions, zkIdent, isReady)
+
+	return isReady
 }

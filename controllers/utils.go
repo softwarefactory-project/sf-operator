@@ -627,7 +627,8 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 
 	switch newQTY.Cmp(*currentQTY) {
 	case -1:
-		r.log.V(1).Info("Cannot downsize volume " + pvcName)
+		r.log.V(1).Info("Cannot downsize volume " + pvcName + ". Current size: " +
+			currentQTY.String() + ", Expected size: " + newQTY.String())
 		return true
 	case 0:
 		r.log.V(1).Info("Volume " + pvcName + " at expected size, nothing to do")
