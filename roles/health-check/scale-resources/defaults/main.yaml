@@ -1,15 +1,5 @@
 ---
-# The scale_up_replicas values are hardcoded now, due it is using update-custom-resource
-# role. More info: https://softwarefactory-project.io/r/c/software-factory/sf-operator/+/28387/comments/15f3bffd_f834d8f8
-scale_up_replicas: 4
-scale_down_replicas: 2
 scaling_services:
   - name: zuul-executor
-    scale_up_resources:
-      zuul:
-        executor:
-          replicas: "{{ scale_up_replicas }}"
-    scale_down_resources:
-      zuul:
-        executor:
-          replicas: "{{ scale_down_replicas }}"
+    kind: sts
+    replicas: 2

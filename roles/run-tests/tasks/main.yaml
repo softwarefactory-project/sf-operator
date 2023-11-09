@@ -18,6 +18,7 @@
   loop:
     - check-service-uri
     - zuul-connections
+    - scale-resources
     - zuul-authenticators
     - config-update-zuul
     - config-update-nodepool-launcher
@@ -34,11 +35,3 @@
   loop_control:
     loop_var: role
 
-- name: Check scaling
-  ansible.builtin.include_role:
-    name: health-check/scale-resources
-  loop:
-    - up
-    - down
-  loop_control:
-    loop_var: operation

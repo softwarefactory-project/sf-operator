@@ -12,6 +12,7 @@ but addresses specificities and idiosyncrasies induced by deploying Zuul with th
 1. [Delegating temporary administrative powers on a tenant](#delegating-temporary-administrative-powers-on-a-tenant)
 1. [Zuul-Client](#zuul-client)
 1. [Zuul-Admin](#zuul-admin)
+1. [Scaling Zuul](#scaling-zuul)
 
 ## Architecture
 
@@ -72,3 +73,15 @@ kubectl exec --stdin --tty zuul-scheduler-0 -- /bin/sh
 
 Then from that shell, run the `zuul-admin` command.
 
+## Scaling Zuul
+
+Zuul Executor and Zuul Merger services can be scaled whenever sf-operator deployment
+no more fits the demand of the CI jobs.
+The scale is done with Kubernetes scale cli command:
+```bash
+kubectl scale <resource kind> <resource name> --replicas=<number of replicas>
+
+# Example to scale Zuul Executor
+kubectl scale sts zuul-executor --replicas=3
+```
+The scale will take no more that one minute.

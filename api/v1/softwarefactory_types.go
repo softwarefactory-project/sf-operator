@@ -168,8 +168,6 @@ type ZuulOIDCAuthenticatorSpec struct {
 type ZuulExecutorSpec struct {
 	// Storage-related settings
 	Storage StorageSpec `json:"storage,omitempty"`
-	// How many executor pods to run
-	Replicas int32 `json:"replicas,omitempty"`
 	// Specify the Log Level of the zuul-executor service.
 	// Valid values are:
 	// "INFO" (default),
@@ -226,9 +224,6 @@ type ZuulMergerSpec struct {
 	GitTimeout int32 `json:"gitTimeout,omitempty"`
 	// Storage-related settings
 	Storage StorageSpec `json:"storage,omitempty"`
-	// How many merger pods to run
-	// +kubebuilder:default:=1
-	MinReplicas int32 `json:"minReplicas,omitempty"`
 	// Specify the Log Level of the nodepool launcher service.
 	// Valid values are:
 	// "INFO" (default),
