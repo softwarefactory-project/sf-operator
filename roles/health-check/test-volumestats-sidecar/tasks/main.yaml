@@ -1,6 +1,6 @@
 ---
 - name: ensure logserver deployment is ready
-  ansible.builtin.command: kubectl get deployment logserver -o=jsonpath='{.status.readyReplicas}'
+  ansible.builtin.command: kubectl get sts logserver -o=jsonpath='{.status.readyReplicas}'
   register: logserver_ready
   until:
     - logserver_ready.stdout == "1"

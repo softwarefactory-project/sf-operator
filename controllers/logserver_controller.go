@@ -183,6 +183,7 @@ func (r *LogServerController) cleanup() {
 			Name:      httpdPortName,
 		},
 	})
+
 	// Delete apiv1.Service sshdPortName-sshdPort
 	r.DeleteR(&apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -190,6 +191,7 @@ func (r *LogServerController) cleanup() {
 			Name:      sshdPortName,
 		},
 	})
+
 	// Delete apiv1.service logserverIdent-NodeExporterPortNameSuffix
 	r.DeleteR(&apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -198,6 +200,13 @@ func (r *LogServerController) cleanup() {
 		},
 	})
 
+	// Remove the Deployment -> We switch to StatefulSet
+	r.DeleteR(&v1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.ns,
+			Name:      logserverIdent,
+		},
+	})
 }
 
 func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
@@ -254,19 +263,15 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		},
 	}
 
-	// Create the deployment
-	dep := base.MkDeployment(logserverIdent, r.ns, base.HTTPDImage)
+	// Create the statefulset
+	sts := r.mkStatefulSet(logserverIdent, base.HTTPDImage,
+		BaseGetStorageConfOrDefault(r.cr.Spec.Settings.Storage, r.cr.Spec.StorageClassName), apiv1.ReadWriteOnce)
 
 	// Setup the main container
-	dep.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
+	sts.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
-	// NOTE: Currently we are providing "ReadWriteOnce" access mode
-	// for the Logserver, due "ReadWriteMany" requires special storage backend.
-	dataPvc := base.MkPVC(logserverIdent, r.ns, BaseGetStorageConfOrDefault(
-		r.cr.Spec.Settings.Storage, r.cr.Spec.StorageClassName), apiv1.ReadWriteOnce)
-	r.GetOrCreate(&dataPvc)
 	var mod int32 = 256 // decimal for 0400 octal
-	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
+	sts.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		{
 			Name: logserverIdent + "-config-vol",
 			VolumeSource: apiv1.VolumeSource{
@@ -287,24 +292,16 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 				},
 			},
 		},
-		{
-			Name: logserverIdent,
-			VolumeSource: apiv1.VolumeSource{
-				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-					ClaimName: logserverIdent,
-				},
-			},
-		},
 	}
 
-	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+	sts.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(httpdPort, httpdPortName),
 	}
 
-	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/", httpdPort)
-	dep.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/", httpdPort)
-	dep.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/", httpdPort)
-	dep.Spec.Template.Spec.Containers[0].Command = []string{
+	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/", httpdPort)
+	sts.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/", httpdPort)
+	sts.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/", httpdPort)
+	sts.Spec.Template.Spec.Containers[0].Command = []string{
 		"/usr/bin/" + lgEntryScriptName,
 	}
 
@@ -333,7 +330,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		base.MkContainerPort(sshdPort, sshdPortName),
 	}
 
-	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, sshdContainer)
+	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, sshdContainer)
 
 	purgelogsContainer := base.MkContainer(purgelogIdent, base.PurgeLogsImage)
 	purgelogsContainer.Command = []string{
@@ -351,7 +348,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		},
 	}
 
-	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, purgelogsContainer)
+	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, purgelogsContainer)
 
 	// add volumestats exporter
 	volumeMountsStatsExporter := []apiv1.VolumeMount{
@@ -362,7 +359,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(logserverIdent, volumeMountsStatsExporter)
-	dep.Spec.Template.Spec.Containers = append(dep.Spec.Template.Spec.Containers, statsExporter)
+	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
 
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
 	annotations := map[string]string{
@@ -376,28 +373,27 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		"sshd-image":      base.SSHDImage,
 	}
 
-	// do we have an existing deployment?
-	currentDep := v1.Deployment{}
-	deploymentUpdated := true
-	if r.GetM(dep.GetName(), &currentDep) {
+	currentSTS := v1.StatefulSet{}
+	stsUpdated := true
+	if r.GetM(sts.GetName(), &currentSTS) {
 		// Are annotations in sync?
-		if !utils.MapEquals(&currentDep.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			currentDep.Spec.Template.Spec = dep.Spec.Template.Spec
-			currentDep.Spec.Template.ObjectMeta.Annotations = annotations
+		if !utils.MapEquals(&currentSTS.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			currentSTS.Spec.Template.Spec = sts.Spec.Template.Spec
+			currentSTS.Spec.Template.ObjectMeta.Annotations = annotations
 			log.V(1).Info("Logserver pod restarting to apply changes ...")
-			deploymentUpdated = r.UpdateR(&currentDep)
+			stsUpdated = r.UpdateR(&currentSTS)
 		}
 
 	} else {
-		dep.Spec.Template.ObjectMeta.Annotations = annotations
-		r.log.V(1).Info("Creating object", "name", dep.GetName())
-		r.CreateR(&dep)
+		sts.Spec.Template.ObjectMeta.Annotations = annotations
+		r.log.V(1).Info("Creating object", "name", sts.GetName())
+		r.CreateR(&sts)
 	}
 
-	pvcReadiness := r.reconcileExpandPVC(logserverIdent, r.cr.Spec.Settings.Storage)
+	pvcReadiness := r.reconcileExpandPVC(logserverIdent+"-"+logserverIdent+"-0", r.cr.Spec.Settings.Storage)
 
-	// refresh current deployment
-	r.GetM(dep.GetName(), &currentDep)
+	// refresh current stsloyment
+	r.GetM(sts.GetName(), &currentSTS)
 
 	routeReady := r.ensureHTTPSRoute(
 		r.cr.Name+"-logserver", logserverIdent,
@@ -408,11 +404,11 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	r.ensureLogserverPodMonitor()
 	r.ensureLogserverPromRule()
 
-	isDeploymentReady := r.IsDeploymentReady(&currentDep)
-	conds.UpdateConditions(&r.cr.Status.Conditions, logserverIdent, isDeploymentReady)
+	isReady := r.IsStatefulSetReady(&currentSTS) && stsUpdated && pvcReadiness && routeReady
+	conds.UpdateConditions(&r.cr.Status.Conditions, logserverIdent, isReady)
 
 	return sfv1.LogServerStatus{
-		Ready:              deploymentUpdated && isDeploymentReady && pvcReadiness && routeReady,
+		Ready:              isReady,
 		ObservedGeneration: r.cr.Generation,
 		ReconciledBy:       conds.GetOperatorConditionName(),
 	}
