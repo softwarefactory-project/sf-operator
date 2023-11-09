@@ -61,7 +61,6 @@
   ansible.builtin.copy:
     src: clouds.yaml
     dest: /tmp/test-clouds.yaml
-  become: true
 
 - name: configure clouds.yaml in sfconfig.yaml
   ansible.builtin.lineinfile:
