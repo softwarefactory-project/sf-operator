@@ -14,6 +14,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	apiroutev1 "github.com/openshift/api/route/v1"
@@ -41,7 +42,28 @@ func init() {
 	utilruntime.Must(certv1.AddToScheme(controllerScheme))
 	utilruntime.Must(apiroutev1.AddToScheme(controllerScheme))
 	utilruntime.Must(monitoringv1.AddToScheme(controllerScheme))
-	//+kubebuilder:scaffold:scheme
+}
+
+func getPodRESTClient(config *rest.Config) rest.Interface {
+
+	gvk := schema.GroupVersionKind{
+		Group:   "",
+		Version: "v1",
+		Kind:    "Pod",
+	}
+
+	httpCli, err := rest.HTTPClientFor(config)
+	if err != nil {
+		setupLog.Error(err, "unable to get HTTP client")
+		os.Exit(1)
+	}
+
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, config, serializer.NewCodecFactory(controllerScheme), httpCli)
+	if err != nil {
+		setupLog.Error(err, "unable to create REST client")
+	}
+
+	return restClient
 }
 
 func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection bool, oneShot bool) {
@@ -59,22 +81,8 @@ func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection 
 		os.Exit(1)
 	}
 
-	gvk := schema.GroupVersionKind{
-		Group:   "",
-		Version: "v1",
-		Kind:    "Pod",
-	}
-
-	httpCli, err := rest.HTTPClientFor(mgr.GetConfig())
-	if err != nil {
-		setupLog.Error(err, "unable to get HTTP client")
-		os.Exit(1)
-	}
-
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()), httpCli)
-	if err != nil {
-		setupLog.Error(err, "unable to create REST client")
-	}
+	config := mgr.GetConfig()
+	restClient := getPodRESTClient(config)
 
 	baseCtx := ctrl.SetupSignalHandler()
 	var cancelFunc context.CancelFunc
@@ -89,7 +97,7 @@ func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection 
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		RESTClient: restClient,
-		RESTConfig: mgr.GetConfig(),
+		RESTConfig: config,
 		CancelFunc: cancelFunc,
 		Completed:  false,
 	}
@@ -98,7 +106,7 @@ func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection 
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		RESTClient: restClient,
-		RESTConfig: mgr.GetConfig(),
+		RESTConfig: config,
 	}
 
 	//+kubebuilder:scaffold:builder
@@ -125,4 +133,26 @@ func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection 
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func Standalone(sf sfv1.SoftwareFactory, ns string) {
+
+	config := ctrl.GetConfigOrDie()
+	cl, err := client.New(config, client.Options{
+		Scheme: controllerScheme,
+	})
+	if err != nil {
+		ctrl.Log.Error(err, "unable to create a client")
+		os.Exit(1)
+	}
+	restClient := getPodRESTClient(config)
+	ctx, cancelFunc := context.WithCancel(ctrl.SetupSignalHandler())
+	sfr := &SoftwareFactoryReconciler{
+		Client:     cl,
+		Scheme:     controllerScheme,
+		RESTClient: restClient,
+		RESTConfig: config,
+		CancelFunc: cancelFunc,
+	}
+	sfr.StandaloneReconcile(ctx, ns, sf)
 }

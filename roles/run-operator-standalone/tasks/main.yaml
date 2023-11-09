@@ -1,0 +1,6 @@
+---
+- name: Run the operator in standalone mode
+  ansible.builtin.shell: |
+    go run ./main.go standalone --cr config/samples/sf_v1_softwarefactory.yaml --namespace sf
+  args:
+    chdir: "{{ zuul.project.src_dir }}"

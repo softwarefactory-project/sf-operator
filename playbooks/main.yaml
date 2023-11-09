@@ -10,11 +10,7 @@
         Simulates the "dev" process (start with 'go run' the operator)
         that we describe in the CONTRIBUTING doc
       ansible.builtin.include_role:
-        name: "{{ item }}"
-      loop:
-        - run-operator-dev
-      vars:
-        create_test_bundle_ns: false
+        name: run-operator-dev
       when: mode == 'dev'
 
     - name: CI process(OLM install)

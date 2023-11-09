@@ -422,6 +422,7 @@ func (r *LogServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		log:        log,
 		ctx:        ctx,
 		owner:      &cr,
+		standalone: false,
 	}
 
 	var controller = LogServerController{

@@ -1,0 +1,17 @@
+---
+- hosts: "{{ hostname | default('controller') }}"
+  roles:
+    - setup-variables
+    - setup-env
+    - sanity-check
+    - setup-namespaces
+    - start-gerrit
+  tasks:
+    - community.general.make:
+        target: "{{ item }}"
+        chdir: "{{ src_dir }}"
+      loop:
+        - install-cert-manager
+        - install-prometheus-operator
+    - ansible.builtin.include_role:
+        name: run-operator-standalone
