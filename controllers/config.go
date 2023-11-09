@@ -23,7 +23,7 @@ var pymodSecret string
 var pymodMain string
 
 // SetupBaseSecrets returns true when the Job that set the zuul secret in the system-config repository is done
-func (r *SFController) SetupBaseSecrets() bool {
+func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) bool {
 
 	serviceAccountName := "config-updater"
 	serviceAccount := apiv1.ServiceAccount{}
@@ -105,7 +105,9 @@ func (r *SFController) SetupBaseSecrets() bool {
 	}
 
 	var job batchv1.Job
-	jobName := "config-base-secret"
+	// We need to run a new job whenever the version of the secrets changed
+	// thus we include the version of the secrets
+	jobName := "config-base-secret-" + internalTenantSecretsVersion
 	found := r.GetM(jobName, &job)
 
 	extraCmdVars := []apiv1.EnvVar{
@@ -151,27 +153,41 @@ func (r *SFController) InstallTooling() {
 }
 
 func (r *SFController) SetupConfigJob() bool {
+	var (
+		// We use the CM to store versions that can trigger internal tenant secrets update
+		// or zuul internal tenant reconfigure
+		cmName                       = "zs-internal-tenant-reconfigure"
+		zsInternalTenantReconfigure  apiv1.ConfigMap
+		configHash                   = utils.Checksum([]byte(preInitScriptTemplate))
+		internalTenantSecretsVersion = "1"
+		needReconfigureTenant        = false
+		needCMUpdate                 = false
+	)
+
+	// Ensure that toolings are available in the ConfigMap
 	r.InstallTooling()
+
+	// Get the internal tenant version CM and evaluate if we need to trigger actions
+	if !r.GetM(cmName, &zsInternalTenantReconfigure) {
+		needReconfigureTenant = true
+	} else {
+		if configHash != zsInternalTenantReconfigure.Data["internal-tenant-config-hash"] ||
+			internalTenantSecretsVersion != zsInternalTenantReconfigure.Data["internal-tenant-secrets-version"] {
+			needReconfigureTenant = true
+			needCMUpdate = true
+		}
+	}
+
 	// We ensure that base secrets are set in the system-config repository
-	if r.SetupBaseSecrets() {
+	baseSecretsInstalled := r.SetupBaseSecrets(internalTenantSecretsVersion)
+
+	if baseSecretsInstalled {
 		// We run zuul tenant-reconfigure for the 'internal' tenant, when:
 		// - the configMap does not exists (or)
 		// - tenant config changed
+		// - tenant secrets version changed
 		// This ensures that the zuul-scheduler loaded the provisionned Zuul config
 		// for the 'internal' tenant
-		var zsInternalTenantReconfigure apiv1.ConfigMap
-		var cmName = "zs-internal-tenant-reconfigure"
-		var needReconfigureTenant = false
-		var needConfigMapUpdate = false
-		var configHash = utils.Checksum([]byte(preInitScriptTemplate))
-		if !r.GetM(cmName, &zsInternalTenantReconfigure) {
-			needReconfigureTenant = true
-		} else {
-			if configHash != zsInternalTenantReconfigure.Data["internal-tenant-config-hash"] {
-				needReconfigureTenant = true
-				needConfigMapUpdate = true
-			}
-		}
 		if needReconfigureTenant {
 			r.log.Info("Running tenant-reconfigure for the 'internal' tenant")
 			if r.runZuulInternalTenantReconfigure() {
@@ -181,9 +197,10 @@ func (r *SFController) SetupConfigJob() bool {
 					Namespace: r.ns,
 				}
 				zsInternalTenantReconfigure.Data = map[string]string{
-					"internal-tenant-config-hash": configHash,
+					"internal-tenant-config-hash":     configHash,
+					"internal-tenant-secrets-version": internalTenantSecretsVersion,
 				}
-				if needConfigMapUpdate {
+				if needCMUpdate {
 					r.UpdateR(&zsInternalTenantReconfigure)
 				} else {
 					r.CreateR(&zsInternalTenantReconfigure)

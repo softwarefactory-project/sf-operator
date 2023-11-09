@@ -174,7 +174,36 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 	return true
 }
 
+// cleanup ensures removal of legacy resources
+func (r *LogServerController) cleanup() {
+	// Delete apiv1.Service httpdPortName-httpdPort
+	r.DeleteR(&apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.ns,
+			Name:      httpdPortName,
+		},
+	})
+	// Delete apiv1.Service sshdPortName-sshdPort
+	r.DeleteR(&apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.ns,
+			Name:      sshdPortName,
+		},
+	})
+	// Delete apiv1.service logserverIdent-NodeExporterPortNameSuffix
+	r.DeleteR(&apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.ns,
+			Name:      logserverIdent + sfmonitoring.NodeExporterPortNameSuffix,
+		},
+	})
+
+}
+
 func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
+
+	r.cleanup()
+
 	log := log.FromContext(r.ctx)
 
 	r.EnsureSSHKeySecret(logserverIdent + "-keys")
@@ -194,6 +223,12 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	cmData[lgEntryScriptName] = logserverEntrypoint
 
 	r.EnsureConfigMap(logserverIdent, cmData)
+
+	// Create service exposed by logserver
+	servicePorts := []int32{httpdPort, sshdPort, sfmonitoring.NodeExporterPort}
+	svc := base.MkService(
+		logserverIdent, r.ns, logserverIdent, servicePorts, logserverIdent)
+	r.GetOrCreate(&svc)
 
 	volumeMounts := []apiv1.VolumeMount{
 		{
@@ -272,12 +307,6 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	dep.Spec.Template.Spec.Containers[0].Command = []string{
 		"/usr/bin/" + lgEntryScriptName,
 	}
-
-	// Create services exposed by logserver
-	servicePorts := []int32{httpdPort}
-	httpdService := base.MkService(
-		httpdPortName, r.ns, logserverIdent, servicePorts, httpdPortName)
-	r.GetOrCreate(&httpdService)
 
 	// Setup the sidecar container for sshd
 	sshdContainer := base.MkContainer(sshdPortName, base.SSHDImage)
@@ -365,13 +394,6 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		r.CreateR(&dep)
 	}
 
-	sshdServicePorts := []int32{sshdPort}
-	sshdService := base.MkService(sshdPortName, r.ns, logserverIdent, sshdServicePorts, sshdPortName)
-	r.GetOrCreate(&sshdService)
-
-	nodeExporterSidecarService := sfmonitoring.MkNodeExporterSideCarService(logserverIdent, r.ns)
-	r.GetOrCreate(&nodeExporterSidecarService)
-
 	pvcReadiness := r.reconcileExpandPVC(logserverIdent, r.cr.Spec.Settings.Storage)
 
 	// refresh current deployment
@@ -379,7 +401,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	routeReady := r.ensureHTTPSRoute(
 		r.cr.Name+"-logserver", logserverIdent,
-		httpdPortName, "/", httpdPort, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
+		logserverIdent, "/", httpdPort, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
 	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
 	// TODO(mhu) we may want to include monitoring objects' status in readiness computation

@@ -100,7 +100,7 @@ func (r *SFUtilContext) CreateR(obj client.Object) {
 
 // DeleteR delete a resource.
 func (r *SFUtilContext) DeleteR(obj client.Object) {
-	if err := r.Client.Delete(r.ctx, obj); err != nil {
+	if err := r.Client.Delete(r.ctx, obj); err != nil && !errors.IsNotFound(err) {
 		panic(err.Error())
 	}
 }

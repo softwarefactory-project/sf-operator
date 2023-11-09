@@ -107,7 +107,7 @@ microshift cluster inbound, then `firefox https://logserver.test.local`.
 To send data to the logserver, first enable the port-forward:
 
 ```shell
-kubectl -n logserver port-forward service/logserver-sshd 22220:2222
+kubectl -n logserver port-forward service/logserver 22220:2222
 ```
 
 Then use rsync:

@@ -203,9 +203,9 @@ cat << EOF > playbooks/base/post.yaml
        fileserver: "{{ site_sflogs }}"
     -  role: generate-zuul-manifest
 
-- hosts: logserver-sshd
+- hosts: logserver
   vars:
-    ansible_port: ${LOGSERVER_SSHD_SERVICE_PORT}
+    ansible_port: 2222
   gather_facts: false
   tasks:
     - block:

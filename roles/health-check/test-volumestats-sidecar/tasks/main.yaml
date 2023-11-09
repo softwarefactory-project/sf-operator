@@ -9,7 +9,7 @@
 
 - name: Start port forwarding to logserver sidecar
   shell: |
-    kubectl port-forward service/logserver-ne 9100 -n sf
+    kubectl port-forward service/logserver 9100 -n sf
   async: 60
   poll: 0
 

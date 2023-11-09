@@ -36,7 +36,7 @@ func GetTruncatedPortName(serviceName string, suffix string) string {
 
 const NodeExporterNameSuffix = "-nodeexporter"
 const NodeExporterPortNameSuffix = "-ne"
-const nodeExporterPort = 9100
+const NodeExporterPort = 9100
 
 // Fun fact: arrays cannot be consts, so we define our args in this function.
 func getNodeExporterArgs(volumeMounts []apiv1.VolumeMount) []string {
@@ -52,18 +52,10 @@ func MkNodeExporterSideCarContainer(serviceName string, volumeMounts []apiv1.Vol
 	container := base.MkContainer(serviceName+NodeExporterNameSuffix, base.NodeExporterImage)
 	container.Args = getNodeExporterArgs(volumeMounts)
 	container.Ports = []apiv1.ContainerPort{
-		base.MkContainerPort(nodeExporterPort, GetTruncatedPortName(serviceName, NodeExporterPortNameSuffix)),
+		base.MkContainerPort(NodeExporterPort, GetTruncatedPortName(serviceName, NodeExporterPortNameSuffix)),
 	}
 	container.VolumeMounts = volumeMounts
 	return container
-}
-
-func MkNodeExporterSideCarService(serviceName string, namespace string) apiv1.Service {
-	var portName = GetTruncatedPortName(serviceName, NodeExporterPortNameSuffix)
-	servicePorts := []int32{nodeExporterPort}
-	neService := base.MkService(serviceName+NodeExporterPortNameSuffix, namespace, serviceName, servicePorts, portName)
-	return neService
-
 }
 
 // Statsd exporter utilities

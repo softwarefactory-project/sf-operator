@@ -31,7 +31,7 @@ def sshkey_scan(port: int, hostname: str) -> bytes:
         ["ssh-keyscan", "-T", "10", "-p", str(port), hostname ])
 
 def get_logserver_fingerprint() -> str:
-    return " ".join(sshkey_scan(2222, "logserver-sshd").decode().split()[0:3])
+    return " ".join(sshkey_scan(2222, "logserver").decode().split()[0:3])
 
 def mk_incluster_k8s_config():
     sa = Path("/run/secrets/kubernetes.io/serviceaccount")
@@ -66,7 +66,7 @@ def create_zuul_secrets():
             ("ssh_private_key", os.environ["ZUUL_LOGSERVER_PRIVATE_KEY"])
         ],
         unencrypted_items=[
-            ("fqdn", "\"[logserver-sshd]:2222\""),
+            ("fqdn", "\"[logserver]:2222\""),
             ("path", "rsync"),
             ("ssh_known_hosts", "\"%s\"" % get_logserver_fingerprint()),
             ("ssh_username", "zuul")
