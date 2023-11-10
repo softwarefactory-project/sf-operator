@@ -27,7 +27,7 @@ var (
 	NodepoolLauncherImage = ImageToString(Image{Path: "quay.io/software-factory/nodepool-launcher", Version: nodepoolImageVersion})
 	NodepoolBuilderImage  = ImageToString(Image{Path: "quay.io/software-factory/nodepool-builder", Version: nodepoolImageVersion})
 	MariabDBImage         = ImageToString(Image{Path: "quay.io/software-factory/mariadb", Version: "10.5.16-4"})
-	ZookeeperImage        = ImageToString(Image{Path: "quay.io/software-factory/zookeeper", Version: "3.8.0-5"})
+	ZookeeperImage        = ImageToString(Image{Path: "quay.io/software-factory/zookeeper", Version: "3.8.3-1"})
 	// https://catalog.redhat.com/software/containers/ubi8/httpd-24/6065b844aee24f523c207943?q=httpd&architecture=amd64&image=651f274c8ce9242f7bb3e011
 	HTTPDImage          = ImageToString(Image{Path: "registry.access.redhat.com/ubi8/httpd-24", Version: "1-284.1696531168"})
 	NodeExporterImage   = ImageToString(Image{Path: "quay.io/prometheus/node-exporter", Version: "v1.6.1"})
