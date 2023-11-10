@@ -296,13 +296,13 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 	name string, host string, serviceName string, path string,
 	port int, annotations map[string]string, fqdn string, le *sfv1.LetsEncryptSpec) bool {
 
-	var tlsDataReady bool
+	tlsDataReady := true
 	var sslCA, sslCrt, sslKey []byte
 
 	if le == nil {
 		// Letsencrypt config has not been set so we check the `customSSLSecretName` Secret
 		// for any custom TLS data to setup the Route
-		tlsDataReady, sslCA, sslCrt, sslKey = r.extractStaticTLSFromSecret(name, host)
+		sslCA, sslCrt, sslKey = r.extractStaticTLSFromSecret(name, host)
 	} else {
 		// Letsencrypt config has been set so we ensure we set a Certificate via the
 		// cert-manager Issuer and then we'll setup the Route based on the Certificate's Secret
@@ -471,27 +471,16 @@ func GetCustomRouteSSLSecretName(host string) string {
 	return host + "-ssl-cert"
 }
 
-func (r *SFUtilContext) extractStaticTLSFromSecret(name string, host string) (bool, []byte, []byte, []byte) {
+func (r *SFUtilContext) extractStaticTLSFromSecret(name string, host string) ([]byte, []byte, []byte) {
 	var customSSLSecret apiv1.Secret
 	customSSLSecretName := GetCustomRouteSSLSecretName(host)
 
-	// We set a place holder secret to ensure that the Secret is owned (ControllerReference)
-	// Or we adopt the existing secret
 	if !r.GetM(customSSLSecretName, &customSSLSecret) {
-		r.CreateR(&apiv1.Secret{
-			Data:       map[string][]byte{},
-			ObjectMeta: metav1.ObjectMeta{Name: customSSLSecretName, Namespace: r.ns}})
-		return false, nil, nil, nil
+		return nil, nil, nil
 	} else {
-		if len(customSSLSecret.GetOwnerReferences()) == 0 {
-			r.log.V(1).Info("Adopting the route secret to set the owner reference", "secret", customSSLSecretName, "route name", name)
-			if !r.UpdateR(&customSSLSecret) {
-				return false, nil, nil, nil
-			}
-		}
+		// Fetching secret expected TLS Keys content
+		return customSSLSecret.Data["CA"], customSSLSecret.Data["crt"], customSSLSecret.Data["key"]
 	}
-	// Fetching secret expected TLS Keys content
-	return true, customSSLSecret.Data["CA"], customSSLSecret.Data["crt"], customSSLSecret.Data["key"]
 }
 
 func (r *SFUtilContext) extractTLSFromLECertificateSecret(name string, host string, fqdn string, le sfv1.LetsEncryptSpec) (bool, []byte, []byte, []byte) {
