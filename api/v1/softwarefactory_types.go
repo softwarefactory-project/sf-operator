@@ -281,10 +281,26 @@ func GetGitHubConnectionsName(spec *ZuulSpec) []string {
 	return res
 }
 
+func GetGitHubConnectionsSecretName(spec *ZuulSpec) []string {
+	var res []string
+	for _, conn := range spec.GitHubConns {
+		res = append(res, conn.Secrets)
+	}
+	return res
+}
+
 func GetGitLabConnectionsName(spec *ZuulSpec) []string {
 	var res []string
 	for _, conn := range spec.GitLabConns {
 		res = append(res, conn.Name)
+	}
+	return res
+}
+
+func GetGitLabConnectionsSecretName(spec *ZuulSpec) []string {
+	var res []string
+	for _, conn := range spec.GitLabConns {
+		res = append(res, conn.Secrets)
 	}
 	return res
 }

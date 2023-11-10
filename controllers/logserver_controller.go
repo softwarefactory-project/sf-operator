@@ -455,7 +455,6 @@ func (r *LogServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 func (r *LogServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&sfv1.LogServer{}).
-		Owns(&apiv1.Secret{}).
 		Owns(&certv1.Certificate{}).
 		Complete(r)
 }
