@@ -22,7 +22,7 @@ var (
 	BusyboxImage          = ImageToString(Image{Path: "quay.io/software-factory/sf-op-busybox", Version: "1.5-3"})
 	GerritImage           = ImageToString(Image{Path: "quay.io/software-factory/gerrit", Version: "3.6.4-8"})
 	GitServerImage        = ImageToString(Image{Path: "quay.io/software-factory/git-deamon", Version: "2.39.1-3"})
-	SSHDImage             = ImageToString(Image{Path: "quay.io/software-factory/sshd", Version: "0.1-2"})
+	SSHDImage             = ImageToString(Image{Path: "quay.io/software-factory/sshd", Version: "0.1-3"})
 	PurgeLogsImage        = ImageToString(Image{Path: "quay.io/software-factory/purgelogs", Version: "0.2.3-3"})
 	NodepoolLauncherImage = ImageToString(Image{Path: "quay.io/software-factory/nodepool-launcher", Version: nodepoolImageVersion})
 	NodepoolBuilderImage  = ImageToString(Image{Path: "quay.io/software-factory/nodepool-builder", Version: nodepoolImageVersion})
