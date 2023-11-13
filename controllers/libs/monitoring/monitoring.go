@@ -12,6 +12,7 @@ package monitoring
 
 import (
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -178,11 +179,23 @@ func MkAlertRuleChecksumString(alertRule monitoringv1.Rule) string {
 		_for := *alertRule.For
 		checksumable += string(_for)
 	}
-	for k, v := range alertRule.Labels {
-		checksumable += k + "." + v
+
+	var labels []string
+	for label := range alertRule.Labels {
+		labels = append(labels, label)
 	}
-	for k, v := range alertRule.Annotations {
-		checksumable += k + ":" + v
+	sort.Strings(labels)
+	for _, label := range labels {
+		checksumable += label + "." + alertRule.Labels[label]
+	}
+
+	var annotations []string
+	for annotation := range alertRule.Annotations {
+		annotations = append(annotations, annotation)
+	}
+	sort.Strings(annotations)
+	for _, annotation := range annotations {
+		checksumable += annotation + ":" + alertRule.Annotations[annotation]
 	}
 	return checksumable
 }
