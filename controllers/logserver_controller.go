@@ -338,10 +338,13 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
 	annotations := map[string]string{
 		"fqdn":       r.cr.Spec.FQDN,
-		"serial":     "3",
+		"serial":     "4",
 		"httpd-conf": utils.Checksum([]byte(logserverConf)),
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Settings.RetentionDays) +
 			" loopDelay:" + strconv.Itoa(r.cr.Spec.Settings.LoopDelay),
+		"httpd-image":     base.HTTPDImage,
+		"purgelogs-image": base.PurgeLogsImage,
+		"sshd-image":      base.SSHDImage,
 	}
 
 	// do we have an existing deployment?
