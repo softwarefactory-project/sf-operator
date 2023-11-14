@@ -4,9 +4,7 @@
     - setup-variables
     - setup-env
     - sanity-check
-    - setup-namespaces
-    - microshift-workarounds
-    - start-gerrit
+    - sfconfig-dev-prepare
     - role: build-operator-assets
       vars:
         build_bundle: false
@@ -20,5 +18,4 @@
         build_bundle: true
         ci_bundle_img: localhost:5000/sf-operator-bundle:latest
     - upgrade-operator
-    - start-prometheus
     - run-tests

@@ -18,23 +18,11 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/clientcmd"
 	cliapi "k8s.io/client-go/tools/clientcmd/api"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 )
-
-func ensureNamespace(env *utils.ENV, name string) {
-	var ns apiv1.Namespace
-	if err := env.Cli.Get(env.Ctx, client.ObjectKey{Name: name}, &ns); errors.IsNotFound(err) {
-		ns.Name = name
-		utils.CreateR(env, &ns)
-	} else if err != nil {
-		panic(fmt.Errorf("could not get namespace: %s", err))
-	}
-}
 
 func ensureRole(env *utils.ENV, sa string) {
 	var role rbacv1.Role
@@ -189,7 +177,7 @@ func CreateNamespaceForNodepool(sfEnv *utils.ENV, nodepoolContext string, nodepo
 	sa := "nodepool-sa"
 
 	// Ensure resources exists
-	ensureNamespace(&nodepoolEnv, nodepoolNamespace)
+	utils.EnsureNamespace(&nodepoolEnv, nodepoolNamespace)
 	utils.EnsureServiceAccount(&nodepoolEnv, sa)
 	ensureRole(&nodepoolEnv, sa)
 	token := ensureServiceAccountSecret(&nodepoolEnv, sa)
