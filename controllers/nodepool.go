@@ -454,6 +454,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-builder restart
 		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),
 		"serial":                     "10",
+		"image":                      base.NodepoolBuilderImage,
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", base.BusyboxImage)
@@ -609,7 +610,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		"serial":                "6",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),
-		"nodepool-launcher-image":    base.NodepoolLauncherImage,
+		"image":                      base.NodepoolLauncherImage,
 	}
 
 	if r.isConfigRepoSet() {
