@@ -32,6 +32,7 @@ var (
 	HTTPDImage          = ImageToString(Image{Path: "registry.access.redhat.com/ubi8/httpd-24", Version: "1-284.1696531168"})
 	NodeExporterImage   = ImageToString(Image{Path: "quay.io/prometheus/node-exporter", Version: "v1.6.1"})
 	StatsdExporterImage = ImageToString(Image{Path: "quay.io/prometheus/statsd-exporter", Version: "v0.24.0"})
+	FluentBitImage      = ImageToString(Image{Path: "cr.fluentbit.io/fluent/fluent-bit", Version: "2.1.10-debug"})
 )
 
 func ZuulImage(service string) string {

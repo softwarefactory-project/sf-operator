@@ -41,6 +41,20 @@ var nodepoolStatsdMappingConfigTemplate string
 //go:embed static/nodepool/httpd-build-logs-dir.conf
 var httpdBuildLogsDirConfig string
 
+//go:embed static/nodepool/fluentbit/parsers.conf
+var fluentBitForwarderParsersConfig string
+
+//go:embed static/nodepool/fluentbit/fluent-bit.conf.tmpl
+var fluentBitForwarderConfig string
+
+// ansible.cfg and the timestamp callback could be hard-coded in the nodepool builder container.
+//
+//go:embed static/nodepool/ansible/ansible.cfg
+var ansibleConfiguration string
+
+//go:embed static/nodepool/ansible/timestamp.py
+var timestampOutputCallback string
+
 const (
 	nodepoolIdent                = "nodepool"
 	launcherIdent                = nodepoolIdent + "-launcher"
@@ -69,11 +83,47 @@ var nodepoolFluentBitLabels = []logging.FluentBitLabel{
 	},
 }
 
+func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
+	fbForwarderConfig := make(map[string]string)
+	fbForwarderConfig["fluent-bit.conf"], _ = utils.ParseString(
+		fluentBitForwarderConfig,
+		struct {
+			ExtraKeys              []logging.FluentBitLabel
+			FluentBitHTTPInputHost string
+			FluentBitHTTPInputPort string
+		}{[]logging.FluentBitLabel{}, r.cr.Spec.FluentBitLogForwarding.HTTPInputHost, strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort))})
+	fbForwarderConfig["parsers.conf"] = fluentBitForwarderParsersConfig
+	r.EnsureConfigMap("fluentbit-dib-cfg", fbForwarderConfig)
+
+	volume := base.MkVolumeCM("dib-log-forwarder-config",
+		"fluentbit-dib-cfg-config-map")
+
+	volumeMounts := []apiv1.VolumeMount{
+		{
+			Name:      builderIdent,
+			SubPath:   "builds",
+			MountPath: "/watch/",
+		},
+		{
+			Name:      "dib-log-forwarder-config",
+			MountPath: "/fluent-bit/etc/",
+		},
+	}
+	sidecar := logging.CreateFluentBitSideCarContainer("diskimage-builder", nodepoolFluentBitLabels, volumeMounts)
+	annotations["dib-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
+	annotations["dib-fluent-bit-parser"] = utils.Checksum([]byte(fbForwarderConfig["parsers.conf"]))
+	annotations["dib-fluent-bit-image"] = base.FluentBitImage
+	return volume, sidecar
+
+}
+
 func (r *SFController) setNodepoolTooling() {
 	toolingData := make(map[string]string)
 	toolingData["generate-config.sh"] = generateConfigScript
 	toolingData["dib-ansible.py"] = dibAnsibleWrapper
 	toolingData["ssh_config"] = builderSSHConfig
+	toolingData["timestamp.py"] = timestampOutputCallback
+	toolingData["ansible.cfg"] = ansibleConfiguration
 	r.EnsureConfigMap("nodepool-tooling", toolingData)
 }
 
@@ -437,6 +487,18 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 			MountPath: "/etc/nodepool-logging/logging.yaml",
 			ReadOnly:  true,
 		},
+		{
+			Name:      "nodepool-tooling-vol",
+			SubPath:   "ansible.cfg",
+			MountPath: "/etc/ansible/ansible.cfg",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "nodepool-tooling-vol",
+			SubPath:   "timestamp.py",
+			MountPath: "/usr/share/ansible/plugins/callback/timestamp.py",
+			ReadOnly:  true,
+		},
 	}
 
 	nodepoolProvidersSecrets, volumeMount, ready := r.setProviderSecretsVolumeMounts(volumeMount)
@@ -488,6 +550,11 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-builder", r.cr.Spec.FluentBitLogForwarding, nodepoolFluentBitLabels, annotations)
 	nb.Spec.Template.Spec.Containers[0].Env = append(nb.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
+	if r.cr.Spec.FluentBitLogForwarding != nil {
+		fbVolume, fbSidecar := createImageBuildLogForwarderSidecar(r, annotations)
+		nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers, fbSidecar)
+		nb.Spec.Template.Spec.Volumes = append(nb.Spec.Template.Spec.Volumes, fbVolume)
+	}
 
 	nb.Spec.Template.ObjectMeta.Annotations = annotations
 

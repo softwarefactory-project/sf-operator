@@ -18,3 +18,8 @@
   ansible.builtin.shell: "~/bin/logcli query '{application=\"zuul\"}' --quiet --limit 5"
   register: zuul_logs
   failed_when: zuul_logs.stdout|length < 1
+
+- name: Ensure DIB logs are collected by loki
+  ansible.builtin.shell: "~/bin/logcli query '{labels_run=\"dib\"}' --quiet --limit 5"
+  register: dib_logs
+  failed_when: dib_logs.stdout|length < 1

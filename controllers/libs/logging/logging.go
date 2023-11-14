@@ -53,3 +53,17 @@ func SetupLogForwarding(serviceName string, forwarderSpec *v1.FluentBitForwarder
 		return []apiv1.EnvVar{}
 	}
 }
+
+func CreateFluentBitSideCarContainer(serviceName string, extraLabels []FluentBitLabel, volumeMounts []apiv1.VolumeMount) apiv1.Container {
+	container := base.MkContainer("fluentbit", base.FluentBitImage)
+	container.Env = CreateForwarderEnvVars(serviceName, extraLabels)
+	ports := []apiv1.ContainerPort{
+		{
+			Name:          "fb-http-server",
+			ContainerPort: 2020,
+		},
+	}
+	container.Ports = ports
+	container.VolumeMounts = volumeMounts
+	return container
+}
