@@ -1,14 +1,14 @@
 # Getting Started
 
-This section covers the basic tools and the testing environment required to start working on SF-Operator's code base.
+This section covers the basics to get started with the development on the SF-Operator's code base.
 
 ## Table of Contents
 
 1. [Requirements](#requirements)
-1. [Deploy test resources](#deploy-test-resources)
-1. [Run the operator in dev mode](#run-the-operator-in-dev-mode)
-1. [Next steps](#next-steps)
-1. [Experiment a deployment with the standalone mode](#experiment-a-deployment-with-the-standalone-mode)
+1. [Run the operator](#run-the-operator)
+1. [Access the services web UI](#access-the-services-web-ui)
+1. [Delete the development deployment](#delete-the-development-deployment)
+1. [To go further](#to-go-further)
 
 ## Requirements
 
@@ -31,13 +31,6 @@ The following tools are not mandatory, but they will make your life much easier:
 - skopeo
 - buildah
 
-The [operator-sdk](https://sdk.operatorframework.io/) is required to generate/update the OLM bundle, or
-when a new `CRD` needs to be added to the operator. You can install it with `make`:
-
-```sh
-make operator-sdk
-```
-
 ### OpenShift
 
 You need an OpenShift cluster or equivalent on which to run the operator and deploy resources.
@@ -45,20 +38,9 @@ The requirements for the cluster are [the ones listed in the operator section of
 
 You can read about [how to deploy a MicroShift instance here](./microshift.md).
 
-## Deploy test resources
+### Prepare development context
 
-With `sfconfig`, you can quickly deploy a demo deployment consisting of the following:
-
-* a SoftwareFactory resource (Zuul, Nodepool, Log server and backend services)
-* a companion Gerrit service hosting:
-    * the deployment's config repository
-    * a demo repository
-* a companion Prometheus instance for monitoring
-
-The operator will automatically use the current context in your kubeconfig file
-(i.e. whatever cluster `kubectl cluster-info` shows).
-Make sure that your current context is the right one for development. In this example, we are using
-the microshift context:
+`sf-operator` uses the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows). Make sure that your current context is the right one for development. In this example, we are using the `microshift` context:
 
 ```sh
 kubectl config current-context
@@ -72,29 +54,66 @@ Edit the [sfconfig.yaml](./../../sfconfig.yaml) configuration file to your likin
 Then run the `sfconfig` command:
 
 ```sh
-go run ./cli/sfconfig
+./tools/sfconfig dev prepare
 ```
 
-You can monitor the deployment's advancement by running
+This command performs the following tasks:
 
-```sh
-kubectl get pods -w -n sf
-```
+- ensure namespace permissions
+- ensure the installation of the Cert-manager and Prometheus operators
+- ensure the deployment of Gerrit
+- ensure the deployment of Prometheus
+- ensure the checkout of the config and demo-project git repositories in the `deploy` directory
+- ensure the creation of dedicated namespace for nodepool-launcher
 
-The deployment is ready when every pod is either in status "Completed" or "Running".
+The context is now ready to run the sf-operator using the `manager` or the `standalone` modes.
 
-## Run the operator in dev mode
+## Run the operator
 
-To run the operator locally, simply do
+To iterate on the development of the `sf-operator` you can either start the operator using:
+
+- the `manager` mode: the is the default running mode of the operator.
+  The `SoftwareFactory's` 's`CRD` must be installed into the cluster, and the operator watches
+  for a `CR` to reconcile the state in the namespace.
+- the `standalone` mode: does not require the installation of the `CRD`. The `controller-runtime`'s
+  client is used to perform a `SofwareFactory` deployment based on `yaml` definition passed
+  as parameter.
+
+### Run the operator with the manager mode
+
+Run the operator with the following command:
 
 ```sh
 go run ./main.go --namespace sf
 ```
 
+> The command does not return and wait for events to run the reconcile.
+
 You can kill and restart this process every time you modify the code base
 to see your changes applied to the deployed resources.
 
-## Next Steps
+In another terminal, apply the `SoftwareFactory`'s `CR`:
+
+```sh
+kubectl apply -f config/sample/sf_v1_softwarefactory.yaml
+```
+
+Any change on the applied resource re-trigger the reconcile.
+
+### Run the operator in standalone mode
+
+Run the operator with the following command:
+
+```sh
+go run ./main.go standalone --cr config/samples/sf_v1_softwarefactory.yaml --namespace sf
+```
+
+> The command returns when the expected state is applied.
+
+Each change to the `CR`, passed as parameter, will require a new run of the command to `reconcile` the change.
+
+
+## Access the services web UI
 
 You can verify that the services are properly exposed with Firefox (you may have to accept insecure connections when deploying with the default self-signed CA):
 
@@ -106,40 +125,17 @@ firefox https://prometheus.<FQDN>
 firefox https://nodepool.<FQDN>
 ```
 
-Next, you may want to [run the test suite on your modifications](./testing.md).
+## Delete the development deployment
 
-## Experiment a deployment with the Standalone mode
-
-The purpose of this mode is to experiment a Software Factory deployment without the need
-to get the `sf-operators' CRDs` installed on the cluster. CRDs installation requires the `cluster-admin`
-right or the `sf-operator` being installed by your cluster's admin or via `OLM`.
-
-For instance, you might want to first experiment with a sandbox deployment of Software Factory before requesting
-an installation of the sf-operator to your cluster's administrator.
-
-To experiment with a deployment (assuming a valid `kube config` file and the right `context` set), run the following command:
-
-> `sf` namespace must have been created prior to the command below.
-
-```sh
-go run ./main.go standalone --cr config/samples/sf_v1_softwarefactory.yaml --namespace sf
-```
-
-Each change to the `CR`, passed as parameter, will require a new run of the command to `reconcile` the change.
-
-To go further, with that deployment, please refer to [set up a **config** repository](../deployment/config_repository.md).
-
-### Delete the sandbox deployment
-
-This deployment mode creates an owner `ConfigMap` Resource that can deleted to trigger the deletion
-of all SoftwareFactory's Resources created by the `standalone` command.
+Run the deletion with the following command:
 
 ```
-kubectl -n sf delete cm sf-standalone-owner
+./tools/sfconfig sf delete -a
 ```
 
-Then, delete the `PVCs`, with:
+## To go further
 
-```
-./tools/sfconfig sf delete --pvcs
-```
+The run to `sfconfig prepare dev` setups a `Gerrit` instance with a [a **config** repository](../deployment/config_repository.md). This repository can be used to play with the deployment.
+
+
+You may want to [run the test suite on your modifications](./testing.md).

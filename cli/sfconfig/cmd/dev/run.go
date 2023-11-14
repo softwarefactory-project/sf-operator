@@ -15,44 +15,54 @@ import (
 
 	"gopkg.in/yaml.v3"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sfprometheus"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/config"
-	controllers "github.com/softwarefactory-project/sf-operator/controllers"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
+	"github.com/spf13/cobra"
 )
 
-func Run(erase bool) {
+var DevCmd = &cobra.Command{
+	Use:   "dev",
+	Short: "developer utilities",
+	Run:   func(cmd *cobra.Command, args []string) {},
+}
+
+var DevPrepareCmd = &cobra.Command{
+	Use:   "prepare",
+	Short: "prepare dev environment",
+	Run:   func(cmd *cobra.Command, args []string) { Run() },
+}
+
+func init() {
+	DevCmd.AddCommand(DevPrepareCmd)
+}
+
+func Run() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{Development: true})))
 	sfconfig := config.GetSFConfigOrDie()
 	fmt.Println("sfconfig started with: ", sfconfig)
 	cli, err := utils.CreateKubernetesClient("")
 	if err != nil {
-		cli = EnsureCluster(err)
+		panic(err)
 	}
 	env := utils.ENV{
 		Ctx: context.TODO(),
 		Ns:  "sf",
 		Cli: cli,
 	}
-	if erase {
-		fmt.Println("Erasing...")
-		// TODO: remove the sfconfig resource and the pv
-	} else {
-		// TODO: only do gerrit when provision demo is on?
-		gerrit.EnsureGerrit(&env, sfconfig.FQDN)
-		sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN, false)
-		EnsureDemoConfig(&env, &sfconfig)
-		nodepool.CreateNamespaceForNodepool(&env, "", "nodepool", "")
-		EnsureDeployment(&env, &sfconfig)
-	}
+	// TODO: only do gerrit when provision demo is on?
+	EnsureNamespacePermissions(&env)
+	EnsureCertManager(&env)
+	EnsurePrometheusOperator(&env)
+	gerrit.EnsureGerrit(&env, sfconfig.FQDN)
+	sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN, false)
+	EnsureDemoConfig(&env, &sfconfig)
+	nodepool.CreateNamespaceForNodepool(&env, "", "nodepool", "")
+	EnsureCRD()
 }
 
 // EnsureDemoConfig prepares a demo config
@@ -121,107 +131,12 @@ func EnsureRepo(sfconfig *config.SFConfig, apiKey string, name string) {
 	utils.RunCmd("git", "-C", path, "reset", "--hard", "origin/master")
 }
 
-// EnsureCluster recorvers from client creation error
-func EnsureCluster(err error) client.Client {
-	// TODO: perform openstack server reboot?
-	panic(fmt.Errorf("cluster error: %s", err))
-}
-
-// EnsureDeployment ensures a deployment is running.
-func EnsureDeployment(env *utils.ENV, sfconfig *config.SFConfig) {
-	fmt.Println("[+] Checking SF resource...")
-	sf, err := utils.GetSF(env, "my-sf")
-	if sf.Status.Ready {
-		// running the operator should be a no-op
-		RunOperator()
-
-		fmt.Println("Software Factory is already ready!")
-		// TODO: connect to the Zuul API and ensure it is running
-		fmt.Println("Check https://zuul." + sf.Spec.FQDN)
-		os.Exit(0)
-
-	} else if err != nil {
-		if errors.IsNotFound(err) {
-			// The resource does not exist
-			EnsureNamespacePermissions(env)
-			EnsureCR(env, sfconfig)
-			EnsureCertManager(env)
-			EnsurePrometheusOperator(env)
-			RunOperator()
-
-		} else if utils.IsCRDMissing(err) {
-			// The resource definition does not exist
-			EnsureNamespacePermissions(env)
-			EnsureCRD()
-			EnsureCR(env, sfconfig)
-			EnsureCertManager(env)
-			EnsurePrometheusOperator(env)
-			RunOperator()
-
-		} else {
-			// TODO: check what is the actual error and suggest counter measure, for example:
-			// if microshift host is up but service is done, apply the ansible-microshift-role
-			// if kubectl is not connecting ask for reboot or rebuild
-			fmt.Printf("Error %v\n", errors.IsInvalid(err))
-			fmt.Println(err)
-		}
-
-	} else {
-		// Software Factory resource exists, but it is not ready
-		if IsOperatorRunning() {
-			// TODO: check operator status
-			// TODO: check cluster status and/or suggest sf resource delete/recreate
-		} else {
-			EnsureCertManager(env)
-			EnsurePrometheusOperator(env)
-			RunOperator()
-		}
-	}
-
-	// TODO: suggest sfconfig --erase if the command does not succeed.
-	fmt.Println("[+] Couldn't deploy your software factory, sorry!")
-}
-
 func EnsureNamespacePermissions(env *utils.ENV) {
 	// TODO: implement natively
+	// TODO: ensure setup-namespaces role use this to avoid duplication
 	utils.RunCmd("kubectl", "label", "--overwrite", "ns", env.Ns, "pod-security.kubernetes.io/enforce=privileged")
 	utils.RunCmd("kubectl", "label", "--overwrite", "ns", env.Ns, "pod-security.kubernetes.io/enforce-version=v1.24")
 	utils.RunCmd("oc", "adm", "policy", "add-scc-to-user", "privileged", "-z", "default")
-}
-
-func EnsureCR(env *utils.ENV, sfconfig *config.SFConfig) {
-	fmt.Println("[+] Installing CR...")
-	var cr sfv1.SoftwareFactory
-	cr.SetName("my-sf")
-	cr.SetNamespace(env.Ns)
-	cr.Spec.FQDN = sfconfig.FQDN
-	cr.Spec.ConfigLocation = sfv1.ConfigLocationSpec{
-		BaseURL:            "http://gerrit-httpd/",
-		Name:               "config",
-		ZuulConnectionName: "gerrit",
-	}
-	cr.Spec.Zuul.GerritConns = []sfv1.GerritConnection{
-		{
-			Name:     "gerrit",
-			Username: "zuul",
-			Hostname: "gerrit-sshd",
-			Puburl:   "https://gerrit." + sfconfig.FQDN,
-		},
-	}
-
-	cr.Spec.StorageClassName = "topolvm-provisioner"
-	logserverVolumeSize, _ := resource.ParseQuantity("2Gi")
-	cr.Spec.Logserver.Storage.Size = logserverVolumeSize
-	var err error
-	for i := 0; i < 10; i++ {
-		err = env.Cli.Create(env.Ctx, &cr)
-		if err == nil {
-			return
-		}
-		// Sometime the api needs a bit of time to register the CRD
-		time.Sleep(2 * time.Second)
-	}
-	panic(fmt.Errorf("could not install CR: %s", err))
 }
 
 func EnsureCRD() {
@@ -252,14 +167,4 @@ func EnsurePrometheusOperator(env *utils.ENV) {
 	if err != nil {
 		panic(fmt.Errorf("could not install prometheus-operator: %s", err))
 	}
-}
-
-func RunOperator() {
-	fmt.Println("[+] Running the operator...")
-	controllers.Main("sf", ":8081", ":8080", false, true)
-}
-
-func IsOperatorRunning() bool {
-	// TODO: implement
-	return false
 }

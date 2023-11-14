@@ -21,12 +21,4 @@
         ci_bundle_img: localhost:5000/sf-operator-bundle:latest
     - upgrade-operator
     - start-prometheus
-  tasks:
-    - name: Run tests
-      ansible.builtin.include_role:
-        name: run-tests
-        apply:
-          tags:
-            - test_only
-      tags:
-        - always
+    - run-tests

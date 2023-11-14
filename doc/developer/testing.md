@@ -1,30 +1,12 @@
 # Running the test suites locally
 
-Before running the tests, make sure the operator was started in another terminal:
+Tests run in the [project's CI](https://zuul.microshift.softwarefactory-project.io/zuul/t/sf/buildsets) can also be run locally using the `sfconfig runTests` CLI.
 
-```sh
-go run ./main.go --namespace sf
-```
-
-Tests run in the [project's CI](https://softwarefactory-project.io/zuul/t/local/buildsets?project=software-factory%2Fsf-operator) can also be run locally using the `sfconfig` CLI:
-
-```sh
-./tools/sfconfig runTests
-```
-
-This command is a wrapper on top of `ansible-playbook` to run the same Ansible playbook
+> This command is a wrapper on top of `ansible-playbook` to run the same Ansible playbook
 than the CI. This includes steps to deploy the operator if needed.
 
-`runTests` performs a build and installation of the `OLM package` of the `sf-operator` prior to
-running the validation test suite.
-
-If you want to only run the test suite part (the functional tests only, [assuming a SoftwareFactory instance was already deployed](./getting_started.md)), then you can use the `--test-only` option:
-
-```sh
-./tools/sfconfig runTests --test-only
-```
-
 The command accepts extra Ansible parameters to be passed to `ansible-playbook` command.
+
 For instance to override the default `microshift_host` variable:
 
 ```sh
@@ -38,11 +20,44 @@ For example:
 /tools/sfconfig runTests -v
 ```
 
-To run the upgrade sf-operator test scenario, run the command below:
+## Available test suites
+
+### The OLM validation test
+
+The `OLM` test (similar to `sf-operator-olm` in the Zuul CI) performs a build and
+installation of the `OLM package` of the `sf-operator` prior to running the validation
+test suite.
+
+To perform this test, run the following command:
+
+```sh
+./tools/sfconfig runTests
+```
+
+### The OLM upgrade validation test
+
+The `OLM upgrade` test (similar to `sf-operator-upgrade` in the Zuul CI) performs the installation via `OLM` of the current published version of the operator then
+build the current local version and upgrade the currently deployed version.
+Finally, runs the validation test suite.
+
+To run the upgrade sf-operator test scenario, run the following command:
 
 ```sh
 /tools/sfconfig runTests --upgrade
 ```
+
+### The standalone validation test
+
+The `standalone` tests  (similar to `sf-operator-dev-multinode` in the Zuul CI) performs
+a standalone deployment and run the validation test suite.
+
+> This is fastest way to run the test suite when iterating on the development of the `sf-operator`.
+
+```sh
+./tools/sfconfig runTests --standalone
+```
+
+## Fetching test artifacts
 
 To fetch the test suite artifacts (service logs, operator logs, etc) locally, run:
 
