@@ -16,14 +16,18 @@ import (
 	"github.com/fatih/color"
 
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/strings/slices"
 
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
@@ -282,7 +286,47 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 func (r *SoftwareFactoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&sfv1.SoftwareFactory{}).
-		Owns(&corev1.Secret{}).
+		// Watch only specific Secrets resources
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, a client.Object) []reconcile.Request {
+				softwareFactories := sfv1.SoftwareFactoryList{}
+				r.Client.List(ctx, &softwareFactories, &client.ListOptions{
+					Namespace: a.GetNamespace(),
+				})
+				if len(softwareFactories.Items) > 0 {
+					// We take the first one of the list
+					// sf-operator only manages one SoftwareFactory instance by namespace
+					softwareFactory := softwareFactories.Items[0]
+					req := []reconcile.Request{
+						{NamespacedName: types.NamespacedName{
+							Name:      softwareFactory.Name,
+							Namespace: a.GetNamespace(),
+						}}}
+					switch updatedResourceName := a.GetName(); updatedResourceName {
+					case NodepoolProvidersSecretsName:
+						return req
+					case GetCustomRouteSSLSecretName("logserver"):
+						return req
+					case GetCustomRouteSSLSecretName("nodepool"):
+						return req
+					case GetCustomRouteSSLSecretName("zuul"):
+						return req
+					default:
+						// Discover secrets for github and gitlab connections
+						otherSecretNames := []string{}
+						otherSecretNames = append(otherSecretNames, sfv1.GetGitHubConnectionsSecretName(&softwareFactory.Spec.Zuul)...)
+						otherSecretNames = append(otherSecretNames, sfv1.GetGitLabConnectionsSecretName(&softwareFactory.Spec.Zuul)...)
+						if slices.Contains(otherSecretNames, a.GetName()) {
+							return req
+						}
+						// All others secrets must trigger reconcile
+						return []reconcile.Request{}
+					}
+				}
+				return []reconcile.Request{}
+			}),
+		).
 		Owns(&certv1.Certificate{}).
 		Complete(r)
 }
