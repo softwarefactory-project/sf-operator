@@ -66,6 +66,7 @@ func (r *SFController) DeployGitServer() bool {
 
 	annotations := map[string]string{
 		"system-config": utils.Checksum([]byte(preInitScript)),
+		"image":         base.GitServerImage,
 	}
 
 	if r.isConfigRepoSet() {
