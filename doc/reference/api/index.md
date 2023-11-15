@@ -406,7 +406,6 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `storage` _[StorageSpec](#storagespec)_ | Storage-related settings | -|
-| `replicas` _integer_ | How many executor pods to run | -|
 | `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-executor service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
 
 
@@ -427,7 +426,6 @@ _Appears in:_
 | `gitHttpLowSpeedTime` _integer_ | the [git_http_low_speed_time](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_time) parameter | -|
 | `gitTimeout` _integer_ | the [git_timeout](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_timeout) parameter | -|
 | `storage` _[StorageSpec](#storagespec)_ | Storage-related settings | -|
-| `minReplicas` _integer_ | How many merger pods to run | {1}|
 | `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the nodepool launcher service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
 
 

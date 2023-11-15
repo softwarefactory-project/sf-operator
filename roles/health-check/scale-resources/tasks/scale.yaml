@@ -1,22 +1,18 @@
 ---
-- name: "Collect executor log before the scaleup"
+- name: "Collect {{ service.kind }} log before executing the scale command"
   shell: |
     mkdir -p ~/zuul-output/logs/k8s-resources/sf/pod
-    kubectl logs zuul-executor-0 > ~/zuul-output/logs/k8s-resources/sf/pod/zuul-executor-0-zuul-executor-logs0.txt
+    kubectl logs {{ service.kind }}/{{ service.name }} > ~/zuul-output/logs/k8s-resources/sf/pod/{{ service.name }}-0-{{ service.name }}-logs0.txt
 
-- name: "Scale {{ operation }} on statefulset {{ service.name }}"
-  ansible.builtin.include_role:
-    name: "update-custom-resource"
-  vars:
-    cr_spec: "{{ service['scale_' + operation + '_resources'] }}"
+- name: "Scale  on {{ service.kind }} {{ service.name }}"
+  ansible.builtin.command:
+    cmd: kubectl scale {{ service.kind }} {{ service.name }} --replicas {{ service.replicas }}
 
-- name: "Get replica count for {{ service.name }} to operation {{ operation }}"
+- name: "Get replica count for {{ service.name }}"
   ansible.builtin.command: >
-    kubectl get statefulsets {{ service.name }}
+    kubectl get {{ service.kind }} {{ service.name }}
     -o jsonpath='{.status.readyReplicas}'
   register: _scale_ready
-
-- name: Check if replica count is correct
-  fail:
-    msg: "The replica count for service {{ service.name }} is not {{ vars['scale_' + operation + '_replicas'] }}"
-  when: _scale_ready.stdout | int != vars['scale_' + operation + '_replicas']
+  until: _scale_ready.stdout | int == service.replicas
+  retries: "{{ service.replicas }}"
+  delay: 10

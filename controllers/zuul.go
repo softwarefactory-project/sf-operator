@@ -359,13 +359,12 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            base.ZuulImage("zuul-executor"),
-		"replicas":              strconv.Itoa(int(r.cr.Spec.Zuul.Executor.Replicas)),
 		"serial":                "1",
 		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
-	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), int32(r.cr.Spec.Zuul.Executor.Replicas), apiv1.ReadWriteOnce)
+	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), 1, apiv1.ReadWriteOnce)
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-executor")
 	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor", r)
@@ -410,11 +409,10 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            base.ZuulImage(service),
-		"replicas":              strconv.Itoa(int(r.cr.Spec.Zuul.Merger.MinReplicas)),
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
-	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), int32(r.cr.Spec.Zuul.Merger.MinReplicas), apiv1.ReadWriteOnce)
+	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), 1, apiv1.ReadWriteOnce)
 	zm.Spec.Template.ObjectMeta.Annotations = annotations
 	zm.Spec.Template.Spec.Containers = r.mkZuulContainer(service)
 	zm.Spec.Template.Spec.Volumes = mkZuulVolumes(service, r)

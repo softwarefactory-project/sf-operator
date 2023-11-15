@@ -298,10 +298,6 @@ spec:
                         - WARN
                         - DEBUG
                         type: string
-                      replicas:
-                        description: How many executor pods to run
-                        format: int32
-                        type: integer
                       storage:
                         description: Storage-related settings
                         properties:
@@ -501,11 +497,6 @@ spec:
                         - WARN
                         - DEBUG
                         type: string
-                      minReplicas:
-                        default: 1
-                        description: How many merger pods to run
-                        format: int32
-                        type: integer
                       storage:
                         description: Storage-related settings
                         properties:

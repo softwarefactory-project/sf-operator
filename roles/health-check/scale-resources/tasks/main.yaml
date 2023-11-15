@@ -1,5 +1,5 @@
 ---
-- name: "Checking operation {{ operation }}"
+- name: "Scaling resources"
   ansible.builtin.include_tasks:
     file: scale.yaml
   loop:
