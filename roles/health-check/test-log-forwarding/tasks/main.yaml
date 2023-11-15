@@ -15,9 +15,13 @@
   until: "loki_buildinfo.status == 200 and '2.9.2' in loki_buildinfo.content"
 
 - name: Aggregate logs collected by loki
-  ansible.builtin.shell: "~/bin/logcli query '{application=\"zuul\"}' --quiet --limit 5"
-  register: zuul_logs
-  failed_when: zuul_logs.stdout|length < 1
+  ansible.builtin.shell: "~/bin/logcli query '{application=\"{{ item }}\"}' --quiet --limit 5"
+  register: xxx_logs
+  failed_when: xxx_logs.stdout|length < 1
+  loop:
+    - zuul
+    - nodepool
+    - mariadb
 
 - name: Ensure DIB logs are collected by loki
   ansible.builtin.shell: "~/bin/logcli query '{labels_run=\"dib\"}' --quiet --limit 5"

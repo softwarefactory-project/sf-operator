@@ -6,13 +6,16 @@
 package controllers
 
 import (
+	_ "embed"
 	"fmt"
 	"strconv"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +28,9 @@ const (
 	zuulDBConfigSecret = "zuul-db-connection"
 )
 
+//go:embed static/mariadb/fluentbit/fluent-bit.conf.tmpl
+var mariadbFluentBitForwarderConfig string
+
 type ZuulDBOpts struct {
 	Username string
 	Password string
@@ -32,6 +38,37 @@ type ZuulDBOpts struct {
 	Port     int32
 	Database string
 	Params   map[string]string
+}
+
+func createLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
+
+	fbForwarderConfig := make(map[string]string)
+	fbForwarderConfig["fluent-bit.conf"], _ = utils.ParseString(
+		mariadbFluentBitForwarderConfig,
+		struct {
+			ExtraKeys              []logging.FluentBitLabel
+			FluentBitHTTPInputHost string
+			FluentBitHTTPInputPort string
+		}{[]logging.FluentBitLabel{}, r.cr.Spec.FluentBitLogForwarding.HTTPInputHost, strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort))})
+	r.EnsureConfigMap("fluentbit-mariadb-cfg", fbForwarderConfig)
+
+	volume := base.MkVolumeCM("mariadb-log-forwarder-config",
+		"fluentbit-mariadb-cfg-config-map")
+
+	volumeMounts := []apiv1.VolumeMount{
+		{
+			Name:      "mariadb-logs",
+			MountPath: "/watch/",
+		},
+		{
+			Name:      "mariadb-log-forwarder-config",
+			MountPath: "/fluent-bit/etc/",
+		},
+	}
+	sidecar := logging.CreateFluentBitSideCarContainer("mariadb", []logging.FluentBitLabel{}, volumeMounts)
+	annotations["mariadb-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
+	annotations["mariadb-fluent-bit-image"] = base.FluentBitImage
+	return volume, sidecar
 }
 
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
@@ -159,7 +196,28 @@ func (r *SFController) DeployMariadb() bool {
 		base.MkEmptyDirVolume("mariadb-run"),
 	}
 
-	r.GetOrCreate(&sts)
+	annotations := map[string]string{
+		"serial": "1",
+	}
+	if r.cr.Spec.FluentBitLogForwarding != nil {
+		fbVolume, fbSidecar := createLogForwarderSidecar(r, annotations)
+		sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, fbSidecar)
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, fbVolume)
+	}
+	sts.Spec.Template.ObjectMeta.Annotations = annotations
+
+	current := appsv1.StatefulSet{}
+	if r.GetM(mariadbIdent, &current) {
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("mariaDB changed, rollout pods ...")
+			current.Spec = sts.DeepCopy().Spec
+			r.UpdateR(&current)
+			return false
+		}
+	} else {
+		current := sts
+		r.CreateR(&current)
+	}
 
 	servicePorts := []int32{mariadbPort}
 	srv := base.MkServicePod(mariadbIdent, r.ns, "mariadb-0", servicePorts, mariaDBPortName)
@@ -167,7 +225,7 @@ func (r *SFController) DeployMariadb() bool {
 
 	var zuulDBSecret apiv1.Secret
 
-	if r.IsStatefulSetReady(&sts) {
+	if r.IsStatefulSetReady(&current) {
 		zuulDBSecret = apiv1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      zuulDBConfigSecret,
@@ -181,7 +239,7 @@ func (r *SFController) DeployMariadb() bool {
 		}
 	}
 
-	isReady := r.IsStatefulSetReady(&sts) && zuulDBSecret.Data != nil
+	isReady := r.IsStatefulSetReady(&current) && zuulDBSecret.Data != nil
 
 	conds.UpdateConditions(&r.cr.Status.Conditions, mariadbIdent, isReady)
 
