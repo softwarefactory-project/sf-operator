@@ -21,6 +21,7 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
@@ -49,6 +50,13 @@ var zuulLoggingConfig string
 
 // Common config sections for all Zuul components
 var commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
+
+var zuulFluentBitLabels = []logging.FluentBitLabel{
+	{
+		Key:   "SERVICE",
+		Value: "zuul",
+	},
+}
 
 func isStatefulset(service string) bool {
 	return service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger"
@@ -233,22 +241,44 @@ func (r *SFController) setZuulLoggingfile() {
 	if r.cr.Spec.Zuul.Merger.LogLevel != "" {
 		zuulMergerLogLevel = r.cr.Spec.Zuul.Web.LogLevel
 	}
+	var forwardLogs = false
+	var inputBaseURL = ""
+	if r.cr.Spec.FluentBitLogForwarding != nil {
+		forwardLogs = true
+		inputBaseURL = "http://" + r.cr.Spec.FluentBitLogForwarding.HTTPInputHost + ":" + strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort))
+	}
 
-	loggingData["zuul-executor-logging.yaml"], _ = utils.ParseString(zuulLoggingConfig, struct {
-		LogLevel string
-	}{string(zuulExecutorLogLevel)})
+	loggingData["zuul-executor-logging.yaml"], _ = utils.ParseString(
+		zuulLoggingConfig,
+		logging.PythonTemplateLoggingParams{
+			LogLevel:    string(zuulExecutorLogLevel),
+			ForwardLogs: forwardLogs,
+			BaseURL:     inputBaseURL,
+		})
 
-	loggingData["zuul-scheduler-logging.yaml"], _ = utils.ParseString(zuulLoggingConfig, struct {
-		LogLevel string
-	}{string(zuulSchedulerLogLevel)})
+	loggingData["zuul-scheduler-logging.yaml"], _ = utils.ParseString(
+		zuulLoggingConfig,
+		logging.PythonTemplateLoggingParams{
+			LogLevel:    string(zuulSchedulerLogLevel),
+			ForwardLogs: forwardLogs,
+			BaseURL:     inputBaseURL,
+		})
 
-	loggingData["zuul-web-logging.yaml"], _ = utils.ParseString(zuulLoggingConfig, struct {
-		LogLevel string
-	}{string(zuulWebLogLevel)})
+	loggingData["zuul-web-logging.yaml"], _ = utils.ParseString(
+		zuulLoggingConfig,
+		logging.PythonTemplateLoggingParams{
+			LogLevel:    string(zuulWebLogLevel),
+			ForwardLogs: forwardLogs,
+			BaseURL:     inputBaseURL,
+		})
 
-	loggingData["zuul-merger-logging.yaml"], _ = utils.ParseString(zuulLoggingConfig, struct {
-		LogLevel string
-	}{string(zuulMergerLogLevel)})
+	loggingData["zuul-merger-logging.yaml"], _ = utils.ParseString(
+		zuulLoggingConfig,
+		logging.PythonTemplateLoggingParams{
+			LogLevel:    string(zuulMergerLogLevel),
+			ForwardLogs: forwardLogs,
+			BaseURL:     inputBaseURL,
+		})
 
 	r.EnsureConfigMap("zuul-logging", loggingData)
 
@@ -306,6 +336,10 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 	}
 
 	zuulContainers := r.mkZuulContainer("zuul-scheduler")
+
+	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-scheduler", r.cr.Spec.FluentBitLogForwarding, zuulFluentBitLabels, annotations)
+	zuulContainers[0].Env = append(zuulContainers[0].Env, extraLoggingEnvVars...)
+
 	statsdSidecar := monitoring.MkStatsdExporterSideCarContainer("zuul", "statsd-config", relayAddress)
 
 	zuulContainers = append(zuulContainers, statsdSidecar)
@@ -321,6 +355,7 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 	r.EnsureConfigMap("zuul-scheduler-tooling", schedulerToolingData)
 
 	zsVolumes := mkZuulVolumes("zuul-scheduler", r)
+
 	zsReplicas := int32(1)
 	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), zsReplicas, apiv1.ReadWriteOnce)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
@@ -365,9 +400,14 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	}
 
 	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), 1, apiv1.ReadWriteOnce)
-	ze.Spec.Template.ObjectMeta.Annotations = annotations
 	ze.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-executor")
 	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor", r)
+
+	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-executor", r.cr.Spec.FluentBitLogForwarding, zuulFluentBitLabels, annotations)
+	ze.Spec.Template.Spec.Containers[0].Env = append(ze.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
+
+	ze.Spec.Template.ObjectMeta.Annotations = annotations
+
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
 	ze.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessHTTPProbe("/health/live", zuulPrometheusPort)
 	ze.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
@@ -413,9 +453,14 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 	}
 
 	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), 1, apiv1.ReadWriteOnce)
-	zm.Spec.Template.ObjectMeta.Annotations = annotations
 	zm.Spec.Template.Spec.Containers = r.mkZuulContainer(service)
 	zm.Spec.Template.Spec.Volumes = mkZuulVolumes(service, r)
+
+	extraLoggingEnvVars := logging.SetupLogForwarding(service, r.cr.Spec.FluentBitLogForwarding, zuulFluentBitLabels, annotations)
+	zm.Spec.Template.Spec.Containers[0].Env = append(zm.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
+
+	zm.Spec.Template.ObjectMeta.Annotations = annotations
+
 	zm.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
 	zm.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessHTTPProbe("/health/live", zuulPrometheusPort)
 	zm.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
@@ -456,9 +501,14 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	}
 
 	zw := base.MkDeployment("zuul-web", r.ns, "")
-	zw.Spec.Template.ObjectMeta.Annotations = annotations
 	zw.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-web")
 	zw.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-web", r)
+
+	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-web", r.cr.Spec.FluentBitLogForwarding, zuulFluentBitLabels, annotations)
+	zw.Spec.Template.Spec.Containers[0].Env = append(zw.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
+
+	zw.Spec.Template.ObjectMeta.Annotations = annotations
+
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/api/info", zuulWEBPort)

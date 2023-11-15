@@ -2,36 +2,63 @@ version: 1
 formatters:
   console:
     class: 'zuul.lib.logutil.MultiLineFormatter'
-    format: '%(levelname)7s %(name)s: %(message)s'
+    format: '%(asctime)s %(levelname)s %(name)s: %(message)s'
+{{- if .ForwardLogs }}
+  logforward:
+    format: '%(asctime)s %(levelname)s %(name)s: %(message)s'
+{{ end }}
 handlers:
   console:
     class: logging.StreamHandler
     formatter: console
     level: {{.LogLevel}}
     stream: ext://sys.stdout
+{{- if .ForwardLogs }}
+  logforward:
+    class: sfExtras.SimpleFluentBitHTTPInputHandler
+    level: {{ .LogLevel }}
+    formatter: logforward
+    url: '{{ .BaseURL }}/zuul'
+    env_prefix: K8S_
+{{ end }}
 loggers:
   zuul.GerritConnection.io:
     handlers:
       - console
+{{- if .ForwardLogs }}
+      - logforward
+{{ end }}
     level: {{ .LogLevel }}
     propagate: 0
   sqlalchemy.engine:
     handlers:
       - console
+{{- if .ForwardLogs }}
+      - logforward
+{{ end }}
     level: {{ .LogLevel }}
     propagate: 0
   connection:
     handlers:
       - console
+{{- if .ForwardLogs }}
+      - logforward
+{{ end }}
     level: {{ .LogLevel }}
     propagate: 0
   zuul:
     handlers:
       - console
+ {{- if .ForwardLogs }}
+      - logforward
+{{ end }}
     level: {{ .LogLevel }}
     propagate: 0
 root:
   handlers:
     - console
+{{- if .ForwardLogs }}
+    - logforward
+{{ end }}
   level: {{ .LogLevel }}
 

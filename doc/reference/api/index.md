@@ -34,6 +34,21 @@ _Appears in:_
 | `zuul-connection-name` _string_ | Name of the Zuul connection through which Zuul can handle git events on the config repository | -|
 
 
+#### FluentBitForwarderSpec
+
+
+
+
+
+_Appears in:_
+- [SoftwareFactorySpec](#softwarefactoryspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `httpInputHost` _string_ | The Host for the Fluent Bit HTTP Input to forward logs to. | -|
+| `httpInputPort` _integer_ | The (optional) port on which to forward logs to, defaults to 80. | {80}|
+
+
 #### GerritConnection
 
 
@@ -346,6 +361,7 @@ _Appears in:_
 | --- | --- | --- |
 | `fqdn` _string_ | The fully qualified domain name to use with the deployment. Relevant services will be served at https://`service`.`FQDN` | -|
 | `letsEncrypt` _[LetsEncryptSpec](#letsencryptspec)_ | LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS | -|
+| `FluentBitLogForwarding` _[FluentBitForwarderSpec](#fluentbitforwarderspec)_ | Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http) | -|
 | `storageClassName` _string_ | Default storage class to use by Persistent Volume Claims | -|
 | `config-location` _[ConfigLocationSpec](#configlocationspec)_ | Config repository spec | -|
 | `zuul` _[ZuulSpec](#zuulspec)_ | Zuul service spec | -|
