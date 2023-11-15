@@ -1,0 +1,7 @@
+---
+- hosts: "{{ hostname | default('controller') }}"
+  tasks:
+    - name: Ensure ansible-lint is installed
+      shell: type ansible-galaxy || pip install --user ansible-core
+    - name: install required collections
+      shell: ansible-galaxy collection install community.general community.crypto ansible.posix kubernetes.core

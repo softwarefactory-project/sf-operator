@@ -111,11 +111,13 @@
     name: sf-operator-ansible-lint
     description: Lint Ansible playbooks located in playbooks directory
     timeout: 900
+    pre-run: playbooks/ansible-dependencies.yaml
     parent: ansible-lint
     vars:
       # NOTE(dpawlik): We don't need to add roles dir, due there is a symlink
       # done in playbooks that is related to roles dir.
       ansible_lint_playbooks_dir: playbooks
+      ansible_lint_roles_dir: roles
       ansible_lint_check_all: false
     nodeset:
       nodes:
