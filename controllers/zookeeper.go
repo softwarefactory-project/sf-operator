@@ -65,6 +65,7 @@ func (r *SFController) DeployZookeeper() bool {
 		"ok":     utils.Checksum([]byte(zookeeperOk)),
 		"ready":  utils.Checksum([]byte(zookeeperReady)),
 		"run":    utils.Checksum([]byte(zookeepeRun)),
+		"image":  base.ZookeeperImage,
 		"serial": "1",
 	}
 
