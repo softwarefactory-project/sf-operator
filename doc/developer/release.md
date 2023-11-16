@@ -1,6 +1,6 @@
 # How to release the sf-operator
 
-A CI job named [sf-operator-publish-olm-bundle-image](https://softwarefactory-project.io/zuul/t/local/builds?job_name=sf-operator-publish-olm-bundle-image&skip=0) runs in the `release` pipeline.
+A CI job named [sf-operator-publish-olm-bundle-image](https://zuul.microshift.softwarefactory-project.io/zuul/t/local/builds?job_name=sf-operator-publish-olm-bundle-image&skip=0) runs in the `release` pipeline.
 The `release` pipeline is triggered when a git tag is created on the `sf-operator` repository.
 This job builds and pushes the following assets to Quay.io:
 
