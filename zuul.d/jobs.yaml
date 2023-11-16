@@ -55,16 +55,16 @@
       registry: "quay.io"
       username: "software-factory+zuul"
       password: !encrypted/pkcs1-oaep
-        - Gibh081fnfZqnPcUm99jpj5VlqQdRXSorujRCo1WdwbJ8041elXo8QYbHih2u1jIUbxUg
-          VD1vFVPzXBt10ajdJv8WA6Q6vLnRVuZhB7CUEZgD67Z4WAT8SbMoCTVOpOH4FZhd06rYr
-          0qSBh89B5KSGX1rwqFbaSjbtFcLCGfkyZdkAUaCLDwrUykM0DW8PDVGn8dJYTNvu2Ck5W
-          h1OGjFFwjF4Busy/rb/OJx1ndFafZAMvaxloXX8q0vEPsbKx2ba8jlac2kSd2XrXOaTFG
-          btIXhUgYNpqqF47bPeZ/HoYMuwdPRSPK0L96c55VFRkEN54K813GOFIP+Iyv/XVDBjzlj
-          7cz+ec+pMVsbulrF2vO8ZghTLrU89XT/8kRPYakGFBwKtZBZ5h2URSFG1VLWo6RZJe0aO
-          m3sLKB0/lgpPnpvXhdM+ZAwgmdNEM4BPHrnG1VWTWKl6uFMcRbxeO7sQXpn1OMDgGM2cN
-          XbIqXUos+IaxB7+jhN62RvDGRMCptiJdN1VF7swklM/MFAdewEXDtageyHoU55SDhLJ+7
-          OwHgAoLXvsYs6wSkKVL/1LsUmwtutFmNT13xBQrRJf3SgeUWlKtTTfBiBHytIiiVudN2n
-          OKoPhslAqI3QDy/3lR2A8Rj0tqFxr1YjNw7kQKhf6Sbcc00jXkpuAew9tPzy28=
+        - kysFA16AGr8xwIw4dfax+1TXRLoi2DO4LDKp6SMUYlnWHIcykfjnaduOpdEY6yc6AWqsF
+          274Bm5qSGnEPRlDgGSPWz5kJKeyCnZgK9BVqkSBI8Ks6BdQPzGaOuMXOi3zIuuR9i2VYy
+          YScM3WPfVeSmilBn7k2P5YU1gLcwubbYUT4G7OHIIFxIise+2pGNbZlN7yGtlefdK9cMi
+          jOoq1cE9KpeJLOJFO1PbqteVMqMzMDhwS42HkBRailKb9UiHAlvMGjIFWvKESvTwhU+0b
+          Fx16NCrNYvk7mESHoCkn9TG23yEoNhCX7CozOlRuzxrn4xQBZWw8EbCWvBFOL3+FMyjpc
+          gRPOFWLVOk9K+4abjySN+EfWn+Ktfqd0WyYI3zr7kBJRSj/qcdiQoi8GwppbEXp9hG5B3
+          /fJrudyJUNhcWOPufZbuNOPH8OIFGsSg0s90qSKmM70ObsktMXYqeKIrfRwaMBAnoYukq
+          WhsJAHl4xKCip9xl4yguf4Ojt1KharJtvpNhalKNymN1ApztcuZm+ynZxsNMlHZPzWtxN
+          zS2m/j9+5pRBx4wHSNrwB+aSSHd++B8qv+ykjgH3sCENe/AS6vp0+PXEKKXYxz0fSy8jc
+          mv1Ir3I4Ooql0op1zl56c2tgdkguRH4koVYlP12Mj6+obxBmJ2LDnU17c6yQIg=
 
 # Images publication job
 - job:
