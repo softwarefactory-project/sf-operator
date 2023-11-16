@@ -162,8 +162,8 @@ func (r *SFController) DeployMariadb() bool {
 	r.GetOrCreate(&sts)
 
 	servicePorts := []int32{mariadbPort}
-	srv := base.MkServicePod("mariadb", r.ns, "mariadb-0", servicePorts, mariaDBPortName)
-	r.GetOrCreate(&srv)
+	srv := base.MkServicePod(mariadbIdent, r.ns, "mariadb-0", servicePorts, mariaDBPortName)
+	r.EnsureService(&srv)
 
 	var zuulDBSecret apiv1.Secret
 
