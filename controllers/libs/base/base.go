@@ -213,9 +213,10 @@ func mkServicePorts(ports []int32, portName string) []apiv1.ServicePort {
 		servicePorts = append(
 			servicePorts,
 			apiv1.ServicePort{
-				Name:     fmt.Sprintf("%s-%d", portName, p),
-				Protocol: apiv1.ProtocolTCP,
-				Port:     p,
+				Name:       fmt.Sprintf("%s-%d", portName, p),
+				Protocol:   apiv1.ProtocolTCP,
+				Port:       p,
+				TargetPort: intstr.FromInt(int(p)),
 			})
 	}
 	return servicePorts

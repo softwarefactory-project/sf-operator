@@ -234,10 +234,10 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	r.EnsureConfigMap(logserverIdent, cmData)
 
 	// Create service exposed by logserver
-	servicePorts := []int32{httpdPort, sshdPort, sfmonitoring.NodeExporterPort}
-	svc := base.MkService(
-		logserverIdent, r.ns, logserverIdent, servicePorts, logserverIdent)
-	r.GetOrCreate(&svc)
+	svc := base.MkServicePod(
+		logserverIdent, r.ns, logserverIdent+"-0",
+		[]int32{httpdPort, sshdPort, sfmonitoring.NodeExporterPort}, logserverIdent)
+	r.EnsureService(&svc)
 
 	volumeMounts := []apiv1.VolumeMount{
 		{

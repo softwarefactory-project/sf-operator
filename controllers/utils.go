@@ -11,6 +11,9 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -242,6 +245,32 @@ func (r *SFUtilContext) EnsureSSHKeySecret(name string) {
 		r.log.V(1).Info("Creating ssh key", "name", name)
 		secret := base.MkSSHKeySecret(name, r.ns)
 		r.CreateR(&secret)
+	}
+}
+
+// EnsureService ensures a Service exists
+// The Service is updated if needed
+func (r *SFUtilContext) EnsureService(service *apiv1.Service) {
+	var current apiv1.Service
+	spsAsString := func(sps []apiv1.ServicePort) string {
+		s := []string{}
+		for _, p := range current.Spec.Ports {
+			s = append(s, []string{strconv.Itoa(int(p.Port)), p.Name, p.TargetPort.String(), string(p.Protocol)}...)
+		}
+		sort.Strings(s)
+		return strings.Join(s[:], "")
+	}
+	name := service.GetName()
+	if !r.GetM(name, &current) {
+		r.log.V(1).Info("Creating service", "name", name)
+		r.CreateR(service)
+	} else {
+		if !reflect.DeepEqual(current.Spec.Selector, service.Spec.Selector) ||
+			spsAsString(current.Spec.Ports) != spsAsString(service.Spec.Ports) {
+			r.log.V(1).Info("Updating service", "name", name)
+			current.Spec = *service.Spec.DeepCopy()
+			r.UpdateR(&current)
+		}
 	}
 }
 
