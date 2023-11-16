@@ -1,0 +1,5 @@
+---
+- name: Setup nodepool namespace
+  command: "tools/sfconfig create-namespace-for-nodepool"
+  args:
+    chdir: "{{ zuul.project.src_dir }}"

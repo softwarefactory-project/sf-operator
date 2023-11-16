@@ -7,6 +7,9 @@
     - name: setup-variables
     - name: run-operator-standalone
       when: "{{ mode == 'standalone' }}"
+    - name: setup-nodepool-ns
+    - name: run-operator-standalone
+      when: "{{ mode == 'standalone' }}"
     - name: utils/manage-hosts
     - name: utils/get-gerrit-admin-user-api-key
     - name: utils/config-repo-get-or-reset

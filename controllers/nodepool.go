@@ -366,9 +366,13 @@ func (r *SFController) ensureNodepoolPromRule(cloudsYaml map[string]interface{})
 	return true
 }
 
-func (r *SFController) setProviderSecretsVolumeMounts(volumeMount []apiv1.VolumeMount) (apiv1.Secret, []apiv1.VolumeMount, bool) {
-	var nodepoolProvidersSecrets apiv1.Secret
-	if r.GetM(NodepoolProvidersSecretsName, &nodepoolProvidersSecrets) {
+func (r *SFController) setProviderSecretsVolumeMounts() ([]apiv1.VolumeMount, apiv1.Secret, bool) {
+	var (
+		nodepoolProvidersSecrets apiv1.Secret
+		volumeMount              []apiv1.VolumeMount
+	)
+	exists := r.GetM(NodepoolProvidersSecretsName, &nodepoolProvidersSecrets)
+	if exists {
 		if data, ok := nodepoolProvidersSecrets.Data["clouds.yaml"]; ok && len(data) > 0 {
 			volumeMount = append(volumeMount, apiv1.VolumeMount{
 				Name:      "nodepool-providers-secrets",
@@ -386,13 +390,20 @@ func (r *SFController) setProviderSecretsVolumeMounts(volumeMount []apiv1.Volume
 				ReadOnly:  true,
 			})
 		}
-		return nodepoolProvidersSecrets, volumeMount, true
-	} else {
-		return nodepoolProvidersSecrets, volumeMount, false
 	}
+	return volumeMount, nodepoolProvidersSecrets, exists
 }
 
-func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, nodepoolStatsdMappingConfig string) bool {
+func getProvidersSecretsVersion(providersSecrets apiv1.Secret, providersSecretsExists bool) string {
+	providersSecretsVersion := "0"
+	if providersSecretsExists {
+		providersSecretsVersion = string(providersSecrets.ResourceVersion)
+	}
+	return providersSecretsVersion
+}
+
+func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, nodepoolStatsdMappingConfig string,
+	initialVolumeMounts []apiv1.VolumeMount, providersSecrets apiv1.Secret, providerSecretsExists bool) bool {
 
 	r.EnsureSSHKeySecret("nodepool-builder-ssh-key")
 
@@ -444,7 +455,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		statsdExporterVolume,
 	}
 
-	volumeMount := []apiv1.VolumeMount{
+	volumeMounts := append(initialVolumeMounts, []apiv1.VolumeMount{
 		{
 			Name:      "zookeeper-client-tls",
 			MountPath: "/tls/client",
@@ -499,24 +510,18 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 			MountPath: "/usr/share/ansible/plugins/callback/timestamp.py",
 			ReadOnly:  true,
 		},
-	}
-
-	nodepoolProvidersSecrets, volumeMount, ready := r.setProviderSecretsVolumeMounts(volumeMount)
-	if !ready {
-		return false
-	}
+	}...)
 
 	annotations := map[string]string{
-		"nodepool.yaml":          utils.Checksum([]byte(generateConfigScript)),
-		"nodepool-logging.yaml":  utils.Checksum([]byte(loggingConfig)),
-		"dib-ansible.py":         utils.Checksum([]byte(dibAnsibleWrapper)),
-		"ssh_config":             utils.Checksum([]byte(builderSSHConfig)),
-		"buildlogs_httpd_config": utils.Checksum([]byte(httpdBuildLogsDirConfig)),
-		"statsd_mapping":         utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
-		// When the Secret ResourceVersion field change (when edited) we force a nodepool-builder restart
-		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),
-		"serial":                     "10",
+		"nodepool.yaml":              utils.Checksum([]byte(generateConfigScript)),
+		"nodepool-logging.yaml":      utils.Checksum([]byte(loggingConfig)),
+		"dib-ansible.py":             utils.Checksum([]byte(dibAnsibleWrapper)),
+		"ssh_config":                 utils.Checksum([]byte(builderSSHConfig)),
+		"buildlogs_httpd_config":     utils.Checksum([]byte(httpdBuildLogsDirConfig)),
+		"statsd_mapping":             utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		"image":                      base.NodepoolBuilderImage,
+		"nodepool-providers-secrets": getProvidersSecretsVersion(providersSecrets, providerSecretsExists),
+		"serial":                     "11",
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", base.BusyboxImage)
@@ -545,7 +550,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	nb.Spec.Template.Spec.Volumes = volumes
 	nb.Spec.Template.Spec.Containers[0].Command = []string{"/usr/local/bin/dumb-init", "--",
 		"/usr/local/bin/nodepool-builder", "-f", "-l", "/etc/nodepool-logging/logging.yaml"}
-	nb.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMount
+	nb.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 	nb.Spec.Template.Spec.Containers[0].Env = r.getNodepoolConfigEnvs()
 
 	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-builder", r.cr.Spec.FluentBitLogForwarding, nodepoolFluentBitLabels, annotations)
@@ -608,7 +613,8 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	return isReady
 }
 
-func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume, nodepoolProvidersSecrets apiv1.Secret, nodepoolStatsdMappingConfig string) bool {
+func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume, nodepoolStatsdMappingConfig string,
+	initialVolumeMounts []apiv1.VolumeMount, providersSecrets apiv1.Secret, providerSecretsExists bool) bool {
 
 	r.setNodepoolTooling()
 
@@ -635,7 +641,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		statsdExporterVolume,
 	}
 
-	volumeMount := []apiv1.VolumeMount{
+	volumeMounts := append(initialVolumeMounts, []apiv1.VolumeMount{
 		{
 			Name:      "zookeeper-client-tls",
 			MountPath: "/tls/client",
@@ -654,22 +660,17 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 			SubPath:   "logging.yaml",
 			MountPath: "/etc/nodepool-logging/logging.yaml",
 		},
-		configScriptVolumeMount,
-	}
-
-	nodepoolProvidersSecrets, volumeMount, ready := r.setProviderSecretsVolumeMounts(volumeMount)
-	if !ready {
-		return false
-	}
+		configScriptVolumeMount}...,
+	)
 
 	annotations := map[string]string{
 		"nodepool.yaml":         utils.Checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml": utils.Checksum([]byte(loggingConfig)),
 		"statsd_mapping":        utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
-		"serial":                "6",
+		"serial":                "7",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
-		"nodepool-providers-secrets": string(nodepoolProvidersSecrets.ResourceVersion),
 		"image":                      base.NodepoolLauncherImage,
+		"nodepool-providers-secrets": getProvidersSecretsVersion(providersSecrets, providerSecretsExists),
 	}
 
 	if r.isConfigRepoSet() {
@@ -679,7 +680,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	nl := base.MkDeployment("nodepool-launcher", r.ns, "")
 
 	container := base.MkContainer("launcher", base.NodepoolLauncherImage)
-	container.VolumeMounts = volumeMount
+	container.VolumeMounts = volumeMounts
 	container.Command = []string{"/usr/local/bin/dumb-init", "--",
 		"/usr/local/bin/nodepool-launcher", "-f", "-l", "/etc/nodepool-logging/logging.yaml"}
 	container.Env = r.getNodepoolConfigEnvs()
@@ -746,13 +747,7 @@ func (r *SFController) DeployNodepool() map[string]bool {
 	deployments := make(map[string]bool)
 
 	// We need to initialize the providers secrets early
-	var v []apiv1.VolumeMount
-	var nodepoolProvidersSecrets, _, ready = r.setProviderSecretsVolumeMounts(v)
-	if !ready {
-		deployments[launcherIdent] = false
-		deployments[builderIdent] = false
-		return deployments
-	}
+	var volumeMounts, nodepoolProvidersSecrets, providerSecretsResourceExists = r.setProviderSecretsVolumeMounts()
 
 	cloudsData, ok := nodepoolProvidersSecrets.Data["clouds.yaml"]
 	var cloudsYaml = make(map[string]interface{})
@@ -771,7 +766,9 @@ func (r *SFController) DeployNodepool() map[string]bool {
 	r.EnsureNodepoolPodMonitor()
 	r.ensureNodepoolPromRule(cloudsYaml)
 
-	deployments[launcherIdent] = r.DeployNodepoolLauncher(statsdVolume, nodepoolProvidersSecrets, nodepoolStatsdMappingConfig)
-	deployments[builderIdent] = r.DeployNodepoolBuilder(statsdVolume, nodepoolStatsdMappingConfig)
+	deployments[launcherIdent] = r.DeployNodepoolLauncher(
+		statsdVolume, nodepoolStatsdMappingConfig, volumeMounts, nodepoolProvidersSecrets, providerSecretsResourceExists)
+	deployments[builderIdent] = r.DeployNodepoolBuilder(statsdVolume, nodepoolStatsdMappingConfig,
+		volumeMounts, nodepoolProvidersSecrets, providerSecretsResourceExists)
 	return deployments
 }
