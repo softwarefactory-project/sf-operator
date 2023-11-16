@@ -26,37 +26,41 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
 
-const zuulWEBPort = 9000
+const (
+	zuulWEBPort = 9000
 
-const zuulExecutorPortName = "finger"
-const zuulExecutorPort = 7900
+	zuulExecutorPortName = "finger"
+	zuulExecutorPort     = 7900
 
-const zuulPrometheusPort = 9090
-const zuulPrometheusPortName = "zuul-metrics"
+	zuulPrometheusPort     = 9090
+	zuulPrometheusPortName = "zuul-metrics"
+)
 
-var zuulStatsdExporterPortName = monitoring.GetStatsdExporterPort("zuul")
+var (
+	zuulStatsdExporterPortName = monitoring.GetStatsdExporterPort("zuul")
 
-//go:embed static/zuul/zuul.conf
-var zuulDotconf string
+	//go:embed static/zuul/zuul.conf
+	zuulDotconf string
 
-//go:embed static/zuul/statsd_mapping.yaml
-var zuulStatsdMappingConfig string
+	//go:embed static/zuul/statsd_mapping.yaml
+	zuulStatsdMappingConfig string
 
-//go:embed static/zuul/generate-tenant-config.sh
-var zuulGenerateTenantConfig string
+	//go:embed static/zuul/generate-tenant-config.sh
+	zuulGenerateTenantConfig string
 
-//go:embed static/zuul/logging.yaml.tmpl
-var zuulLoggingConfig string
+	//go:embed static/zuul/logging.yaml.tmpl
+	zuulLoggingConfig string
 
-// Common config sections for all Zuul components
-var commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
+	// Common config sections for all Zuul components
+	commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
 
-var zuulFluentBitLabels = []logging.FluentBitLabel{
-	{
-		Key:   "COMPONENT",
-		Value: "zuul",
-	},
-}
+	zuulFluentBitLabels = []logging.FluentBitLabel{
+		{
+			Key:   "COMPONENT",
+			Value: "zuul",
+		},
+	}
+)
 
 func isStatefulset(service string) bool {
 	return service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger"
@@ -307,7 +311,7 @@ func mkZuulGitHubSecretsVolumes(r *SFController) []apiv1.Volume {
 	return gitConnectionSecretVolumes
 }
 
-func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg *ini.File) bool {
+func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	authSections := utils.IniGetSectionNamesByPrefix(cfg, "auth")
 	sections = append(sections, authSections...)
@@ -345,7 +349,7 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 	zuulContainers = append(zuulContainers, statsdSidecar)
 
 	var setAdditionalContainers = func(sts *appsv1.StatefulSet) {
-		sts.Spec.Template.Spec.InitContainers = append(initContainers, r.mkInitSchedulerConfigContainer())
+		sts.Spec.Template.Spec.InitContainers = []apiv1.Container{r.mkInitSchedulerConfigContainer()}
 		sts.Spec.Template.Spec.Containers = zuulContainers
 	}
 
@@ -545,11 +549,11 @@ func (r *SFController) EnsureZuulComponentsFrontServices() {
 
 }
 
-func (r *SFController) EnsureZuulComponents(initContainers []apiv1.Container, cfg *ini.File) bool {
+func (r *SFController) EnsureZuulComponents(cfg *ini.File) bool {
 
 	zuulServices := map[string]bool{}
 	r.setZuulLoggingfile()
-	zuulServices["scheduler"] = r.EnsureZuulScheduler(initContainers, cfg)
+	zuulServices["scheduler"] = r.EnsureZuulScheduler(cfg)
 	zuulServices["executor"] = r.EnsureZuulExecutor(cfg)
 	zuulServices["web"] = r.EnsureZuulWeb(cfg)
 	zuulServices["merger"] = r.EnsureZuulMerger(cfg)
@@ -907,7 +911,6 @@ func (r *SFController) DeployZuulSecrets() {
 }
 
 func (r *SFController) DeployZuul() bool {
-	initContainers := []apiv1.Container{}
 	dbSettings := apiv1.Secret{}
 	if !r.GetM(zuulDBConfigSecret, &dbSettings) {
 		r.log.Info("Waiting for db connection secret")
@@ -1006,7 +1009,7 @@ func (r *SFController) DeployZuul() bool {
 	r.EnsureZuulPodMonitor()
 	r.ensureZuulPromRule()
 
-	return r.EnsureZuulComponents(initContainers, cfgINI) && r.setupZuulIngress()
+	return r.EnsureZuulComponents(cfgINI) && r.setupZuulIngress()
 }
 
 func (r *SFController) runZuulInternalTenantReconfigure() bool {
