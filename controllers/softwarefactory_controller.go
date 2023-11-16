@@ -119,7 +119,20 @@ func (r *SFController) DeployLogserverResource() bool {
 	return logserverController.DeployLogserver().Ready
 }
 
+// cleanup ensures removal of legacy resources
+func (r *SFController) cleanup() {
+	r.DeleteR(&corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.ns,
+			Name:      BuildLogsHttpdPortName,
+		},
+	})
+}
+
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
+
+	r.cleanup()
+
 	services := map[string]bool{}
 	services["Zuul"] = false
 
