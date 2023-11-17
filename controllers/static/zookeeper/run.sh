@@ -98,7 +98,7 @@ do
     echo "server.$i=$NAME-$((i-1)).$DOMAIN:$ZK_SERVER_PORT:$ZK_ELECTION_PORT" >> "$ZK_CONFIG_FILE"
 done
 
-cp /zookeeper/conf/logback.xml /conf
+cp /config-scripts/logback.xml /conf
 
 if [ -n "$JMXDISABLE" ]
 then
