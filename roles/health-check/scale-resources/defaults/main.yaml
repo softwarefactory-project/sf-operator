@@ -3,3 +3,6 @@ scaling_services:
   - name: zuul-executor
     kind: sts
     replicas: 2
+  - name: zuul-merger
+    kind: sts
+    replicas: 2

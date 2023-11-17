@@ -39,10 +39,10 @@
   failed_when: "'running' not in item.state"
   loop: "{{ _components.json['executor'] }}"
 
-- name: Check if, at least, one Zuul Merger Instances Exists, fails otherwise
+- name: Check if, two Zuul Merger Instances Exist, fails otherwise
   ansible.builtin.fail:
-    msg: "Zuul Merger has no instances"
-  when: "_components.json['merger'] | length  == 0"
+    msg: "Zuul Merger must have 2 replicas"
+  when: "_components.json['merger'] | length != 2"
 
 - name: Check if Zuul Merger Components are Running
   ansible.builtin.fail:

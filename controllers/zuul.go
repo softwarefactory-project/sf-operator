@@ -471,7 +471,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 	if r.GetM(service, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("zuul-merger configuration changed, rollout zuul-merger pods ...")
-			current.Spec = zm.DeepCopy().Spec
+			current.Spec.Template = *zm.Spec.Template.DeepCopy()
 			r.UpdateR(&current)
 			return false
 		}
