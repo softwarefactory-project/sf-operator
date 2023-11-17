@@ -75,8 +75,7 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Create the deployment
-	replicas := int32(1)
-	dep := r.mkStatefulSet(gsIdent, base.GitServerImage, r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), replicas, apiv1.ReadWriteOnce)
+	dep := r.mkStatefulSet(gsIdent, base.GitServerImage, r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), apiv1.ReadWriteOnce)
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 		{

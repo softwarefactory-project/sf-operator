@@ -356,8 +356,7 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 
 	zsVolumes := mkZuulVolumes("zuul-scheduler", r)
 
-	zsReplicas := int32(1)
-	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), zsReplicas, apiv1.ReadWriteOnce)
+	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), apiv1.ReadWriteOnce)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	setAdditionalContainers(&zs)
 	zs.Spec.Template.Spec.Volumes = zsVolumes
@@ -399,7 +398,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
-	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), 1, apiv1.ReadWriteOnce)
+	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), apiv1.ReadWriteOnce)
 	ze.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-executor")
 	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor", r)
 
@@ -452,7 +451,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
-	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), 1, apiv1.ReadWriteOnce)
+	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), apiv1.ReadWriteOnce)
 	zm.Spec.Template.Spec.Containers = r.mkZuulContainer(service)
 	zm.Spec.Template.Spec.Volumes = mkZuulVolumes(service, r)
 

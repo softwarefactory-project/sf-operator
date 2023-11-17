@@ -125,8 +125,7 @@ func (r *SFController) DeployMariadb() bool {
 	passName := "mariadb-root-password"
 	r.EnsureSecretUUID(passName)
 
-	replicas := int32(1)
-	sts := r.mkStatefulSet(mariadbIdent, base.MariabDBImage, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), replicas, apiv1.ReadWriteOnce)
+	sts := r.mkStatefulSet(mariadbIdent, base.MariabDBImage, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce)
 
 	sts.Spec.VolumeClaimTemplates = append(
 		sts.Spec.VolumeClaimTemplates,

@@ -386,26 +386,22 @@ func getStorageClassname(storageClassName string) string {
 }
 
 // Create a default statefulset.
-func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, replicas int32, accessMode apiv1.PersistentVolumeAccessMode, nameSuffix ...string) appsv1.StatefulSet {
+func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, accessMode apiv1.PersistentVolumeAccessMode, nameSuffix ...string) appsv1.StatefulSet {
 	serviceName := name
 	if nameSuffix != nil {
 		serviceName = name + "-" + nameSuffix[0]
 	}
 
-	if replicas == 0 {
-		replicas = 1
-	}
-
 	container := base.MkContainer(name, image)
 	pvc := base.MkPVC(name, r.ns, storageConfig, accessMode)
-	return base.MkStatefulset(name, r.ns, replicas, serviceName, container, pvc)
+	return base.MkStatefulset(name, r.ns, 1, serviceName, container, pvc)
 }
 
 // Create a default headless statefulset.
 func (r *SFUtilContext) mkHeadlessSatefulSet(
 	name string, image string, storageConfig base.StorageConfig,
-	replicas int32, accessMode apiv1.PersistentVolumeAccessMode) appsv1.StatefulSet {
-	return r.mkStatefulSet(name, image, storageConfig, replicas, accessMode, "headless")
+	accessMode apiv1.PersistentVolumeAccessMode) appsv1.StatefulSet {
+	return r.mkStatefulSet(name, image, storageConfig, accessMode, "headless")
 }
 
 func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {

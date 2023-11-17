@@ -474,10 +474,9 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		configScriptVolumeMount,
 	}
 
-	replicas := int32(1)
 	nb := r.mkStatefulSet(
 		builderIdent, base.NodepoolBuilderImage, r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage),
-		replicas, apiv1.ReadWriteOnce)
+		apiv1.ReadWriteOnce)
 
 	nb.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nb.Spec.Template.Spec.Volumes = volumes
