@@ -21,16 +21,9 @@ var extravars []string
 // runTestsCmd represents the runTests command
 var runTestsCmd = &cobra.Command{
 	Use:   "runTests",
-	Short: "Run playbook/main.yaml",
-	Long: `Run playbook/main.yaml playbook, it used for CI job
-and can be used locally
-
-Run test_only tag
-
-./tools/sfconfig runTests --test-only
-	`,
+	Short: "Run the test suite",
 	Run: func(cmd *cobra.Command, args []string) {
-		testOnly, _ := cmd.Flags().GetBool("test-only")
+		testOnly, _ := cmd.Flags().GetBool("standalone")
 		upgrade, _ := cmd.Flags().GetBool("upgrade")
 		verbose, _ := cmd.Flags().GetBool("v")
 		debug, _ := cmd.Flags().GetBool("vvv")
@@ -59,7 +52,7 @@ Run test_only tag
 		} else {
 			playbookYAML = "playbooks/main.yaml"
 			if testOnly {
-				ansiblePlaybookOptions.Tags = "test_only"
+				ansiblePlaybookOptions.Tags = "standalone"
 				ansiblePlaybookOptions.AddExtraVar("mode", "standalone")
 			} else {
 				ansiblePlaybookOptions.AddExtraVar("mode", "olm")
@@ -101,7 +94,7 @@ func varListToMap(varsList []string) (map[string]interface{}, error) {
 func init() {
 	rootCmd.AddCommand(runTestsCmd)
 	runTestsCmd.Flags().StringSliceVarP(&extravars, "extra-var", "e", []string{}, "Set extra variables, the format of each variable must be <key>=<value>")
-	runTestsCmd.Flags().BoolP("test-only", "t", false, "run test_only")
+	runTestsCmd.Flags().BoolP("standalone", "s", false, "run standalone test")
 	runTestsCmd.Flags().BoolP("upgrade", "u", false, "run upgrade test")
 	runTestsCmd.Flags().Bool("v", false, "run ansible in verbose mode")
 	runTestsCmd.Flags().Bool("vvv", false, "run ansible in debug mode")

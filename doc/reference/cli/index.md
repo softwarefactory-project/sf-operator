@@ -302,7 +302,7 @@ Flags:
 |----------|------|-------|----|
 |  -e, --extra-var |string |  Set extra variables, the format of each variable must be `key`=`value`|-|
 |  -h, --help      | boolean       |  help for runTests|-|
-|  -t, --test-only |   boolean     |  run tests only - it is assumed the operator is running and a SoftwareFactory resource is already deployed |-|
+|  -s, --standalone |   boolean     |  run standalone test|-|
 |  -u, --upgrade  |   boolean      |  run upgrade test|-|
 |      --v        |boolean         |  run ansible in verbose mode|-|
 |      --vvv      |  boolean      |   run ansible in debug mode|-|

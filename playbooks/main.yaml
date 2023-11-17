@@ -37,6 +37,6 @@
         name: run-tests
         apply:
           tags:
-            - test_only
+            - standalone
       tags:
         - always

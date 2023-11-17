@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/softwarefactory-project/sf-operator/cli"
 	bootstrap "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/bootstrap-tenant-config-repo"
+	cli "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/dev"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/operator"
@@ -40,13 +40,8 @@ var cfgFile string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "sfconfig",
-	Short: "sfconfig cli tool",
-	Long: `sfconfig command line tool
-	This tool is used to deploy and run tests for sf-operator`,
-	Run: func(cmd *cobra.Command, args []string) {
-		erase, _ := cmd.Flags().GetBool("erase")
-		cli.Run(erase)
-	},
+	Short: "Toolbox for sf-operator",
+	Run:   func(cmd *cobra.Command, args []string) {},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -72,9 +67,9 @@ func init() {
 	rootCmd.AddCommand(sfprometheus.PrometheusCmd)
 	rootCmd.AddCommand(nodepool.ProvidersSecretsCmd)
 	rootCmd.AddCommand(zuul.ZuulCmd)
-
 	rootCmd.AddCommand(bootstrap.BootstrapTenantConfigRepoCmd)
-	rootCmd.Flags().BoolP("erase", "", false, "Erase data")
+	rootCmd.AddCommand(cli.DevCmd)
+
 }
 
 // initConfig reads in config file and ENV variables if set.
