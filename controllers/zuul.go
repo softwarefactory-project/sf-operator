@@ -399,7 +399,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
-	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), 1, apiv1.ReadWriteOnce)
+	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), 1, apiv1.ReadWriteOnce)
 	ze.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-executor")
 	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor", r)
 
