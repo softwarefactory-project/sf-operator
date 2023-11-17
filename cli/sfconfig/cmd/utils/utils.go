@@ -49,6 +49,16 @@ func RunCmd(cmdName string, args ...string) {
 	}
 }
 
+func EnsureNamespace(env *ENV, name string) {
+	var ns apiv1.Namespace
+	if err := env.Cli.Get(env.Ctx, client.ObjectKey{Name: name}, &ns); errors.IsNotFound(err) {
+		ns.Name = name
+		CreateR(env, &ns)
+	} else if err != nil {
+		panic(fmt.Errorf("could not get namespace: %s", err))
+	}
+}
+
 func EnsureServiceAccount(env *ENV, name string) {
 	var sa apiv1.ServiceAccount
 	if !GetM(env, name, &sa) {

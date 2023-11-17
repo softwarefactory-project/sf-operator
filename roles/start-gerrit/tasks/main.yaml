@@ -1,5 +1,0 @@
----
-- name: Deploy companion Gerrit
-  command: "tools/sfconfig gerrit --deploy"
-  args:
-    chdir: "{{ zuul.project.src_dir }}"

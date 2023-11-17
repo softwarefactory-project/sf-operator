@@ -1,0 +1,5 @@
+---
+- name: Run the sfconfig dev prepare
+  command: "tools/sfconfig dev prepare"
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
