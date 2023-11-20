@@ -41,12 +41,16 @@ func RunMake(arg string) {
 }
 
 func RunCmd(cmdName string, args ...string) {
+	if err := RunCmdNoPanic(cmdName, args...); err != nil {
+		panic(fmt.Errorf("%s failed: %w", args, err))
+	}
+}
+
+func RunCmdNoPanic(cmdName string, args ...string) error {
 	cmd := exec.Command(cmdName, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		panic(fmt.Errorf("%s failed: %w", args, err))
-	}
+	return cmd.Run()
 }
 
 func EnsureNamespace(env *ENV, name string) {

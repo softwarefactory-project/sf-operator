@@ -60,6 +60,7 @@ func Run() {
 	EnsureCertManager(&env)
 	EnsurePrometheusOperator(&env)
 	gerrit.EnsureGerrit(&env, sfconfig.FQDN)
+	EnsureGerritAccess(sfconfig.FQDN)
 	sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN, false)
 	EnsureDemoConfig(&env, &sfconfig)
 	nodepool.CreateNamespaceForNodepool(&env, "", "nodepool", "")
@@ -114,6 +115,27 @@ func PushRepoIfNeeded(path string) {
 		fmt.Println("[+] Pushing new config...")
 		utils.RunCmd("git", "-C", path, "commit", "-m", "Automatic update", "-a")
 		utils.RunCmd("git", "-C", path, "push", "origin")
+	}
+}
+
+func EnsureGerritAccess(fqdn string) {
+	fmt.Println("[+] Wait for Gerrit reachable via the Route ...")
+	params := []string{"--fail", "-k", fmt.Sprintf("https://gerrit.%s/projects/", fqdn)}
+	delay := 20 * time.Second
+	attempts := 0
+	for {
+		if attempts >= 3 {
+			panic("Unable to access Gerrit via the Route !")
+		}
+		err := utils.RunCmdNoPanic("curl", params...)
+		if err != nil {
+			attempts += 1
+			fmt.Println("Gerrit not available via the Route. Retrying in", delay.String(), "seconds ...")
+			time.Sleep(delay)
+		} else {
+			fmt.Println("Gerrit available via the Route. Continue")
+			break
+		}
 	}
 }
 
