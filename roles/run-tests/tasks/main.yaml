@@ -25,6 +25,7 @@
     - name: config-update-zuul
     - name: config-update-nodepool-launcher
     - name: config-update-nodepool-builder
+    - name: test-nodepool-providers-secrets
     - name: pod-spawning
     - name: test-volumestats-sidecar
     - name: expand-volume
