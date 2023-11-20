@@ -57,26 +57,6 @@
     msg: Unexpected value for nodepool_launch_ready
   when: metric_dict.nlr | float < 1
 
-- name: set a fake clouds.yaml configuration
-  ansible.builtin.copy:
-    src: clouds.yaml
-    dest: /tmp/test-clouds.yaml
-
-- name: configure clouds.yaml in sfconfig.yaml
-  ansible.builtin.lineinfile:
-    path: "{{ zuul.project.src_dir }}/sfconfig.yaml"
-    regexp: "^  clouds_file:"
-    line: "  clouds_file: /tmp/test-clouds.yaml"
-
-- name: Upload clouds secrets to nodepool
-  command: "tools/sfconfig nodepool-providers-secrets --update"
-  args:
-    chdir: "{{ zuul.project.src_dir }}"
-
-- name: Wait for secrets to be updated
-  ansible.builtin.include_role:
-    name: "health-check/check-sf-resource-ready"
-
 - name: Ensure statsd mapping config has custom mappings from clouds.yaml
   ansible.builtin.command: kubectl get configmap np-statsd-config-map -o jsonpath='{.data}'
   register: statsd_mappings

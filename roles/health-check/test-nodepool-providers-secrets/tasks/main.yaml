@@ -1,0 +1,41 @@
+---
+- name: Prepare a minimal sfconfig.yaml file
+  ansible.builtin.copy:
+    content: "{{ sf_config_yaml | to_yaml }}"
+    dest: /tmp/sfconfig.yaml
+
+- name: Dump current secrets from nodepool
+  command: >
+    tools/sfconfig --config /tmp/sfconfig.yaml nodepool-providers-secrets --dump
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: set a fake clouds.yaml configuration
+  ansible.builtin.copy:
+    src: clouds.yaml
+    dest: /tmp/clouds.yaml
+
+- name: Upload clouds secrets to nodepool
+  command: >
+    tools/sfconfig --config /tmp/sfconfig.yaml nodepool-providers-secrets --update
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+- name: Wait for secrets to be updated
+  ansible.builtin.include_role:
+    name: "health-check/check-sf-resource-ready"
+
+- name: "Check that clouds.yaml available in nodepool-builder"
+  ansible.builtin.shell: |
+    kubectl exec nodepool-builder-0 -- bash -c "ls /var/lib/nodepool/.config/openstack/clouds.yaml"
+
+- name: Fetch nodepool-launcher Pod info
+  kubernetes.core.k8s_info:
+    kind: Pod
+    label_selectors:
+      - "run = nodepool-launcher"
+  register: nodepool_launcher_info
+
+- name: "Check that clouds.yaml available in nodepool-launcher containers"
+  ansible.builtin.shell: |
+    kubectl exec {{ nodepool_launcher_info.resources[0].metadata.name }} -- bash -c "ls /var/lib/nodepool/.config/openstack/clouds.yaml"

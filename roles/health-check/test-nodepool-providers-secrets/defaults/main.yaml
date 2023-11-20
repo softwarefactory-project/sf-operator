@@ -1,0 +1,6 @@
+---
+kubeconfig: "~/.kube/config"
+sf_config_yaml:
+  nodepool:
+    clouds_file: /tmp/clouds.yaml
+    kube_file: /tmp/kubeconfig.yaml
