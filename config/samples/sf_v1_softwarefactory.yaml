@@ -4,22 +4,3 @@ metadata:
   name: my-sf
 spec:
   fqdn: "sfop.me"
-  config-location:
-    base-url: "http://gerrit-httpd/"
-    name: config
-    zuul-connection-name: gerrit
-  zuul:
-    gerritconns:
-      - name: gerrit
-        username: zuul
-        hostname: gerrit-sshd
-        puburl: "https://gerrit.sfop.me"
-    executor:
-      logLevel: DEBUG
-  logserver:
-    loopDelay: 5
-    retentionDays: 30
-    storage:
-      size: 2Gi
-  # NOTE: use "crc-csi-hostpath-provisioner" in CRC deployment
-  storageClassName: "topolvm-provisioner"
