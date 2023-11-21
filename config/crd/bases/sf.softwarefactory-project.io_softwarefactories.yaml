@@ -397,6 +397,31 @@ spec:
                       - name
                       type: object
                     type: array
+                  gitconns:
+                    description: The list of Git-based connections to add to Zuul's
+                      configuration
+                    items:
+                      description: Describes a Zuul connection using the [git driver](https://zuul-ci.org/docs/zuul/latest/drivers/git.html#connection-configuration).
+                        When an optional parameter is not specified then Zuul's defaults
+                        apply
+                      properties:
+                        baseurl:
+                          description: '[baseurl](https://zuul-ci.org/docs/zuul/latest/drivers/git.html#attr-%3Cgit%20connection%3E.baseurl)'
+                          pattern: ^(https?|git):\/\/.+$
+                          type: string
+                        name:
+                          description: How the connection will be named in Zuul's
+                            configuration and appear in zuul-web
+                          type: string
+                        pollDelay:
+                          description: '[poolDelay](https://zuul-ci.org/docs/zuul/latest/drivers/git.html#attr-%3Cgit%20connection%3E.poll_delays)'
+                          format: int32
+                          type: integer
+                      required:
+                      - baseurl
+                      - name
+                      type: object
+                    type: array
                   githubconns:
                     description: The list of GitHub-based connections to add to Zuul's
                       configuration
