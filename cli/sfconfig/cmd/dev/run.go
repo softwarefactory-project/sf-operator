@@ -22,6 +22,7 @@ import (
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sfprometheus"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/config"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/zuulcf"
 	"github.com/spf13/cobra"
 )
 
@@ -84,11 +85,11 @@ func SetupTenant(configPath string, tenantName string) {
 	}
 	tenantFile := filepath.Join(tenantDir, "main.yaml")
 
-	tenantData := utils.TenantConfig{
+	tenantData := zuulcf.TenantConfig{
 		{
-			Tenant: utils.TenantBody{
+			Tenant: zuulcf.TenantBody{
 				Name: tenantName,
-				Source: utils.TenantConnectionSource{
+				Source: zuulcf.TenantConnectionSource{
 					"gerrit": {
 						ConfigProjects:    []string{"config"},
 						UntrustedProjects: []string{"demo-project"},

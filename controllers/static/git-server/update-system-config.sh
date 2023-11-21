@@ -17,45 +17,8 @@ git config user.email "admin@${FQDN}"
 mkdir -p zuul.d playbooks/base playbooks/config
 
 cat << EOF > zuul.d/jobs-base.yaml
-- job:
-    name: base
-    parent: null
-    description: The base job.
-    pre-run: playbooks/base/pre.yaml
-    post-run:
-      - playbooks/base/post.yaml
-    roles:
-      - zuul: zuul/zuul-jobs
-    timeout: 1800
-    attempts: 3
-    secrets:
-      - site_sflogs
-
-- semaphore:
-    name: semaphore-config-update
-    max: 1
-
-- job:
-    name: config-check
-    parent: base
-    final: true
-    description: Validate the config repo.
-    run: playbooks/config/check.yaml
-    nodeset:
-      nodes: []
-
-# TODO: setup allowed-project rules
-- job:
-    name: config-update
-    parent: base
-    final: true
-    description: Deploy config repo update.
-    run: playbooks/config/update.yaml
-    semaphore: semaphore-config-update
-    secrets:
-      - k8s_config
-    nodeset:
-      nodes: []
+# Semaphore
+# JobBase
 
 EOF
 
