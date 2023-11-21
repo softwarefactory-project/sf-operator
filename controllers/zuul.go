@@ -423,7 +423,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	if r.GetM("zuul-executor", &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("zuul-executor configuration changed, rollout zuul-executor pods ...")
-			current.Spec = ze.DeepCopy().Spec
+			current.Spec.Template = *ze.Spec.Template.DeepCopy()
 			r.UpdateR(&current)
 			return false
 		}

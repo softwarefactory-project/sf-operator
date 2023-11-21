@@ -34,7 +34,7 @@
     - name: test-cert-manager-letsencrypt
       when: "{{ mode == 'olm' }}"
     - name: zuul-client-api
-    - name: zuul-components
     - name: test-monitoring
+    - name: zuul-components
   loop_control:
     loop_var: role

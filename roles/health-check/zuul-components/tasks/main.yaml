@@ -28,10 +28,10 @@
   failed_when: "'running' not in item.state"
   loop: "{{ _components.json['scheduler'] }}"
 
-- name: Check if, at least, one Zuul Executor Instance Exists, fails otherwise
+- name: Check if, two Zuul Executor Instances Exist, fails otherwise
   ansible.builtin.fail:
-    msg: "Zuul Executor has no instances"
-  when: "_components.json['executor'] | length  == 0"
+    msg: "Zuul Executor must have 2 replicas"
+  when: "_components.json['executor'] | length != 2"
 
 - name: Check if Zuul Executor Instances are Running
   ansible.builtin.fail:
