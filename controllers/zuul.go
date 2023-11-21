@@ -866,11 +866,15 @@ func (r *SFController) AddGitLabConnection(cfg *ini.File, conn sfv1.GitLabConnec
 
 }
 
-func AddGitConnection(cfg *ini.File, name string, baseurl string) {
+func AddGitConnection(cfg *ini.File, name string, baseurl string, poolDelay int32) {
 	section := "connection " + name
 	cfg.NewSection(section)
 	cfg.Section(section).NewKey("driver", "git")
 	cfg.Section(section).NewKey("baseurl", baseurl)
+	// When poolDelay is set to a positive value, then we add the setting or Zuul default will apply
+	if poolDelay > 0 {
+		cfg.Section(section).NewKey("poll_delay", strconv.Itoa(int(poolDelay)))
+	}
 }
 
 func AddWebClientSection(cfg *ini.File) {
@@ -881,10 +885,10 @@ func AddWebClientSection(cfg *ini.File) {
 
 func (r *SFController) AddDefaultConnections(cfg *ini.File) {
 	// Internal git-server for system config
-	AddGitConnection(cfg, "git-server", "git://git-server/")
+	AddGitConnection(cfg, "git-server", "git://git-server/", 0)
 
 	// Git connection to opendev.org
-	AddGitConnection(cfg, "opendev.org", "https://opendev.org/")
+	AddGitConnection(cfg, "opendev.org", "https://opendev.org/", 0)
 
 	// Add Web Client for zuul-client
 	AddWebClientSection(cfg)
@@ -934,6 +938,10 @@ func (r *SFController) DeployZuul() bool {
 
 	for _, conn := range r.cr.Spec.Zuul.GitLabConns {
 		r.AddGitLabConnection(cfgINI, conn)
+	}
+
+	for _, conn := range r.cr.Spec.Zuul.GitConns {
+		AddGitConnection(cfgINI, conn.Name, conn.Baseurl, conn.PollDelay)
 	}
 
 	// Add default connections

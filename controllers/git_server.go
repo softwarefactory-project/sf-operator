@@ -33,20 +33,14 @@ var preInitScriptTemplate string
 // This function creates dummy connections to be used during the config-check
 func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
 	var sb strings.Builder
+	connectionNames := sfv1.GetGerritConnectionsName(spec)
+	connectionNames = append(connectionNames, sfv1.GetGitHubConnectionsName(spec)...)
+	connectionNames = append(connectionNames, sfv1.GetGitLabConnectionsName(spec)...)
+	connectionNames = append(connectionNames, sfv1.GetGitConnectionsName(spec)...)
 	sb.WriteString("\n")
-	for _, name := range sfv1.GetGerritConnectionsName(spec) {
+	for _, name := range connectionNames {
 		sb.WriteString(fmt.Sprintf("[connection %s]\n", name))
 		sb.WriteString("driver=git\n")
-		sb.WriteString("baseurl=localhost\n\n")
-	}
-	for _, name := range sfv1.GetGitHubConnectionsName(spec) {
-		sb.WriteString(fmt.Sprintf("[connection %s]\n", name))
-		sb.WriteString("driver=gitlab\n")
-		sb.WriteString("baseurl=localhost\n\n")
-	}
-	for _, name := range sfv1.GetGitLabConnectionsName(spec) {
-		sb.WriteString(fmt.Sprintf("[connection %s]\n", name))
-		sb.WriteString("driver=github\n")
 		sb.WriteString("baseurl=localhost\n\n")
 	}
 	return sb.String()

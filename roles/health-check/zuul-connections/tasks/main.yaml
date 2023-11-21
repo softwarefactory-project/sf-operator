@@ -11,6 +11,9 @@
     dummy_gitlabconns:
       - name: dummy-gitlab-conn
         secrets: gitlabconnectionsecret
+    dummy_gitconns:
+      - name: dummy-git-conn
+        baseurl: git://test
 
 - name: Create GitHub Connection Secret
   kubernetes.core.k8s:
@@ -62,6 +65,7 @@
             gerritconns: "{{ gerritconns_orig + dummy_gerritconn }}"
             githubconns: "{{ dummy_githubconns }}"
             gitlabconns: "{{ dummy_gitlabconns }}"
+            gitconns: "{{ dummy_gitconns }}"
 
     - name: Wait for the new Zuul connections to appear in the Zuul API
       ansible.builtin.uri:
@@ -74,6 +78,7 @@
         - "'dummy-gerrit-conn' in this.content"
         - "'dummy-github-conn' in this.content"
         - "'dummy-gitlab-conn' in this.content"
+        - "'dummy-git-conn' in this.content"
       retries: "{{ retries }}"
       delay: "{{ delay }}"
 
@@ -86,6 +91,7 @@
             gerritconns: "{{ gerritconns_orig }}"
             githubconns: []
             gitlabconns: []
+            gitconns: []
 
     - name: Wait for the dummy Zuul connections to be removed from the API
       ansible.builtin.uri:
@@ -98,6 +104,7 @@
         - "'dummy-gerrit-conn' not in this.content"
         - "'dummy-github-conn' not in this.content"
         - "'dummy-gitlab-conn' not in this.content"
+        - "'dummy-git-conn' not in this.content"
       retries: "{{ retries }}"
       delay: "{{ delay }}"
 
