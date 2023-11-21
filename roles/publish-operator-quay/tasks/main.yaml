@@ -25,7 +25,7 @@
 
 - name: "Set Tag Version"
   ansible.builtin.set_fact:
-    tag_version: "v{{ zuul.tag }}"
+    tag_version: "{{ zuul.tag }}"
 
 - name: Generate the Operator's Bundle files
   community.general.make:

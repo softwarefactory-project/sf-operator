@@ -17,6 +17,6 @@ please contact us on [our matrix channel](https://matrix.to/#/#softwarefactory-p
 Here are the commands to run (assuming releasing HEAD to 0.0.6 version):
 
 ```sh
-git tag 0.0.6 HEAD
-git push gerrit 0.0.6
+git tag v0.0.13 HEAD
+git push gerrit v0.0.13
 ```
