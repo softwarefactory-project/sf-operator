@@ -5,7 +5,7 @@
     curl -sk https://{{ zuul_host }}/api/tenant/internal/status | jq -r '.pipelines[].change_queues[].heads[][].jobs[]' | jq -rc 'select(.name == "config-update")' | jq -r '.uuid'
   register: _job_uuid
   until: _job_uuid.stdout != "" and "null" not in _job_uuid.stdout
-  retries: 60
+  retries: 180
   delay: 1
   tags:
     - skip_ansible_lint
