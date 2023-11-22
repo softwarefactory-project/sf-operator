@@ -34,11 +34,17 @@
 - name: Fetch a basic Zuul metric exporter by statsd
   ansible.builtin.shell: curl -k https://{{ prometheus_host }}/api/v1/query?query=zuul_executors_online | jq '.data.result[0].value[1]'
   register: zeo
+  until: zeo.stdout != "" and "null" not in zeo.stdout
+  retries: 60
+  delay: 1
 
   # config-update-nodepool-builder should at least trigger one tick for readiness.
 - name: Fetch a basic Nodepool metric exported by statsd
   ansible.builtin.shell: curl -k https://{{ prometheus_host }}/api/v1/query?query=nodepool_launch_ready | jq '.data.result[0].value[1]'
   register: nlr
+  until: nlr.stdout != "" and "null" not in nlr.stdout
+  retries: 60
+  delay: 1
 
 # Use a dictionary to trick Ansible into casting metrics to int/float
 - set_fact:
