@@ -302,6 +302,33 @@ spec:
                     description: The name of the default authenticator to use if no
                       authenticator is bound explicitly to a tenant with zuul-web
                     type: string
+                  elasticsearchconns:
+                    description: The list of ElasticSearch-based connections to add
+                      to Zuul's configuration
+                    items:
+                      description: Describes a Zuul connection using the [ElasticSearch
+                        driver](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#connection-configuration).
+                        When an optional parameter is not specified then Zuul's defaults
+                        apply
+                      properties:
+                        name:
+                          description: How the connection will be named in Zuul's
+                            configuration and appear in zuul-web
+                          type: string
+                        uri:
+                          description: '[uri](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.uri)'
+                          type: string
+                        useSSL:
+                          description: '[useSSL](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.use_ssl)'
+                          type: boolean
+                        verifyCerts:
+                          description: '[verifyCerts](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.verify_certs)'
+                          type: boolean
+                      required:
+                      - name
+                      - uri
+                      type: object
+                    type: array
                   executor:
                     description: Configuration of the executor microservices
                     properties:

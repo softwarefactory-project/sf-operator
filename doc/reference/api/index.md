@@ -34,6 +34,23 @@ _Appears in:_
 | `zuul-connection-name` _string_ | Name of the Zuul connection through which Zuul can handle git events on the config repository | -|
 
 
+#### ElasticSearchConnection
+
+
+
+Describes a Zuul connection using the [ElasticSearch driver](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#connection-configuration). When an optional parameter is not specified then Zuul's defaults apply
+
+_Appears in:_
+- [ZuulSpec](#zuulspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `name` _string_ | How the connection will be named in Zuul's configuration and appear in zuul-web | -|
+| `uri` _string_ | [uri](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.uri) | -|
+| `useSSL` _boolean_ | [useSSL](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.use_ssl) | -|
+| `verifyCerts` _boolean_ | [verifyCerts](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.verify_certs) | -|
+
+
 #### FluentBitForwarderSpec
 
 
@@ -519,6 +536,7 @@ _Appears in:_
 | `githubconns` _[GitHubConnection](#githubconnection) array_ | The list of GitHub-based connections to add to Zuul's configuration | -|
 | `gitlabconns` _[GitLabConnection](#gitlabconnection) array_ | The list of GitLab-based connections to add to Zuul's configuration | -|
 | `gitconns` _[GitConnection](#gitconnection) array_ | The list of Git-based connections to add to Zuul's configuration | -|
+| `elasticsearchconns` _[ElasticSearchConnection](#elasticsearchconnection) array_ | The list of ElasticSearch-based connections to add to Zuul's configuration | -|
 | `executor` _[ZuulExecutorSpec](#zuulexecutorspec)_ | Configuration of the executor microservices | -|
 | `scheduler` _[ZuulSchedulerSpec](#zuulschedulerspec)_ | Configuration of the scheduler microservice | -|
 | `web` _[ZuulWebSpec](#zuulwebspec)_ | Configuration of the web microservice | -|

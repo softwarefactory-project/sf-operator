@@ -152,6 +152,19 @@ type GitConnection struct {
 	PollDelay int32 `json:"pollDelay,omitempty"`
 }
 
+// Describes a Zuul connection using the [ElasticSearch driver](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#connection-configuration).
+// When an optional parameter is not specified then Zuul's defaults apply
+type ElasticSearchConnection struct {
+	// How the connection will be named in Zuul's configuration and appear in zuul-web
+	Name string `json:"name"`
+	// [uri](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.uri)
+	URI string `json:"uri"`
+	// [useSSL](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.use_ssl)
+	UseSSL *bool `json:"useSSL,omitempty"`
+	// [verifyCerts](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.verify_certs)
+	VerifyCerts *bool `json:"verifyCerts,omitempty"`
+}
+
 // The description of an OpenIDConnect authenticator, see [Zuul's authentication documentation](https://zuul-ci.org/docs/zuul/latest/configuration.html#authentication)
 type ZuulOIDCAuthenticatorSpec struct {
 	// The [name of the authenticator in Zuul's configuration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E)
@@ -270,6 +283,8 @@ type ZuulSpec struct {
 	GitLabConns []GitLabConnection `json:"gitlabconns,omitempty"`
 	// The list of Git-based connections to add to Zuul's configuration
 	GitConns []GitConnection `json:"gitconns,omitempty"`
+	// The list of ElasticSearch-based connections to add to Zuul's configuration
+	ElasticSearchConns []ElasticSearchConnection `json:"elasticsearchconns,omitempty"`
 	// Configuration of the executor microservices
 	Executor ZuulExecutorSpec `json:"executor,omitempty"`
 	// Configuration of the scheduler microservice
