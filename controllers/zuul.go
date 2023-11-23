@@ -861,6 +861,20 @@ func AddGitConnection(cfg *ini.File, name string, baseurl string, poolDelay int3
 	}
 }
 
+func (r *SFController) AddElasticSearchConnection(cfg *ini.File, conn sfv1.ElasticSearchConnection) {
+	section := "connection " + conn.Name
+	cfg.NewSection(section)
+	cfg.Section(section).NewKey("driver", "elasticsearch")
+	cfg.Section(section).NewKey("uri", conn.URI)
+	// Optional fields (set as omitempty in ElasticSearchConnection struct definition)
+	if conn.UseSSL != nil && !*conn.UseSSL {
+		cfg.Section(section).NewKey("use_ssl", "false")
+	}
+	if conn.VerifyCerts != nil && !*conn.VerifyCerts {
+		cfg.Section(section).NewKey("verify_certs", "false")
+	}
+}
+
 func AddWebClientSection(cfg *ini.File) {
 	section := "webclient"
 	cfg.NewSection(section)
@@ -931,6 +945,10 @@ func (r *SFController) DeployZuul() bool {
 
 	for _, conn := range r.cr.Spec.Zuul.GitConns {
 		AddGitConnection(cfgINI, conn.Name, conn.Baseurl, conn.PollDelay)
+	}
+
+	for _, conn := range r.cr.Spec.Zuul.ElasticSearchConns {
+		r.AddElasticSearchConnection(cfgINI, conn)
 	}
 
 	// Add default connections
