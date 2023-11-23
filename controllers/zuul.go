@@ -762,7 +762,7 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	if conn.Canonicalhostname != "" {
 		cfg.Section(section).NewKey("canonical_hostname", conn.Canonicalhostname)
 	}
-	if !conn.VerifySSL {
+	if conn.VerifySSL != nil && !*conn.VerifySSL {
 		// Zuul default is true, so set that setting only when VerifySSL is disabled
 		cfg.Section(section).NewKey("verify_ssl", "false")
 	}

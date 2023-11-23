@@ -137,7 +137,7 @@ type GerritConnection struct {
 	// Set to true to force git operations over SSH even if the password attribute is set. Equivalent to the [git_over_ssh](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.git_over_ssh) parameter.
 	GitOverSSH bool `json:"git-over-ssh,omitempty"`
 	// Disable SSL certificate verification with the Gerrit instance when set to false. Equivalent to the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.verify_ssl) parameter.
-	VerifySSL bool `json:"verifyssl,omitempty"`
+	VerifySSL *bool `json:"verifyssl,omitempty"`
 }
 
 // Describes a Zuul connection using the [git driver](https://zuul-ci.org/docs/zuul/latest/drivers/git.html#connection-configuration).
