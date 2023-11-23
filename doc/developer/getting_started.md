@@ -95,7 +95,7 @@ to see your changes applied to the deployed resources.
 In another terminal, apply the `SoftwareFactory`'s `CR`:
 
 ```sh
-kubectl apply -f config/sample/sf_v1_softwarefactory.yaml
+kubectl apply -f playbooks/files/sf.yaml
 ```
 
 Any change on the applied resource re-trigger the reconcile.
@@ -105,7 +105,7 @@ Any change on the applied resource re-trigger the reconcile.
 Run the operator with the following command:
 
 ```sh
-go run ./main.go standalone --cr config/samples/sf_v1_softwarefactory.yaml --namespace sf
+go run ./main.go standalone --cr playbooks/files/sf.yaml --namespace sf
 ```
 
 > The command returns when the expected state is applied.
