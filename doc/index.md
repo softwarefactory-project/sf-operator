@@ -1,7 +1,7 @@
 # SF Operator documentation
 
 Welcome to SF-Operator's documentation. To know more about the project's purpose,
-please consult the [README](./README.md).
+please consult the [README](../README.md).
 
 ## Table of Contents
 
