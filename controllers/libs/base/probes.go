@@ -52,6 +52,7 @@ func mkLivenessProbe(handler apiv1.ProbeHandler) *apiv1.Probe {
 		TimeoutSeconds:      5,
 		PeriodSeconds:       20,
 		InitialDelaySeconds: 5,
+		FailureThreshold:    20,
 	}
 }
 
