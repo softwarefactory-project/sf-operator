@@ -18,6 +18,7 @@ import (
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -56,6 +57,65 @@ func MkNodeExporterSideCarContainer(serviceName string, volumeMounts []apiv1.Vol
 	}
 	container.VolumeMounts = volumeMounts
 	return container
+}
+
+func MkDiskUsageRuleGroup(ns string, componentIdent string) monitoringv1.RuleGroup {
+	// Create some default, interesting alerts
+	diskFullAnnotations := map[string]string{
+		"description": componentIdent + ": mountpoint {{ $labels.mountpoint }} on pod {{ $labels.pod }} has {{ $value | humanize1024 }}% free space left.",
+		"summary":     componentIdent + " out of disk",
+	}
+	diskFull3daysAnnotations := map[string]string{
+		"description": componentIdent + ": mountpoint {{ $labels.mountpoint }} on pod {{ $labels.pod }} has {{ $value | humanize1024 }}% free space left and is expected to fill up in less than three days.",
+		"summary":     componentIdent + " running out of disk",
+	}
+	diskFull := MkPrometheusAlertRule(
+		"OutOfDiskNow",
+		intstr.FromString(
+			"(node_filesystem_avail_bytes{job=\""+ns+"/"+componentIdent+"-monitor\"} * 100 /"+
+				" node_filesystem_size_bytes{job=\""+ns+"/"+componentIdent+"-monitor\"} < 10) and "+
+				"(node_filesystem_avail_bytes{job=\""+ns+"/"+componentIdent+"-monitor\"} < 20 * 1024 ^ 3)"),
+		"30m",
+		CriticalSeverityLabel,
+		diskFullAnnotations,
+	)
+	diskFullIn3days := MkPrometheusAlertRule(
+		"OutOfDiskInThreeDays",
+		intstr.FromString(
+			"(node_filesystem_avail_bytes{job=\""+ns+"/"+componentIdent+"-monitor\"} * 100 /"+
+				" node_filesystem_size_bytes{job=\""+ns+"/"+componentIdent+"-monitor\"} < 50) and "+
+				"(predict_linear(node_filesystem_avail_bytes{job=\""+ns+"/"+componentIdent+"-monitor\"}[1d], 3 * 24 * 3600) < 0) and "+
+				"(node_filesystem_size_bytes{job=\""+ns+"/"+componentIdent+"-monitor\"} <= 1e+11)"),
+		"12h",
+		WarningSeverityLabel,
+		diskFull3daysAnnotations,
+	)
+	DiskRuleGroup := MkPrometheusRuleGroup(
+		componentIdent+"-disk-usage-default.rules",
+		[]monitoringv1.Rule{diskFull, diskFullIn3days})
+
+	return DiskRuleGroup
+}
+
+func MkDiskUsagePromRule(ruleGroups []monitoringv1.RuleGroup, ns string) monitoringv1.PrometheusRule {
+	desiredDUPromRule := MkPrometheusRuleCR("disk-usage-default.rules", ns)
+	desiredDUPromRule.Spec.Groups = append(desiredDUPromRule.Spec.Groups, ruleGroups...)
+
+	var checksumable string
+	for _, group := range desiredDUPromRule.Spec.Groups {
+		for _, rule := range group.Rules {
+			checksumable += MkAlertRuleChecksumString(rule)
+		}
+	}
+
+	// add annotations so we can handle lifecycle
+	annotations := map[string]string{
+		"version":       "1",
+		"rulesChecksum": utils.Checksum([]byte(checksumable)),
+	}
+
+	desiredDUPromRule.ObjectMeta.Annotations = annotations
+	return desiredDUPromRule
 }
 
 // Statsd exporter utilities

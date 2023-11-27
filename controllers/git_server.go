@@ -11,17 +11,20 @@ import (
 	"strconv"
 	"strings"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/zuulcf"
 	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const gsIdent = "git-server"
+const GitServerIdent = "git-server"
 const gsGitPort = 9418
 const gsGitPortName = "git-server-port"
 const gsGitMountPath = "/git"
@@ -29,6 +32,36 @@ const gsPiMountPath = "/entry"
 
 //go:embed static/git-server/update-system-config.sh
 var preInitScriptTemplate string
+
+func (r *SFController) ensureGitServerPodMonitor() bool {
+	selector := metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "sf",
+			"run": GitServerIdent,
+		},
+	}
+	nePort := sfmonitoring.GetTruncatedPortName(GitServerIdent, sfmonitoring.NodeExporterPortNameSuffix)
+	desiredGSPodmonitor := sfmonitoring.MkPodMonitor(GitServerIdent+"-monitor", r.ns, []string{nePort}, selector)
+	// add annotations so we can handle lifecycle
+	annotations := map[string]string{
+		"version": "1",
+	}
+	desiredGSPodmonitor.ObjectMeta.Annotations = annotations
+	currentGSpm := monitoringv1.PodMonitor{}
+	if !r.GetM(desiredGSPodmonitor.Name, &currentGSpm) {
+		r.CreateR(&desiredGSPodmonitor)
+		return false
+	} else {
+		if !utils.MapEquals(&currentGSpm.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("Git Server PodMonitor configuration changed, updating...")
+			currentGSpm.Spec = desiredGSPodmonitor.Spec
+			currentGSpm.ObjectMeta.Annotations = annotations
+			r.UpdateR(&currentGSpm)
+			return false
+		}
+	}
+	return true
+}
 
 // This function creates dummy connections to be used during the config-check
 func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
@@ -131,11 +164,12 @@ func (r *SFController) DeployGitServer() bool {
 	preInitScript := r.makePreInitScript()
 	cmData := make(map[string]string)
 	cmData["pre-init.sh"] = preInitScript
-	r.EnsureConfigMap(gsIdent+"-pi", cmData)
+	r.EnsureConfigMap(GitServerIdent+"-pi", cmData)
 
 	annotations := map[string]string{
 		"system-config": utils.Checksum([]byte(preInitScript)),
 		"image":         base.GitServerImage,
+		"serial":        "1",
 	}
 
 	if r.isConfigRepoSet() {
@@ -143,18 +177,19 @@ func (r *SFController) DeployGitServer() bool {
 		annotations["config-zuul-connection-name"] = r.cr.Spec.ConfigLocation.ZuulConnectionName
 	}
 
-	// Create the deployment
-	sts := r.mkStatefulSet(gsIdent, base.GitServerImage, r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), apiv1.ReadWriteOnce)
+	// Create the statefulset
+	sts := r.mkStatefulSet(GitServerIdent, base.GitServerImage, r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), apiv1.ReadWriteOnce)
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
-	sts.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
+	GSVolumeMounts := []apiv1.VolumeMount{
 		{
-			Name:      gsIdent,
+			Name:      GitServerIdent,
 			MountPath: gsGitMountPath,
 		},
 	}
+	sts.Spec.Template.Spec.Containers[0].VolumeMounts = GSVolumeMounts
 
 	sts.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		base.MkVolumeCM(gsIdent+"-pi", gsIdent+"-pi-config-map"),
+		base.MkVolumeCM(GitServerIdent+"-pi", GitServerIdent+"-pi-config-map"),
 	}
 
 	sts.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
@@ -170,11 +205,11 @@ func (r *SFController) DeployGitServer() bool {
 	}
 	initContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
-			Name:      gsIdent,
+			Name:      GitServerIdent,
 			MountPath: gsGitMountPath,
 		},
 		{
-			Name:      gsIdent + "-pi",
+			Name:      GitServerIdent + "-pi",
 			MountPath: gsPiMountPath,
 		},
 	}
@@ -191,8 +226,11 @@ func (r *SFController) DeployGitServer() bool {
 	// Note: The probe is causing error message to be logged by the service
 	// dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GS_GIT_PORT)
 
+	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(GitServerIdent, GSVolumeMounts)
+	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
+
 	current := appsv1.StatefulSet{}
-	if r.GetM(gsIdent, &current) {
+	if r.GetM(GitServerIdent, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("System configuration needs to be updated, restarting git-server...")
 			current.Spec.Template = *sts.Spec.Template.DeepCopy()
@@ -205,11 +243,13 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Create services exposed
-	svc := base.MkServicePod(gsIdent, r.ns, gsIdent+"-0", []int32{gsGitPort}, gsGitPortName)
+	svc := base.MkServicePod(GitServerIdent, r.ns, GitServerIdent+"-0", []int32{gsGitPort}, gsGitPortName)
 	r.EnsureService(&svc)
 
+	r.ensureGitServerPodMonitor()
+
 	isStatefulset := r.IsStatefulSetReady(&current)
-	conds.UpdateConditions(&r.cr.Status.Conditions, gsIdent, isStatefulset)
+	conds.UpdateConditions(&r.cr.Status.Conditions, GitServerIdent, isStatefulset)
 
 	return isStatefulset
 }

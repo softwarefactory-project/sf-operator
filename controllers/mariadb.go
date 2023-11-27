@@ -11,9 +11,11 @@ import (
 	"strconv"
 
 	"github.com/go-sql-driver/mysql"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
+	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -22,7 +24,7 @@ import (
 )
 
 const (
-	mariadbIdent       = "mariadb"
+	MariaDBIdent       = "mariadb"
 	mariadbPort        = 3306
 	mariaDBPortName    = "mariadb-port"
 	zuulDBConfigSecret = "zuul-db-connection"
@@ -71,12 +73,42 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 	return volume, sidecar
 }
 
+func (r *SFController) ensureMariaDBPodMonitor() bool {
+	selector := metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "sf",
+			"run": MariaDBIdent,
+		},
+	}
+	nePort := sfmonitoring.GetTruncatedPortName(MariaDBIdent, sfmonitoring.NodeExporterPortNameSuffix)
+	desiredDBPodmonitor := sfmonitoring.MkPodMonitor(MariaDBIdent+"-monitor", r.ns, []string{nePort}, selector)
+	// add annotations so we can handle lifecycle
+	annotations := map[string]string{
+		"version": "1",
+	}
+	desiredDBPodmonitor.ObjectMeta.Annotations = annotations
+	currentDBpm := monitoringv1.PodMonitor{}
+	if !r.GetM(desiredDBPodmonitor.Name, &currentDBpm) {
+		r.CreateR(&desiredDBPodmonitor)
+		return false
+	} else {
+		if !utils.MapEquals(&currentDBpm.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("MariaDB PodMonitor configuration changed, updating...")
+			currentDBpm.Spec = desiredDBPodmonitor.Spec
+			currentDBpm.ObjectMeta.Annotations = annotations
+			r.UpdateR(&currentDBpm)
+			return false
+		}
+	}
+	return true
+}
+
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
 	c := "CREATE DATABASE IF NOT EXISTS " + dbname + " CHARACTER SET utf8 COLLATE utf8_general_ci; "
 	g := "GRANT ALL PRIVILEGES ON " + dbname + ".* TO '" + username + "'@'%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
 	container := base.MkContainer("mariadb-client", base.MariabDBImage)
 	container.Command = []string{"sh", "-c", `
-	echo 'Running: mysql --host=" ` + mariadbIdent + `" --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
+	echo 'Running: mysql --host=" ` + MariaDBIdent + `" --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
 	ATTEMPT=0
 	while ! mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"; do
 		ATTEMPT=$[ $ATTEMPT + 1 ]
@@ -126,7 +158,7 @@ func (r *SFController) DBPostInit(configSecret apiv1.Secret) apiv1.Secret {
 	zuulOpts := ZuulDBOpts{
 		Username: "zuul",
 		Password: utils.NewUUIDString(),
-		Host:     mariadbIdent,
+		Host:     MariaDBIdent,
 		Port:     mariadbPort,
 		Database: "zuul",
 		Params:   map[string]string{},
@@ -162,26 +194,30 @@ func (r *SFController) DeployMariadb() bool {
 	passName := "mariadb-root-password"
 	r.EnsureSecretUUID(passName)
 
-	sts := r.mkStatefulSet(mariadbIdent, base.MariabDBImage, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce)
+	sts := r.mkStatefulSet(MariaDBIdent, base.MariabDBImage, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce)
 
 	sts.Spec.VolumeClaimTemplates = append(
 		sts.Spec.VolumeClaimTemplates,
 		// TODO redirect logs to stdout so we don't need a volume
 		base.MkPVC("mariadb-logs", r.ns, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.LogStorage), apiv1.ReadWriteOnce))
-	sts.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
+
+	volumeMountsStatsExporter := []apiv1.VolumeMount{
 		{
-			Name:      mariadbIdent,
+			Name:      MariaDBIdent,
 			MountPath: "/var/lib/mysql",
 		},
 		{
 			Name:      "mariadb-logs",
 			MountPath: "/var/log/mariadb",
 		},
+	}
+
+	sts.Spec.Template.Spec.Containers[0].VolumeMounts = append([]apiv1.VolumeMount{
 		{
 			Name:      "mariadb-run",
 			MountPath: "/run/mariadb",
 		},
-	}
+	}, volumeMountsStatsExporter...)
 	sts.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 		base.MkEnvVar("HOME", "/var/lib/mysql"),
 		base.MkSecretEnvVar("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
@@ -197,17 +233,21 @@ func (r *SFController) DeployMariadb() bool {
 	}
 
 	annotations := map[string]string{
-		"serial": "1",
+		"serial": "3",
 	}
 	if r.cr.Spec.FluentBitLogForwarding != nil {
 		fbVolume, fbSidecar := createLogForwarderSidecar(r, annotations)
 		sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, fbSidecar)
 		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, fbVolume)
 	}
+
+	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(MariaDBIdent, volumeMountsStatsExporter)
+	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
+
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 
 	current := appsv1.StatefulSet{}
-	if r.GetM(mariadbIdent, &current) {
+	if r.GetM(MariaDBIdent, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("mariaDB changed, rollout pods ...")
 			current.Spec = sts.DeepCopy().Spec
@@ -220,7 +260,7 @@ func (r *SFController) DeployMariadb() bool {
 	}
 
 	servicePorts := []int32{mariadbPort}
-	srv := base.MkServicePod(mariadbIdent, r.ns, "mariadb-0", servicePorts, mariaDBPortName)
+	srv := base.MkServicePod(MariaDBIdent, r.ns, "mariadb-0", servicePorts, mariaDBPortName)
 	r.EnsureService(&srv)
 
 	var zuulDBSecret apiv1.Secret
@@ -239,9 +279,11 @@ func (r *SFController) DeployMariadb() bool {
 		}
 	}
 
+	r.ensureMariaDBPodMonitor()
+
 	isReady := r.IsStatefulSetReady(&current) && zuulDBSecret.Data != nil
 
-	conds.UpdateConditions(&r.cr.Status.Conditions, mariadbIdent, isReady)
+	conds.UpdateConditions(&r.cr.Status.Conditions, MariaDBIdent, isReady)
 
 	return isReady
 }

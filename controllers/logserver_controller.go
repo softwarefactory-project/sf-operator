@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -102,40 +101,9 @@ func (r *LogServerController) ensureLogserverPodMonitor() bool {
 	return true
 }
 
-// Create some default, interesting alerts
 func (r *LogServerController) ensureLogserverPromRule() bool {
-	diskFullAnnotations := map[string]string{
-		"description": "Log server only has {{ $value | humanize1024 }} free disk available.",
-		"summary":     "Log server out of disk",
-	}
-	diskFull3daysAnnotations := map[string]string{
-		"description": "Log server only has at most three days' worth ({{ $value | humanize1024 }}) of free disk available.",
-		"summary":     "Log server running out of disk",
-	}
-	diskFull := sfmonitoring.MkPrometheusAlertRule(
-		"OutOfDiskNow",
-		intstr.FromString(
-			"(node_filesystem_avail_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} * 100 /"+
-				" node_filesystem_size_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} < 10) and "+
-				"(node_filesystem_avail_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} < 20 * 1024 ^ 3)"),
-		"30m",
-		sfmonitoring.CriticalSeverityLabel,
-		diskFullAnnotations,
-	)
-	diskFullIn3days := sfmonitoring.MkPrometheusAlertRule(
-		"OutOfDiskInThreeDays",
-		intstr.FromString(
-			"(node_filesystem_avail_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} * 100 /"+
-				" node_filesystem_size_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} < 50) and "+
-				"(predict_linear(node_filesystem_avail_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"}[1d], 3 * 24 * 3600) < 0) and "+
-				"(node_filesystem_size_bytes{job=\""+r.ns+"/"+logserverIdent+"-monitor\"} <= 1e+11)"),
-		"12h",
-		sfmonitoring.WarningSeverityLabel,
-		diskFull3daysAnnotations,
-	)
-	lsDiskRuleGroup := sfmonitoring.MkPrometheusRuleGroup(
-		"disk_default.rules",
-		[]monitoringv1.Rule{diskFull, diskFullIn3days})
+	lsDiskRuleGroup := sfmonitoring.MkDiskUsageRuleGroup(r.ns, logserverIdent)
+	// We keep the logserver's PromRule management here for standalone logservers
 	desiredLsPromRule := sfmonitoring.MkPrometheusRuleCR(logserverIdent+"-default.rules", r.ns)
 	desiredLsPromRule.Spec.Groups = append(desiredLsPromRule.Spec.Groups, lsDiskRuleGroup)
 
@@ -150,11 +118,6 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 	annotations := map[string]string{
 		"version":       "2",
 		"rulesChecksum": utils.Checksum([]byte(checksumable)),
-	}
-	// delete badly named, previous rule - TODO remove this after next release
-	badPromRule := monitoringv1.PrometheusRule{}
-	if r.GetM(logserverIdent+".rules", &badPromRule) {
-		r.DeleteR(&badPromRule)
 	}
 
 	desiredLsPromRule.ObjectMeta.Annotations = annotations

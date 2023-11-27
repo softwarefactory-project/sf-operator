@@ -8,13 +8,16 @@ import (
 	"strconv"
 
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
+	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //go:embed static/zookeeper/ok.sh
@@ -44,8 +47,38 @@ const zkElectionPort = 3888
 const zkServerPortName = "zkserver"
 const zkServerPort = 2888
 
-const zkIdent = "zookeeper"
+const ZookeeperIdent = "zookeeper"
 const zkPIMountPath = "/config-scripts"
+
+func (r *SFController) ensureZookeeperPodMonitor() bool {
+	selector := metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "sf",
+			"run": ZookeeperIdent,
+		},
+	}
+	nePort := sfmonitoring.GetTruncatedPortName(ZookeeperIdent, sfmonitoring.NodeExporterPortNameSuffix)
+	desiredZKPodmonitor := sfmonitoring.MkPodMonitor(ZookeeperIdent+"-monitor", r.ns, []string{nePort}, selector)
+	// add annotations so we can handle lifecycle
+	annotations := map[string]string{
+		"version": "1",
+	}
+	desiredZKPodmonitor.ObjectMeta.Annotations = annotations
+	currentZKpm := monitoringv1.PodMonitor{}
+	if !r.GetM(desiredZKPodmonitor.Name, &currentZKpm) {
+		r.CreateR(&desiredZKPodmonitor)
+		return false
+	} else {
+		if !utils.MapEquals(&currentZKpm.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("Zookeeper PodMonitor configuration changed, updating...")
+			currentZKpm.Spec = desiredZKPodmonitor.Spec
+			currentZKpm.ObjectMeta.Annotations = annotations
+			r.UpdateR(&currentZKpm)
+			return false
+		}
+	}
+	return true
+}
 
 func createZKLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
 
@@ -64,7 +97,7 @@ func createZKLogForwarderSidecar(r *SFController, annotations map[string]string)
 
 	volumeMounts := []apiv1.VolumeMount{
 		{
-			Name:      zkIdent + "-logs",
+			Name:      ZookeeperIdent + "-logs",
 			MountPath: "/watch/",
 		},
 		{
@@ -78,7 +111,7 @@ func createZKLogForwarderSidecar(r *SFController, annotations map[string]string)
 }
 
 func (r *SFController) DeployZookeeper() bool {
-	dnsNames := r.MkClientDNSNames(zkIdent)
+	dnsNames := r.MkClientDNSNames(ZookeeperIdent)
 	privateKey := certv1.CertificatePrivateKey{
 		Encoding: certv1.PKCS8,
 	}
@@ -98,14 +131,25 @@ func (r *SFController) DeployZookeeper() bool {
 	cmData["ready.sh"] = zookeeperReady
 	cmData["run.sh"] = zookeeperRun
 	cmData["logback.xml"] = zkLogbackConfig
-	r.EnsureConfigMap(zkIdent+"-pi", cmData)
+	r.EnsureConfigMap(ZookeeperIdent+"-pi", cmData)
 
 	configChecksumable := zookeeperOk + "\n" + zookeeperReady + "\n" + zookeeperRun + "\n" + zkLogbackConfig
 
 	annotations := map[string]string{
 		"configuration": utils.Checksum([]byte(configChecksumable)),
 		"image":         base.ZookeeperImage,
-		"serial":        "2",
+		"serial":        "3",
+	}
+
+	volumeMountsStatsExporter := []apiv1.VolumeMount{
+		{
+			Name:      ZookeeperIdent + "-data",
+			MountPath: "/data",
+		},
+		{
+			Name:      ZookeeperIdent + "-logs",
+			MountPath: "/var/log",
+		},
 	}
 
 	volumeMounts := []apiv1.VolumeMount{
@@ -120,27 +164,20 @@ func (r *SFController) DeployZookeeper() bool {
 			ReadOnly:  true,
 		},
 		{
-			Name:      zkIdent + "-data",
-			MountPath: "/data",
-		},
-		{
-			Name:      zkIdent + "-conf",
+			Name:      ZookeeperIdent + "-conf",
 			MountPath: "/conf",
 		},
 		{
-			Name:      zkIdent + "-pi",
+			Name:      ZookeeperIdent + "-pi",
 			MountPath: zkPIMountPath,
 		},
-		{
-			Name:      zkIdent + "-logs",
-			MountPath: "/var/log",
-		},
 	}
+	volumeMounts = append(volumeMounts, volumeMountsStatsExporter...)
 
-	srv := base.MkServicePod(zkIdent, r.ns, zkIdent+"-0", []int32{zkSSLPort}, zkIdent)
+	srv := base.MkServicePod(ZookeeperIdent, r.ns, ZookeeperIdent+"-0", []int32{zkSSLPort}, ZookeeperIdent)
 	r.EnsureService(&srv)
 
-	srvZK := base.MkHeadlessServicePod(zkIdent, r.ns, zkIdent+"-0", []int32{zkSSLPort, zkElectionPort, zkServerPort}, zkIdent)
+	srvZK := base.MkHeadlessServicePod(ZookeeperIdent, r.ns, ZookeeperIdent+"-0", []int32{zkSSLPort, zkElectionPort, zkServerPort}, ZookeeperIdent)
 	r.EnsureService(&srvZK)
 
 	storageConfig := r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage)
@@ -149,23 +186,23 @@ func (r *SFController) DeployZookeeper() bool {
 		StorageClassName: storageConfig.StorageClassName,
 	}
 	zk := r.mkHeadlessSatefulSet(
-		zkIdent, base.ZookeeperImage, storageConfig, apiv1.ReadWriteOnce)
+		ZookeeperIdent, base.ZookeeperImage, storageConfig, apiv1.ReadWriteOnce)
 	// We overwrite the VolumeClaimTemplates set by MkHeadlessStatefulSet to keep the previous volume name
 	// Previously the default PVC created by MkHeadlessStatefulSet was not used by Zookeeper (not mounted). So to avoid having two Volumes
-	// and to ensure data persistence during the upgrade we keep the previous naming 'zkIdent + "-data"' and we discard the one
+	// and to ensure data persistence during the upgrade we keep the previous naming 'ZookeeperIdent + "-data"' and we discard the one
 	// created by MkHeadlessStatefulSet.
 	zk.Spec.VolumeClaimTemplates = []apiv1.PersistentVolumeClaim{
-		base.MkPVC(zkIdent+"-data", r.ns, storageConfig, apiv1.ReadWriteOnce),
-		base.MkPVC(zkIdent+"-logs", r.ns, logStorageConfig, apiv1.ReadWriteOnce),
+		base.MkPVC(ZookeeperIdent+"-data", r.ns, storageConfig, apiv1.ReadWriteOnce),
+		base.MkPVC(ZookeeperIdent+"-logs", r.ns, logStorageConfig, apiv1.ReadWriteOnce),
 	}
 	zk.Spec.Template.Spec.Containers[0].Command = []string{"/bin/bash", "/config-scripts/run.sh"}
 	zk.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
 	zk.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		base.MkVolumeCM(zkIdent+"-pi", zkIdent+"-pi-config-map"),
+		base.MkVolumeCM(ZookeeperIdent+"-pi", ZookeeperIdent+"-pi-config-map"),
 		base.MkVolumeSecret("zookeeper-client-tls"),
 		base.MkVolumeSecret("zookeeper-server-tls"),
-		base.MkEmptyDirVolume(zkIdent + "-conf"),
+		base.MkEmptyDirVolume(ZookeeperIdent + "-conf"),
 	}
 	zk.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessCMDProbe([]string{"/bin/bash", "/config-scripts/ready.sh"})
 	zk.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessCMDProbe([]string{"/bin/bash", "/config-scripts/ok.sh"})
@@ -181,10 +218,14 @@ func (r *SFController) DeployZookeeper() bool {
 		zk.Spec.Template.Spec.Containers = append(zk.Spec.Template.Spec.Containers, fbSidecar)
 		zk.Spec.Template.Spec.Volumes = append(zk.Spec.Template.Spec.Volumes, fbVolume)
 	}
+
+	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(ZookeeperIdent, volumeMountsStatsExporter)
+	zk.Spec.Template.Spec.Containers = append(zk.Spec.Template.Spec.Containers, statsExporter)
+
 	zk.Spec.Template.ObjectMeta.Annotations = annotations
 
 	current := appsv1.StatefulSet{}
-	if r.GetM(zkIdent, &current) {
+	if r.GetM(ZookeeperIdent, &current) {
 		// VolumeClaimTemplates cannot be updated on a statefulset. If we are missing the logs PVC we must
 		// recreate from scratch the statefulset. The new statefulset should mount the old PVC again.
 		if len(current.Spec.VolumeClaimTemplates) < 2 {
@@ -203,10 +244,12 @@ func (r *SFController) DeployZookeeper() bool {
 		r.CreateR(&current)
 	}
 
-	pvcReadiness := r.reconcileExpandPVC(zkIdent+"-data-"+zkIdent+"-0", r.cr.Spec.Zookeeper.Storage)
+	pvcReadiness := r.reconcileExpandPVC(ZookeeperIdent+"-data-"+ZookeeperIdent+"-0", r.cr.Spec.Zookeeper.Storage)
+
+	r.ensureZookeeperPodMonitor()
 
 	isReady := r.IsStatefulSetReady(&current) && pvcReadiness
-	conds.UpdateConditions(&r.cr.Status.Conditions, zkIdent, isReady)
+	conds.UpdateConditions(&r.cr.Status.Conditions, ZookeeperIdent, isReady)
 
 	return isReady
 }

@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +35,7 @@ import (
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
+	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
 	"github.com/go-logr/logr"
@@ -689,4 +691,22 @@ func (r *SFController) MkClientDNSNames(serviceName string) []string {
 		fmt.Sprintf("%s.%s", serviceName, r.cr.Spec.FQDN),
 		r.cr.GetName(),
 	}
+}
+
+func (r *SFController) EnsureDiskUsagePromRule(ruleGroups []monitoringv1.RuleGroup) bool {
+	desiredDUPromRule := sfmonitoring.MkDiskUsagePromRule(ruleGroups, r.ns)
+	currentPromRule := monitoringv1.PrometheusRule{}
+	if !r.GetM(desiredDUPromRule.Name, &currentPromRule) {
+		r.CreateR(&desiredDUPromRule)
+		return false
+	} else {
+		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &desiredDUPromRule.ObjectMeta.Annotations) {
+			r.log.V(1).Info("Default disk usage Prometheus rules changed, updating...")
+			currentPromRule.Spec = desiredDUPromRule.Spec
+			currentPromRule.ObjectMeta.Annotations = desiredDUPromRule.ObjectMeta.Annotations
+			r.UpdateR(&currentPromRule)
+			return false
+		}
+	}
+	return true
 }

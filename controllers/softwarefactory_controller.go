@@ -14,6 +14,7 @@ import (
 
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/fatih/color"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/strings/slices"
@@ -31,6 +32,7 @@ import (
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 )
 
 type SoftwareFactoryReconciler struct {
@@ -133,6 +135,8 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	r.cleanup()
 
+	DURuleGroups := []monitoringv1.RuleGroup{}
+
 	services := map[string]bool{}
 	services["Zuul"] = false
 
@@ -149,10 +153,19 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	// The git server service is needed to store system jobs (config-check and config-update)
 	services["GitServer"] = r.DeployGitServer()
+	if services["GitServer"] {
+		DURuleGroups = append(DURuleGroups, sfmonitoring.MkDiskUsageRuleGroup(r.ns, GitServerIdent))
+	}
 
 	services["MariaDB"] = r.DeployMariadb()
+	if services["MariaDB"] {
+		DURuleGroups = append(DURuleGroups, sfmonitoring.MkDiskUsageRuleGroup(r.ns, MariaDBIdent))
+	}
 
 	services["Zookeeper"] = r.DeployZookeeper()
+	if services["Zookeeper"] {
+		DURuleGroups = append(DURuleGroups, sfmonitoring.MkDiskUsageRuleGroup(r.ns, ZookeeperIdent))
+	}
 
 	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] {
 		services["Zuul"] = r.DeployZuul()
@@ -172,6 +185,9 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 			conds.RefreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
 		}
 	}
+
+	// TODO? we could add this to the readiness computation.
+	r.EnsureDiskUsagePromRule(DURuleGroups)
 
 	r.log.V(1).Info(messageInfo(r, services))
 
