@@ -710,3 +710,32 @@ func (r *SFController) EnsureDiskUsagePromRule(ruleGroups []monitoringv1.RuleGro
 	}
 	return true
 }
+
+func (r *SFController) EnsureSFPodMonitor(ports []string, selector metav1.LabelSelector) bool {
+	desiredPodMonitor := sfmonitoring.MkPodMonitor("sf-monitor", r.ns, ports, selector)
+	// add annotations so we can handle lifecycle
+	var portsChecksumable string
+	sort.Strings(ports)
+	for _, port := range ports {
+		portsChecksumable += port + " "
+	}
+	annotations := map[string]string{
+		"version": "1",
+		"ports":   utils.Checksum([]byte(portsChecksumable)),
+	}
+	desiredPodMonitor.ObjectMeta.Annotations = annotations
+	currentPodMonitor := monitoringv1.PodMonitor{}
+	if !r.GetM(desiredPodMonitor.Name, &currentPodMonitor) {
+		r.CreateR(&desiredPodMonitor)
+		return false
+	} else {
+		if !utils.MapEquals(&currentPodMonitor.ObjectMeta.Annotations, &annotations) {
+			r.log.V(1).Info("SF PodMonitor configuration changed, updating...")
+			currentPodMonitor.Spec = desiredPodMonitor.Spec
+			currentPodMonitor.ObjectMeta.Annotations = annotations
+			r.UpdateR(&currentPodMonitor)
+			return false
+		}
+	}
+	return true
+}

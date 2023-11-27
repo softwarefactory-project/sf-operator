@@ -129,13 +129,31 @@ func (r *SFController) cleanup() {
 			Name:      BuildLogsHttpdPortName,
 		},
 	})
+
+	// clean up old podmonitors if they exist. Remove after next release
+	currentZKpm := monitoringv1.PodMonitor{}
+	if r.GetM(ZookeeperIdent+"-monitor", &currentZKpm) {
+		r.DeleteR(&currentZKpm)
+	}
+	currentDBpm := monitoringv1.PodMonitor{}
+	if r.GetM(MariaDBIdent+"-monitor", &currentDBpm) {
+		r.DeleteR(&currentDBpm)
+	}
+	currentGSpm := monitoringv1.PodMonitor{}
+	if r.GetM(GitServerIdent+"-monitor", &currentGSpm) {
+		r.DeleteR(&currentGSpm)
+	}
 }
 
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	r.cleanup()
 
-	DURuleGroups := []monitoringv1.RuleGroup{}
+	DURuleGroups := []monitoringv1.RuleGroup{
+		sfmonitoring.MkDiskUsageRuleGroup(r.ns, "sf"),
+	}
+	monitoredPorts := []string{}
+	selectorRunList := []string{}
 
 	services := map[string]bool{}
 	services["Zuul"] = false
@@ -154,17 +172,20 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	// The git server service is needed to store system jobs (config-check and config-update)
 	services["GitServer"] = r.DeployGitServer()
 	if services["GitServer"] {
-		DURuleGroups = append(DURuleGroups, sfmonitoring.MkDiskUsageRuleGroup(r.ns, GitServerIdent))
+		monitoredPorts = append(monitoredPorts, sfmonitoring.GetTruncatedPortName(GitServerIdent, sfmonitoring.NodeExporterPortNameSuffix))
+		selectorRunList = append(selectorRunList, GitServerIdent)
 	}
 
 	services["MariaDB"] = r.DeployMariadb()
 	if services["MariaDB"] {
-		DURuleGroups = append(DURuleGroups, sfmonitoring.MkDiskUsageRuleGroup(r.ns, MariaDBIdent))
+		monitoredPorts = append(monitoredPorts, sfmonitoring.GetTruncatedPortName(MariaDBIdent, sfmonitoring.NodeExporterPortNameSuffix))
+		selectorRunList = append(selectorRunList, MariaDBIdent)
 	}
 
 	services["Zookeeper"] = r.DeployZookeeper()
 	if services["Zookeeper"] {
-		DURuleGroups = append(DURuleGroups, sfmonitoring.MkDiskUsageRuleGroup(r.ns, ZookeeperIdent))
+		monitoredPorts = append(monitoredPorts, sfmonitoring.GetTruncatedPortName(ZookeeperIdent, sfmonitoring.NodeExporterPortNameSuffix))
+		selectorRunList = append(selectorRunList, ZookeeperIdent)
 	}
 
 	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] {
@@ -186,7 +207,20 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		}
 	}
 
+	podMonitorSelector := metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "sf",
+		},
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{
+				Key:      "run",
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   selectorRunList,
+			},
+		},
+	}
 	// TODO? we could add this to the readiness computation.
+	r.EnsureSFPodMonitor(monitoredPorts, podMonitorSelector)
 	r.EnsureDiskUsagePromRule(DURuleGroups)
 
 	r.log.V(1).Info(messageInfo(r, services))

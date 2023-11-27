@@ -62,12 +62,12 @@ func MkNodeExporterSideCarContainer(serviceName string, volumeMounts []apiv1.Vol
 func MkDiskUsageRuleGroup(ns string, componentIdent string) monitoringv1.RuleGroup {
 	// Create some default, interesting alerts
 	diskFullAnnotations := map[string]string{
-		"description": componentIdent + ": mountpoint {{ $labels.mountpoint }} on pod {{ $labels.pod }} has {{ $value | humanize1024 }}% free space left.",
-		"summary":     componentIdent + " out of disk",
+		"description": "Mountpoint {{ $labels.mountpoint }} on pod {{ $labels.pod }} has {{ $value | humanize1024 }}% free space left.",
+		"summary":     "{{ $labels.pod }}:{{ $labels.mountpoint }} out of disk",
 	}
 	diskFull3daysAnnotations := map[string]string{
-		"description": componentIdent + ": mountpoint {{ $labels.mountpoint }} on pod {{ $labels.pod }} has {{ $value | humanize1024 }}% free space left and is expected to fill up in less than three days.",
-		"summary":     componentIdent + " running out of disk",
+		"description": "Mountpoint {{ $labels.mountpoint }} on pod {{ $labels.pod }} has {{ $value | humanize1024 }}% free space left and is expected to fill up in less than three days.",
+		"summary":     "{{ $labels.pod }}:{{ $labels.mountpoint }} running out of disk",
 	}
 	diskFull := MkPrometheusAlertRule(
 		"OutOfDiskNow",

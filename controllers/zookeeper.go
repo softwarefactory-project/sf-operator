@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
@@ -17,7 +16,6 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //go:embed static/zookeeper/ok.sh
@@ -49,36 +47,6 @@ const zkServerPort = 2888
 
 const ZookeeperIdent = "zookeeper"
 const zkPIMountPath = "/config-scripts"
-
-func (r *SFController) ensureZookeeperPodMonitor() bool {
-	selector := metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"app": "sf",
-			"run": ZookeeperIdent,
-		},
-	}
-	nePort := sfmonitoring.GetTruncatedPortName(ZookeeperIdent, sfmonitoring.NodeExporterPortNameSuffix)
-	desiredZKPodmonitor := sfmonitoring.MkPodMonitor(ZookeeperIdent+"-monitor", r.ns, []string{nePort}, selector)
-	// add annotations so we can handle lifecycle
-	annotations := map[string]string{
-		"version": "1",
-	}
-	desiredZKPodmonitor.ObjectMeta.Annotations = annotations
-	currentZKpm := monitoringv1.PodMonitor{}
-	if !r.GetM(desiredZKPodmonitor.Name, &currentZKpm) {
-		r.CreateR(&desiredZKPodmonitor)
-		return false
-	} else {
-		if !utils.MapEquals(&currentZKpm.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("Zookeeper PodMonitor configuration changed, updating...")
-			currentZKpm.Spec = desiredZKPodmonitor.Spec
-			currentZKpm.ObjectMeta.Annotations = annotations
-			r.UpdateR(&currentZKpm)
-			return false
-		}
-	}
-	return true
-}
 
 func createZKLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
 
@@ -245,8 +213,6 @@ func (r *SFController) DeployZookeeper() bool {
 	}
 
 	pvcReadiness := r.reconcileExpandPVC(ZookeeperIdent+"-data-"+ZookeeperIdent+"-0", r.cr.Spec.Zookeeper.Storage)
-
-	r.ensureZookeeperPodMonitor()
 
 	isReady := r.IsStatefulSetReady(&current) && pvcReadiness
 	conds.UpdateConditions(&r.cr.Status.Conditions, ZookeeperIdent, isReady)

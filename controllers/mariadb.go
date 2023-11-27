@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"github.com/go-sql-driver/mysql"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
@@ -71,36 +70,6 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 	annotations["mariadb-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["mariadb-fluent-bit-image"] = base.FluentBitImage
 	return volume, sidecar
-}
-
-func (r *SFController) ensureMariaDBPodMonitor() bool {
-	selector := metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"app": "sf",
-			"run": MariaDBIdent,
-		},
-	}
-	nePort := sfmonitoring.GetTruncatedPortName(MariaDBIdent, sfmonitoring.NodeExporterPortNameSuffix)
-	desiredDBPodmonitor := sfmonitoring.MkPodMonitor(MariaDBIdent+"-monitor", r.ns, []string{nePort}, selector)
-	// add annotations so we can handle lifecycle
-	annotations := map[string]string{
-		"version": "1",
-	}
-	desiredDBPodmonitor.ObjectMeta.Annotations = annotations
-	currentDBpm := monitoringv1.PodMonitor{}
-	if !r.GetM(desiredDBPodmonitor.Name, &currentDBpm) {
-		r.CreateR(&desiredDBPodmonitor)
-		return false
-	} else {
-		if !utils.MapEquals(&currentDBpm.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("MariaDB PodMonitor configuration changed, updating...")
-			currentDBpm.Spec = desiredDBPodmonitor.Spec
-			currentDBpm.ObjectMeta.Annotations = annotations
-			r.UpdateR(&currentDBpm)
-			return false
-		}
-	}
-	return true
 }
 
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
@@ -278,8 +247,6 @@ func (r *SFController) DeployMariadb() bool {
 			zuulDBSecret = r.DBPostInit(zuulDBSecret)
 		}
 	}
-
-	r.ensureMariaDBPodMonitor()
 
 	isReady := r.IsStatefulSetReady(&current) && zuulDBSecret.Data != nil
 
