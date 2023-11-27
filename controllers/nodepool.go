@@ -48,7 +48,7 @@ const (
 	launcherPortName             = "nlwebapp"
 	launcherPort                 = 8006
 	buildLogsHttpdPort           = 8080
-	buildLogsHttpdPortName       = "buildlogs-http"
+	BuildLogsHttpdPortName       = "buildlogs-http"
 	NodepoolProvidersSecretsName = "nodepool-providers-secrets"
 	builderIdent                 = nodepoolIdent + "-builder"
 )
@@ -511,7 +511,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		},
 	}
 	buildLogsContainer.Ports = []apiv1.ContainerPort{
-		base.MkContainerPort(buildLogsHttpdPort, buildLogsHttpdPortName),
+		base.MkContainerPort(buildLogsHttpdPort, BuildLogsHttpdPortName),
 	}
 	buildLogsContainer.ReadinessProbe = base.MkReadinessHTTPProbe("/builds", buildLogsHttpdPort)
 	buildLogsContainer.StartupProbe = base.MkStartupHTTPProbe("/builds", buildLogsHttpdPort)
@@ -520,9 +520,9 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		buildLogsContainer,
 	)
 
-	httpdService := base.MkService(
-		buildLogsHttpdPortName, r.ns, builderIdent, []int32{buildLogsHttpdPort}, buildLogsHttpdPortName)
-	r.GetOrCreate(&httpdService)
+	svc := base.MkServicePod(
+		builderIdent, r.ns, builderIdent+"-0", []int32{buildLogsHttpdPort}, builderIdent)
+	r.EnsureService(&svc)
 
 	current := appsv1.StatefulSet{}
 	if r.GetM(builderIdent, &current) {
@@ -539,7 +539,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	pvcReadiness := r.reconcileExpandPVC(builderIdent+"-"+builderIdent+"-0", r.cr.Spec.Nodepool.Builder.Storage)
 
-	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-builder", "nodepool", buildLogsHttpdPortName, "/builds",
+	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-builder", "nodepool", builderIdent, "/builds",
 		buildLogsHttpdPort, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
 	var isReady = r.IsStatefulSetReady(&current) && routeReady && pvcReadiness
