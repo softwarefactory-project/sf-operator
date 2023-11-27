@@ -17,7 +17,6 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const gsIdent = "git-server"
@@ -136,26 +135,8 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Create services exposed
-	gitService := apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      gsIdent,
-			Namespace: r.ns,
-		},
-		Spec: apiv1.ServiceSpec{
-			Ports: []apiv1.ServicePort{
-				{
-					Name:     gsGitPortName,
-					Protocol: apiv1.ProtocolTCP,
-					Port:     gsGitPort,
-				},
-			},
-			Type: apiv1.ServiceTypeNodePort,
-			Selector: map[string]string{
-				"app": "sf",
-				"run": gsIdent,
-			},
-		}}
-	r.GetOrCreate(&gitService)
+	svc := base.MkServicePod(gsIdent, r.ns, gsIdent+"-0", []int32{gsGitPort}, gsGitPortName)
+	r.EnsureService(&svc)
 
 	isStatefulset := r.IsStatefulSetReady(&current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, gsIdent, isStatefulset)
