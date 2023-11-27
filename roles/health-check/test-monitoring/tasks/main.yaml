@@ -36,7 +36,7 @@
   register: zeo
   until: zeo.stdout != "" and "null" not in zeo.stdout
   retries: 60
-  delay: 2
+  delay: 4
 
   # config-update-nodepool-builder should at least trigger one tick for readiness.
 - name: Fetch a basic Nodepool metric exported by statsd
@@ -44,7 +44,7 @@
   register: nlr
   until: nlr.stdout != "" and "null" not in nlr.stdout
   retries: 60
-  delay: 2
+  delay: 4
 
 # Use a dictionary to trick Ansible into casting metrics to int/float
 - set_fact:
