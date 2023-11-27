@@ -49,6 +49,8 @@
           - skopeo
           - openssl
           - python3-cryptography
+          - zip
+          - unzip
 
     - name: Install openshift-client
       ansible.builtin.package:

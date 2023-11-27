@@ -64,7 +64,7 @@ var configScriptVolumeMount = apiv1.VolumeMount{
 
 var nodepoolFluentBitLabels = []logging.FluentBitLabel{
 	{
-		Key:   "SERVICE",
+		Key:   "COMPONENT",
 		Value: "nodepool",
 	},
 }

@@ -53,7 +53,7 @@ var commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
 
 var zuulFluentBitLabels = []logging.FluentBitLabel{
 	{
-		Key:   "SERVICE",
+		Key:   "COMPONENT",
 		Value: "zuul",
 	},
 }

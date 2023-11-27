@@ -1,0 +1,24 @@
+---
+- name: check if logCLI is present
+  ansible.builtin.shell: type logcli
+  register: logcli_exists
+  ignore_errors: true
+
+- name: Install logCLI
+  block:
+  - name: download and unzip logCLI
+    ansible.builtin.unarchive:
+      src: "https://github.com/grafana/loki/releases/download/v2.9.2/logcli-linux-amd64.zip"
+      remote_src: yes
+      mode: a+x
+      dest: /tmp/
+
+  - name: ensure ~/bin exists
+    ansible.builtin.file:
+      path: ~/bin
+      state: directory
+      mode: '0755'
+
+  - name: move logCLI to ~/bin/
+    command: mv /tmp/logcli-linux-amd64 ~/bin/logcli
+  when: logcli_exists.rc > 0

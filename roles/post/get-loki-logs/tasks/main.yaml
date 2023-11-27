@@ -1,0 +1,34 @@
+---
+- name: Ensure output dir exists for loki logs
+  ansible.builtin.file:
+    path: "{{ output_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: Set realpath for the log directory
+  ansible.builtin.command: realpath {{ output_dir }}
+  register: _output_dir_realpath
+
+- name: Start port forwarding to loki-http if needed
+  shell: |
+    kubectl port-forward service/loki-http 3100 -n sf
+  async: 60
+  poll: 0
+  ignore_errors: true
+
+- name: Ensure loki is reachable
+  uri:
+    url: http://localhost:3100/loki/api/v1/status/buildinfo
+    return_content: yes
+  register: loki_buildinfo
+  delay: 6
+  retries: 10
+  until: "loki_buildinfo.status == 200 and '2.9.2' in loki_buildinfo.content"
+
+- name: Get aggregated logs prefixed by service
+  ansible.builtin.shell: >
+    ~/bin/logcli query --forward --since=6h --parallel-duration 15m --parallel-max-workers 4 --part-path-prefix=/tmp/all-query --merge-parts --no-labels --quiet '{namespace="sf"} | json | {{ line_format_query }}' > {{ _output_dir_realpath.stdout }}/all.log
+
+- name: Change owner and group for the log dir
+  ansible.builtin.command: chown -R {{ ansible_user }}:{{ ansible_user }} {{ _output_dir_realpath.stdout }}
