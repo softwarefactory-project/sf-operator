@@ -331,6 +331,27 @@ _Appears in:_
 | `statsdTarget` _string_ | The address to forward statsd metrics to (optional), in the form "host:port" | -|
 
 
+#### PagureConnection
+
+
+
+Describes a Zuul connection using the [pagure driver](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#connection-configuration).
+
+_Appears in:_
+- [ZuulSpec](#zuulspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `name` _string_ | How the connection will be named in Zuul's configuration and appear in zuul-web | -|
+| `server` _string_ | the [server](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.server) | -|
+| `canonicalHostname` _string_ | the [canonicalHostname](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.canonical_hostname) | -|
+| `baseUrl` _string_ | the (baseUrl)[https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-%3Cpagure%20connection%3E.baseurl) | -|
+| `secrets` _string_ | Name of the secret which containes the following keys: the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.api_token) | -|
+| `appName` _string_ | the [appName](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.app_name) | -|
+| `cloneUrl` _string_ | the [cloneUrl](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.cloneurl) | -|
+| `sourceWhitelist` _string_ | the [sourceWhitelist](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.source_whitelist) | -|
+
+
 #### Secret
 
 
@@ -536,6 +557,7 @@ _Appears in:_
 | `githubconns` _[GitHubConnection](#githubconnection) array_ | The list of GitHub-based connections to add to Zuul's configuration | -|
 | `gitlabconns` _[GitLabConnection](#gitlabconnection) array_ | The list of GitLab-based connections to add to Zuul's configuration | -|
 | `gitconns` _[GitConnection](#gitconnection) array_ | The list of Git-based connections to add to Zuul's configuration | -|
+| `pagureconns` _[PagureConnection](#pagureconnection) array_ | The list of Pagure-based connections to add to Zuul's configuration | -|
 | `elasticsearchconns` _[ElasticSearchConnection](#elasticsearchconnection) array_ | The list of ElasticSearch-based connections to add to Zuul's configuration | -|
 | `executor` _[ZuulExecutorSpec](#zuulexecutorspec)_ | Configuration of the executor microservices | -|
 | `scheduler` _[ZuulSchedulerSpec](#zuulschedulerspec)_ | Configuration of the scheduler microservice | -|

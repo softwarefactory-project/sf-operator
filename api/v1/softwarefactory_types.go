@@ -140,6 +140,27 @@ type GerritConnection struct {
 	VerifySSL *bool `json:"verifyssl,omitempty"`
 }
 
+// Describes a Zuul connection using the [pagure driver](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#connection-configuration).
+type PagureConnection struct {
+	// How the connection will be named in Zuul's configuration and appear in zuul-web
+	Name string `json:"name"`
+	// the [server](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.server)
+	Server string `json:"server,omitempty"`
+	// the [canonicalHostname](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.canonical_hostname)
+	CanonicalHostname string `json:"canonicalHostname,omitempty"`
+	// the (baseUrl)[https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-%3Cpagure%20connection%3E.baseurl)
+	BaseURL string `json:"baseUrl,omitempty"`
+	// Name of the secret which containes the following keys:
+	// the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.api_token)
+	Secrets string `json:"secrets,omitempty"`
+	// the [appName](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.app_name)
+	AppName string `json:"appName,omitempty"`
+	// the [cloneUrl](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.cloneurl)
+	CloneURL string `json:"cloneUrl,omitempty"`
+	// the [sourceWhitelist](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.source_whitelist)
+	SourceWhitelist string `json:"sourceWhitelist,omitempty"`
+}
+
 // Describes a Zuul connection using the [git driver](https://zuul-ci.org/docs/zuul/latest/drivers/git.html#connection-configuration).
 // When an optional parameter is not specified then Zuul's defaults apply
 type GitConnection struct {
@@ -283,6 +304,8 @@ type ZuulSpec struct {
 	GitLabConns []GitLabConnection `json:"gitlabconns,omitempty"`
 	// The list of Git-based connections to add to Zuul's configuration
 	GitConns []GitConnection `json:"gitconns,omitempty"`
+	// The list of Pagure-based connections to add to Zuul's configuration
+	PagureConns []PagureConnection `json:"pagureconns,omitempty"`
 	// The list of ElasticSearch-based connections to add to Zuul's configuration
 	ElasticSearchConns []ElasticSearchConnection `json:"elasticsearchconns,omitempty"`
 	// Configuration of the executor microservices
