@@ -37,7 +37,7 @@
       cloudprovider_dns:
         - 199.204.44.24
         - 199.204.47.54
-      inject_dev_ssh_keys: false
+      inject_dev_ssh_keys: true
 
 - job:
     name: sf-operator-multinode
