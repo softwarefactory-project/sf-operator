@@ -143,6 +143,10 @@ func (r *SFController) cleanup() {
 	if r.GetM(GitServerIdent+"-monitor", &currentGSpm) {
 		r.DeleteR(&currentGSpm)
 	}
+	currentZPM := monitoringv1.PodMonitor{}
+	if r.GetM("zuul-monitor", &currentZPM) {
+		r.DeleteR(&currentZPM)
+	}
 }
 
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
@@ -201,6 +205,16 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	}
 
 	if services["Zuul"] {
+		monitoredPorts = append(
+			monitoredPorts,
+			sfmonitoring.GetTruncatedPortName("zuul-scheduler", sfmonitoring.NodeExporterPortNameSuffix),
+			sfmonitoring.GetTruncatedPortName("zuul-executor", sfmonitoring.NodeExporterPortNameSuffix),
+			sfmonitoring.GetTruncatedPortName("zuul-merger", sfmonitoring.NodeExporterPortNameSuffix),
+			sfmonitoring.GetTruncatedPortName("zuul-web", sfmonitoring.NodeExporterPortNameSuffix),
+			ZuulPrometheusPortName,
+			ZuulStatsdExporterPortName,
+		)
+		selectorRunList = append(selectorRunList, "zuul-scheduler", "zuul-executor", "zuul-merger", "zuul-web")
 		services["Config"] = r.SetupConfigJob()
 		if services["Config"] {
 			conds.RefreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")

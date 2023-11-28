@@ -33,11 +33,11 @@ const (
 	zuulExecutorPort     = 7900
 
 	zuulPrometheusPort     = 9090
-	zuulPrometheusPortName = "zuul-metrics"
+	ZuulPrometheusPortName = "zuul-metrics"
 )
 
 var (
-	zuulStatsdExporterPortName = monitoring.GetStatsdExporterPort("zuul")
+	ZuulStatsdExporterPortName = monitoring.GetStatsdExporterPort("zuul")
 
 	//go:embed static/zuul/zuul.conf
 	zuulDotconf string
@@ -352,8 +352,16 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	zuulContainers[0].Env = append(zuulContainers[0].Env, extraLoggingEnvVars...)
 
 	statsdSidecar := monitoring.MkStatsdExporterSideCarContainer("zuul", "statsd-config", relayAddress)
+	nodeExporterSidecar := monitoring.MkNodeExporterSideCarContainer(
+		"zuul-scheduler",
+		[]apiv1.VolumeMount{
+			{
+				Name:      "zuul-scheduler",
+				MountPath: "/var/lib/zuul",
+			},
+		})
 
-	zuulContainers = append(zuulContainers, statsdSidecar)
+	zuulContainers = append(zuulContainers, statsdSidecar, nodeExporterSidecar)
 
 	var setAdditionalContainers = func(sts *appsv1.StatefulSet) {
 		sts.Spec.Template.Spec.InitContainers = []apiv1.Container{r.mkInitSchedulerConfigContainer()}
@@ -375,7 +383,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	zs.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/health/live", zuulPrometheusPort)
 	zs.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/health/ready", zuulPrometheusPort)
 	zs.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		base.MkContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
+		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 	}
 
 	current, changed := r.ensureStatefulset(zs)
@@ -413,13 +421,28 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
 	ze.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessHTTPProbe("/health/live", zuulPrometheusPort)
 	ze.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		base.MkContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
+		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 		base.MkContainerPort(zuulExecutorPort, zuulExecutorPortName),
 	}
 	// NOTE(dpawlik): Zuul Executor needs to privileged pod, due error in the console log:
 	// "bwrap: Can't bind mount /oldroot/etc/resolv.conf on /newroot/etc/resolv.conf: Permission denied""
 	ze.Spec.Template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(true)
 	ze.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = pointer.Int64(1000)
+
+	nodeExporterSidecar := monitoring.MkNodeExporterSideCarContainer(
+		"zuul-executor",
+		[]apiv1.VolumeMount{
+			{
+				Name:      "zuul-executor",
+				MountPath: "/var/lib/zuul",
+			},
+		})
+	ze.Spec.Template.Spec.Containers = append(ze.Spec.Template.Spec.Containers, nodeExporterSidecar)
+	// FIXME: OpenShift doesn't seem very happy when containers in the same pod don't share
+	// the same security context; or maybe it is because a volume is shared between the two?
+	// Anyhow, the simplest fix is to elevate privileges on the node exporter sidecar.
+	ze.Spec.Template.Spec.Containers[1].SecurityContext = base.MkSecurityContext(true)
+	ze.Spec.Template.Spec.Containers[1].SecurityContext.RunAsUser = pointer.Int64(1000)
 
 	current, changed := r.ensureStatefulset(ze)
 	if changed {
@@ -454,12 +477,22 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 	extraLoggingEnvVars := logging.SetupLogForwarding(service, r.cr.Spec.FluentBitLogForwarding, zuulFluentBitLabels, annotations)
 	zm.Spec.Template.Spec.Containers[0].Env = append(zm.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
 
+	nodeExporterSidecar := monitoring.MkNodeExporterSideCarContainer(
+		service,
+		[]apiv1.VolumeMount{
+			{
+				Name:      service,
+				MountPath: "/var/lib/zuul",
+			},
+		})
+	zm.Spec.Template.Spec.Containers = append(zm.Spec.Template.Spec.Containers, nodeExporterSidecar)
+
 	zm.Spec.Template.ObjectMeta.Annotations = annotations
 
 	zm.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
 	zm.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessHTTPProbe("/health/live", zuulPrometheusPort)
 	zm.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		base.MkContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
+		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 	}
 
 	current, changed := r.ensureStatefulset(zm)
@@ -500,7 +533,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		base.MkContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
+		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 	}
 
 	current := appsv1.Deployment{}
@@ -545,43 +578,6 @@ func (r *SFController) EnsureZuulComponents(cfg *ini.File) bool {
 	return zuulServices["scheduler"] && zuulServices["executor"] && zuulServices["web"] && zuulServices["merger"]
 }
 
-func (r *SFController) EnsureZuulPodMonitor() bool {
-	selector := metav1.LabelSelector{
-		MatchExpressions: []metav1.LabelSelectorRequirement{
-			{
-				Key:      "run",
-				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{"zuul-scheduler", "zuul-merger", "zuul-executor", "zuul-web"},
-			},
-			{
-				Key:      "app",
-				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{"sf"},
-			},
-		},
-	}
-	desiredZuulPodMonitor := monitoring.MkPodMonitor("zuul-monitor", r.ns, []string{zuulPrometheusPortName, zuulStatsdExporterPortName}, selector)
-	// add annotations so we can handle lifecycle
-	annotations := map[string]string{
-		"version": "2",
-	}
-	desiredZuulPodMonitor.ObjectMeta.Annotations = annotations
-	currentZPM := monitoringv1.PodMonitor{}
-	if !r.GetM(desiredZuulPodMonitor.Name, &currentZPM) {
-		r.CreateR(&desiredZuulPodMonitor)
-		return false
-	} else {
-		if !utils.MapEquals(&currentZPM.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("Zuul PodMonitor configuration changed, updating...")
-			currentZPM.Spec = desiredZuulPodMonitor.Spec
-			currentZPM.ObjectMeta.Annotations = annotations
-			r.UpdateR(&currentZPM)
-			return false
-		}
-	}
-	return true
-}
-
 // create default alerts
 func (r *SFController) ensureZuulPromRule() bool {
 	/* Alert when a config-update job fails on the config repository */
@@ -610,7 +606,7 @@ func (r *SFController) ensureZuulPromRule() bool {
 	notEnoughExecutors := monitoring.MkPrometheusAlertRule(
 		"NotEnoughExecutors",
 		intstr.FromString(
-			"rate(zuul_executors_jobs_queued[1h]) > 0"),
+			"increase(zuul_executors_jobs_queued[1h]) > 0"),
 		"1h",
 		monitoring.WarningSeverityLabel,
 		notEnoughExecutorsAnnotations,
@@ -624,7 +620,7 @@ func (r *SFController) ensureZuulPromRule() bool {
 	notEnoughMergers := monitoring.MkPrometheusAlertRule(
 		"NotEnoughMergers",
 		intstr.FromString(
-			"rate(zuul_mergers_jobs_queued[1h]) > 0"),
+			"increase(zuul_mergers_jobs_queued[1h]) > 0"),
 		"1h",
 		monitoring.WarningSeverityLabel,
 		notEnoughMergersAnnotations,
@@ -638,7 +634,7 @@ func (r *SFController) ensureZuulPromRule() bool {
 	notEnoughNodes := monitoring.MkPrometheusAlertRule(
 		"NotEnoughTestNodes",
 		intstr.FromString(
-			"rate(zuul_nodepool_current_requests[1h]) > 0"),
+			"increase(zuul_nodepool_current_requests[1h]) > 0"),
 		"1h",
 		monitoring.WarningSeverityLabel,
 		notEnoughNodesAnnotations,
@@ -1020,8 +1016,7 @@ func (r *SFController) DeployZuul() bool {
 
 	r.EnsureZuulConfigSecret(cfgINI)
 	r.EnsureZuulComponentsFrontServices()
-	// We could condition readiness to the state of the PodMonitor, but we don't.
-	r.EnsureZuulPodMonitor()
+
 	r.ensureZuulPromRule()
 
 	return r.EnsureZuulComponents(cfgINI) && r.setupZuulIngress()
