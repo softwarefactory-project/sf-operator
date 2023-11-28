@@ -351,6 +351,7 @@ func MkPodMonitor(name string, ns string, ports []string, selector metav1.LabelS
 		Spec: monitoringv1.PodMonitorSpec{
 			Selector:            selector,
 			PodMetricsEndpoints: endpoints,
+			PodTargetLabels:     []string{"app", "run"},
 		},
 	}
 }
