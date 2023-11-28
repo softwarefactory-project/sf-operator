@@ -17,112 +17,17 @@ git config user.email "admin@${FQDN}"
 mkdir -p zuul.d playbooks/base playbooks/config
 
 cat << EOF > zuul.d/jobs-base.yaml
-# Semaphore
-# JobBase
+# Semaphores
+# JobsBase
 
 EOF
 
 if [ -n "${CONFIG_REPO_NAME}" -a -n "${CONFIG_ZUUL_CONNECTION_NAME}" ]; then
   cat << EOF > zuul.d/config-project.yaml
 ---
-- pipeline:
-    name: post
-    post-review: true
-    description: This pipeline runs jobs that operate after each change is merged.
-    manager: supercedent
-    precedence: low
-    trigger:
-      git-server:
-        event:
-          - ref-updated
-      ${CONFIG_ZUUL_CONNECTION_NAME}:
-        - event: ref-updated
-          ref: ^refs/heads/.*$
+# Pipelines
+# Projects
 
-- pipeline:
-    name: check
-    description: |
-      Newly uploaded patchsets enter this pipeline to receive an
-      initial +/-1 Verified vote.
-    manager: independent
-    require:
-      ${CONFIG_ZUUL_CONNECTION_NAME}:
-        open: True
-        current-patchset: True
-    trigger:
-      ${CONFIG_ZUUL_CONNECTION_NAME}:
-        - event: patchset-created
-        - event: change-restored
-        - event: comment-added
-          comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*(recheck|reverify)
-        - event: comment-added
-          require:
-            approval:
-              - Verified: [-1, -2]
-                username: zuul
-          approval:
-            - Workflow: 1
-    start:
-      ${CONFIG_ZUUL_CONNECTION_NAME}:
-        Verified: 0
-    success:
-      ${CONFIG_ZUUL_CONNECTION_NAME}:
-        Verified: 1
-    failure:
-      ${CONFIG_ZUUL_CONNECTION_NAME}:
-        Verified: -1
-
-- pipeline:
-    name: gate
-    description: |
-      Changes that have been approved by core developers are enqueued
-      in order in this pipeline, and if they pass tests, will be
-      merged.
-    success-message: Build succeeded (gate pipeline).
-    failure-message: Build failed (gate pipeline).
-    manager: dependent
-    precedence: high
-    supercedes: check
-    post-review: True
-    require:
-      ${CONFIG_ZUUL_CONNECTION_NAME}:
-        open: True
-        current-patchset: True
-        approval:
-          - Workflow: 1
-    trigger:
-      ${CONFIG_ZUUL_CONNECTION_NAME}:
-        - event: comment-added
-          approval:
-            - Workflow: 1
-        - event: comment-added
-          approval:
-            - Verified: 1
-          username: zuul
-    start:
-      ${CONFIG_ZUUL_CONNECTION_NAME}:
-        Verified: 0
-    success:
-      ${CONFIG_ZUUL_CONNECTION_NAME}:
-        Verified: 2
-        submit: true
-    failure:
-      ${CONFIG_ZUUL_CONNECTION_NAME}:
-        Verified: -2
-    window-floor: 20
-    window-increase-factor: 2
-
-- project:
-    name: ${CONFIG_REPO_NAME}
-    check:
-      jobs:
-        - config-check
-    gate:
-      jobs:
-        - config-check
-    post:
-      jobs:
-        - config-update
 EOF
 else
   cat  << EOF > zuul.d/config-project.yaml

@@ -180,105 +180,91 @@ func GetZuulPipelinePrecedence(precedence string) PipelinePrecedence {
 	return precedencestr
 }
 
-func GetZuulPipelineReporterVerified(verified string) GerritReporter {
-	var verifiedstr GerritReporter
+func GetZuulPipelineReporterVerified(verified string) GerritVotePoint {
+	var verifiedstr GerritVotePoint
 	switch verified {
 	case "2":
-		verifiedstr = VerifiedTwo
+		verifiedstr = GerritVotePointTwo
 	case "1":
-		verifiedstr = VerifiedOne
+		verifiedstr = GerritVotePointOne
 	case "0":
-		verifiedstr = VerifiedZero
+		verifiedstr = GerritVotePointZero
 	case "-1":
-		verifiedstr = VerifiedMinusOne
+		verifiedstr = GerritVotePointMinusOne
 	case "-2":
-		verifiedstr = VerifiedMinusTwo
+		verifiedstr = GerritVotePointMinusTwo
 	default:
-		verifiedstr = VerifiedZero
+		verifiedstr = GerritVotePointZero
 	}
 	return verifiedstr
 }
 
-type GerritReporter int8
+type GerritVotePoint int8
 
 const (
 	// This is needed due to https://go.dev/ref/spec#The_zero_value
 	// Zero Values for int's will not show while printing the structure
-	VerifiedTwo      = 2
-	VerifiedOne      = 1
-	VerifiedZero     = 0
-	VerifiedMinusOne = -1
-	VerifiedMinusTwo = -2
+	GerritVotePointTwo      = 2
+	GerritVotePointOne      = 1
+	GerritVotePointZero     = 0
+	GerritVotePointMinusOne = -1
+	GerritVotePointMinusTwo = -2
 )
 
 // This struct defines Trigger Configurations for Gerrit, Gitlab and GitHub
 // The fields defined are common to all three configurations
 
-func GetGerritWorkflowValue(value string) GerritWorkflowColumn {
-	var workflowvalue GerritWorkflowColumn
+func GetGerritWorkflowValue(value string) GerritWorkflow {
+	var workflowvalue GerritWorkflow
 	switch value {
 	case "1":
-		workflowvalue = GerritWorkflowPlusOne
+		workflowvalue = GerritVotePointOne
 	case "0":
-		workflowvalue = GerritWorkflowZero
+		workflowvalue = GerritVotePointZero
 	case "-1":
-		workflowvalue = GerritWorkflowMinusOne
+		workflowvalue = GerritVotePointMinusOne
 	default:
-		workflowvalue = GerritWorkflowZero
+		workflowvalue = GerritVotePointZero
 	}
 	return workflowvalue
 }
 
-const (
-	GerritWorkflowPlusOne  = 1
-	GerritWorkflowZero     = 0
-	GerritWorkflowMinusOne = -1
-)
-
-type GerritWorkflowColumn int8
+type GerritWorkflow GerritVotePoint
 
 func GetGerritCodeReviewValue(value string) GerritCodeReview {
 	var codereviewvalue GerritCodeReview
 	switch value {
 	case "2":
-		codereviewvalue = GerritCodeReviewPlusTwo
+		codereviewvalue = GerritVotePointTwo
 	case "1":
-		codereviewvalue = GerritCodeReviewPlusOne
+		codereviewvalue = GerritVotePointOne
 	case "0":
-		codereviewvalue = GerritCodeReviewZero
+		codereviewvalue = GerritVotePointZero
 	case "-1":
-		codereviewvalue = GerritCodeReviewMinusOne
+		codereviewvalue = GerritVotePointMinusOne
 	case "-2":
-		codereviewvalue = GerritCodeReviewMinusTwo
+		codereviewvalue = GerritVotePointMinusTwo
 	default:
-		codereviewvalue = GerritWorkflowZero
+		codereviewvalue = GerritVotePointZero
 	}
 	return codereviewvalue
 }
 
-const (
-	GerritCodeReviewPlusTwo  = 2
-	GerritCodeReviewPlusOne  = 1
-	GerritCodeReviewZero     = 0
-	GerritCodeReviewMinusOne = -1
-	GerritCodeReviewMinusTwo = -2
-)
-
-type GerritCodeReview int8
+type GerritCodeReview GerritVotePoint
 
 type PipelineRequireGerritApproval struct {
-	Workflow   GerritWorkflowColumn `yaml:"Workflow,omitempty"`
-	Verified   GerritReporter       `yaml:"Verified,omitempty,flow"`
-	CodeReview GerritCodeReview     `yaml:"Code-Review,omitempty"`
+	Workflow   GerritWorkflow   `yaml:"Workflow,omitempty"`
+	Verified   GerritVotePoint  `yaml:"Verified,omitempty,flow"`
+	CodeReview GerritCodeReview `yaml:"Code-Review,omitempty"`
 }
 
 type PipelineRequireApproval struct {
 	Username        string                          `yaml:"username,omitempty"`
 	Open            bool                            `yaml:"open,omitempty"`
 	CurrentPatchset bool                            `yaml:"current-patchset,omitempty"`
-	Verified        []GerritReporter                `yaml:"Verified,omitempty,flow"`
+	Verified        []GerritVotePoint               `yaml:"Verified,omitempty,flow"`
 	GerritApproval  []PipelineRequireGerritApproval `yaml:"approval,omitempty"`
-	Workflow        GerritWorkflowColumn            `yaml:"Workflow,omitempty"`
+	Workflow        GerritWorkflow                  `yaml:"Workflow,omitempty"`
 }
 
 type PipelineTriggerGitGerrit struct {
@@ -299,8 +285,8 @@ type PipelineTriggerGitArray []PipelineTriggerGit
 type PipelineGenericTrigger map[string]PipelineTriggerGitArray
 
 type PipelineGerritReporter struct {
-	Submit   bool           `yaml:"submit,omitempty"`
-	Verified GerritReporter `yaml:"Verified"`
+	Submit   bool            `yaml:"submit,omitempty"`
+	Verified GerritVotePoint `yaml:"Verified"`
 }
 
 type GerritReporterMap map[string]PipelineGerritReporter
@@ -329,19 +315,21 @@ const (
 type PipelineRequire map[string]PipelineRequireApproval
 
 type PipelineBody struct {
-	Name           string                 `yaml:"name"`
-	Description    string                 `yaml:"description,omitempty"`
-	Manager        PipelineManager        `yaml:"manager"`
-	PostReview     bool                   `yaml:"post-review,omitempty"`
-	Precedence     PipelinePrecedence     `yaml:"precedence,omitempty"`
-	Supercedes     []string               `yaml:"supercedes,omitempty"`
-	SuccessMessage string                 `yaml:"success-message,omitempty"`
-	FailureMessage string                 `yaml:"failure-message,omitempty"`
-	Require        PipelineRequire        `yaml:"require,omitempty"`
-	Start          PipelineReporter       `yaml:"start,omitempty"`
-	Success        PipelineReporter       `yaml:"success,omitempty"`
-	Failure        PipelineReporter       `yaml:"failure,omitempty"`
-	Trigger        PipelineGenericTrigger `yaml:"trigger,omitempty"`
+	Name                 string                 `yaml:"name"`
+	Description          string                 `yaml:"description,omitempty"`
+	Manager              PipelineManager        `yaml:"manager"`
+	PostReview           bool                   `yaml:"post-review,omitempty"`
+	Precedence           PipelinePrecedence     `yaml:"precedence,omitempty"`
+	Supercedes           []string               `yaml:"supercedes,omitempty"`
+	SuccessMessage       string                 `yaml:"success-message,omitempty"`
+	FailureMessage       string                 `yaml:"failure-message,omitempty"`
+	Require              PipelineRequire        `yaml:"require,omitempty"`
+	Start                PipelineReporter       `yaml:"start,omitempty"`
+	Success              PipelineReporter       `yaml:"success,omitempty"`
+	Failure              PipelineReporter       `yaml:"failure,omitempty"`
+	Trigger              PipelineGenericTrigger `yaml:"trigger,omitempty"`
+	WindowFloor          uint8                  `yaml:"window-floor,omitempty"`
+	WindowIncreaseFactor uint8                  `yaml:"window-increase-factor,omitempty"`
 }
 
 type Pipeline struct {
