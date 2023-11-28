@@ -148,7 +148,10 @@ func (r *SFController) cleanup() {
 	if r.GetM("zuul-monitor", &currentZPM) {
 		r.DeleteR(&currentZPM)
 	}
-
+	currentNPM := monitoringv1.PodMonitor{}
+	if r.GetM("nodepool-monitor", &currentNPM) {
+		r.DeleteR(&currentNPM)
+	}
 	// remove a legacy Route definition for Zuul
 	r.DeleteR(&apiroutev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
@@ -209,8 +212,16 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	if services["Zookeeper"] {
 		nodepool := r.DeployNodepool()
-		services["NodePoolLauncher"] = nodepool[launcherIdent]
-		services["NodePoolBuilder"] = nodepool[builderIdent]
+		services["NodePoolLauncher"] = nodepool[LauncherIdent]
+		services["NodePoolBuilder"] = nodepool[BuilderIdent]
+		if services["NodePoolLauncher"] && services["NodePoolBuilder"] {
+			monitoredPorts = append(
+				monitoredPorts,
+				sfmonitoring.GetTruncatedPortName(BuilderIdent, sfmonitoring.NodeExporterPortNameSuffix),
+				NodepoolStatsdExporterPortName,
+			)
+			selectorRunList = append(selectorRunList, LauncherIdent, BuilderIdent)
+		}
 	}
 
 	if services["Zuul"] {
