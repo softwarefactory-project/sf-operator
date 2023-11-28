@@ -13,11 +13,11 @@ For instance to override the default `microshift_host` variable:
 ./tools/sfconfig runTests --extra-var "microshift_host=my-microshift"
 ```
 
-To get more Ansible output logs, you can use the `verbose (-v)` or `debug (-vvv)` parameter.
+To get more Ansible output logs, you can use the `verbose (--v)` or `debug (--vvv)` parameter.
 For example:
 
 ```sh
-/tools/sfconfig runTests -v
+./tools/sfconfig runTests --v
 ```
 
 ## Available test suites
