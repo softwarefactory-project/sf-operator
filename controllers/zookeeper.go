@@ -14,7 +14,6 @@ import (
 	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -165,7 +164,6 @@ func (r *SFController) DeployZookeeper() bool {
 	}
 	zk.Spec.Template.Spec.Containers[0].Command = []string{"/bin/bash", "/config-scripts/run.sh"}
 	zk.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
-
 	zk.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkVolumeCM(ZookeeperIdent+"-pi", ZookeeperIdent+"-pi-config-map"),
 		base.MkVolumeSecret("zookeeper-client-tls"),
@@ -192,29 +190,22 @@ func (r *SFController) DeployZookeeper() bool {
 
 	zk.Spec.Template.ObjectMeta.Annotations = annotations
 
-	current := appsv1.StatefulSet{}
-	if r.GetM(ZookeeperIdent, &current) {
-		// VolumeClaimTemplates cannot be updated on a statefulset. If we are missing the logs PVC we must
-		// recreate from scratch the statefulset. The new statefulset should mount the old PVC again.
-		if len(current.Spec.VolumeClaimTemplates) < 2 {
-			r.log.V(1).Info("Zookeeper volume claim templates changed, recreating statefulset ...")
-			r.DeleteR(&current)
-			return false
-		}
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("Zookeeper configuration changed, rollout pods ...")
-			current.Spec.Template = zk.DeepCopy().Spec.Template
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		current := zk
-		r.CreateR(&current)
+	current, changed := r.ensureStatefulset(zk)
+	if changed {
+		return false
+	}
+
+	// VolumeClaimTemplates cannot be updated on a statefulset. If we are missing the logs PVC we must
+	// recreate from scratch the statefulset. The new statefulset should mount the old PVC again.
+	if len(current.Spec.VolumeClaimTemplates) < 2 {
+		r.log.V(1).Info("Zookeeper volume claim templates changed, recreating statefulset ...")
+		r.DeleteR(current)
+		return false
 	}
 
 	pvcReadiness := r.reconcileExpandPVC(ZookeeperIdent+"-data-"+ZookeeperIdent+"-0", r.cr.Spec.Zookeeper.Storage)
 
-	isReady := r.IsStatefulSetReady(&current) && pvcReadiness
+	isReady := r.IsStatefulSetReady(current) && pvcReadiness
 	conds.UpdateConditions(&r.cr.Status.Conditions, ZookeeperIdent, isReady)
 
 	return isReady

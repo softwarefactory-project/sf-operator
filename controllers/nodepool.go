@@ -591,17 +591,9 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		builderIdent, r.ns, builderIdent+"-0", []int32{buildLogsHttpdPort}, builderIdent)
 	r.EnsureService(&svc)
 
-	current := appsv1.StatefulSet{}
-	if r.GetM(builderIdent, &current) {
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("Nodepool-builder configuration changed, rollout pods ...")
-			current.Spec.Template = *nb.Spec.Template.DeepCopy()
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		current := nb
-		r.CreateR(&current)
+	current, changed := r.ensureStatefulset(nb)
+	if changed {
+		return false
 	}
 
 	pvcReadiness := r.reconcileExpandPVC(builderIdent+"-"+builderIdent+"-0", r.cr.Spec.Nodepool.Builder.Storage)
@@ -609,7 +601,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-builder", "nodepool", builderIdent, "/builds",
 		buildLogsHttpdPort, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
 
-	var isReady = r.IsStatefulSetReady(&current) && routeReady && pvcReadiness
+	var isReady = r.IsStatefulSetReady(current) && routeReady && pvcReadiness
 
 	conds.UpdateConditions(&r.cr.Status.Conditions, builderIdent, isReady)
 

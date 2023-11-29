@@ -16,7 +16,6 @@ import (
 	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
-	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -215,17 +214,9 @@ func (r *SFController) DeployMariadb() bool {
 
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 
-	current := appsv1.StatefulSet{}
-	if r.GetM(MariaDBIdent, &current) {
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("mariaDB changed, rollout pods ...")
-			current.Spec = sts.DeepCopy().Spec
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		current := sts
-		r.CreateR(&current)
+	current, changed := r.ensureStatefulset(sts)
+	if changed {
+		return false
 	}
 
 	servicePorts := []int32{mariadbPort}
@@ -234,7 +225,9 @@ func (r *SFController) DeployMariadb() bool {
 
 	var zuulDBSecret apiv1.Secret
 
-	if r.IsStatefulSetReady(&current) {
+	stsReady := r.IsStatefulSetReady(current)
+
+	if stsReady {
 		zuulDBSecret = apiv1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      zuulDBConfigSecret,
@@ -248,7 +241,7 @@ func (r *SFController) DeployMariadb() bool {
 		}
 	}
 
-	isReady := r.IsStatefulSetReady(&current) && zuulDBSecret.Data != nil
+	isReady := stsReady && zuulDBSecret.Data != nil
 
 	conds.UpdateConditions(&r.cr.Status.Conditions, MariaDBIdent, isReady)
 

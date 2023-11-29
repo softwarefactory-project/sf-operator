@@ -371,23 +371,15 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		base.MkContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
 	}
 
-	current := appsv1.StatefulSet{}
-	if r.GetM("zuul-scheduler", &current) {
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("zuul-scheduler configuration changed, rollout zuul-scheduler pods ...")
-			current.Spec.Template = *zs.Spec.Template.DeepCopy()
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		current := zs
-		r.CreateR(&current)
+	current, changed := r.ensureStatefulset(zs)
+	if changed {
+		return false
 	}
 
-	isStatefulSet := r.IsStatefulSetReady(&current)
-	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-scheduler", isStatefulSet)
+	ready := r.IsStatefulSetReady(current)
+	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-scheduler", ready)
 
-	return isStatefulSet
+	return ready
 }
 
 func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
@@ -422,23 +414,15 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	ze.Spec.Template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(true)
 	ze.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = pointer.Int64(1000)
 
-	current := appsv1.StatefulSet{}
-	if r.GetM("zuul-executor", &current) {
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("zuul-executor configuration changed, rollout zuul-executor pods ...")
-			current.Spec.Template = *ze.Spec.Template.DeepCopy()
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		current := ze
-		r.CreateR(&current)
+	current, changed := r.ensureStatefulset(ze)
+	if changed {
+		return false
 	}
 
-	isStatefulSet := r.IsStatefulSetReady(&current)
-	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-executor", isStatefulSet)
+	ready := r.IsStatefulSetReady(current)
+	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-executor", ready)
 
-	return isStatefulSet
+	return ready
 }
 
 func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
@@ -470,23 +454,15 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		base.MkContainerPort(zuulPrometheusPort, zuulPrometheusPortName),
 	}
 
-	current := appsv1.StatefulSet{}
-	if r.GetM(service, &current) {
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("zuul-merger configuration changed, rollout zuul-merger pods ...")
-			current.Spec.Template = *zm.Spec.Template.DeepCopy()
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		current := zm
-		r.CreateR(&current)
+	current, changed := r.ensureStatefulset(zm)
+	if changed {
+		return false
 	}
 
-	isStatefulSet := r.IsStatefulSetReady(&current)
-	conds.UpdateConditions(&r.cr.Status.Conditions, service, isStatefulSet)
+	ready := r.IsStatefulSetReady(current)
+	conds.UpdateConditions(&r.cr.Status.Conditions, service, ready)
 
-	return isStatefulSet
+	return ready
 }
 
 func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
