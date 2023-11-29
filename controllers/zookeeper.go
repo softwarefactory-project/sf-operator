@@ -94,13 +94,11 @@ func (r *SFController) DeployZookeeper() bool {
 		},
 	}
 
-	servicePorts := []int32{zkSSLPort}
-	srv := base.MkService(zkIdent, r.ns, zkIdent, servicePorts, zkIdent)
-	r.GetOrCreate(&srv)
+	srv := base.MkServicePod(zkIdent, r.ns, zkIdent+"-0", []int32{zkSSLPort}, zkIdent)
+	r.EnsureService(&srv)
 
-	headlessPorts := []int32{zkSSLPort, zkElectionPort, zkServerPort}
-	srvZK := base.MkHeadlessService(zkIdent, r.ns, zkIdent, headlessPorts, zkIdent)
-	r.GetOrCreate(&srvZK)
+	srvZK := base.MkHeadlessServicePod(zkIdent, r.ns, zkIdent+"-0", []int32{zkSSLPort, zkElectionPort, zkServerPort}, zkIdent)
+	r.EnsureService(&srvZK)
 
 	storageConfig := r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage)
 	zk := r.mkHeadlessSatefulSet(

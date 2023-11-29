@@ -262,6 +262,14 @@ func MkHeadlessService(name string, ns string, selector string, ports []int32, p
 	return service
 }
 
+// MkHeadlessServicePod produces a headless service.
+func MkHeadlessServicePod(name string, ns string, podName string, ports []int32, portName string) apiv1.Service {
+	service := MkServicePod(name, ns, podName, ports, portName)
+	service.ObjectMeta.Name = name + "-headless"
+	service.Spec.ClusterIP = "None"
+	return service
+}
+
 // MkHTTPSRoute produces a Route on top of a Service
 func MkHTTPSRoute(
 	name string, ns string, host string, serviceName string, path string,
