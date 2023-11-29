@@ -595,7 +595,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	if r.GetM(builderIdent, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("Nodepool-builder configuration changed, rollout pods ...")
-			current.Spec = nb.DeepCopy().Spec
+			current.Spec.Template = *nb.Spec.Template.DeepCopy()
 			r.UpdateR(&current)
 			return false
 		}
