@@ -15,6 +15,7 @@
       - playbooks/post.yaml
     run: playbooks/main.yaml
     abstract: true
+    timeout: 5200
     irrelevant-files: &irrelevant-files
       - ".*.md$"
       - "doc/.*"
@@ -44,6 +45,7 @@
     parent: sf-operator-microshift-multinode
     pre-run: *pre-run
     post-run: *post-run
+    timeout: 5200
     run: playbooks/main.yaml
     abstract: true
     irrelevant-files: *irrelevant-files
@@ -85,7 +87,6 @@
 - job:
     name: sf-operator-olm
     description: Validates a sf-operator deployment via OLM
-    timeout: 3600
     parent: sf-operator
     vars:
       mode: "olm"
@@ -93,7 +94,6 @@
 - job:
     name: sf-operator-upgrade
     description: Validates a sf-operator upgrade via OLM
-    timeout: 3600
     parent: sf-operator
     run: playbooks/upgrade.yaml
     vars:
@@ -102,7 +102,6 @@
 - job:
     name: sf-operator-standalone
     description: Validates a sf-operator standalone deployment in multinode
-    timeout: 3600
     parent: sf-operator-multinode
     vars:
       mode: "standalone"

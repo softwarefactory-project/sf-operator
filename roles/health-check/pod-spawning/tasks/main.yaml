@@ -49,7 +49,7 @@
       - hosts: localhost,all
         tasks:
           - name: Doing command
-            command: sleep 2
+            command: sleep 15
     dest: "{{ config_path }}/playbooks/microshift-pod.yml"
 
 - name: Create git commit message
@@ -119,7 +119,7 @@
   register: _job_uuid
   until: _job_uuid.stdout != "" and "null" not in _job_uuid.stdout
   retries: 60
-  delay: 1
+  delay: 2
   tags:
     - skip_ansible_lint
 
@@ -135,5 +135,6 @@
     - zuul_job_result.json != []
     - "'result' in zuul_job_result.json[0]"
     - zuul_job_result.json[0]["result"] == 'SUCCESS'
+    - zuul_job_result.json[0]["uuid"] == _job_uuid.stdout
   retries: 60
-  delay: 30
+  delay: 2
