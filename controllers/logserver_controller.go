@@ -308,6 +308,9 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	// Setup the sidecar container for sshd
 	sshdContainer := base.MkContainer(sshdPortName, base.SSHDImage)
 	sshdContainer.Command = []string{"bash", "/conf/run.sh"}
+	sshdContainer.LivenessProbe = base.MkReadinessTCPProbe(sshdPort)
+	sshdContainer.StartupProbe = base.MkReadinessTCPProbe(sshdPort)
+
 	sshdContainer.Env = []apiv1.EnvVar{
 		base.MkEnvVar("AUTHORIZED_KEY", r.cr.Spec.AuthorizedSSHKey),
 	}
