@@ -22,6 +22,14 @@
   command: podman volume rm registry
 
 # quay.io/software-factory/registry:2 is a copy of https://hub.docker.com/_/registry
+- name: Fetch the podman registry container image
+  command: podman pull quay.io/software-factory/registry:2
+  register: podman_fetch
+  retries: 12
+  delay: 10
+  until:
+    - podman_fetch.rc == 0
+
 - name: Start the podman registry container
   command: |
     podman container run -dt -p 5000:5000 --name registry \
