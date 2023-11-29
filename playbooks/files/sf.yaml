@@ -17,7 +17,7 @@ spec:
     executor:
       logLevel: DEBUG
   logserver:
-    loopDelay: 5
+    loopDelay: 3600
     retentionDays: 30
     storage:
       size: 2Gi
