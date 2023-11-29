@@ -371,7 +371,7 @@ func (r *SFController) EnsureZuulScheduler(initContainers []apiv1.Container, cfg
 	if r.GetM("zuul-scheduler", &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("zuul-scheduler configuration changed, rollout zuul-scheduler pods ...")
-			current.Spec = zs.DeepCopy().Spec
+			current.Spec.Template = *zs.Spec.Template.DeepCopy()
 			r.UpdateR(&current)
 			return false
 		}

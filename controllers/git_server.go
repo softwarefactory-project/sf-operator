@@ -74,20 +74,20 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Create the deployment
-	dep := r.mkStatefulSet(gsIdent, base.GitServerImage, r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), apiv1.ReadWriteOnce)
-	dep.Spec.Template.ObjectMeta.Annotations = annotations
-	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
+	sts := r.mkStatefulSet(gsIdent, base.GitServerImage, r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), apiv1.ReadWriteOnce)
+	sts.Spec.Template.ObjectMeta.Annotations = annotations
+	sts.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      gsIdent,
 			MountPath: gsGitMountPath,
 		},
 	}
 
-	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
+	sts.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkVolumeCM(gsIdent+"-pi", gsIdent+"-pi-config-map"),
 	}
 
-	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
+	sts.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(gsGitPort, gsGitPortName),
 	}
 
@@ -115,7 +115,7 @@ func (r *SFController) DeployGitServer() bool {
 			base.MkEnvVar("CONFIG_ZUUL_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName))
 	}
 
-	dep.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
+	sts.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 
 	// Create readiness probes
 	// Note: The probe is causing error message to be logged by the service
@@ -125,12 +125,12 @@ func (r *SFController) DeployGitServer() bool {
 	if r.GetM(gsIdent, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
 			r.log.V(1).Info("System configuration needs to be updated, restarting git-server...")
-			current.Spec = dep.DeepCopy().Spec
+			current.Spec.Template = *sts.Spec.Template.DeepCopy()
 			r.UpdateR(&current)
 			return false
 		}
 	} else {
-		current := dep
+		current := sts
 		r.CreateR(&current)
 	}
 
