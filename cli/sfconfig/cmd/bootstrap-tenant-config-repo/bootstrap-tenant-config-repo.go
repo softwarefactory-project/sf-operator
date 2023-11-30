@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
+	utils "github.com/softwarefactory-project/sf-operator/controllers/libs/zuulcf"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

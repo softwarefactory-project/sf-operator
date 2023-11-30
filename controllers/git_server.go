@@ -15,6 +15,8 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/zuulcf"
+	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -51,6 +53,80 @@ func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
 }
 
 func (r *SFController) makePreInitScript() string {
+
+	parentJobName := "base"
+
+	semaphore := zuulcf.Semaphores{
+		{
+			Semaphore: zuulcf.SemaphoreBody{
+				Name: "semaphore-config-update",
+				Max:  1,
+			},
+		},
+	}
+
+	jobs := zuulcf.JobConfig{
+		{
+			Job: zuulcf.JobBody{
+				Name:        "base",
+				Parent:      nil,
+				Description: "The base job.",
+				PreRun: []string{
+					"playbooks/base/pre.yaml",
+				},
+				PostRun: []string{
+					"playbooks/base/post.yaml",
+				},
+				Roles: []zuulcf.JobRoles{
+					{
+						"zuul": "zuul/zuul-jobs",
+					},
+				},
+				Timeout:  1800,
+				Attempts: 3,
+				Secrets: []interface{}{
+					"site_sflogs",
+				},
+			},
+		},
+		{
+			Job: zuulcf.JobBody{
+				Name:        "config-check",
+				Parent:      &parentJobName,
+				Final:       true,
+				Description: "Validate the config repo.",
+				Run: []interface{}{
+					"playbooks/config/check.yaml",
+				},
+			},
+		},
+		{
+			Job: zuulcf.JobBody{
+				Name:        "config-update",
+				Parent:      &parentJobName,
+				Final:       true,
+				Description: "Deploy config repo update.",
+				Run: []interface{}{
+					"playbooks/config/update.yaml",
+				},
+				Secrets: []interface{}{
+					"k8s_config",
+				},
+				Semaphores: []zuulcf.JobRunNameAndSemaphore{
+					{
+						Name: "semaphore-config-update",
+					},
+				},
+			},
+		},
+	}
+
+	semaphoreOutput, _ := yaml.Marshal(semaphore)
+	jobbaseOutput, _ := yaml.Marshal(jobs)
+
+	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# Semaphore", string(semaphoreOutput), 1)
+	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# JobBase", string(jobbaseOutput), 1)
+
 	return strings.Replace(
 		preInitScriptTemplate,
 		"# ZUUL_CONNECTIONS",
