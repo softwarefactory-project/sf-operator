@@ -71,6 +71,22 @@ _Appears in:_
 | `verifyssl` _boolean_ | Disable SSL certificate verification with the Gerrit instance when set to false. Equivalent to the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.verify_ssl) parameter. | -|
 
 
+#### GitConnection
+
+
+
+Describes a Zuul connection using the [git driver](https://zuul-ci.org/docs/zuul/latest/drivers/git.html#connection-configuration). When an optional parameter is not specified then Zuul's defaults apply
+
+_Appears in:_
+- [ZuulSpec](#zuulspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `name` _string_ | How the connection will be named in Zuul's configuration and appear in zuul-web | -|
+| `baseurl` _string_ | [baseurl](https://zuul-ci.org/docs/zuul/latest/drivers/git.html#attr-%3Cgit%20connection%3E.baseurl) | -|
+| `pollDelay` _integer_ | [poolDelay](https://zuul-ci.org/docs/zuul/latest/drivers/git.html#attr-%3Cgit%20connection%3E.poll_delays) | -|
+
+
 #### GitHubConnection
 
 
@@ -502,6 +518,7 @@ _Appears in:_
 | `gerritconns` _[GerritConnection](#gerritconnection) array_ | The list of Gerrit-based connections to add to Zuul's configuration | -|
 | `githubconns` _[GitHubConnection](#githubconnection) array_ | The list of GitHub-based connections to add to Zuul's configuration | -|
 | `gitlabconns` _[GitLabConnection](#gitlabconnection) array_ | The list of GitLab-based connections to add to Zuul's configuration | -|
+| `gitconns` _[GitConnection](#gitconnection) array_ | The list of Git-based connections to add to Zuul's configuration | -|
 | `executor` _[ZuulExecutorSpec](#zuulexecutorspec)_ | Configuration of the executor microservices | -|
 | `scheduler` _[ZuulSchedulerSpec](#zuulschedulerspec)_ | Configuration of the scheduler microservice | -|
 | `web` _[ZuulWebSpec](#zuulwebspec)_ | Configuration of the web microservice | -|
