@@ -157,5 +157,5 @@
   until:
     - this.status == 200
     - zuul_worker_ci_label in this.content
-  retries: 6
-  delay: 5
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"

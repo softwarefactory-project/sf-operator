@@ -1,5 +1,5 @@
 ---
 kubeconfig: "~/.kube/config"
-retries: 12
-delay: 5
+zuul_api_delay: 10
+zuul_api_retries: 60
 validate_certs: false

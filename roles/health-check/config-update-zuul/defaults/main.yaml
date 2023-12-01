@@ -2,3 +2,5 @@
 fqdn: sfop.me
 random: dummy
 zuul_host: zuul.{{ fqdn }}
+zuul_api_delay: 10
+zuul_api_retries: 60

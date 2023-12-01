@@ -11,7 +11,7 @@
 
 - name: Wait config-check FAILURE result using zuul-web API
   ansible.builtin.uri:
-    url: "{{ zuul_web_url }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=config-check&change={{ json_reply._number }}"
+    url: "https://{{ zuul_host }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=config-check&change={{ json_reply._number }}"
     return_content: true
     body_format: json
     validate_certs: "{{ validate_certs }}"
@@ -21,5 +21,5 @@
     - zuul_job_result.json != []
     - "'result' in zuul_job_result.json[0]"
     - zuul_job_result.json[0]["result"] == 'FAILURE'
-  retries: "{{ retries }}"
-  delay: 30
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"

@@ -79,8 +79,8 @@
         - "'dummy-github-conn' in this.content"
         - "'dummy-gitlab-conn' in this.content"
         - "'dummy-git-conn' in this.content"
-      retries: "{{ retries }}"
-      delay: "{{ delay }}"
+      retries: "{{ zuul_api_retries }}"
+      delay: "{{ zuul_api_delay }}"
 
     - name: Delete the dummy Zuul connections
       ansible.builtin.include_role:
@@ -105,8 +105,8 @@
         - "'dummy-github-conn' not in this.content"
         - "'dummy-gitlab-conn' not in this.content"
         - "'dummy-git-conn' not in this.content"
-      retries: "{{ retries }}"
-      delay: "{{ delay }}"
+      retries: "{{ zuul_api_retries }}"
+      delay: "{{ zuul_api_delay }}"
 
   always:
     - name: Delete GitHub Connection Secret

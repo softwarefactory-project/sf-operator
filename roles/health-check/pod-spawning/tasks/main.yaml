@@ -118,14 +118,14 @@
     curl -sk https://{{ zuul_host }}/api/tenant/internal/status | jq -r '.pipelines[].change_queues[].heads[][].jobs[]' | jq -rc 'select(.name == "microshift-pod")' | jq -r '.uuid'
   register: _job_uuid
   until: _job_uuid.stdout != "" and "null" not in _job_uuid.stdout
-  retries: 60
-  delay: 2
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
   tags:
     - skip_ansible_lint
 
 - name: Wait for last result for microshift-pod using zuul-web API
   ansible.builtin.uri:
-    url: "{{ zuul_web_url }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=microshift-pod"
+    url: "https://{{ zuul_host }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=microshift-pod"
     return_content: true
     body_format: json
     validate_certs: false
@@ -136,5 +136,5 @@
     - "'result' in zuul_job_result.json[0]"
     - zuul_job_result.json[0]["result"] == 'SUCCESS'
     - zuul_job_result.json[0]["uuid"] == _job_uuid.stdout
-  retries: 60
-  delay: 2
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"

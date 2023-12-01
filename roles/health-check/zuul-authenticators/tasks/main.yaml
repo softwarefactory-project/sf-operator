@@ -23,8 +23,8 @@
     validate_certs: "{{ validate_certs }}"
   register: this
   until: "'my_test_realm' in this.content"
-  retries: "{{ retries }}"
-  delay: "{{ delay }}"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
 
 - name: Remove the test authenticator from the spec
   ansible.builtin.include_role:
@@ -42,5 +42,5 @@
     validate_certs: "{{ validate_certs }}"
   register: this
   until: "'my_test_realm' not in this.content"
-  retries: "{{ retries }}"
-  delay: "{{ delay }}"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
