@@ -26,7 +26,8 @@
   until:
     - this.status == 200
     - "'info' in this.content"
-  retries: "{{ retries }}"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
 
 - name: Attempt to access Zuul pipelines for internal tenant via API
   ansible.builtin.uri:
@@ -39,7 +40,8 @@
   until:
     - this.status == 200
     - "'check' in this.content"
-  retries: "{{ retries }}"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
 
 - name: Attempt to access Zuul web status page
   ansible.builtin.uri:
@@ -50,7 +52,8 @@
   register: this
   until:
     - this.status == 200
-  retries: "{{ retries }}"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
 
 - name: Attempt to access Zuul web internal tenant status page
   ansible.builtin.uri:
@@ -61,7 +64,8 @@
   register: this
   until:
     - this.status == 200
-  retries: "{{ retries }}"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
 
 - name: Attempt to access Logserver web
   ansible.builtin.uri:

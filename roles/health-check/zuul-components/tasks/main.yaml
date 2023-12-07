@@ -5,6 +5,10 @@
     method: GET
     validate_certs: "{{ validate_certs }}"
   register: _components
+  until:
+    - "'json' in _components"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
 
 - name: Check if, at least, one Zuul Web instance Exists, fails otherwise
   ansible.builtin.fail:

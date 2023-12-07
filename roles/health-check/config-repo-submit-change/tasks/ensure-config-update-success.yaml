@@ -7,7 +7,7 @@
 
 - name: Wait config-update SUCCESS result using zuul-web API
   ansible.builtin.uri:
-    url: "{{ zuul_web_url }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=config-update&newrev={{ commitsha.stdout }}"
+    url: "https://{{ zuul_host }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=config-update&newrev={{ commitsha.stdout }}"
     return_content: true
     body_format: json
     validate_certs: false
@@ -17,5 +17,5 @@
     - zuul_job_result.json != []
     - "'result' in zuul_job_result.json[0]"
     - zuul_job_result.json[0]["result"] == 'SUCCESS'
-  retries: "{{ retries }}"
-  delay: 30
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"

@@ -10,6 +10,8 @@
   register: internal_tenant_errors
   until:
     - "'json' in internal_tenant_errors"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
 
 - name: Ensure no configuration errors/warnings into the internal tenant
   ansible.builtin.fail:
@@ -94,7 +96,8 @@
     validate_certs: "{{ validate_certs }}"
     method: GET
   register: zuul_tenant_projects
-  retries: 10
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
 
 - name: Ensure project exists in Zuul (fail if not)
   ansible.builtin.fail:
