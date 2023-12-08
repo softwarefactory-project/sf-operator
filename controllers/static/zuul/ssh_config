@@ -1,0 +1,3 @@
+Host *
+    IdentityFile /var/lib/zuul-ssh/priv
+    UserKnownHostsFile /var/lib/zuul/known_hosts

@@ -54,6 +54,9 @@ var (
 	// Common config sections for all Zuul components
 	commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
 
+	//go:embed static/zuul/ssh_config
+	sshConfig string
+
 	zuulFluentBitLabels = []logging.FluentBitLabel{
 		{
 			Key:   "COMPONENT",
@@ -130,6 +133,12 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 				Name:      "tooling-vol",
 				SubPath:   "generate-zuul-tenant-yaml.sh",
 				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
+			apiv1.VolumeMount{
+				Name:      "extra-config",
+				SubPath:   "ssh_config",
+				MountPath: "/var/lib/zuul/.ssh/config",
+				ReadOnly:  true,
+			},
 		)
 		envs = append(envs, r.getTenantsEnvs()...)
 	}
@@ -169,6 +178,7 @@ func mkZuulVolumes(service string, r *SFController) []apiv1.Volume {
 			},
 		},
 		base.MkVolumeCM("statsd-config", "zuul-statsd-config-map"),
+		base.MkVolumeCM("extra-config", "zuul-extra-config-map"),
 	}
 	if !isStatefulset(service) {
 		// statefulset already has a PV for the service-name,
@@ -325,6 +335,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		"statsd_mapping":        utils.Checksum([]byte(zuulStatsdMappingConfig)),
 		"serial":                "3",
 		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
+		"zuul-extra":            utils.Checksum([]byte(sshConfig)),
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
@@ -924,6 +935,11 @@ func (r *SFController) DeployZuul() bool {
 	// create statsd exporter config map
 	r.EnsureConfigMap("zuul-statsd", map[string]string{
 		monitoring.StatsdExporterConfigFile: zuulStatsdMappingConfig,
+	})
+
+	// create extra config config map
+	r.EnsureConfigMap("zuul-extra", map[string]string{
+		"ssh_config": sshConfig,
 	})
 
 	// Update base config to add connections

@@ -1,4 +1,4 @@
-# Nodepool
+ # Nodepool
 
 Here you will find information about managing the Nodepool service when deployed with the SF Operator.
 It does not replace [Nodepool's documentation](https://zuul-ci.org/docs/nodepool/latest/),
@@ -155,7 +155,7 @@ $ kubectl exec -ti nodepool-launcher-$uuid -c launcher -- nodepool list
 Look for the node's IP address then from the Zuul executor pod, run:
 
 ```sh
-$kubectl exec -ti zuul-executor-0 -- ssh -o "StrictHostKeyChecking no" -i /var/lib/zuul-ssh/..data/priv <user>@<ip>
+$ kubectl exec -ti zuul-executor-0 -- ssh -o "StrictHostKeyChecking no" <user>@<ip>
 Warning: Permanently added '$public_ip' (ED25519) to the list of known hosts.
 $ hostname
 np0000000001
