@@ -116,11 +116,204 @@ func (r *SFController) makePreInitScript() string {
 		},
 	}
 
+	pipelines := zuulcf.PipelineConfig{
+		{
+			Pipeline: zuulcf.PipelineBody{
+				Name:        "post",
+				PostReview:  true,
+				Description: "This pipeline runs jobs that operate after each change is merged.",
+				Manager:     zuulcf.Supercedent,
+				Precedence:  zuulcf.Low,
+				Trigger: zuulcf.PipelineGenericTrigger{
+					"git-server": zuulcf.PipelineTriggerGitArray{
+						{
+							Event: "ref-updated",
+						},
+					},
+					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineTriggerGitArray{
+						{
+							Event: "ref-updated",
+							Ref: []string{
+								"^refs/heads/.*$",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Pipeline: zuulcf.PipelineBody{
+				Name:        "check",
+				Description: "Newly uploaded patchsets enter this pipeline to receive an initial +/-1 Verified vote.",
+				Manager:     zuulcf.Independent,
+				Require: zuulcf.PipelineRequire{
+					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineRequireApproval{
+						Open:            true,
+						CurrentPatchset: true,
+					},
+				},
+				Trigger: zuulcf.PipelineGenericTrigger{
+					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineTriggerGitArray{
+						{
+							Event: "patchset-created",
+						},
+						{
+							Event: "change-restored",
+						},
+						{
+							Event:   "comment-added",
+							Comment: "(?i)^(Patch Set [0-9]+:)?( [\\w\\+-]*)*(\\n\\n)?\\s*(recheck|reverify)",
+						},
+						{
+							Event: "comment-added",
+							Gerrit: zuulcf.PipelineTriggerGitGerrit{
+								Approval: []zuulcf.PipelineRequireApproval{
+									{
+										Verified: []zuulcf.GerritVotePoint{
+											zuulcf.GerritVotePointMinusOne,
+											zuulcf.GerritVotePointMinusTwo,
+										},
+										Username: "zuul",
+									},
+								},
+							},
+							Approval: []zuulcf.PipelineRequireGerritApproval{
+								{
+									Workflow: zuulcf.GetGerritWorkflowValue("1"),
+								},
+							},
+						},
+					},
+				},
+				Start: zuulcf.PipelineReporter{
+					GerritReporter: zuulcf.GerritReporterMap{
+						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+							Verified: zuulcf.GerritVotePointZero,
+						},
+					},
+				},
+				Success: zuulcf.PipelineReporter{
+					GerritReporter: zuulcf.GerritReporterMap{
+						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+							Verified: zuulcf.GerritVotePointOne,
+						},
+					},
+				},
+				Failure: zuulcf.PipelineReporter{
+					GerritReporter: zuulcf.GerritReporterMap{
+						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+							Verified: zuulcf.GerritVotePointMinusOne,
+						},
+					},
+				},
+			},
+		},
+		{
+			Pipeline: zuulcf.PipelineBody{
+				Name:           "gate",
+				Description:    "Changes that have been approved by core developers are enqueued in order in this pipeline, and if they pass tests, will be merged.",
+				SuccessMessage: "Build succeeded (gate pipeline).",
+				FailureMessage: "Build failed (gate pipeline).",
+				Manager:        zuulcf.Dependent,
+				Precedence:     zuulcf.High,
+				Supercedes: []string{
+					"check",
+				},
+				PostReview: true,
+				Require: zuulcf.PipelineRequire{
+					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineRequireApproval{
+						Open:            true,
+						CurrentPatchset: true,
+						GerritApproval: []zuulcf.PipelineRequireGerritApproval{
+							{
+								Workflow: zuulcf.GetGerritWorkflowValue("1"),
+							},
+						},
+					},
+				},
+				Trigger: zuulcf.PipelineGenericTrigger{
+					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineTriggerGitArray{
+						{
+							Event: "comment-added",
+							Approval: []zuulcf.PipelineRequireGerritApproval{
+								{
+									Workflow: zuulcf.GetGerritWorkflowValue("1"),
+								},
+							},
+						},
+						{
+							Event: "comment-added",
+							Approval: []zuulcf.PipelineRequireGerritApproval{
+								{
+									Verified: zuulcf.GerritVotePointOne,
+								},
+							},
+							Username: "zuul",
+						},
+					},
+				},
+				Start: zuulcf.PipelineReporter{
+					GerritReporter: zuulcf.GerritReporterMap{
+						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+							Verified: zuulcf.GerritVotePointZero,
+						},
+					},
+				},
+				Success: zuulcf.PipelineReporter{
+					GerritReporter: zuulcf.GerritReporterMap{
+						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+							Verified: zuulcf.GerritVotePointTwo,
+							Submit:   true,
+						},
+					},
+				},
+				Failure: zuulcf.PipelineReporter{
+					GerritReporter: zuulcf.GerritReporterMap{
+						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+							Verified: zuulcf.GerritVotePointMinusTwo,
+						},
+					},
+				},
+				WindowFloor:          20,
+				WindowIncreaseFactor: 2,
+			},
+		},
+	}
+
+	projects := zuulcf.ProjectConfig{
+		{
+			Project: zuulcf.ZuulProjectBody{
+				Name: r.cr.Spec.ConfigLocation.Name,
+				Pipeline: zuulcf.ZuulProjectPipelineMap{
+					"check": zuulcf.ZuulProjectPipeline{
+						Jobs: []string{
+							"config-check",
+						},
+					},
+					"gate": zuulcf.ZuulProjectPipeline{
+						Jobs: []string{
+							"config-check",
+						},
+					},
+					"post": zuulcf.ZuulProjectPipeline{
+						Jobs: []string{
+							"config-update",
+						},
+					},
+				},
+			},
+		},
+	}
+
 	semaphoreOutput, _ := yaml.Marshal(semaphore)
 	jobbaseOutput, _ := yaml.Marshal(jobs)
+	pipelineOutput, _ := yaml.Marshal(pipelines)
+	projectOutput, _ := yaml.Marshal(projects)
 
-	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# Semaphore", string(semaphoreOutput), 1)
-	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# JobBase", string(jobbaseOutput), 1)
+	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# Semaphores", string(semaphoreOutput), 1)
+	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# JobsBase", string(jobbaseOutput), 1)
+	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# Pipelines", string(pipelineOutput), 1)
+	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# Projects", string(projectOutput), 1)
 
 	return strings.Replace(
 		preInitScriptTemplate,

@@ -142,7 +142,7 @@ pipeline to receive an initial +/-1 Verified vote.`,
 									Approval: []utils.PipelineRequireApproval{
 										{
 											Username: "zuul",
-											Verified: []utils.GerritReporter{
+											Verified: []utils.GerritVotePoint{
 												utils.GetZuulPipelineReporterVerified("-1"),
 												utils.GetZuulPipelineReporterVerified("-2"),
 											},
