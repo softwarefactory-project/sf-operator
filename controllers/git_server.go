@@ -18,7 +18,6 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/zuulcf"
 	"gopkg.in/yaml.v3"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -390,25 +389,17 @@ func (r *SFController) DeployGitServer() bool {
 	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(GitServerIdent, GSVolumeMounts)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
 
-	current := appsv1.StatefulSet{}
-	if r.GetM(GitServerIdent, &current) {
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("System configuration needs to be updated, restarting git-server...")
-			current.Spec.Template = *sts.Spec.Template.DeepCopy()
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		current := sts
-		r.CreateR(&current)
+	current, changed := r.ensureStatefulset(sts)
+	if changed {
+		return false
 	}
 
 	// Create services exposed
 	svc := base.MkServicePod(GitServerIdent, r.ns, GitServerIdent+"-0", []int32{gsGitPort}, gsGitPortName)
 	r.EnsureService(&svc)
 
-	isStatefulset := r.IsStatefulSetReady(&current)
-	conds.UpdateConditions(&r.cr.Status.Conditions, GitServerIdent, isStatefulset)
+	ready := r.IsStatefulSetReady(current)
+	conds.UpdateConditions(&r.cr.Status.Conditions, GitServerIdent, ready)
 
-	return isStatefulset
+	return ready
 }

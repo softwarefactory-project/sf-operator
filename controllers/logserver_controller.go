@@ -176,8 +176,6 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	r.cleanup()
 
-	log := log.FromContext(r.ctx)
-
 	r.EnsureSSHKeySecret(logserverIdent + "-keys")
 
 	cmData := make(map[string]string)
@@ -328,7 +326,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
 
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
-	annotations := map[string]string{
+	sts.Spec.Template.ObjectMeta.Annotations = map[string]string{
 		"fqdn":       r.cr.Spec.FQDN,
 		"serial":     "4",
 		"httpd-conf": utils.Checksum([]byte(logserverConf)),
@@ -339,27 +337,9 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		"sshd-image":      base.SSHDImage,
 	}
 
-	currentSTS := v1.StatefulSet{}
-	stsUpdated := true
-	if r.GetM(sts.GetName(), &currentSTS) {
-		// Are annotations in sync?
-		if !utils.MapEquals(&currentSTS.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			currentSTS.Spec.Template.Spec = sts.Spec.Template.Spec
-			currentSTS.Spec.Template.ObjectMeta.Annotations = annotations
-			log.V(1).Info("Logserver pod restarting to apply changes ...")
-			stsUpdated = r.UpdateR(&currentSTS)
-		}
-
-	} else {
-		sts.Spec.Template.ObjectMeta.Annotations = annotations
-		r.log.V(1).Info("Creating object", "name", sts.GetName())
-		r.CreateR(&sts)
-	}
+	current, stsUpdated := r.ensureStatefulset(sts)
 
 	pvcReadiness := r.reconcileExpandPVC(logserverIdent+"-"+logserverIdent+"-0", r.cr.Spec.Settings.Storage)
-
-	// refresh current stsloyment
-	r.GetM(sts.GetName(), &currentSTS)
 
 	routeReady := r.ensureHTTPSRoute(
 		r.cr.Name+"-logserver", logserverIdent,
@@ -370,7 +350,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	r.ensureLogserverPodMonitor()
 	r.ensureLogserverPromRule()
 
-	isReady := r.IsStatefulSetReady(&currentSTS) && stsUpdated && pvcReadiness && routeReady
+	isReady := r.IsStatefulSetReady(current) && !stsUpdated && pvcReadiness && routeReady
 	conds.UpdateConditions(&r.cr.Status.Conditions, logserverIdent, isReady)
 
 	return sfv1.LogServerStatus{

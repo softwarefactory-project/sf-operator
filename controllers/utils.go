@@ -739,3 +739,24 @@ func (r *SFController) EnsureSFPodMonitor(ports []string, selector metav1.LabelS
 	}
 	return true
 }
+
+// ensureStatefulSet ensures that a StatefulSet object is as expected.
+// The function takes the expected StatefulSet and returns a tuple with the current object on
+// the cluster and a boolean indicating whether the function performed a create or update on the object.
+func (r *SFUtilContext) ensureStatefulset(sts appsv1.StatefulSet) (*appsv1.StatefulSet, bool) {
+	current := appsv1.StatefulSet{}
+	name := sts.ObjectMeta.Name
+	if r.GetM(name, &current) {
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &sts.Spec.Template.ObjectMeta.Annotations) {
+			r.log.V(1).Info(name + " configuration changed, rollout pods ...")
+			current.Spec.Template = *sts.Spec.Template.DeepCopy()
+			r.UpdateR(&current)
+			return &current, true
+		}
+	} else {
+		current := sts
+		r.CreateR(&current)
+		return &current, true
+	}
+	return &current, false
+}
