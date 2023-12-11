@@ -105,7 +105,7 @@ Any change on the applied resource re-trigger the reconcile.
 Run the operator with the following command:
 
 ```sh
-go run ./main.go standalone --cr playbooks/files/sf.yaml --namespace sf
+go run ./main.go --namespace sf standalone --cr playbooks/files/sf.yaml
 ```
 
 > The command returns when the expected state is applied.
