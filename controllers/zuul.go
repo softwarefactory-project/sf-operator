@@ -146,14 +146,10 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 	volumes = append(volumes, mkZuulLoggingMount(service))
 	volumes = append(volumes, mkZuulGitHubSecretsMounts(r)...)
 
-	command := []string{
-		"sh", "-c",
-		fmt.Sprintf("exec %s -f -d", service),
-	}
 	container := apiv1.Container{
 		Name:         service,
 		Image:        base.ZuulImage(service),
-		Command:      command,
+		Command:      []string{"/usr/local/bin/dumb-init", "--", "/usr/local/bin/" + service, "-f", "-d"},
 		Env:          envs,
 		VolumeMounts: volumes,
 	}
@@ -333,7 +329,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            base.ZuulImage("zuul-scheduler"),
 		"statsd_mapping":        utils.Checksum([]byte(zuulStatsdMappingConfig)),
-		"serial":                "3",
+		"serial":                "4",
 		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
 		"zuul-extra":            utils.Checksum([]byte(sshConfig)),
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
@@ -400,7 +396,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            base.ZuulImage("zuul-executor"),
-		"serial":                "1",
+		"serial":                "2",
 		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
@@ -447,6 +443,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            base.ZuulImage(service),
+		"serial":                "1",
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
@@ -485,7 +482,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            base.ZuulImage("zuul-web"),
-		"serial":                "1",
+		"serial":                "2",
 		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
