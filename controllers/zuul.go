@@ -846,6 +846,27 @@ func (r *SFController) AddGitLabConnection(cfg *ini.File, conn sfv1.GitLabConnec
 
 }
 
+func (r *SFController) AddPagureConnection(cfg *ini.File, conn sfv1.PagureConnection) {
+
+	apiToken, _ := r.GetSecretDataFromKey(conn.Secrets, "api_token")
+
+	section := "connection " + conn.Name
+	cfg.NewSection(section)
+
+	for key, value := range map[string]string{
+		"driver":             "pagure",
+		"server":             conn.Server,
+		"canonical_hostname": conn.CanonicalHostname,
+		"baseurl":            conn.BaseURL,
+		"cloneurl":           conn.CloneURL,
+		"api_token":          string(apiToken),
+		"app_name":           conn.AppName,
+		"source_whitelist":   conn.SourceWhitelist,
+	} {
+		addKeyToSection(cfg.Section(section), key, value)
+	}
+}
+
 func AddGitConnection(cfg *ini.File, name string, baseurl string, poolDelay int32) {
 	section := "connection " + name
 	cfg.NewSection(section)
@@ -937,6 +958,10 @@ func (r *SFController) DeployZuul() bool {
 
 	for _, conn := range r.cr.Spec.Zuul.GitLabConns {
 		r.AddGitLabConnection(cfgINI, conn)
+	}
+
+	for _, conn := range r.cr.Spec.Zuul.PagureConns {
+		r.AddPagureConnection(cfgINI, conn)
 	}
 
 	for _, conn := range r.cr.Spec.Zuul.GitConns {

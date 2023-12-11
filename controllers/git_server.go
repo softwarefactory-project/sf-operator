@@ -37,6 +37,7 @@ func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
 	connectionNames = append(connectionNames, sfv1.GetGitHubConnectionsName(spec)...)
 	connectionNames = append(connectionNames, sfv1.GetGitLabConnectionsName(spec)...)
 	connectionNames = append(connectionNames, sfv1.GetGitConnectionsName(spec)...)
+	connectionNames = append(connectionNames, sfv1.GetPagureConnectionsName(spec)...)
 	sb.WriteString("\n")
 	for _, name := range connectionNames {
 		sb.WriteString(fmt.Sprintf("[connection %s]\n", name))

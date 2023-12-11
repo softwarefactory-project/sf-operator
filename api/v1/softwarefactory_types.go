@@ -368,6 +368,22 @@ func GetGitLabConnectionsSecretName(spec *ZuulSpec) []string {
 	return res
 }
 
+func GetPagureConnectionsName(spec *ZuulSpec) []string {
+	var res []string
+	for _, conn := range spec.PagureConns {
+		res = append(res, conn.Name)
+	}
+	return res
+}
+
+func GetPagureConnectionsSecretName(spec *ZuulSpec) []string {
+	var res []string
+	for _, conn := range spec.PagureConns {
+		res = append(res, conn.Secrets)
+	}
+	return res
+}
+
 // +kubebuilder:validation:Enum=INFO;WARN;DEBUG
 // +kubebuilder:default:=INFO
 type LogLevel string

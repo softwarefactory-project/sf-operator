@@ -17,6 +17,9 @@
     dummy_elasticsearchconns:
       - name: dummy-elasticsearch-conn
         uri: http://test:9200
+    dummy_pagureconns:
+      - name: dummy-pagure-conn
+        secrets: pagureconnectionsecret
 
 - name: Create GitHub Connection Secret
   kubernetes.core.k8s:
@@ -46,6 +49,18 @@
         webhook_token: "{{ '0000000000000000000000000000000000000000' | b64encode }}"
         sshkey: "{{ '0000000000000000000000000000000000000000' | b64encode }}"
 
+- name: Create Pagure Connection Secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: pagureconnectionsecret
+        namespace: sf
+      data:
+        api_token: "{{ 'ghp_51abcFzcvf3GxOJpPFUKxsT6JIL3Nnbf39E' | b64encode }}"
+
 - name: Get current Zuul gerrit connections
   command: |
     {% if mode == 'olm' %}
@@ -70,6 +85,7 @@
             gitlabconns: "{{ dummy_gitlabconns }}"
             gitconns: "{{ dummy_gitconns }}"
             elasticsearchconns: "{{ dummy_elasticsearchconns }}"
+            pagureconns: "{{ dummy_pagureconns }}"
 
     - name: Wait for the new Zuul connections to appear in the Zuul API
       ansible.builtin.uri:
@@ -83,6 +99,7 @@
         - "'dummy-github-conn' in this.content"
         - "'dummy-gitlab-conn' in this.content"
         - "'dummy-git-conn' in this.content"
+        - "'dummy-pagure-conn' in this.content"
       retries: "{{ zuul_api_retries }}"
       delay: "{{ zuul_api_delay }}"
 
@@ -103,6 +120,7 @@
             gitlabconns: []
             gitconns: []
             elasticsearchconns: []
+            pagureconns: []
 
     - name: Wait for the dummy Zuul connections to be removed from the API
       ansible.builtin.uri:
@@ -116,6 +134,7 @@
         - "'dummy-github-conn' not in this.content"
         - "'dummy-gitlab-conn' not in this.content"
         - "'dummy-git-conn' not in this.content"
+        - "'dummy-pagure-conn' not in this.content"
       retries: "{{ zuul_api_retries }}"
       delay: "{{ zuul_api_delay }}"
 
@@ -143,3 +162,11 @@
         kind: Secret
         namespace: sf
         name: gitlabconnectionsecret
+
+    - name: Delete Pagure Connection Secret
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Secret
+        namespace: sf
+        name: pagureconnectionsecret

@@ -406,10 +406,11 @@ func (r *SoftwareFactoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					case CustomSSLSecretName:
 						return req
 					default:
-						// Discover secrets for github and gitlab connections
+						// Discover secrets for GitHub, GitLab and Pagure connections
 						otherSecretNames := []string{}
 						otherSecretNames = append(otherSecretNames, sfv1.GetGitHubConnectionsSecretName(&softwareFactory.Spec.Zuul)...)
 						otherSecretNames = append(otherSecretNames, sfv1.GetGitLabConnectionsSecretName(&softwareFactory.Spec.Zuul)...)
+						otherSecretNames = append(otherSecretNames, sfv1.GetPagureConnectionsSecretName(&softwareFactory.Spec.Zuul)...)
 						if slices.Contains(otherSecretNames, a.GetName()) {
 							return req
 						}
