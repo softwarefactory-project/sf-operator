@@ -45,7 +45,7 @@ cat << EOF > playbooks/base/pre.yaml
         - import_role:
             name: log-inventory
       vars:
-        zuul_log_url: "https://logserver.${FQDN}/"
+        zuul_log_url: "https://${FQDN}/logs"
 
 - hosts: all
   tasks:
@@ -83,7 +83,7 @@ cat << EOF > playbooks/base/post.yaml
             name: buildset-artifacts-location
       vars:
         zuul_log_compress: true
-        zuul_log_url: "https://logserver.${FQDN}/"
+        zuul_log_url: "https://${FQDN}/logs"
         zuul_logserver_root: "{{ site_sflogs.path }}"
         zuul_log_verbose: true
 EOF

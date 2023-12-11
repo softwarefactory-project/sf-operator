@@ -58,19 +58,15 @@ NAME    READY
 my-sf   true
 ```
 
+The `sf-operator` handles the `Route`s installation. Here is the lists of available
+endpoints:
 
-The following `Routes` (or `Ingresses`) are created:
+- https://sfop.me/zuul
+- https://sfop.me/logs
+- https://sfop.me/nodepool/api/image-list
+- https://sfop.me/nodepool/builds
 
-```
-kubectl -n sf get routes -o custom-columns=HOST:.spec.host
-
-HOST
-zuul.sfop.me
-logserver.sfop.me
-nodepool.sfop.me
-```
-
-At that point you have successfully deployed a **SoftwareFactory** instance. You can access the Zuul Web UI at https://zuul.sfop.me .
+At that point you have successfully deployed a **SoftwareFactory** instance. You can access the Zuul Web UI at https://sfop.me/zuul.
 
 ## Next steps
 

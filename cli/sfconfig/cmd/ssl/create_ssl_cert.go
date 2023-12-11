@@ -24,10 +24,9 @@ import (
 )
 
 func ensureSSLSecret(env *utils.ENV, serviceCAContent []byte,
-	serviceCertContent []byte, serviceKeyContent []byte, serviceName string,
-) {
+	serviceCertContent []byte, serviceKeyContent []byte) {
 	var secret apiv1.Secret
-	secretName := sf.GetCustomRouteSSLSecretName(serviceName)
+	secretName := sf.CustomSSLSecretName
 	data := map[string][]byte{
 		"CA":  serviceCAContent,
 		"crt": serviceCertContent,
@@ -89,7 +88,7 @@ func verifySSLCert(serviceCAContent []byte, serviceCertContent []byte,
 }
 
 func CreateServiceCertSecret(sfEnv *utils.ENV, sfNamespace string,
-	serviceName string, sfServiceCA string, sfServiceCert string,
+	sfServiceCA string, sfServiceCert string,
 	sfServiceKey string, serverName string,
 ) {
 	kubernetesEnv := utils.ENV{Cli: sfEnv.Cli, Ctx: sfEnv.Ctx, Ns: sfNamespace}
@@ -117,7 +116,7 @@ func CreateServiceCertSecret(sfEnv *utils.ENV, sfNamespace string,
 	}
 
 	ensureSSLSecret(&kubernetesEnv, serviceCAContent, serviceCertContent,
-		serviceKeyContent, serviceName)
+		serviceKeyContent)
 
 }
 
@@ -129,7 +128,6 @@ var CreateCertificateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		sfNamespace, _ := cmd.Flags().GetString("sf-namespace")
 		sfContext, _ := cmd.Flags().GetString("sf-context")
-		serviceName, _ := cmd.Flags().GetString("sf-service-name")
 		sfServiceCA, _ := cmd.Flags().GetString("sf-service-ca")
 		sfServiceCert, _ := cmd.Flags().GetString("sf-service-cert")
 		sfServiceKey, _ := cmd.Flags().GetString("sf-service-key")
@@ -139,9 +137,8 @@ var CreateCertificateCmd = &cobra.Command{
 			Ns:  sfNamespace,
 		}
 		conf := config.GetSFConfigOrDie()
-		serverName := serviceName + "." + conf.FQDN
-		CreateServiceCertSecret(&sfEnv, sfNamespace, serviceName, sfServiceCA,
-			sfServiceCert, sfServiceKey, serverName)
+		CreateServiceCertSecret(&sfEnv, sfNamespace, sfServiceCA,
+			sfServiceCert, sfServiceKey, conf.FQDN)
 
 	},
 }
@@ -151,8 +148,6 @@ func init() {
 		"Name of the namespace to copy the kubeconfig, or '-' for stdout")
 	CreateCertificateCmd.Flags().StringP("sf-context", "", "",
 		"The kubeconfig context of the sf-namespace, use the default context by default")
-	CreateCertificateCmd.Flags().StringP("sf-service-name", "", "",
-		"The SF service name for the SSL cert like Zuul, Gerrit, Logserver etc.")
 	CreateCertificateCmd.Flags().StringP("sf-service-ca", "", "",
 		"Path for the service CA certificate")
 	CreateCertificateCmd.Flags().StringP("sf-service-cert", "", "",

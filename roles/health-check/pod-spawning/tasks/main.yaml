@@ -115,7 +115,7 @@
 
 - name: Wait for microshift-pod job
   ansible.builtin.shell: |
-    curl -sk https://{{ zuul_host }}/api/tenant/internal/status | jq -r '.pipelines[].change_queues[].heads[][].jobs[]' | jq -rc 'select(.name == "microshift-pod")' | jq -r '.uuid'
+    curl -sk https://{{ zuul_endpoint }}/api/tenant/internal/status | jq -r '.pipelines[].change_queues[].heads[][].jobs[]' | jq -rc 'select(.name == "microshift-pod")' | jq -r '.uuid'
   register: _job_uuid
   until: _job_uuid.stdout != "" and "null" not in _job_uuid.stdout
   retries: "{{ zuul_api_retries }}"
@@ -125,7 +125,7 @@
 
 - name: Wait for last result for microshift-pod using zuul-web API
   ansible.builtin.uri:
-    url: "https://{{ zuul_host }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=microshift-pod"
+    url: "https://{{ zuul_endpoint }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=microshift-pod"
     return_content: true
     body_format: json
     validate_certs: false

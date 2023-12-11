@@ -364,8 +364,8 @@ func (g *GerritCMDContext) ensureGerritSTS() {
 
 func (g *GerritCMDContext) ensureGerritIngresses() {
 	name := "gerrit"
-	route := base.MkHTTPSRoute(name, g.env.Ns, name,
-		gerritHTTPDPortName, "/", gerritHTTPDPort, map[string]string{}, g.fqdn, nil)
+	route := base.MkHTTPSRoute(name, g.env.Ns, name+"."+g.fqdn,
+		gerritHTTPDPortName, "/", gerritHTTPDPort, map[string]string{}, nil)
 	g.ensureRoute(name, route)
 }
 

@@ -5,7 +5,7 @@
 
 - name: Verify that the SSL is in the secret
   ansible.builtin.shell: >
-    kubectl get secret {{ service_name_custom_ssl }}-ssl-cert -o json |
+    kubectl get secret sf-ssl-cert -o json |
     jq -r ".data.crt" | base64 -d
   register: _new_cert_secret
 
@@ -14,13 +14,19 @@
     that:
       - _ssl_content.stdout == _new_cert_secret.stdout
 
-- name: Make a query to validate that the route exposes the expected certificate
-  ansible.builtin.shell: >
-    openssl s_client
-    -showcerts
-    -servername {{ common_name }}
-    -connect {{ common_name }}:443
+# From here we validate all Route handled by the sf-operator to ensure that curl
+# is exposed to the right certificate
+
+- name: Make a query to validate that the Routes expose the expected certificate
+  ansible.builtin.shell: curl -kv https://{{ item }}
   register: _new_cert_subj
-  until: _ssl_content.stdout in _new_cert_subj.stdout
-  retries: 10
+  loop:
+    - "{{ zuul_endpoint }}"
+    - "{{ nodepool_endpoint }}/builds"
+    - "{{ nodepool_endpoint }}/api"
+    - "{{ logserver_endpoint }}"
+  until:
+    - ca_common_name in _new_cert_subj.stderr or ca_common_name in _new_cert_subj.stdout
+    - random_state_or_province_name in _new_cert_subj.stderr or random_state_or_province_name in _new_cert_subj.stdout
+  retries: 5
   delay: 3

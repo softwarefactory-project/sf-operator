@@ -11,31 +11,12 @@
 # We do not wait for the CR status to be ready because it will never happen as the
 # CI deployment Route URL/Host cannot be resolved and thus the http01 challenge will
 # fails.
-# However here we are able to check that 'Certificate resources' are created for each
-# related 'Route' and we can assert that each 'Certificate.Status' is not ready due to
-# http01 challenge failure.
+# However here we are able to check that a 'Certificate resources''s challenge is created but
+# does not become ready due to http01 challenge failure.
 # This partialy verifies the flow with Let's Encrypt.
 
 - name: Ensure nodepool service Certificate not Ready for expected reason
-  shell: "kubectl -n sf get challenge -o json | grep nodepool"
-  register: result
-  until:
-    - result is success
-    - "'DNS problem: NXDOMAIN' in result.stdout or 'Waiting for HTTP-01 challenge propagation' in result.stdout or 'no such host' in result.stdout"
-  retries: 6
-  delay: 10
-
-- name: Ensure zuul service Certificate not Ready for expected reason
-  shell: "kubectl -n sf get challenge -o json | grep zuul"
-  register: result
-  until:
-    - result is success
-    - "'DNS problem: NXDOMAIN' in result.stdout or 'Waiting for HTTP-01 challenge propagation' in result.stdout or 'no such host' in result.stdout"
-  retries: 6
-  delay: 10
-
-- name: Ensure logserver service Certificate not Ready for expected reason
-  shell: "kubectl -n sf get challenge -o json | grep logserver"
+  shell: "kubectl -n sf get challenge -o json | grep {{ fqdn }}"
   register: result
   until:
     - result is success

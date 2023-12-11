@@ -1,6 +1,6 @@
 - name: Get Zuul Components
   ansible.builtin.uri:
-    url: https://{{ zuul_host }}/zuul/api/components
+    url: https://{{ zuul_endpoint }}/api/components
     status_code: [200]
     method: GET
     validate_certs: "{{ validate_certs }}"

@@ -134,7 +134,7 @@
 
 - name: Ensure the new label listed in the Nodepool API
   ansible.builtin.uri:
-    url: "https://{{ nodepool_host }}/label-list"
+    url: "https://{{ nodepool_endpoint }}/api/label-list"
     method: GET
     validate_certs: "{{ validate_certs }}"
     status_code: [200, 503]
@@ -148,7 +148,7 @@
 
 - name: Ensure the new label listed in the Zuul API
   ansible.builtin.uri:
-    url: "https://{{ zuul_host }}/api/tenant/internal/labels"
+    url: "https://{{ zuul_endpoint }}/api/tenant/internal/labels"
     method: GET
     validate_certs: "{{ validate_certs }}"
     status_code: [200, 503]

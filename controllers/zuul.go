@@ -969,7 +969,7 @@ func (r *SFController) DeployZuul() bool {
 		cfgINI.Section(srv).NewKey("prometheus_port", strconv.Itoa(zuulPrometheusPort))
 	}
 	// Set Zuul web public URL
-	cfgINI.Section("web").NewKey("root", "https://zuul."+r.cr.Spec.FQDN)
+	cfgINI.Section("web").NewKey("root", "https://"+r.cr.Spec.FQDN+"/zuul/")
 
 	// Set Zuul Merger Configurations
 	if r.cr.Spec.Zuul.Merger.GitUserName != "" {
@@ -1031,15 +1031,10 @@ func (r *SFController) runZuulInternalTenantReconfigure() bool {
 }
 
 func (r *SFController) setupZuulIngress() bool {
-	route1Ready := r.ensureHTTPSRoute(r.cr.Name+"-zuul", "zuul", "zuul-web", "/", zuulWEBPort,
-		map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
+	route1Ready := r.ensureHTTPSRoute(r.cr.Name+"-zuul", r.cr.Spec.FQDN, "zuul-web", "/zuul", zuulWEBPort,
+		map[string]string{
+			"haproxy.router.openshift.io/rewrite-target": "/",
+		}, r.cr.Spec.LetsEncrypt)
 
-	// Zuul ingress is special because the zuul-web container expect the
-	// the files to be served at `/zuul/`, but it is listening on `/`.
-	// Thus this ingress remove the `/zuul/` so that the javascript loads as
-	// expected
-	route2Ready := r.ensureHTTPSRoute(r.cr.Name+"-zuul-red", "zuul", "zuul-web", "/zuul", zuulWEBPort, map[string]string{
-		"haproxy.router.openshift.io/rewrite-target": "/",
-	}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
-	return route1Ready && route2Ready
+	return route1Ready
 }

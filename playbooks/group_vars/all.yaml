@@ -4,17 +4,15 @@ fqdn: sfop.me
 
 validate_certs: false
 
-gerrit_host: "gerrit.{{ fqdn }}"
-zuul_host: "zuul.{{ fqdn }}"
-logserver_host: "logserver.{{ fqdn }}"
-nodepool_host: "nodepool.{{ fqdn }}"
+zuul_endpoint: "{{ fqdn }}/zuul"
+logserver_endpoint: "{{ fqdn }}/logs"
+nodepool_endpoint: "{{ fqdn }}/nodepool"
 prometheus_host: "prometheus.{{ fqdn }}"
+gerrit_host: "gerrit.{{ fqdn }}"
 
 hosts:
+  - "{{ fqdn }}"
   - "{{ gerrit_host }}"
-  - "{{ zuul_host }}"
-  - "{{ logserver_host }}"
-  - "{{ nodepool_host }}"
   - "{{ prometheus_host }}"
 
 logserver_copy_content_dest: "/tmp/logserver-content"

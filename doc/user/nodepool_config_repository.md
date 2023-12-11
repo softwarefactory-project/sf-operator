@@ -173,6 +173,6 @@ Once these three files `nodepool/dib-ansible/inventory.yaml`, `nodepool/dib-ansi
 
 > At the first connection attempt of the `nodepool-builder` to an `image-builder` host, Ansible will refuse to connect because the SSH Host key is not known. Please refer to the section [Accept an image-builder's SSH Host key](../deployment/nodepool#accept-an-image-builders-ssh-host-key).
 
-The image builds status can be consulted by accessing this endpoint: `https://nodepool.<fqdn>/dib-image-list`.
+The image builds status can be consulted by accessing this endpoint: `https://<fqdn>/nodepool/api/dib-image-list`.
 
-The image builds logs can be consulted by accessing this endpoint: `https://nodepool.<fqdn>/builds`.
+The image builds logs can be consulted by accessing this endpoint: `https://<fqdn>/nodepool/builds`.

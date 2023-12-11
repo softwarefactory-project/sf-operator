@@ -231,7 +231,7 @@ func EnsurePrometheusService(env *utils.ENV) {
 
 func (p *PromCMDContext) EnsurePrometheusRoute() {
 	route := base.MkHTTPSRoute(
-		prometheusName, p.env.Ns, prometheusName, prometheusName, "/", prometheusPort, map[string]string{}, p.fqdn, nil)
+		prometheusName, p.env.Ns, prometheusName+"."+p.fqdn, prometheusName, "/", prometheusPort, map[string]string{}, nil)
 	err := p.env.Cli.Get(p.env.Ctx, client.ObjectKey{
 		Name:      prometheusName,
 		Namespace: p.env.Ns,

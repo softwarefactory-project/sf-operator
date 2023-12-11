@@ -165,4 +165,4 @@ np0000000001
 
 Nodepool exposes some [API endpoints](https://zuul-ci.org/docs/nodepool/latest/operation.html#web-interface).
 
-For instance, to reach the `image-list` endpoint a user can access the following URL: `https://nodepool.<fqdn>/image-list`.
+For instance, to reach the `image-list` endpoint a user can access the following URL: `https://<fqdn>/nodepool/api/image-list`.

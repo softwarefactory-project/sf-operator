@@ -108,7 +108,6 @@ Flags:
 |--sf-service-ca |string   |  Path for the service CA certificate| - |
 |--sf-service-cert |string  | Path for the service certificate file| - |
 |--sf-service-key |string   | Path for the service private key file| - |
-|--sf-service-name s|tring  | The SF service name for the SSL certificate like Zuul, Gerrit, Logserver etc.| - |
 
 See [this section in the deployment documentation](./../deployment/certificates.md#using-x509-certificates) for more details.
 

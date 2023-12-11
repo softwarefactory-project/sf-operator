@@ -43,7 +43,10 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
-const BusyboxImage = "quay.io/software-factory/sf-op-busybox:1.5-3"
+const (
+	BusyboxImage        = "quay.io/software-factory/sf-op-busybox:1.5-3"
+	CustomSSLSecretName = "sf-ssl-cert"
+)
 
 // HTTPDImage uses pinned/ubi8 based image for httpd
 // https://catalog.redhat.com/software/containers/ubi8/httpd-24/6065b844aee24f523c207943?q=httpd&architecture=amd64&image=651f274c8ce9242f7bb3e011
@@ -325,7 +328,7 @@ func (r *SFUtilContext) ensureRoute(route apiroutev1.Route, name string) bool {
 // the route setting changed.
 func (r *SFUtilContext) ensureHTTPSRoute(
 	name string, host string, serviceName string, path string,
-	port int, annotations map[string]string, fqdn string, le *sfv1.LetsEncryptSpec) bool {
+	port int, annotations map[string]string, le *sfv1.LetsEncryptSpec) bool {
 
 	tlsDataReady := true
 	var sslCA, sslCrt, sslKey []byte
@@ -333,11 +336,11 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 	if le == nil {
 		// Letsencrypt config has not been set so we check the `customSSLSecretName` Secret
 		// for any custom TLS data to setup the Route
-		sslCA, sslCrt, sslKey = r.extractStaticTLSFromSecret(name, host)
+		sslCA, sslCrt, sslKey = r.extractStaticTLSFromSecret()
 	} else {
 		// Letsencrypt config has been set so we ensure we set a Certificate via the
 		// cert-manager Issuer and then we'll setup the Route based on the Certificate's Secret
-		tlsDataReady, sslCA, sslCrt, sslKey = r.extractTLSFromLECertificateSecret(name, host, fqdn, *le)
+		tlsDataReady, sslCA, sslCrt, sslKey = r.extractTLSFromLECertificateSecret(host, *le)
 	}
 
 	if !tlsDataReady {
@@ -356,9 +359,9 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 			Key:                           string(sslKey),
 			CACertificate:                 string(sslCA),
 		}
-		route = base.MkHTTPSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, &tls)
+		route = base.MkHTTPSRoute(name, r.ns, host, serviceName, path, port, annotations, &tls)
 	} else {
-		route = base.MkHTTPSRoute(name, r.ns, host, serviceName, path, port, annotations, fqdn, nil)
+		route = base.MkHTTPSRoute(name, r.ns, host, serviceName, path, port, annotations, nil)
 	}
 	return r.ensureRoute(route, name)
 }
@@ -494,15 +497,10 @@ func (r *SFUtilContext) DebugStatefulSet(name string) {
 	r.log.V(1).Info("Debugging service", "name", name)
 }
 
-func GetCustomRouteSSLSecretName(host string) string {
-	return host + "-ssl-cert"
-}
-
-func (r *SFUtilContext) extractStaticTLSFromSecret(name string, host string) ([]byte, []byte, []byte) {
+func (r *SFUtilContext) extractStaticTLSFromSecret() ([]byte, []byte, []byte) {
 	var customSSLSecret apiv1.Secret
-	customSSLSecretName := GetCustomRouteSSLSecretName(host)
 
-	if !r.GetM(customSSLSecretName, &customSSLSecret) {
+	if !r.GetM(CustomSSLSecretName, &customSSLSecret) {
 		return nil, nil, nil
 	} else {
 		// Fetching secret expected TLS Keys content
@@ -510,23 +508,24 @@ func (r *SFUtilContext) extractStaticTLSFromSecret(name string, host string) ([]
 	}
 }
 
-func (r *SFUtilContext) extractTLSFromLECertificateSecret(name string, host string, fqdn string, le sfv1.LetsEncryptSpec) (bool, []byte, []byte, []byte) {
+func (r *SFUtilContext) extractTLSFromLECertificateSecret(host string, le sfv1.LetsEncryptSpec) (bool, []byte, []byte, []byte) {
 	_, issuerName := getLetsEncryptServer(le)
-	dnsNames := []string{host + "." + fqdn}
-	certificate := cert.MkCertificate(name, r.ns, issuerName, dnsNames, name+"-tls", nil)
+	const sfLECertName = "sf-le-certificate"
+	dnsNames := []string{host}
+	certificate := cert.MkCertificate(sfLECertName, r.ns, issuerName, dnsNames, sfLECertName+"-tls", nil)
 
 	current := certv1.Certificate{}
 
-	found := r.GetM(name, &current)
+	found := r.GetM(sfLECertName, &current)
 	if !found {
-		r.log.V(1).Info("Creating Cert-Manager LetsEncrypt Certificate ...", "name", name)
+		r.log.V(1).Info("Creating Cert-Manager LetsEncrypt Certificate ...", "name", sfLECertName)
 		r.CreateR(&certificate)
 		return false, nil, nil, nil
 	} else {
 		if current.Spec.IssuerRef.Name != certificate.Spec.IssuerRef.Name ||
 			!reflect.DeepEqual(current.Spec.DNSNames, certificate.Spec.DNSNames) {
 			// We need to update the Certficate
-			r.log.V(1).Info("Updating Cert-Manager LetsEncrypt Certificate ...", "name", name)
+			r.log.V(1).Info("Updating Cert-Manager LetsEncrypt Certificate ...", "name", sfLECertName)
 			current.Spec = *certificate.Spec.DeepCopy()
 			r.UpdateR(&current)
 			return false, nil, nil, nil
@@ -536,7 +535,7 @@ func (r *SFUtilContext) extractTLSFromLECertificateSecret(name string, host stri
 		ready := cert.IsCertificateReady(&current)
 
 		if ready {
-			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is Ready ...", "name", name)
+			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is Ready ...", "name", sfLECertName)
 			var leSSLSecret apiv1.Secret
 			if r.GetM(current.Spec.SecretName, &leSSLSecret) {
 				// Extract the TLS material
@@ -545,12 +544,12 @@ func (r *SFUtilContext) extractTLSFromLECertificateSecret(name string, host stri
 			} else {
 				// We are not able to find the Certificate's secret
 				r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is Ready but waiting for the Secret ...",
-					"name", name, "secret", current.Spec.SecretName)
+					"name", sfLECertName, "secret", current.Spec.SecretName)
 				return false, nil, nil, nil
 			}
 		} else {
 			// Return false to force a new Reconcile as the certificate is not Ready yet
-			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is not Ready yet ...", "name", name)
+			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is not Ready yet ...", "name", sfLECertName)
 			return false, nil, nil, nil
 		}
 	}

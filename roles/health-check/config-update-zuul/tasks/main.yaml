@@ -2,7 +2,7 @@
 # First let's ensure that the internal tenant does not contain any Zuul configuration error
 - name: Get configuration errors/warnings into the internal tenant
   ansible.builtin.uri:
-    url: "https://{{ zuul_host }}/api/tenant/internal/config-errors"
+    url: "https://{{ zuul_endpoint }}/api/tenant/internal/config-errors"
     validate_certs: "{{ validate_certs }}"
     method: GET
     return_content: true
@@ -92,7 +92,7 @@
 
 - name: Get Zuul projects list
   ansible.builtin.uri:
-    url: "https://{{ zuul_host }}/api/tenant/{{ tenant_name }}/projects"
+    url: "https://{{ zuul_endpoint }}/api/tenant/{{ tenant_name }}/projects"
     validate_certs: "{{ validate_certs }}"
     method: GET
   register: zuul_tenant_projects

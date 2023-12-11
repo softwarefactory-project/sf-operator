@@ -6,7 +6,4 @@ state_or_province_name: Dolnoslaskie
 locality_name: Wroclaw
 fqdn: sfop.me
 ca_common_name: "{{ fqdn }}"
-common_name: "{{ service_name_custom_ssl }}.{{ ca_common_name }}"
-common_name_alt: "{{ ca_common_name }}"
-
-service_name_custom_ssl: zuul
+common_name: "{{ ca_common_name }}"

@@ -603,8 +603,10 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	pvcReadiness := r.reconcileExpandPVC(builderIdent+"-"+builderIdent+"-0", r.cr.Spec.Nodepool.Builder.Storage)
 
-	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-builder", "nodepool", builderIdent, "/builds",
-		buildLogsHttpdPort, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
+	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-builder", r.cr.Spec.FQDN, builderIdent, "/nodepool/builds",
+		buildLogsHttpdPort, map[string]string{
+			"haproxy.router.openshift.io/rewrite-target": "/builds/",
+		}, r.cr.Spec.LetsEncrypt)
 
 	var isReady = r.IsStatefulSetReady(current) && routeReady && pvcReadiness
 
@@ -733,8 +735,10 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	srv := base.MkService(launcherIdent, r.ns, launcherIdent, []int32{launcherPort}, launcherIdent)
 	r.GetOrCreate(&srv)
 
-	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-launcher", "nodepool", launcherIdent, "/",
-		launcherPort, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
+	routeReady := r.ensureHTTPSRoute(r.cr.Name+"-nodepool-launcher", r.cr.Spec.FQDN, launcherIdent, "/nodepool/api",
+		launcherPort, map[string]string{
+			"haproxy.router.openshift.io/rewrite-target": "/",
+		}, r.cr.Spec.LetsEncrypt)
 
 	isDeploymentReady := r.IsDeploymentReady(&current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, launcherIdent, isDeploymentReady)

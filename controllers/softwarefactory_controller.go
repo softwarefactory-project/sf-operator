@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	apiroutev1 "github.com/openshift/api/route/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
@@ -147,6 +148,14 @@ func (r *SFController) cleanup() {
 	if r.GetM("zuul-monitor", &currentZPM) {
 		r.DeleteR(&currentZPM)
 	}
+
+	// remove a legacy Route definition for Zuul
+	r.DeleteR(&apiroutev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.ns,
+			Name:      r.cr.Spec.FQDN + "-zuul-red",
+		},
+	})
 }
 
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
@@ -383,11 +392,7 @@ func (r *SoftwareFactoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					switch updatedResourceName := a.GetName(); updatedResourceName {
 					case NodepoolProvidersSecretsName:
 						return req
-					case GetCustomRouteSSLSecretName("logserver"):
-						return req
-					case GetCustomRouteSSLSecretName("nodepool"):
-						return req
-					case GetCustomRouteSSLSecretName("zuul"):
+					case CustomSSLSecretName:
 						return req
 					default:
 						// Discover secrets for github and gitlab connections

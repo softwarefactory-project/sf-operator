@@ -12,8 +12,5 @@
         path: /etc/hosts
         block: |
           {{ microshift_ip }} {{ microshift_fqdn }}
-          {{ microshift_ip }} zuul.{{ sf_fqdn }}
-          {{ microshift_ip }} gerrit.{{ sf_fqdn }}
-          {{ microshift_ip }} logserver.{{ sf_fqdn }}
-          {{ microshift_ip }} nodepool.{{ sf_fqdn }}
+          {{ microshift_ip }} {{ sf_fqdn }}
       become: yes

@@ -118,11 +118,12 @@ Each change to the `CR`, passed as parameter, will require a new run of the comm
 You can verify that the services are properly exposed with Firefox (you may have to accept insecure connections when deploying with the default self-signed CA):
 
 ```sh
-firefox https://zuul.<FQDN>
+firefox https://<FQDN>/zuul
+firefox https://<FQDN>/logs
+firefox https://<FQDN>/nodepool/api/image-list
+firefox https://<FQDN>/nodepool/builds
 firefox https://gerrit.<FQDN>
-firefox https://logserver.<FQDN>
 firefox https://prometheus.<FQDN>
-firefox https://nodepool.<FQDN>
 ```
 
 ## Delete the development deployment

@@ -342,8 +342,10 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	pvcReadiness := r.reconcileExpandPVC(logserverIdent+"-"+logserverIdent+"-0", r.cr.Spec.Settings.Storage)
 
 	routeReady := r.ensureHTTPSRoute(
-		r.cr.Name+"-logserver", logserverIdent,
-		logserverIdent, "/", httpdPort, map[string]string{}, r.cr.Spec.FQDN, r.cr.Spec.LetsEncrypt)
+		r.cr.Name+"-logserver", r.cr.Spec.FQDN,
+		logserverIdent, "/logs/", httpdPort, map[string]string{
+			"haproxy.router.openshift.io/rewrite-target": "/",
+		}, r.cr.Spec.LetsEncrypt)
 
 	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
 	// TODO(mhu) we may want to include monitoring objects' status in readiness computation
