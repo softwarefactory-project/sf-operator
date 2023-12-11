@@ -104,10 +104,9 @@ func main() {
 	rootCmd.Flags().BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	rootCmd.Flags().StringVar(&ns, "namespace", "", "The namespace to listen to.")
+	rootCmd.PersistentFlags().StringVarP(&ns, "namespace", "n", "sf", "The namespace to listen to.")
 
 	// Flags for the standalone command
-	standaloneCmd.Flags().StringVar(&ns, "namespace", "sf", "The namespace where to reconcile the deployment.")
 	standaloneCmd.Flags().StringVar(&sfResource, "cr", "", "The path to the CR to reconcile.")
 
 	// Add sub commands
