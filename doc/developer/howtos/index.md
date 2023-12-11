@@ -88,7 +88,7 @@ Here is an usage example of this resource:
 # Create a dedicated namespace
 kubectl create ns logserver
 # Start the operator for the dedicated namespace
-go run ./main.go --namespace logserver
+go run ./main.go --namespace logserver operator
 ```
 
 ```shell

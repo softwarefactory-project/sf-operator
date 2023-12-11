@@ -84,7 +84,7 @@ To iterate on the development of the `sf-operator` you can either start the oper
 Run the operator with the following command:
 
 ```sh
-go run ./main.go --namespace sf
+go run ./main.go --namespace sf operator
 ```
 
 > The command does not return and wait for events to run the reconcile.
@@ -105,7 +105,7 @@ Any change on the applied resource re-trigger the reconcile.
 Run the operator with the following command:
 
 ```sh
-go run ./main.go --namespace sf standalone --cr playbooks/files/sf.yaml
+go run ./main.go --namespace sf apply --cr playbooks/files/sf.yaml
 ```
 
 > The command returns when the expected state is applied.
