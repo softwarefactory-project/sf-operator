@@ -19,3 +19,5 @@ General information about architectural decision records is available at <https:
 1. [Config check and update jobs implementation](./0008-config-jobs.md)
 1. [Database Agnosticity for SF Deployments](./0009-database-agnosticity.md)
 1. [Usage of the upstream zuul-operator](./0010-zuul-operator-usage.md)
+1. [Nodepool Builder](./0011-nodepool-builder.md)
+1. [CLI overhaul](./0012-CLI-overhaul.md)
