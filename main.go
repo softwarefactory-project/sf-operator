@@ -4,22 +4,19 @@
 package main
 
 import (
-	"errors"
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/yaml"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"github.com/softwarefactory-project/sf-operator/cli/cmd"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	//+kubebuilder:scaffold:imports
@@ -33,107 +30,16 @@ func getWatchNamespace() (string, error) {
 	return utils.GetEnvVarValue("WATCH_NAMESPACE")
 }
 
-// CLI config struct
-type SoftwareFactoryConfigContext struct {
-	ConfigRepository string `mapstructure:"config-repository-path"`
-	Manifest         string `mapstructure:"manifest-file"`
-	IsStandalone     bool   `mapstructure:"standalone"`
-	Namespace        string `mapstructure:"namespace"`
-	KubeContext      string `mapstructure:"kube-context"`
-	FQDN             string `mapstructure:"fqdn"`
-	Dev              struct {
-		AnsibleMicroshiftRolePath string `mapstructure:"ansible-microshift-role-path"`
-		Microshift                struct {
-			Host          string `mapstructure:"host"`
-			User          string `mapstructure:"user"`
-			InventoryFile string `mapstructure:"inventory-file"`
-		} `mapstructure:"microshift"`
-		Tests struct {
-			ExtraVars map[string]string `mapstructure:"extra-vars"`
-		} `mapstructure:"tests"`
-	} `mapstructure:"development"`
-	Components struct {
-		Nodepool struct {
-			CloudsFile string `mapstructure:"clouds-file"`
-			KubeFile   string `mapstructure:"kube-file"`
-		} `mapstructure:"nodepool"`
-	} `mapstructure:"components"`
-}
-
-type SoftwareFactoryConfig struct {
-	Contexts map[string]SoftwareFactoryConfigContext `mapstructure:"contexts"`
-	Default  string                                  `mapstructure:"default-context"`
-}
-
-func loadConfigFile(cmd *cobra.Command) (cliConfig SoftwareFactoryConfig, err error) {
-	configPath, _ := cmd.Flags().GetString("config")
-	viper.SetConfigFile(configPath)
-	err = viper.ReadInConfig()
-	if err != nil {
-		return
-	}
-	err = viper.Unmarshal(&cliConfig)
-	return
-}
-
-func getContextFromFile(cmd *cobra.Command) (ctxName string, cliContext SoftwareFactoryConfigContext, err error) {
-	cliConfig, err := loadConfigFile(cmd)
-	if err != nil {
-		return
-	}
-	ctx, _ := cmd.Flags().GetString("context")
-	if ctx == "" {
-		ctx = cliConfig.Default
-	}
-	for c := range cliConfig.Contexts {
-		if ctx == "" || ctx == c {
-			return c, cliConfig.Contexts[c], nil
-		}
-	}
-	return ctxName, cliContext, errors.New("context not found")
-}
-
-// Parse arguments from config file and the command line.
-// CLI arguments take precedence over config file.
-func getCLIContext(cmd *cobra.Command) (SoftwareFactoryConfigContext, error) {
-	var cliContext SoftwareFactoryConfigContext
-	var ctxName string
-	var err error
-	configPath, _ := cmd.Flags().GetString("config")
-	if configPath != "" {
-		ctxName, cliContext, err = getContextFromFile(cmd)
-		if err != nil {
-			ctrl.Log.Error(err, "Could not load config file")
-		} else {
-			ctrl.Log.Info("Using configuration context " + ctxName)
-		}
-	}
-	// Override with defaults
-	// We don't set a default namespace here so as not to interfere with rootCmd.
-	ns, _ := cmd.Flags().GetString("namespace")
-	if cliContext.Namespace == "" {
-		cliContext.Namespace = ns
-	}
-	fqdn, _ := cmd.Flags().GetString("fqdn")
-	if fqdn == "" {
-		fqdn = "sfop.me"
-	}
-	if cliContext.FQDN == "" {
-		cliContext.FQDN = fqdn
-	}
-	return cliContext, nil
-}
-
-func operatorCmd(cmd *cobra.Command, args []string) {
-	cliCtx, err := getCLIContext(cmd)
+func operatorCmd(kmd *cobra.Command, args []string) {
+	cliCtx, err := cmd.GetCLIContext(kmd)
 	if err != nil {
 		ctrl.Log.Error(err, "Error initializing:")
 		os.Exit(1)
 	}
 	ns := cliCtx.Namespace
-	metricsAddr, _ := cmd.Flags().GetString("metrics-bind-address")
-	probeAddr, _ := cmd.Flags().GetString("health-probe-bind-address")
-	enableLeaderElection, _ := cmd.Flags().GetBool("leader-elect")
+	metricsAddr, _ := kmd.Flags().GetString("metrics-bind-address")
+	probeAddr, _ := kmd.Flags().GetString("health-probe-bind-address")
+	enableLeaderElection, _ := kmd.Flags().GetBool("leader-elect")
 	if ns == "" {
 		var err error
 		ns, err = getWatchNamespace()
@@ -148,42 +54,6 @@ func operatorCmd(cmd *cobra.Command, args []string) {
 	controllers.Main(ns, metricsAddr, probeAddr, enableLeaderElection, false)
 }
 
-func standaloneCmd(cmd *cobra.Command, args []string) {
-	cliCtx, err := getCLIContext(cmd)
-	if err != nil {
-		ctrl.Log.Error(err, "Error initializing:")
-		os.Exit(1)
-	}
-	ns := cliCtx.Namespace
-	sfResource, _ := cmd.Flags().GetString("cr")
-	hasManifest := &cliCtx.Manifest
-	if sfResource == "" && hasManifest != nil {
-		sfResource = cliCtx.Manifest
-	}
-	if (sfResource != "" && ns == "") || (sfResource == "" && ns != "") {
-		err := errors.New("standalone mode requires both --cr and --namespace to be set")
-		ctrl.Log.Error(err, "Argument error:")
-		os.Exit(1)
-	} else if sfResource != "" && ns != "" {
-		var sf sfv1.SoftwareFactory
-		dat, err := os.ReadFile(sfResource)
-		if err != nil {
-			ctrl.Log.Error(err, "Error reading manifest:")
-			os.Exit(1)
-		}
-		if err := yaml.Unmarshal(dat, &sf); err != nil {
-			ctrl.Log.Error(err, "Error interpreting the SF custom resource:")
-			os.Exit(1)
-		}
-		ctrl.Log.Info("Applying custom resource with the following parameters:",
-			"CR", sf,
-			"CR name", sf.ObjectMeta.Name,
-			"Namespace", ns)
-		controllers.Standalone(sf, ns, cliCtx.KubeContext)
-		os.Exit(0)
-	}
-}
-
 func main() {
 	var (
 		metricsAddr          string
@@ -193,7 +63,6 @@ func main() {
 		fqdn                 string
 		cliContext           string
 		configFile           string
-		sfResource           string
 
 		rootCmd = &cobra.Command{
 			Short: "SF Operator CLI",
@@ -205,14 +74,6 @@ func main() {
 			Short: "Start the SF Operator",
 			Long:  `This command starts the sf-operator service locally, for the cluster defined in the current kube context. The SF CRDs must be installed on the cluster.`,
 			Run:   operatorCmd,
-		}
-
-		standaloneCmd = &cobra.Command{
-			Use:   "apply",
-			Short: "Apply a SoftwareFactory Custom Resource to a cluster",
-			Long: `This command can be used to deploy a SoftwareFactory resource without installing the operator or its associated CRDs on a cluster.
-			This will run the operator runtime locally, deploy the resource's components on the cluster, then exit.`,
-			Run: standaloneCmd,
 		}
 	)
 
@@ -229,12 +90,14 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 
-	// Flags for the standalone command
-	standaloneCmd.Flags().StringVar(&sfResource, "cr", "", "The path to the CR to apply.")
-
 	// Add sub commands
-	rootCmd.AddCommand(standaloneCmd)
 	rootCmd.AddCommand(operatorCmd)
+	subcommands := []*cobra.Command{
+		cmd.MkApplyCmd(),
+	}
+	for _, c := range subcommands {
+		rootCmd.AddCommand(c)
+	}
 
 	opts := zap.Options{
 		Development: true,
