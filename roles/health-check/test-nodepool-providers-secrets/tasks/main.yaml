@@ -6,7 +6,7 @@
 
 - name: Dump current secrets from nodepool
   command: >
-    tools/sfconfig --config /tmp/sfconfig.yaml nodepool-providers-secrets --dump
+    go run ./main.go --namespace sf nodepool get providers-secrets --clouds /tmp/clouds.yaml --kube /tmp/kubeconfig.yaml
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
