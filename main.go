@@ -94,6 +94,8 @@ func main() {
 	rootCmd.AddCommand(operatorCmd)
 	subcommands := []*cobra.Command{
 		cmd.MkApplyCmd(),
+		cmd.MkBackupCmd(),
+		cmd.MkRestoreCmd(),
 	}
 	for _, c := range subcommands {
 		rootCmd.AddCommand(c)

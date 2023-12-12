@@ -8,10 +8,11 @@ deployments, beyond what can be defined in a custom resource manifest.
 1. [Running the CLI](#running-the-cli)
 1. [Global Flags](#global-flags)
 1. [Configuration File](#configuration-file)
-1. [Running the Operator](#running-the-operator)
 1. [Subcommands](#subcommands)
   1. [Apply](#apply)
   1. [Operator](#apply)
+  1. [Backup](#backup)
+  1. [Restore](#restore)
 
 ## Running the CLI
 
@@ -119,3 +120,10 @@ Flags:
 |--metrics-bind-address |string  | The address the metric endpoint binds to. | Yes | :8080 |
 |--health-probe-bind-address |string  | The address the probe endpoint binds to. | Yes | :8081 |
 |--leader-elect |boolean  | Enable leader election for controller manager. | Yes | false |
+### Backup
+
+Not implemented yet
+
+### Restore
+
+Not implemented yet
