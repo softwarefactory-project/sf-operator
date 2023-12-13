@@ -8,6 +8,7 @@ package cmd
 */
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -19,17 +20,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func get(kmd *cobra.Command, args []string) {
-	cliCtx, err := GetCLIContext(kmd)
-	if err != nil {
-		ctrl.Log.Error(err, "Error initializing:")
-		os.Exit(1)
-	}
-	argumentError := errors.New("argument must be in: providers-secrets, builder-ssh-key")
-	if len(args) != 1 {
-		ctrl.Log.Error(argumentError, "Need one argument")
-		os.Exit(1)
-	}
+func npGet(kmd *cobra.Command, args []string) {
+	cliCtx := getCLIctxOrDie(kmd, args, []string{"providers-secrets", "builder-ssh-key"})
 	target := args[0]
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
@@ -43,12 +35,98 @@ func get(kmd *cobra.Command, args []string) {
 			kubeFile = cliCtx.Components.Nodepool.KubeFile
 		}
 		getProvidersSecret(ns, kubeContext, cloudsFile, kubeFile)
-	} else if target == "builder-ssh-key" {
+	}
+	if target == "builder-ssh-key" {
 		pubKey, _ := kmd.Flags().GetString("pubkey")
 		getBuilderSSHKey(ns, kubeContext, pubKey)
-	} else {
-		ctrl.Log.Error(argumentError, "Unknown argument "+target)
+	}
+}
+
+func npConfigure(kmd *cobra.Command, args []string) {
+	cliCtx := getCLIctxOrDie(kmd, args, []string{"providers-secrets"})
+	ns := cliCtx.Namespace
+	kubeContext := cliCtx.KubeContext
+	cloudsFile, _ := kmd.Flags().GetString("clouds")
+	if cloudsFile == "" {
+		cloudsFile = cliCtx.Components.Nodepool.CloudsFile
+	}
+	kubeFile, _ := kmd.Flags().GetString("kube")
+	if kubeFile == "" {
+		kubeFile = cliCtx.Components.Nodepool.KubeFile
+	}
+	if cloudsFile == "" && kubeFile == "" {
+		ctrl.Log.Error(errors.New("not enough parameters"),
+			"a clouds.yaml file or a kube.config file must be passed to the command via the --clouds or --kube arguments")
 		os.Exit(1)
+	}
+	cloudsContent, err := getFileContent(cloudsFile)
+	if err != nil {
+		ctrl.Log.Error(err, "Error opening %s", cloudsContent)
+		os.Exit(1)
+	}
+	kubeContent, err := getFileContent(kubeFile)
+	if err != nil {
+		ctrl.Log.Error(err, "Error opening %s", kubeContent)
+		os.Exit(1)
+	}
+	ensureNodepoolProvidersSecrets(ns, kubeContext, cloudsContent, kubeContent)
+}
+
+func ensureNodepoolProvidersSecrets(ns string, kubeContext string, cloudconfig []byte, kubeconfig []byte) {
+	env := ENV{
+		Cli: CreateKubernetesClientOrDie(kubeContext),
+		Ctx: context.TODO(),
+		Ns:  ns,
+	}
+	var secret apiv1.Secret
+	if x, _ := GetM(&env, controllers.NodepoolProvidersSecretsName, &secret); !x {
+		// Initialize the secret data
+		secret.Name = controllers.NodepoolProvidersSecretsName
+		secret.Data = make(map[string][]byte)
+		if cloudconfig != nil {
+			secret.Data["clouds.yaml"] = cloudconfig
+		}
+		if kubeconfig != nil {
+			secret.Data["kube.config"] = kubeconfig
+		}
+		CreateROrDie(&env, &secret)
+	} else {
+		// Handle secret update
+		if secret.Data == nil {
+			secret.Data = make(map[string][]byte)
+		}
+		needUpdate := false
+		if cloudconfig != nil {
+			if !bytes.Equal(secret.Data["clouds.yaml"], cloudconfig) {
+				ctrl.Log.Info("Updating clouds config ...")
+				secret.Data["clouds.yaml"] = cloudconfig
+				needUpdate = true
+			}
+		} else {
+			if _, ok := secret.Data["clouds.yaml"]; ok {
+				ctrl.Log.Info("Removing clouds config ...")
+				delete(secret.Data, "clouds.yaml")
+				needUpdate = true
+			}
+		}
+		if kubeconfig != nil {
+			if !bytes.Equal(secret.Data["kube.config"], kubeconfig) {
+				ctrl.Log.Info("Updating the kube config ...")
+				secret.Data["kube.config"] = kubeconfig
+				needUpdate = true
+			}
+		} else {
+			if _, ok := secret.Data["kube.config"]; ok {
+				ctrl.Log.Info("Removing the kube config ...")
+				delete(secret.Data, "kube.config")
+				needUpdate = true
+			}
+		}
+		if needUpdate {
+			UpdateROrDie(&env, &secret)
+		} else {
+			ctrl.Log.Info("Secret \"" + controllers.NodepoolProvidersSecretsName + "\" already up to date, doing nothing")
+		}
 	}
 }
 
@@ -123,7 +201,7 @@ func MkNodepoolCmd() *cobra.Command {
 		createCmd, configureCmd, getCmd = GetCRUDSubcommands()
 	)
 
-	getCmd.Run = get
+	getCmd.Run = npGet
 	getCmd.Use = "get {providers-secrets, builder-ssh-key}"
 	getCmd.Long = "Get a Nodepool resource. The resource can be the providers secrets or the builder's public SSH key."
 	getCmd.ValidArgs = []string{"providers-secrets", "builder-ssh-key"}
@@ -131,7 +209,12 @@ func MkNodepoolCmd() *cobra.Command {
 	getCmd.Flags().StringVar(&kubeconfigOutput, "kube", "", "(use with providers-secrets) File where to dump the kube secrets")
 	getCmd.Flags().StringVar(&builderPubKey, "pubkey", "", "(use with builder-ssh-key) File where to dump nodepool-builder's SSH public key")
 
-	createCmd.AddCommand(getCmd)
+	configureCmd.Run = npConfigure
+	configureCmd.Use = "configure {providers-secrets}"
+	configureCmd.Long = "Configure OpenStack and/or K8s-based providers' secrets from local files."
+	configureCmd.ValidArgs = []string{"providers-secrets"}
+	configureCmd.Flags().StringVar(&cloudsOutput, "clouds", "", "(use with providers-secrets) File to read the clouds secrets from")
+	configureCmd.Flags().StringVar(&kubeconfigOutput, "kube", "", "(use with providers-secrets) File to read the kube secrets from")
 
 	nodepoolCmd.AddCommand(createCmd)
 	nodepoolCmd.AddCommand(configureCmd)

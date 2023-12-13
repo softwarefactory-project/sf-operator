@@ -115,6 +115,23 @@ Not implemented yet
 
 The `nodepool` subcommand can be used to interact with the Nodepool component of a Software Factory deployment.
 
+### configure providers-secrets
+
+Set or update Nodepool's providers secrets (OpenStack's clouds.yaml and Kubernetes/OpenShift's kube.config).
+
+> ⚠️ At least one of the `--kube` or `--clouds` flags must be provided.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] nodepool get providers-secrets [--kube /path/to/kube.config --clouds /path/to/clouds.yaml]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --kube | string | The file from which to read nodepool's kube.config | yes | - |
+| --clouds | string | The file from which to read nodepool's clouds.yaml | yes | - |
+
 #### get builder-ssh-key
 
 The Nodepool builder component should be used with at least one `image-builder` companion machine.
