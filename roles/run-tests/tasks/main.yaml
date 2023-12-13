@@ -24,9 +24,9 @@
     - name: zuul-connections
     - name: zuul-authenticators
     - name: config-update-zuul
+    - name: test-nodepool-providers-secrets
     - name: config-update-nodepool-launcher
     - name: config-update-nodepool-builder
-    - name: test-nodepool-providers-secrets
     - name: pod-spawning
     - name: test-volumestats-sidecar
     - name: expand-volume
