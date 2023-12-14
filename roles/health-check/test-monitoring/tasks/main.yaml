@@ -12,10 +12,12 @@
     status_code: [302, 200]
     validate_certs: "{{ validate_certs }}"
 
-- name: Fetch defined Prometheus targets
+- name: Wait for Prometheus targets
   ansible.builtin.shell: curl -k https://{{ prometheus_host }}/api/v1/targets | jq '.data.activeTargets[] | select(.labels.container == "{{ item }}") | .health'
   register: target_health
-  failed_when: '"up" not in target_health.stdout'
+  until: '"up" in target_health.stdout'
+  delay: 10
+  retries: 6
   loop:
     - "zuul-web"
     - "zuul-executor"

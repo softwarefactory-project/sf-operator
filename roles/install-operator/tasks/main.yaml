@@ -14,10 +14,15 @@
     bin/operator-sdk
     run
     bundle
+    --timeout 4m0s
     --skip-tls
     --skip-tls-verify
     {{ ci_bundle_img }}
     --namespace operators
     --security-context-config restricted
+  register: run_bundle
+  retries: 3
+  delay: 10
+  until: run_bundle is success
   args:
     chdir: "{{ src_dir }}"
