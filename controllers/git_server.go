@@ -127,12 +127,12 @@ func (r *SFController) MkPreInitScript() string {
 				Manager:     zuulcf.Supercedent,
 				Precedence:  zuulcf.Low,
 				Trigger: zuulcf.PipelineGenericTrigger{
-					"git-server": zuulcf.PipelineTriggerGitArray{
+					"git-server": zuulcf.PipelineTriggerArray{
 						{
 							Event: "ref-updated",
 						},
 					},
-					configRepoConnectionName: zuulcf.PipelineTriggerGitArray{
+					configRepoConnectionName: zuulcf.PipelineTriggerArray{
 						{
 							Event: "ref-updated",
 							Ref: []string{
@@ -150,12 +150,14 @@ func (r *SFController) MkPreInitScript() string {
 				Manager:     zuulcf.Independent,
 				Require: zuulcf.PipelineRequire{
 					configRepoConnectionName: zuulcf.PipelineRequireApproval{
-						Open:            true,
-						CurrentPatchset: true,
+						Open: true,
+						Gerrit: zuulcf.PipelineGerritRequirement{
+							CurrentPatchset: true,
+						},
 					},
 				},
 				Trigger: zuulcf.PipelineGenericTrigger{
-					configRepoConnectionName: zuulcf.PipelineTriggerGitArray{
+					configRepoConnectionName: zuulcf.PipelineTriggerArray{
 						{
 							Event: "patchset-created",
 						},
@@ -168,43 +170,53 @@ func (r *SFController) MkPreInitScript() string {
 						},
 						{
 							Event: "comment-added",
-							Gerrit: zuulcf.PipelineTriggerGitGerrit{
-								Approval: []zuulcf.PipelineRequireApproval{
-									{
-										Verified: []zuulcf.GerritVotePoint{
-											zuulcf.GerritVotePointMinusOne,
-											zuulcf.GerritVotePointMinusTwo,
+							GitTrigger: zuulcf.PipelineTriggerGit{
+								Gerrit: zuulcf.PipelineTriggerGitGerrit{
+									Approval: []zuulcf.PipelineRequireApproval{
+										{
+											Gerrit: zuulcf.PipelineGerritRequirement{
+												Verified: []zuulcf.GerritVotePoint{
+													zuulcf.GerritVotePointMinusOne,
+													zuulcf.GerritVotePointMinusTwo,
+												},
+												Username: "zuul",
+											},
 										},
-										Username: "zuul",
 									},
 								},
-							},
-							Approval: []zuulcf.PipelineRequireGerritApproval{
-								{
-									Workflow: zuulcf.GetGerritWorkflowValue("1"),
+								Approval: []zuulcf.PipelineRequireGerritApproval{
+									{
+										Workflow: zuulcf.GetGerritWorkflowValue("1"),
+									},
 								},
 							},
 						},
 					},
 				},
 				Start: zuulcf.PipelineReporter{
-					GerritReporter: zuulcf.GerritReporterMap{
-						configRepoConnectionName: zuulcf.PipelineGerritReporter{
-							Verified: zuulcf.GerritVotePointZero,
+					Reporter: zuulcf.ReporterMap{
+						configRepoConnectionName: zuulcf.PipelineDriverReporter{
+							Gerrit: &zuulcf.PipelineGerritReporter{
+								Verified: zuulcf.GerritVotePointZero,
+							},
 						},
 					},
 				},
 				Success: zuulcf.PipelineReporter{
-					GerritReporter: zuulcf.GerritReporterMap{
-						configRepoConnectionName: zuulcf.PipelineGerritReporter{
-							Verified: zuulcf.GerritVotePointOne,
+					Reporter: zuulcf.ReporterMap{
+						configRepoConnectionName: zuulcf.PipelineDriverReporter{
+							Gerrit: &zuulcf.PipelineGerritReporter{
+								Verified: zuulcf.GerritVotePointOne,
+							},
 						},
 					},
 				},
 				Failure: zuulcf.PipelineReporter{
-					GerritReporter: zuulcf.GerritReporterMap{
-						configRepoConnectionName: zuulcf.PipelineGerritReporter{
-							Verified: zuulcf.GerritVotePointMinusOne,
+					Reporter: zuulcf.ReporterMap{
+						configRepoConnectionName: zuulcf.PipelineDriverReporter{
+							Gerrit: &zuulcf.PipelineGerritReporter{
+								Verified: zuulcf.GerritVotePointMinusOne,
+							},
 						},
 					},
 				},
@@ -224,55 +236,68 @@ func (r *SFController) MkPreInitScript() string {
 				PostReview: true,
 				Require: zuulcf.PipelineRequire{
 					configRepoConnectionName: zuulcf.PipelineRequireApproval{
-						Open:            true,
-						CurrentPatchset: true,
-						GerritApproval: []zuulcf.PipelineRequireGerritApproval{
-							{
-								Workflow: zuulcf.GetGerritWorkflowValue("1"),
-							},
-						},
-					},
-				},
-				Trigger: zuulcf.PipelineGenericTrigger{
-					configRepoConnectionName: zuulcf.PipelineTriggerGitArray{
-						{
-							Event: "comment-added",
-							Approval: []zuulcf.PipelineRequireGerritApproval{
+						Open: true,
+						Gerrit: zuulcf.PipelineGerritRequirement{
+							CurrentPatchset: true,
+							GerritApproval: []zuulcf.PipelineRequireGerritApproval{
 								{
 									Workflow: zuulcf.GetGerritWorkflowValue("1"),
 								},
 							},
 						},
+					},
+				},
+				Trigger: zuulcf.PipelineGenericTrigger{
+					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineTriggerArray{
 						{
 							Event: "comment-added",
-							Approval: []zuulcf.PipelineRequireGerritApproval{
-								{
-									Verified: zuulcf.GerritVotePointOne,
+							GitTrigger: zuulcf.PipelineTriggerGit{
+								Approval: []zuulcf.PipelineRequireGerritApproval{
+									{
+										Workflow: zuulcf.GetGerritWorkflowValue("1"),
+									},
 								},
+								Username: "zuul",
 							},
-							Username: "zuul",
+						},
+						{
+							Event: "comment-added",
+							GitTrigger: zuulcf.PipelineTriggerGit{
+								Approval: []zuulcf.PipelineRequireGerritApproval{
+									{
+										Verified: zuulcf.GerritVotePointOne,
+									},
+								},
+								Username: "zuul",
+							},
 						},
 					},
 				},
 				Start: zuulcf.PipelineReporter{
-					GerritReporter: zuulcf.GerritReporterMap{
-						configRepoConnectionName: zuulcf.PipelineGerritReporter{
-							Verified: zuulcf.GerritVotePointZero,
+					Reporter: zuulcf.ReporterMap{
+						configRepoConnectionName: zuulcf.PipelineDriverReporter{
+							Gerrit: &zuulcf.PipelineGerritReporter{
+								Verified: zuulcf.GerritVotePointZero,
+							},
 						},
 					},
 				},
 				Success: zuulcf.PipelineReporter{
-					GerritReporter: zuulcf.GerritReporterMap{
-						configRepoConnectionName: zuulcf.PipelineGerritReporter{
-							Verified: zuulcf.GerritVotePointTwo,
-							Submit:   true,
+					Reporter: zuulcf.ReporterMap{
+						configRepoConnectionName: zuulcf.PipelineDriverReporter{
+							Gerrit: &zuulcf.PipelineGerritReporter{
+								Verified: zuulcf.GerritVotePointTwo,
+								Submit:   true,
+							},
 						},
 					},
 				},
 				Failure: zuulcf.PipelineReporter{
-					GerritReporter: zuulcf.GerritReporterMap{
-						configRepoConnectionName: zuulcf.PipelineGerritReporter{
-							Verified: zuulcf.GerritVotePointMinusTwo,
+					Reporter: zuulcf.ReporterMap{
+						configRepoConnectionName: zuulcf.PipelineDriverReporter{
+							Gerrit: &zuulcf.PipelineGerritReporter{
+								Verified: zuulcf.GerritVotePointMinusTwo,
+							},
 						},
 					},
 				},

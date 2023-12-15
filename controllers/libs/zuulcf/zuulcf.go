@@ -1,4 +1,7 @@
-// Package zuulcf provides a little library with utilities for Zuul Configurations
+// Copyright (C) 2023 Red Hat
+// SPDX-License-Identifier: Apache-2.0
+
+// Package zuulcf contains a library to build Zuul configurations.
 package zuulcf
 
 import (
@@ -258,41 +261,93 @@ type PipelineRequireGerritApproval struct {
 	CodeReview GerritCodeReview `yaml:"Code-Review,omitempty"`
 }
 
-type PipelineRequireApproval struct {
+type PipelineGerritRequirement struct {
 	Username        string                          `yaml:"username,omitempty"`
-	Open            bool                            `yaml:"open,omitempty"`
 	CurrentPatchset bool                            `yaml:"current-patchset,omitempty"`
 	Verified        []GerritVotePoint               `yaml:"Verified,omitempty,flow"`
 	GerritApproval  []PipelineRequireGerritApproval `yaml:"approval,omitempty"`
 	Workflow        GerritWorkflow                  `yaml:"Workflow,omitempty"`
 }
 
+type PipelineGitLabRequirement struct {
+	Merged   bool     `yaml:"merged,omitempty"`
+	Approved bool     `yaml:"approved,omitempty"`
+	Labels   []string `yaml:"labels,omitempty"`
+}
+
+type PipelineRequireApproval struct {
+	Open   bool                      `yaml:"open,omitempty"`
+	Gerrit PipelineGerritRequirement `yaml:",inline,omitempty"`
+	Gitlab PipelineGitLabRequirement `yaml:",inline,omitempty"`
+}
+
 type PipelineTriggerGitGerrit struct {
 	Approval []PipelineRequireApproval `yaml:"approval,omitempty"`
 }
 
+type GitGLMergeRequests string
+
+const (
+	Opened     GitGLMergeRequests = "opened"
+	Changed    GitGLMergeRequests = "changed"
+	Merged     GitGLMergeRequests = "merged"
+	Comment    GitGLMergeRequests = "comment"
+	Approved   GitGLMergeRequests = "approved"
+	Unapproved GitGLMergeRequests = "unapproved"
+	Labeled    GitGLMergeRequests = "labeled"
+)
+
+type PipelineTriggerGitLab struct {
+	Action   []GitGLMergeRequests `yaml:"action,omitempty"`
+	Labels   []string             `yaml:"labels,omitempty"`
+	Unlabels []string             `yaml:"unlabels,omitempty"`
+}
+
 type PipelineTriggerGit struct {
-	Event    string                          `yaml:"event"`
-	Comment  string                          `yaml:"comment,omitempty"`
 	Gerrit   PipelineTriggerGitGerrit        `yaml:"require,omitempty"`
-	Ref      []string                        `yaml:"ref,omitempty"`
 	Approval []PipelineRequireGerritApproval `yaml:"approval,omitempty"`
 	Username string                          `yaml:"username,omitempty"`
 }
 
-type PipelineTriggerGitArray []PipelineTriggerGit
+type PipelineTrigger struct {
+	Event         string                `yaml:"event"`
+	Comment       string                `yaml:"comment,omitempty"`
+	Ref           []string              `yaml:"ref,omitempty"`
+	GitTrigger    PipelineTriggerGit    `yaml:",inline"`
+	GitLabTrigger PipelineTriggerGitLab `yaml:",inline"`
+}
 
-type PipelineGenericTrigger map[string]PipelineTriggerGitArray
+type PipelineTriggerArray []PipelineTrigger
+
+type PipelineGenericTrigger map[string]PipelineTriggerArray
+
+type PipelineGitLabReporter struct {
+	Comment  bool     `yaml:"comment"`
+	Approval bool     `yaml:"approval"`
+	Merge    bool     `yaml:"merge,omitempty"`
+	Labels   []string `yaml:"labels,omitempty"`
+	Unlabels []string `yaml:"unlabels,omitempty"`
+}
 
 type PipelineGerritReporter struct {
 	Submit   bool            `yaml:"submit,omitempty"`
 	Verified GerritVotePoint `yaml:"Verified"`
 }
 
+type PipelineDriverReporter struct {
+	Gitlab *PipelineGitLabReporter `yaml:",inline,omitempty"`
+	Gerrit *PipelineGerritReporter `yaml:",inline,omitempty"`
+}
+
+type ReporterMap map[string]PipelineDriverReporter
+
+type GitLabReporterMap map[string]PipelineGitLabReporter
+
 type GerritReporterMap map[string]PipelineGerritReporter
+
 type PipelineReporter struct {
-	GerritReporter GerritReporterMap `yaml:",inline"`
-	SQLReporter    []string          `yaml:"sqlreporter,omitempty"`
+	Reporter    ReporterMap `yaml:",inline"`
+	SQLReporter []string    `yaml:"sqlreporter,omitempty"`
 }
 
 type PipelinePrecedence string
@@ -382,3 +437,407 @@ type Semaphore struct {
 }
 
 type Semaphores []Semaphore
+
+func GetRequireCheckByDriver(driver string, connection string) (PipelineRequire, error) {
+	require := PipelineRequire{}
+
+	switch driver {
+	case "gerrit":
+		require = PipelineRequire{
+			connection: PipelineRequireApproval{
+				Open: true,
+				Gerrit: PipelineGerritRequirement{
+					CurrentPatchset: true,
+				},
+			},
+		}
+	case "gitlab":
+		require = PipelineRequire{
+			connection: PipelineRequireApproval{
+				Open: true,
+			},
+		}
+	default:
+		return require, fmt.Errorf("Check Pipeline Require: Driver of type \"" + driver + "\" is not supported")
+	}
+
+	return require, nil
+}
+
+func GetRequireGateByDriver(driver string, connection string) (PipelineRequire, error) {
+	require := PipelineRequire{}
+
+	switch driver {
+	case "gerrit":
+		require = PipelineRequire{
+			connection: PipelineRequireApproval{
+				Open: true,
+				Gerrit: PipelineGerritRequirement{
+					CurrentPatchset: true,
+					GerritApproval: []PipelineRequireGerritApproval{
+						{
+							Workflow: GetGerritWorkflowValue("1"),
+						},
+					},
+				},
+			},
+		}
+	case "gitlab":
+		require = PipelineRequire{
+			connection: PipelineRequireApproval{
+				Open: true,
+				Gitlab: PipelineGitLabRequirement{
+					Approved: true,
+					Labels: []string{
+						"gateit",
+					},
+				},
+			},
+		}
+	default:
+		return require, fmt.Errorf("Gate Pipeline Require: Driver of type \"" + driver + "\" is not supported")
+	}
+
+	return require, nil
+}
+
+func GetTriggerCheckByDriver(driver string, connection string) (PipelineGenericTrigger, error) {
+	trigger := PipelineGenericTrigger{}
+	switch driver {
+	case "gerrit":
+		trigger = PipelineGenericTrigger{
+			connection: PipelineTriggerArray{
+				{
+					Event: "patchset-created",
+				},
+				{
+					Event: "change-restored",
+				},
+				{
+					Event:   "comment-added",
+					Comment: "(?i)^(Patch Set [0-9]+:)?( [\\w\\+-]*)*(\\n\\n)?\\s*(recheck|reverify)",
+				},
+				{
+					Event: "comment-added",
+					GitTrigger: PipelineTriggerGit{
+						Gerrit: PipelineTriggerGitGerrit{
+							Approval: []PipelineRequireApproval{
+								{
+									Gerrit: PipelineGerritRequirement{
+										Username: "zuul",
+										Verified: []GerritVotePoint{
+											GetZuulPipelineReporterVerified("-1"),
+											GetZuulPipelineReporterVerified("-2"),
+										},
+									},
+								},
+							},
+						},
+						Approval: []PipelineRequireGerritApproval{
+							{
+								Workflow: GetGerritWorkflowValue("1"),
+							},
+						},
+					},
+				},
+			},
+		}
+	case "gitlab":
+		trigger = PipelineGenericTrigger{
+			connection: PipelineTriggerArray{
+				{
+					Event: "gl_merge_request",
+					GitLabTrigger: PipelineTriggerGitLab{
+						Action: []GitGLMergeRequests{
+							GitGLMergeRequests(Comment),
+						},
+					},
+					Comment: "(?i)^\\s*recheck\\s*$",
+				},
+				{
+					Event: "gl_merge_request",
+					GitLabTrigger: PipelineTriggerGitLab{
+						Action: []GitGLMergeRequests{
+							GitGLMergeRequests(Opened),
+							GitGLMergeRequests(Changed),
+						},
+					},
+				},
+			},
+		}
+	default:
+		return trigger, fmt.Errorf("Check Pipeline Trigger: Driver of type \"" + driver + "\" is not supported")
+	}
+
+	return trigger, nil
+}
+
+func GetTriggerGateByDriver(driver string, connection string) (PipelineGenericTrigger, error) {
+	trigger := PipelineGenericTrigger{}
+	switch driver {
+	case "gerrit":
+		trigger = PipelineGenericTrigger{
+			connection: PipelineTriggerArray{
+				{
+					Event: "comment-added",
+					GitTrigger: PipelineTriggerGit{
+						Approval: []PipelineRequireGerritApproval{
+							{
+								Workflow: GetGerritWorkflowValue("1"),
+							},
+						},
+					},
+				},
+				{
+					Event: "comment-added",
+					GitTrigger: PipelineTriggerGit{
+						Approval: []PipelineRequireGerritApproval{
+							{
+								Verified: GetZuulPipelineReporterVerified("1"),
+							},
+						},
+						Username: "zuul",
+					},
+				},
+			},
+		}
+	case "gitlab":
+		trigger = PipelineGenericTrigger{
+			connection: PipelineTriggerArray{
+				{
+					Event: "gl_merge_request",
+					GitLabTrigger: PipelineTriggerGitLab{
+						Action: []GitGLMergeRequests{
+							GitGLMergeRequests(Approved),
+						},
+					},
+				},
+				{
+					Event: "gl_merge_request",
+					GitLabTrigger: PipelineTriggerGitLab{
+						Action: []GitGLMergeRequests{
+							GitGLMergeRequests(Labeled),
+						},
+						Labels: []string{
+							"gateit",
+						},
+					},
+				},
+			},
+		}
+	default:
+		return trigger, fmt.Errorf("Gate Pipeline Trigger: Driver of type \"" + driver + "\" is not supported")
+	}
+
+	return trigger, nil
+}
+
+func GetTriggerPostByDriver(driver string, connection string) (PipelineGenericTrigger, error) {
+	trigger := PipelineGenericTrigger{
+		"git-server": PipelineTriggerArray{
+			{
+				Event: "ref-updated",
+			},
+		},
+	}
+
+	switch driver {
+	case "gerrit":
+		trigger = PipelineGenericTrigger{
+			connection: PipelineTriggerArray{
+				{
+					Event: "ref-updated",
+					Ref: []string{
+						"^refs/heads/.*$",
+					},
+				},
+			},
+		}
+	case "gitlab":
+		trigger = PipelineGenericTrigger{
+			connection: PipelineTriggerArray{
+				{
+					Event: "gl_push",
+					Ref: []string{
+						"^refs/heads/.*$",
+					},
+				},
+			},
+		}
+	default:
+		return trigger, fmt.Errorf("Post Pipeline Trigger: Driver of type \"" + driver + "\" is not supported")
+	}
+
+	return trigger, nil
+}
+
+func GetReportersCheckByDriver(driver string, connection string) ([]PipelineReporter, error) {
+	reporters := []PipelineReporter{}
+	switch driver {
+	case "gerrit":
+		// Start
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gerrit: &PipelineGerritReporter{
+							Verified: GetZuulPipelineReporterVerified("0"),
+						},
+					},
+				},
+			})
+		// Success
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gerrit: &PipelineGerritReporter{
+							Verified: GetZuulPipelineReporterVerified("1"),
+						},
+					},
+				},
+			})
+		// Failure
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gerrit: &PipelineGerritReporter{
+							Verified: GetZuulPipelineReporterVerified("-1"),
+						},
+					},
+				},
+			})
+	case "gitlab":
+		// Start
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gitlab: &PipelineGitLabReporter{
+							Comment:  true,
+							Approval: false,
+						},
+					},
+				},
+			})
+		// Success
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gitlab: &PipelineGitLabReporter{
+							Comment:  true,
+							Approval: true,
+						},
+					},
+				},
+			})
+		// Failure
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gitlab: &PipelineGitLabReporter{
+							Comment:  true,
+							Approval: false,
+						},
+					},
+				},
+			})
+	default:
+		reporters = append(reporters, PipelineReporter{},
+			PipelineReporter{},
+			PipelineReporter{})
+		return reporters, fmt.Errorf("Check Pipeline Reporters: Driver of type \"" + driver + "\" is not supported")
+
+	}
+
+	return reporters, nil
+}
+
+func GetReportersGateByDriver(driver string, connection string) ([]PipelineReporter, error) {
+	reporters := []PipelineReporter{}
+	switch driver {
+	case "gerrit":
+		// Start
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gerrit: &PipelineGerritReporter{
+							Verified: GetZuulPipelineReporterVerified("0"),
+						},
+					},
+				},
+			})
+		// Success
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gerrit: &PipelineGerritReporter{
+							Verified: GetZuulPipelineReporterVerified("2"),
+							Submit:   true,
+						},
+					},
+				},
+			})
+		// Failure
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gerrit: &PipelineGerritReporter{
+							Verified: GetZuulPipelineReporterVerified("-2"),
+						},
+					},
+				},
+			})
+	case "gitlab":
+		// Start
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gitlab: &PipelineGitLabReporter{
+							Comment:  true,
+							Approval: false,
+						},
+					},
+				},
+			})
+		// Success
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gitlab: &PipelineGitLabReporter{
+							Comment:  true,
+							Approval: true,
+							Merge:    true,
+						},
+					},
+				},
+			})
+		// Failure
+		reporters = append(reporters,
+			PipelineReporter{
+				Reporter: ReporterMap{
+					connection: PipelineDriverReporter{
+						Gitlab: &PipelineGitLabReporter{
+							Comment:  true,
+							Approval: false,
+						},
+					},
+				},
+			})
+	default:
+		reporters = append(reporters, PipelineReporter{},
+			PipelineReporter{},
+			PipelineReporter{})
+		return reporters, fmt.Errorf("Gate Pipeline Reporters: Driver of type \"" + driver + "\" is not supported")
+	}
+
+	return reporters, nil
+}

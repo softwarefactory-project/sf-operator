@@ -95,13 +95,14 @@ Note: If the directories does not exit they will be created
 
 	`,
 	Example: `
-	./tools/sfconfig bootstrap-tenant-config-repo --connection gerrit --outpath <Path to Project>/
-	./tools/sfconfig bootstrap-tenant-config-repo --connection github --outpath <Path to Project>/
+	./tools/sfconfig bootstrap-tenant-config-repo --connection gerrit-conn --driver gerrit --outpath <Path to Project>/
+	./tools/sfconfig bootstrap-tenant-config-repo --connection github-conn --driver github --outpath <Path to Project>/
 	`,
 	Aliases: []string{"boot"},
 	Run: func(cmd *cobra.Command, args []string) {
 
 		connection, _ := cmd.Flags().GetString("connection")
+		driver, _ := cmd.Flags().GetString("driver")
 		outpath, _ := cmd.Flags().GetString("outpath")
 
 		zuulrootdir = outpath
@@ -110,74 +111,51 @@ Note: If the directories does not exit they will be created
 			fmt.Println(err)
 		}
 
+		// Check Pipeline
+		requireCheck, err := utils.GetRequireCheckByDriver(driver, connection)
+		if err != nil {
+			fmt.Println(err)
+		}
+		triggerCheck, err := utils.GetTriggerCheckByDriver(driver, connection)
+		if err != nil {
+			fmt.Println(err)
+		}
+		reportersCheck, err := utils.GetReportersCheckByDriver(driver, connection)
+		if err != nil {
+			fmt.Println(err)
+		}
+		// Gate Pipeline
+		requireGate, err := utils.GetRequireGateByDriver(driver, connection)
+		if err != nil {
+			fmt.Println(err)
+		}
+		triggerGate, err := utils.GetTriggerGateByDriver(driver, connection)
+		if err != nil {
+			fmt.Println(err)
+		}
+		reportersGate, err := utils.GetReportersGateByDriver(driver, connection)
+		if err != nil {
+			fmt.Println(err)
+		}
+		// Post Pipeline
+		triggerPost, err := utils.GetTriggerPostByDriver(driver, connection)
+		if err != nil {
+			fmt.Println(err)
+		}
+
 		zuulpipelinefilepath := filepath.Join(zuulrootdir, zuuldropindir, connection+"-pipeline.yaml")
 		if err := createZuulPipelineFile(utils.PipelineConfig{
 			{
 				Pipeline: utils.PipelineBody{
 					Name: "check",
-					Description: `Newly uploaded patchsets enter this 
+					Description: `Newly uploaded patchsets enter this
 pipeline to receive an initial +/-1 Verified vote.`,
 					Manager: utils.Independent,
-					Require: utils.PipelineRequire{
-						connection: utils.PipelineRequireApproval{
-							Open:            true,
-							CurrentPatchset: true,
-						},
-					},
-					Trigger: utils.PipelineGenericTrigger{
-						connection: utils.PipelineTriggerGitArray{
-							{
-								Event: "patchset-created",
-							},
-							{
-								Event: "change-restored",
-							},
-							{
-								Event:   "comment-added",
-								Comment: "(?i)^(Patch Set [0-9]+:)?( [\\w\\+-]*)*(\\n\\n)?\\s*(recheck|reverify)",
-							},
-							{
-								Event: "comment-added",
-								Gerrit: utils.PipelineTriggerGitGerrit{
-									Approval: []utils.PipelineRequireApproval{
-										{
-											Username: "zuul",
-											Verified: []utils.GerritVotePoint{
-												utils.GetZuulPipelineReporterVerified("-1"),
-												utils.GetZuulPipelineReporterVerified("-2"),
-											},
-										},
-									},
-								},
-								Approval: []utils.PipelineRequireGerritApproval{
-									{
-										Workflow: utils.GetGerritWorkflowValue("1"),
-									},
-								},
-							},
-						},
-					},
-					Start: utils.PipelineReporter{
-						GerritReporter: utils.GerritReporterMap{
-							connection: utils.PipelineGerritReporter{
-								Verified: utils.GetZuulPipelineReporterVerified("0"),
-							},
-						},
-					},
-					Success: utils.PipelineReporter{
-						GerritReporter: utils.GerritReporterMap{
-							connection: utils.PipelineGerritReporter{
-								Verified: utils.GetZuulPipelineReporterVerified("1"),
-							},
-						},
-					},
-					Failure: utils.PipelineReporter{
-						GerritReporter: utils.GerritReporterMap{
-							connection: utils.PipelineGerritReporter{
-								Verified: utils.GetZuulPipelineReporterVerified("-1"),
-							},
-						},
-					},
+					Require: requireCheck,
+					Trigger: triggerCheck,
+					Start:   reportersCheck[0],
+					Success: reportersCheck[1],
+					Failure: reportersCheck[2],
 				},
 			},
 			{
@@ -190,60 +168,11 @@ pipeline to receive an initial +/-1 Verified vote.`,
 					Supercedes:     []string{"check"},
 					PostReview:     true,
 					Manager:        utils.Dependent,
-					Require: utils.PipelineRequire{
-						connection: utils.PipelineRequireApproval{
-							Open:            true,
-							CurrentPatchset: true,
-							GerritApproval: []utils.PipelineRequireGerritApproval{
-								{
-									Workflow: utils.GetGerritWorkflowValue("1"),
-								},
-							},
-						},
-					},
-					Trigger: utils.PipelineGenericTrigger{
-						connection: utils.PipelineTriggerGitArray{
-							{
-								Event: "comment-added",
-								Approval: []utils.PipelineRequireGerritApproval{
-									{
-										Workflow: utils.GetGerritWorkflowValue("1"),
-									},
-								},
-							},
-							{
-								Event: "comment-added",
-								Approval: []utils.PipelineRequireGerritApproval{
-									{
-										Verified: utils.GetZuulPipelineReporterVerified("1"),
-									},
-								},
-								Username: "zuul",
-							},
-						},
-					},
-					Start: utils.PipelineReporter{
-						GerritReporter: utils.GerritReporterMap{
-							connection: utils.PipelineGerritReporter{
-								Verified: utils.GetZuulPipelineReporterVerified("0"),
-							},
-						},
-					},
-					Success: utils.PipelineReporter{
-						GerritReporter: utils.GerritReporterMap{
-							connection: utils.PipelineGerritReporter{
-								Verified: utils.GetZuulPipelineReporterVerified("2"),
-								Submit:   true,
-							},
-						},
-					},
-					Failure: utils.PipelineReporter{
-						GerritReporter: utils.GerritReporterMap{
-							connection: utils.PipelineGerritReporter{
-								Verified: utils.GetZuulPipelineReporterVerified("-2"),
-							},
-						},
-					},
+					Require:        requireGate,
+					Trigger:        triggerGate,
+					Start:          reportersGate[0],
+					Success:        reportersGate[1],
+					Failure:        reportersGate[2],
 				},
 			},
 			{
@@ -253,21 +182,7 @@ pipeline to receive an initial +/-1 Verified vote.`,
 					Description: `This pipeline runs jobs that operate after each change is merged.`,
 					Manager:     utils.Supercedent,
 					Precedence:  utils.GetZuulPipelinePrecedence("low"),
-					Trigger: utils.PipelineGenericTrigger{
-						"git-server": utils.PipelineTriggerGitArray{
-							{
-								Event: "ref-updated",
-							},
-						},
-						connection: utils.PipelineTriggerGitArray{
-							{
-								Event: "ref-updated",
-								Ref: []string{
-									"^refs/heads/.*$",
-								},
-							},
-						},
-					},
+					Trigger:     triggerPost,
 				},
 			},
 		}, zuulpipelinefilepath); err != nil {
@@ -349,6 +264,8 @@ pipeline to receive an initial +/-1 Verified vote.`,
 func init() {
 	BootstrapTenantConfigRepoCmd.Flags().String("connection", "", "Name of the connection or a source")
 	BootstrapTenantConfigRepoCmd.MarkFlagRequired("connection")
+	BootstrapTenantConfigRepoCmd.Flags().String("driver", "", "Driver type of the connection")
+	BootstrapTenantConfigRepoCmd.MarkFlagRequired("driver")
 	BootstrapTenantConfigRepoCmd.Flags().String("outpath", "", "Path to create file structure")
 	BootstrapTenantConfigRepoCmd.MarkFlagRequired("outpath")
 }
