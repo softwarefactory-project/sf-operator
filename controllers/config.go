@@ -158,7 +158,7 @@ func (r *SFController) SetupConfigJob() bool {
 		// or zuul internal tenant reconfigure
 		cmName                       = "zs-internal-tenant-reconfigure"
 		zsInternalTenantReconfigure  apiv1.ConfigMap
-		configHash                   = utils.Checksum([]byte(preInitScriptTemplate))
+		configHash                   = utils.Checksum([]byte(r.MkPreInitScript()))
 		internalTenantSecretsVersion = "1"
 		needReconfigureTenant        = false
 		needCMUpdate                 = false

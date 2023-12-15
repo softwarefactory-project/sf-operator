@@ -6,15 +6,27 @@
     - sanity-check
     - sfconfig-dev-prepare
   tasks:
-    - name: CI process(OLM install)
-      ansible.builtin.include_role:
-        name: "{{ item }}"
-      loop:
-        - build-operator-assets
-        - clean-installations
-        - install-operator
-        - apply-custom-resources
+    - name: Run OLM specific tasks
       when: mode == 'olm'
+      block:
+        - name: CI process(OLM install)
+          ansible.builtin.include_role:
+            name: "{{ item }}"
+          loop:
+            - build-operator-assets
+            - clean-installations
+            - install-operator
+
+        - name: Apply the minimal SF CR and ensure reconciled happened
+          ansible.builtin.include_role:
+            name: update-custom-resource
+          vars:
+            cr_spec:
+              fqdn: "{{ fqdn }}"
+
+        - name: Apply the base CI SF CR and ensure reconciled happened
+          ansible.builtin.include_role:
+            name: apply-custom-resources
 
     - name: Run tests
       ansible.builtin.include_role:

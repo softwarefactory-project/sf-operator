@@ -130,6 +130,9 @@ spec:
                 - server
                 type: object
               logserver:
+                default:
+                  loopDelay: 3600
+                  retentionDays: 60
                 description: Logserver service spec
                 properties:
                   loopDelay:

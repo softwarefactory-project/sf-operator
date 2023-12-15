@@ -449,6 +449,8 @@ type SoftwareFactorySpec struct {
 	Zookeeper ZookeeperSpec `json:"zookeeper,omitempty"`
 
 	// Logserver service spec
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"loopDelay": 3600, retentionDays: 60}
 	Logserver LogServerSpecSettings `json:"logserver,omitempty"`
 
 	// MariaDB service spec
