@@ -181,9 +181,9 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.1.1
-CONTROLLER_TOOLS_VERSION ?= v0.12.1
-OPERATOR_SDK_VERSION ?= 1.31.0
+KUSTOMIZE_VERSION ?= v5.3.0
+CONTROLLER_TOOLS_VERSION ?= v0.13.0
+OPERATOR_SDK_VERSION ?= 1.32.0
 STATICCHECK_VERSION ?= 2023.1.6
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/${KUSTOMIZE_VERSION}/hack/install_kustomize.sh"
