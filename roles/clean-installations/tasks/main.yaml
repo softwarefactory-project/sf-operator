@@ -53,7 +53,7 @@
         - sf_delete_instance
 
     - name: Release PVCs created by the Software Factory operator in the sf namespace
-      ansible.builtin.command: kubectl -n sf delete pvc -l app=sf -l run!=gerrit
+      ansible.builtin.command: kubectl -n sf delete pvc -l 'app in (sf),run notin (gerrit)'
       ignore_errors: true
       tags:
         - skip_ansible_lint
