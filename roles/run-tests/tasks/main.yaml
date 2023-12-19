@@ -39,6 +39,7 @@
       when: "{{ mode == 'olm' }}"
     - name: zuul-client-api
     - name: test-monitoring
+      when: "{{ test_monitoring == 'true' }}"
     - name: zuul-components
     - name: test-log-forwarding
   loop_control:

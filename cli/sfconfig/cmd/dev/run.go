@@ -35,14 +35,17 @@ var DevCmd = &cobra.Command{
 var DevPrepareCmd = &cobra.Command{
 	Use:   "prepare",
 	Short: "prepare dev environment",
-	Run:   func(cmd *cobra.Command, args []string) { Run() },
+	Run:   func(cmd *cobra.Command, args []string) { Run(cmd) },
 }
 
 func init() {
+	var installPrometheus bool
+	DevPrepareCmd.Flags().BoolVar(&installPrometheus, "with-prometheus", false, "Add this flag to spin a prometheus instance as well")
 	DevCmd.AddCommand(DevPrepareCmd)
 }
 
-func Run() {
+func Run(cmd *cobra.Command) {
+	withPrometheus, _ := cmd.Flags().GetBool("with-prometheus")
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{Development: true})))
 	sfconfig := config.GetSFConfigOrDie()
 	fmt.Println("sfconfig started with: ", sfconfig)
@@ -59,10 +62,13 @@ func Run() {
 	EnsureNamespaces(&env)
 	EnsureMicroshiftWorkarounds(&env)
 	EnsureCertManager(&env)
+	// the Prometheus Operator is a dependency of the SF Operator so we must install it regardless of the --with-prometheus flag
 	EnsurePrometheusOperator(&env)
 	gerrit.EnsureGerrit(&env, sfconfig.FQDN)
 	EnsureGerritAccess(sfconfig.FQDN)
-	sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN, false)
+	if withPrometheus {
+		sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN, false)
+	}
 	EnsureDemoConfig(&env, &sfconfig)
 	nodepool.CreateNamespaceForNodepool(&env, "", "nodepool", "")
 	EnsureCRD()

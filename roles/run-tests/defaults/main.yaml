@@ -1,2 +1,3 @@
 ---
 microshift_host: "microshift.dev"
+test_monitoring: false
