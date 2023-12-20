@@ -666,6 +666,48 @@ spec:
                       - realm
                       type: object
                     type: array
+                  pagureconns:
+                    description: The list of Pagure-based connections to add to Zuul's
+                      configuration
+                    items:
+                      description: Describes a Zuul connection using the [pagure driver](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#connection-configuration).
+                      properties:
+                        appName:
+                          description: the [appName](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure
+                            connection>.app_name)
+                          type: string
+                        baseUrl:
+                          description: the (baseUrl)[https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-%3Cpagure%20connection%3E.baseurl)
+                          type: string
+                        canonicalHostname:
+                          description: the [canonicalHostname](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure
+                            connection>.canonical_hostname)
+                          type: string
+                        cloneUrl:
+                          description: the [cloneUrl](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure
+                            connection>.cloneurl)
+                          type: string
+                        name:
+                          description: How the connection will be named in Zuul's
+                            configuration and appear in zuul-web
+                          type: string
+                        secrets:
+                          description: 'Name of the secret which containes the following
+                            keys: the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure
+                            connection>.api_token)'
+                          type: string
+                        server:
+                          description: the [server](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure
+                            connection>.server)
+                          type: string
+                        sourceWhitelist:
+                          description: the [sourceWhitelist](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure
+                            connection>.source_whitelist)
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   scheduler:
                     description: Configuration of the scheduler microservice
                     properties:
