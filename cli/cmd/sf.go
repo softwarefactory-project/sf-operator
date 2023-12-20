@@ -66,6 +66,7 @@ func MkSFCmd() *cobra.Command {
 	sfCmd.AddCommand(MkBackupCmd())
 	sfCmd.AddCommand(MkRestoreCmd())
 	sfCmd.AddCommand(configureCmd)
+	sfCmd.AddCommand(MkWipeCmd())
 
 	return sfCmd
 }

@@ -14,7 +14,7 @@
             name: "{{ item }}"
           loop:
             - build-operator-assets
-            - clean-installations
+            - clean-installations-cli
             - install-operator
 
         - name: Apply the minimal SF CR and ensure reconciled happened

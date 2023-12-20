@@ -1,0 +1,7 @@
+---
+- name: Clean up previous operator installation
+  when: remote_os_host
+  ansible.builtin.shell: >
+    go run ./main.go --namespace sf SF wipe --all
+  args:
+    chdir: "{{ zuul.project.src_dir | default(src_dir) }}"

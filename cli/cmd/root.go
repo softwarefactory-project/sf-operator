@@ -195,6 +195,18 @@ func GetM(env *ENV, name string, obj client.Object) (bool, error) {
 	}
 }
 
+func DeleteOrDie(env *ENV, obj client.Object) bool {
+	err := env.Cli.Delete(env.Ctx, obj)
+	if apierrors.IsNotFound(err) {
+		return false
+	} else if err != nil {
+		msg := fmt.Sprintf("Error while deleting %s \"%s\"", reflect.TypeOf(obj).Name(), obj.GetName())
+		ctrl.Log.Error(err, msg)
+		os.Exit(1)
+	}
+	return true
+}
+
 func GetMOrDie(env *ENV, name string, obj client.Object) bool {
 	_, err := GetM(env, name, obj)
 	if apierrors.IsNotFound(err) {
@@ -230,6 +242,14 @@ func CreateROrDie(env *ENV, obj client.Object) {
 	}
 	msg = fmt.Sprintf("%s \"%s\" created", reflect.TypeOf(obj).Name(), obj.GetName())
 	ctrl.Log.Info(msg)
+}
+
+func DeleteAllOfOrDie(env *ENV, obj client.Object, opts ...client.DeleteAllOfOption) {
+	if err := env.Cli.DeleteAllOf(env.Ctx, obj, opts...); err != nil {
+		var msg = "Error while deleting"
+		ctrl.Log.Error(err, msg)
+		os.Exit(1)
+	}
 }
 
 func getCLIctxOrDie(kmd *cobra.Command, args []string, allowedArgs []string) SoftwareFactoryConfigContext {

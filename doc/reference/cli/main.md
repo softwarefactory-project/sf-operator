@@ -19,6 +19,7 @@ deployments, beyond what can be defined in a custom resource manifest.
     1. [backup](#backup)
     1. [configure TLS](#configure-tls)
     1. [restore](#restore)
+    1. [wipe](#wipe)
 
 ## Running the CLI
 
@@ -212,3 +213,22 @@ Flags:
 #### restore
 
 Not implemented yet
+
+#### wipe
+
+The `wipe` subcommand can be used to remove all Software Factory instances in the provided namespace,
+their persistent volumes, and even remove the SF operator completely.
+
+The default behavior is to stop and remove all containers related to a Software Factory deployment, and
+keep the existing persistent volumes.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] SF wipe [FLAGS]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --rm-data | boolean | Also delete all persistent volumes after removing the instances | yes | False |
+| --all | boolean | Remove all data like with the `--rm-data` flag, and remove the operator from the cluster | yes | False |
