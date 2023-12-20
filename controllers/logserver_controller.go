@@ -46,17 +46,13 @@ var logserverEntrypoint string
 const sshdPort = 2222
 const sshdPortName = "logserver-sshd"
 
-const httpdBaseDir = "/opt/rh/httpd24/root"
-
-const httpdData = "/var/www"
-
 //go:embed static/logserver/run.sh
 var logserverRun string
 
 const purgelogIdent = "purgelogs"
 const purgelogsLogsDir = "/home/logs"
 
-//go:embed static/logserver/logserver.conf.tmpl
+//go:embed static/logserver/logserver.conf
 var logserverConf string
 
 type LogServerReconciler struct {
@@ -179,14 +175,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	r.EnsureSSHKeySecret(logserverIdent + "-keys")
 
 	cmData := make(map[string]string)
-	cmData["logserver.conf"], _ = utils.ParseString(logserverConf, struct {
-		ServerRoot    string
-		LogserverRoot string
-	}{
-		ServerRoot:    httpdBaseDir,
-		LogserverRoot: httpdData,
-	})
-	cmData["index.html"] = ""
+	cmData["logserver.conf"] = logserverConf
 	cmData["run.sh"] = logserverRun
 
 	lgEntryScriptName := logserverIdent + "-entrypoint.sh"
@@ -208,14 +197,8 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 			SubPath:   "logserver.conf",
 		},
 		{
-			Name:      logserverIdent + "-config-vol",
-			MountPath: httpdBaseDir + httpdData + "/index.html",
-			ReadOnly:  true,
-			SubPath:   "index.html",
-		},
-		{
 			Name:      logserverIdent,
-			MountPath: httpdBaseDir + httpdData + "/logs",
+			MountPath: "/var/www/html/logs",
 		},
 		{
 			Name:      logserverIdent + "-config-vol",
@@ -328,7 +311,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
 	sts.Spec.Template.ObjectMeta.Annotations = map[string]string{
 		"fqdn":       r.cr.Spec.FQDN,
-		"serial":     "4",
+		"serial":     "5",
 		"httpd-conf": utils.Checksum([]byte(logserverConf)),
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Settings.RetentionDays) +
 			" loopDelay:" + strconv.Itoa(r.cr.Spec.Settings.LoopDelay),
@@ -343,16 +326,18 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	routeReady := r.ensureHTTPSRoute(
 		r.cr.Name+"-logserver", r.cr.Spec.FQDN,
-		logserverIdent, "/logs/", httpdPort, map[string]string{
-			"haproxy.router.openshift.io/rewrite-target": "/",
-		}, r.cr.Spec.LetsEncrypt)
+		logserverIdent, "/logs/", httpdPort, map[string]string{}, r.cr.Spec.LetsEncrypt)
+	// The icons Route is for the mod_autoindex that build icon links such as <fqdn>/icons/back.gif
+	iconsRouteReady := r.ensureHTTPSRoute(
+		r.cr.Name+"-icons", r.cr.Spec.FQDN,
+		logserverIdent, "/icons/", httpdPort, map[string]string{}, r.cr.Spec.LetsEncrypt)
 
 	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
 	// TODO(mhu) we may want to include monitoring objects' status in readiness computation
 	r.ensureLogserverPodMonitor()
 	r.ensureLogserverPromRule()
 
-	isReady := r.IsStatefulSetReady(current) && !stsUpdated && pvcReadiness && routeReady
+	isReady := r.IsStatefulSetReady(current) && !stsUpdated && pvcReadiness && routeReady && iconsRouteReady
 	conds.UpdateConditions(&r.cr.Status.Conditions, logserverIdent, isReady)
 
 	return sfv1.LogServerStatus{

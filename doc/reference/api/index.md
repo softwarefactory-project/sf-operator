@@ -245,7 +245,7 @@ _Appears in:_
 
 | Field | Description | Default Value |
 | --- | --- | --- |
-| `fqdn` _string_ | The fully qualified domain name to use with the log server. Logs will be served at https://`FQDN`/logs | -|
+| `fqdn` _string_ | The fully qualified domain name to use with the log server. Logs will be served at https://`FQDN`/logs/ | -|
 | `LetsEncrypt` _[LetsEncryptSpec](#letsencryptspec)_ | LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS | -|
 | `storageClassName` _string_ | Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case. | -|
 | `authorizedSSHKey` _string_ | The SSH public key, encoded as base64, to use to authorize file transfers on the log server | -|

@@ -175,4 +175,4 @@ Once these three files `nodepool/dib-ansible/inventory.yaml`, `nodepool/dib-ansi
 
 The image builds status can be consulted by accessing this endpoint: `https://<fqdn>/nodepool/api/dib-image-list`.
 
-The image builds logs can be consulted by accessing this endpoint: `https://<fqdn>/nodepool/builds`.
+The image builds logs can be consulted by accessing this endpoint: `https://<fqdn>/nodepool/builds/`.

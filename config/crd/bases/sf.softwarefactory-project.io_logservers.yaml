@@ -68,7 +68,7 @@ spec:
                 type: string
               fqdn:
                 description: The fully qualified domain name to use with the log server.
-                  Logs will be served at https://`FQDN`/logs
+                  Logs will be served at https://`FQDN`/logs/
                 type: string
               settings:
                 description: General runtime settings for the log server
