@@ -76,7 +76,7 @@ func MkApplyCmd() *cobra.Command {
 			Use:   "apply",
 			Short: "Apply a SoftwareFactory Custom Resource to a cluster",
 			Long: `This command can be used to deploy a SoftwareFactory resource without installing the operator or its associated CRDs on a cluster.
-				This will run the operator runtime locally, deploy the resource's components on the cluster, then exit.`,
+This will run the operator runtime locally, deploy the resource's components on the cluster, then exit.`,
 			Run: applyCmd,
 		}
 	)

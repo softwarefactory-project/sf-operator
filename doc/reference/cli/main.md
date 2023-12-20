@@ -9,11 +9,16 @@ deployments, beyond what can be defined in a custom resource manifest.
 1. [Global Flags](#global-flags)
 1. [Configuration File](#configuration-file)
 1. [Subcommands](#subcommands)
-  1. [Apply](#apply)
-  1. [Backup](#backup)
   1. [Nodepool](#nodepool)
+    1. [configure providers-secrets](#configure-providers-secrets)
+    1. [get builder-ssh-key](#get-builder-ssh-key)
+    1. [get providers-secrets](#get-providers-secrets)
   1. [Operator](#apply)
-  1. [Restore](#restore)
+  1. [SF](#sf)
+    1. [apply](#apply)
+    1. [backup](#backup)
+    1. [configure TLS](#configure-tls)
+    1. [restore](#restore)
 
 ## Running the CLI
 
@@ -91,26 +96,6 @@ default-context: dev
 
 ## Subcommands
 
-### Apply
-
-The `apply` subcommand can be used to deploy a SoftwareFactory resource without installing the operator or its
-associated CRDs on a cluster. This will run the operator runtime locally, deploy the resource's components
-on the cluster, then exit.
-
-```sh
-go run ./main.go [GLOBAL FLAGS] apply --cr /path/to/manifest
-```
-
-Flags:
-
-| Argument | Type | Description | Optional | Default |
-|----------|------|-------|----|----|
-|--cr |string | The path to the custom resource to apply | No | If a config file is used and the flag not provided, will default to the context's `manifest-file` if set |
-
-### Backup
-
-Not implemented yet
-
 ### Nodepool
 
 The `nodepool` subcommand can be used to interact with the Nodepool component of a Software Factory deployment.
@@ -183,6 +168,47 @@ Flags:
 |--health-probe-bind-address |string  | The address the probe endpoint binds to. | Yes | :8081 |
 |--leader-elect |boolean  | Enable leader election for controller manager. | Yes | false |
 
-### Restore
+### SF
+
+The following subcommands can be used to manage a Software Factory deployment and its lifecycle.
+
+#### apply
+
+The `apply` subcommand can be used to deploy a SoftwareFactory resource without installing the operator or its
+associated CRDs on a cluster. This will run the operator runtime locally, deploy the resource's components
+on the cluster, then exit.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] SF apply --cr /path/to/manifest
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+|--cr |string | The path to the custom resource to apply | No | If a config file is used and the flag not provided, will default to the context's `manifest-file` if set |
+
+#### backup
+
+Not implemented yet
+
+#### configure TLS
+
+The `configure TLS` subcommand can be used to inject a pre-existing set of certificates to secure
+the HTTPS endpoints of a Software Factory deployment.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] SF configure TLS --CA /path/to/CA --cert /path/to/cert --key /path/to/privatekey
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --CA | string | The path to the PEM-encoded Certificate Authority file | no | - |
+| --cert | string | The path to the domain certificate file | no | - |
+| --key | string | The path to the private key file | no | - |
+
+#### restore
 
 Not implemented yet
