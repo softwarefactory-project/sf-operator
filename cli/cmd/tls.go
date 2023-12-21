@@ -27,14 +27,16 @@ import (
 	"errors"
 	"os"
 
+	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	sf "github.com/softwarefactory-project/sf-operator/controllers"
+
 	"github.com/spf13/cobra"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func ensureTLSSecret(env *ENV, CAContents []byte,
+func ensureTLSSecret(env *cliutils.ENV, CAContents []byte,
 	CertificateContents []byte, KeyContents []byte) {
 	var secret apiv1.Secret
 	secretName := sf.CustomSSLSecretName
@@ -43,7 +45,7 @@ func ensureTLSSecret(env *ENV, CAContents []byte,
 		"crt": CertificateContents,
 		"key": KeyContents,
 	}
-	if !GetMOrDie(env, secretName, &secret) {
+	if !cliutils.GetMOrDie(env, secretName, &secret) {
 		// Create the secret as it does not exists
 		secret := apiv1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -52,11 +54,11 @@ func ensureTLSSecret(env *ENV, CAContents []byte,
 			},
 			Data: data,
 		}
-		CreateROrDie(env, &secret)
+		cliutils.CreateROrDie(env, &secret)
 	} else {
 		// Update the secret data
 		secret.Data = data
-		UpdateROrDie(env, &secret)
+		cliutils.UpdateROrDie(env, &secret)
 	}
 }
 
@@ -98,15 +100,15 @@ func verifyCertificates(CAContents []byte, CertificateContents []byte,
 func configureTLS(ns string, kubeContext string, CAPath string, CertificatePath string, KeyPath string, fqdn string) {
 	var err error
 	var CAContents, CertificateContents, KeyContents []byte
-	if CAContents, err = getFileContent(CAPath); err != nil {
+	if CAContents, err = cliutils.GetFileContent(CAPath); err != nil {
 		ctrl.Log.Error(err, "Error opening "+CAPath)
 		os.Exit(1)
 	}
-	if CertificateContents, err = getFileContent(CertificatePath); err != nil {
+	if CertificateContents, err = cliutils.GetFileContent(CertificatePath); err != nil {
 		ctrl.Log.Error(err, "Error opening "+CertificatePath)
 		os.Exit(1)
 	}
-	if KeyContents, err = getFileContent(KeyPath); err != nil {
+	if KeyContents, err = cliutils.GetFileContent(KeyPath); err != nil {
 		ctrl.Log.Error(err, "Error opening "+KeyPath)
 		os.Exit(1)
 	}
@@ -118,8 +120,8 @@ func configureTLS(ns string, kubeContext string, CAPath string, CertificatePath 
 		ctrl.Log.Error(err, "Certificates verification failed")
 		os.Exit(1)
 	}
-	env := ENV{
-		Cli: CreateKubernetesClientOrDie(kubeContext),
+	env := cliutils.ENV{
+		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
 		Ctx: context.TODO(),
 		Ns:  ns,
 	}
@@ -127,7 +129,7 @@ func configureTLS(ns string, kubeContext string, CAPath string, CertificatePath 
 }
 
 func TLSConfigureCmd(kmd *cobra.Command, args []string) {
-	cliCtx, err := GetCLIContext(kmd)
+	cliCtx, err := cliutils.GetCLIContext(kmd)
 	if err != nil {
 		ctrl.Log.Error(err, "Error initializing")
 		os.Exit(1)

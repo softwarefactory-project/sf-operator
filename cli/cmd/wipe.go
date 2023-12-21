@@ -25,6 +25,7 @@ import (
 	"os"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 
 	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/spf13/cobra"
@@ -48,7 +49,7 @@ func getOperatorSelector() labels.Selector {
 	return selector.Add(*req)
 }
 
-func cleanSubscription(env *ENV) {
+func cleanSubscription(env *cliutils.ENV) {
 	selector := getOperatorSelector()
 
 	subscriptionListOpts := []client.ListOption{
@@ -71,20 +72,20 @@ func cleanSubscription(env *ENV) {
 			},
 		}
 		sub := v1alpha1.Subscription{}
-		DeleteAllOfOrDie(env, &sub, subscriptionDeleteOpts...)
+		cliutils.DeleteAllOfOrDie(env, &sub, subscriptionDeleteOpts...)
 	}
 }
 
-func cleanCatalogSource(env *ENV) {
+func cleanCatalogSource(env *cliutils.ENV) {
 	cs := v1alpha1.CatalogSource{}
 	cs.SetName("sf-operator-catalog")
 	cs.SetNamespace("operators")
-	if !DeleteOrDie(env, &cs) {
-		ctrl.Log.Info("CatalogSource object not found")
+	if !cliutils.DeleteOrDie(env, &cs) {
+		ctrl.Log.Info("CatalogSource \"sf-operator-catalog\" not found")
 	}
 }
 
-func cleanClusterServiceVersion(env *ENV) {
+func cleanClusterServiceVersion(env *cliutils.ENV) {
 	selector := getOperatorSelector()
 
 	subscriptionListOpts := []client.ListOption{
@@ -107,25 +108,25 @@ func cleanClusterServiceVersion(env *ENV) {
 			},
 		}
 		csv := v1alpha1.ClusterServiceVersion{}
-		DeleteAllOfOrDie(env, &csv, csvDeleteOpts...)
+		cliutils.DeleteAllOfOrDie(env, &csv, csvDeleteOpts...)
 	}
 }
 
-func cleanSFInstance(env *ENV, ns string) {
+func cleanSFInstance(env *cliutils.ENV, ns string) {
 	var sf sfv1.SoftwareFactory
 	sfDeleteOpts := []client.DeleteAllOfOption{
 		client.InNamespace(ns),
 	}
-	DeleteAllOfOrDie(env, &sf, sfDeleteOpts...)
+	cliutils.DeleteAllOfOrDie(env, &sf, sfDeleteOpts...)
 	var cm apiv1.ConfigMap
 	cm.SetName("sf-standalone-owner")
 	cm.SetNamespace(ns)
-	if !DeleteOrDie(env, &cm) {
+	if !cliutils.DeleteOrDie(env, &cm) {
 		ctrl.Log.Info("standalone mode configmap not found")
 	}
 }
 
-func cleanPVCs(env *ENV, ns string) {
+func cleanPVCs(env *cliutils.ENV, ns string) {
 	selector := labels.NewSelector()
 	appReq, err := labels.NewRequirement(
 		"app",
@@ -151,11 +152,11 @@ func cleanPVCs(env *ENV, ns string) {
 		},
 	}
 	var pvc apiv1.PersistentVolumeClaim
-	DeleteAllOfOrDie(env, &pvc, pvcDeleteOpts...)
+	cliutils.DeleteAllOfOrDie(env, &pvc, pvcDeleteOpts...)
 }
 
 func wipeSFCmd(kmd *cobra.Command, args []string) {
-	cliCtx, err := GetCLIContext(kmd)
+	cliCtx, err := cliutils.GetCLIContext(kmd)
 	if err != nil {
 		ctrl.Log.Error(err, "Error initializing")
 		os.Exit(1)
@@ -164,16 +165,19 @@ func wipeSFCmd(kmd *cobra.Command, args []string) {
 	kubeContext := cliCtx.KubeContext
 	delPVCs, _ := kmd.Flags().GetBool("rm-data")
 	delAll, _ := kmd.Flags().GetBool("all")
-	env := ENV{
-		Cli: CreateKubernetesClientOrDie(kubeContext),
+	env := cliutils.ENV{
+		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
 		Ctx: context.TODO(),
 		Ns:  ns,
 	}
+	ctrl.Log.Info("Removing SF instances if present...")
 	cleanSFInstance(&env, ns)
 	if delPVCs || delAll {
+		ctrl.Log.Info("Removing dangling persistent volume claims if any...")
 		cleanPVCs(&env, ns)
 	}
 	if delAll {
+		ctrl.Log.Info("Removing SF Operator if present...")
 		cleanSubscription(&env)
 		cleanCatalogSource(&env)
 		cleanClusterServiceVersion(&env)

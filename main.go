@@ -17,6 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/softwarefactory-project/sf-operator/cli/cmd"
+	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	//+kubebuilder:scaffold:imports
@@ -31,7 +32,7 @@ func getWatchNamespace() (string, error) {
 }
 
 func operatorCmd(kmd *cobra.Command, args []string) {
-	cliCtx, err := cmd.GetCLIContext(kmd)
+	cliCtx, err := cliutils.GetCLIContext(kmd)
 	if err != nil {
 		ctrl.Log.Error(err, "Error initializing:")
 		os.Exit(1)

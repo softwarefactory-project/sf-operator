@@ -15,13 +15,14 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 
+	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 func npGet(kmd *cobra.Command, args []string) {
-	cliCtx := getCLIctxOrDie(kmd, args, []string{"providers-secrets", "builder-ssh-key"})
+	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, []string{"providers-secrets", "builder-ssh-key"})
 	target := args[0]
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
@@ -43,7 +44,7 @@ func npGet(kmd *cobra.Command, args []string) {
 }
 
 func npConfigure(kmd *cobra.Command, args []string) {
-	cliCtx := getCLIctxOrDie(kmd, args, []string{"providers-secrets"})
+	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, []string{"providers-secrets"})
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
 	cloudsFile, _ := kmd.Flags().GetString("clouds")
@@ -59,12 +60,12 @@ func npConfigure(kmd *cobra.Command, args []string) {
 			"a clouds.yaml file or a kube.config file must be passed to the command via the --clouds or --kube arguments")
 		os.Exit(1)
 	}
-	cloudsContent, err := getFileContent(cloudsFile)
+	cloudsContent, err := cliutils.GetFileContent(cloudsFile)
 	if err != nil {
 		ctrl.Log.Error(err, "Error opening %s", cloudsFile)
 		os.Exit(1)
 	}
-	kubeContent, err := getFileContent(kubeFile)
+	kubeContent, err := cliutils.GetFileContent(kubeFile)
 	if err != nil {
 		ctrl.Log.Error(err, "Error opening %s", kubeFile)
 		os.Exit(1)
@@ -73,13 +74,13 @@ func npConfigure(kmd *cobra.Command, args []string) {
 }
 
 func ensureNodepoolProvidersSecrets(ns string, kubeContext string, cloudconfig []byte, kubeconfig []byte) {
-	env := ENV{
-		Cli: CreateKubernetesClientOrDie(kubeContext),
+	env := cliutils.ENV{
+		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
 		Ctx: context.TODO(),
 		Ns:  ns,
 	}
 	var secret apiv1.Secret
-	if x, _ := GetM(&env, controllers.NodepoolProvidersSecretsName, &secret); !x {
+	if x, _ := cliutils.GetM(&env, controllers.NodepoolProvidersSecretsName, &secret); !x {
 		// Initialize the secret data
 		secret.Name = controllers.NodepoolProvidersSecretsName
 		secret.Data = make(map[string][]byte)
@@ -89,7 +90,7 @@ func ensureNodepoolProvidersSecrets(ns string, kubeContext string, cloudconfig [
 		if kubeconfig != nil {
 			secret.Data["kube.config"] = kubeconfig
 		}
-		CreateROrDie(&env, &secret)
+		cliutils.CreateROrDie(&env, &secret)
 	} else {
 		// Handle secret update
 		if secret.Data == nil {
@@ -123,7 +124,7 @@ func ensureNodepoolProvidersSecrets(ns string, kubeContext string, cloudconfig [
 			}
 		}
 		if needUpdate {
-			UpdateROrDie(&env, &secret)
+			cliutils.UpdateROrDie(&env, &secret)
 		} else {
 			ctrl.Log.Info("Secret \"" + controllers.NodepoolProvidersSecretsName + "\" already up to date, doing nothing")
 		}
@@ -131,13 +132,13 @@ func ensureNodepoolProvidersSecrets(ns string, kubeContext string, cloudconfig [
 }
 
 func getProvidersSecret(ns string, kubeContext string, cloudsFile string, kubeFile string) {
-	sfEnv := ENV{
-		Cli: CreateKubernetesClientOrDie(kubeContext),
+	sfEnv := cliutils.ENV{
+		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
 		Ctx: context.TODO(),
 		Ns:  ns,
 	}
 	var secret apiv1.Secret
-	if GetMOrDie(&sfEnv, controllers.NodepoolProvidersSecretsName, &secret) {
+	if cliutils.GetMOrDie(&sfEnv, controllers.NodepoolProvidersSecretsName, &secret) {
 		if len(secret.Data["clouds.yaml"]) > 0 {
 			if cloudsFile == "" {
 				println("clouds.yaml:")
@@ -166,13 +167,13 @@ func getProvidersSecret(ns string, kubeContext string, cloudsFile string, kubeFi
 }
 
 func getBuilderSSHKey(ns string, kubeContext string, pubKey string) {
-	sfEnv := ENV{
-		Cli: CreateKubernetesClientOrDie(kubeContext),
+	sfEnv := cliutils.ENV{
+		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
 		Ctx: context.TODO(),
 		Ns:  ns,
 	}
 	var secret apiv1.Secret
-	if GetMOrDie(&sfEnv, "nodepool-builder-ssh-key", &secret) {
+	if cliutils.GetMOrDie(&sfEnv, "nodepool-builder-ssh-key", &secret) {
 		if pubKey == "" {
 			println(string(secret.Data["pub"]))
 		} else {
@@ -198,7 +199,7 @@ func MkNodepoolCmd() *cobra.Command {
 			Short: "Nodepool subcommands",
 			Long:  `These subcommands can be used to interact with the Nodepool component of a Software Factory deployment.`,
 		}
-		createCmd, configureCmd, getCmd = GetCRUDSubcommands()
+		createCmd, configureCmd, getCmd = cliutils.GetCRUDSubcommands()
 	)
 
 	getCmd.Run = npGet

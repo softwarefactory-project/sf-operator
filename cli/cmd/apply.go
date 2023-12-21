@@ -25,6 +25,7 @@ import (
 	"os"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -32,7 +33,7 @@ import (
 )
 
 func applyCmd(kmd *cobra.Command, args []string) {
-	cliCtx, err := GetCLIContext(kmd)
+	cliCtx, err := cliutils.GetCLIContext(kmd)
 	if err != nil {
 		ctrl.Log.Error(err, "Error initializing:")
 		os.Exit(1)
