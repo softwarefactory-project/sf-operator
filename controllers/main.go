@@ -23,6 +23,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	config "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -64,6 +65,16 @@ func getPodRESTClient(config *rest.Config) rest.Interface {
 	}
 
 	return restClient
+}
+
+func GetConfigContextOrDie(contextName string) *rest.Config {
+	var conf *rest.Config
+	var err error
+	if conf, err = config.GetConfigWithContext(contextName); err != nil {
+		ctrl.Log.Error(err, "couldn't find context "+contextName)
+		os.Exit(1)
+	}
+	return conf
 }
 
 func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection bool, oneShot bool) {
@@ -135,9 +146,9 @@ func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection 
 	}
 }
 
-func Standalone(sf sfv1.SoftwareFactory, ns string) {
+func Standalone(sf sfv1.SoftwareFactory, ns string, kubeContext string) {
 
-	config := ctrl.GetConfigOrDie()
+	config := GetConfigContextOrDie(kubeContext)
 	cl, err := client.New(config, client.Options{
 		Scheme: controllerScheme,
 	})
