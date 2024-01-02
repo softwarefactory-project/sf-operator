@@ -421,7 +421,7 @@ _Appears in:_
 | `zuul` _[ZuulSpec](#zuulspec)_ | Zuul service spec | -|
 | `nodepool` _[NodepoolSpec](#nodepoolspec)_ | Nodepool services spec | -|
 | `zookeeper` _[ZookeeperSpec](#zookeeperspec)_ | Zookeeper service spec | -|
-| `logserver` _[LogServerSpecSettings](#logserverspecsettings)_ | Logserver service spec | -|
+| `logserver` _[LogServerSpecSettings](#logserverspecsettings)_ | Logserver service spec | {map[loopDelay:3600 retentionDays:60]}|
 | `mariadb` _[MariaDBSpec](#mariadbspec)_ | MariaDB service spec | -|
 | `gitserver` _[GitServerSpec](#gitserverspec)_ | Git server spec | -|
 

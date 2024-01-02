@@ -22,7 +22,7 @@ cat << EOF > zuul.d/jobs-base.yaml
 
 EOF
 
-if [ -n "${CONFIG_REPO_NAME}" -a -n "${CONFIG_ZUUL_CONNECTION_NAME}" ]; then
+if [ -n "${CONFIG_REPO_NAME}" ]; then
   cat << EOF > zuul.d/config-project.yaml
 ---
 # Pipelines

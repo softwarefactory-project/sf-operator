@@ -47,7 +47,9 @@ func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
 	return sb.String()
 }
 
-func (r *SFController) makePreInitScript() string {
+func (r *SFController) MkPreInitScript() string {
+	configRepoConnectionName := r.cr.Spec.ConfigLocation.ZuulConnectionName
+	configRepoName := r.cr.Spec.ConfigLocation.Name
 
 	parentJobName := "base"
 
@@ -130,7 +132,7 @@ func (r *SFController) makePreInitScript() string {
 							Event: "ref-updated",
 						},
 					},
-					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineTriggerGitArray{
+					configRepoConnectionName: zuulcf.PipelineTriggerGitArray{
 						{
 							Event: "ref-updated",
 							Ref: []string{
@@ -147,13 +149,13 @@ func (r *SFController) makePreInitScript() string {
 				Description: "Newly uploaded patchsets enter this pipeline to receive an initial +/-1 Verified vote.",
 				Manager:     zuulcf.Independent,
 				Require: zuulcf.PipelineRequire{
-					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineRequireApproval{
+					configRepoConnectionName: zuulcf.PipelineRequireApproval{
 						Open:            true,
 						CurrentPatchset: true,
 					},
 				},
 				Trigger: zuulcf.PipelineGenericTrigger{
-					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineTriggerGitArray{
+					configRepoConnectionName: zuulcf.PipelineTriggerGitArray{
 						{
 							Event: "patchset-created",
 						},
@@ -187,21 +189,21 @@ func (r *SFController) makePreInitScript() string {
 				},
 				Start: zuulcf.PipelineReporter{
 					GerritReporter: zuulcf.GerritReporterMap{
-						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+						configRepoConnectionName: zuulcf.PipelineGerritReporter{
 							Verified: zuulcf.GerritVotePointZero,
 						},
 					},
 				},
 				Success: zuulcf.PipelineReporter{
 					GerritReporter: zuulcf.GerritReporterMap{
-						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+						configRepoConnectionName: zuulcf.PipelineGerritReporter{
 							Verified: zuulcf.GerritVotePointOne,
 						},
 					},
 				},
 				Failure: zuulcf.PipelineReporter{
 					GerritReporter: zuulcf.GerritReporterMap{
-						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+						configRepoConnectionName: zuulcf.PipelineGerritReporter{
 							Verified: zuulcf.GerritVotePointMinusOne,
 						},
 					},
@@ -221,7 +223,7 @@ func (r *SFController) makePreInitScript() string {
 				},
 				PostReview: true,
 				Require: zuulcf.PipelineRequire{
-					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineRequireApproval{
+					configRepoConnectionName: zuulcf.PipelineRequireApproval{
 						Open:            true,
 						CurrentPatchset: true,
 						GerritApproval: []zuulcf.PipelineRequireGerritApproval{
@@ -232,7 +234,7 @@ func (r *SFController) makePreInitScript() string {
 					},
 				},
 				Trigger: zuulcf.PipelineGenericTrigger{
-					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineTriggerGitArray{
+					configRepoConnectionName: zuulcf.PipelineTriggerGitArray{
 						{
 							Event: "comment-added",
 							Approval: []zuulcf.PipelineRequireGerritApproval{
@@ -254,14 +256,14 @@ func (r *SFController) makePreInitScript() string {
 				},
 				Start: zuulcf.PipelineReporter{
 					GerritReporter: zuulcf.GerritReporterMap{
-						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+						configRepoConnectionName: zuulcf.PipelineGerritReporter{
 							Verified: zuulcf.GerritVotePointZero,
 						},
 					},
 				},
 				Success: zuulcf.PipelineReporter{
 					GerritReporter: zuulcf.GerritReporterMap{
-						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+						configRepoConnectionName: zuulcf.PipelineGerritReporter{
 							Verified: zuulcf.GerritVotePointTwo,
 							Submit:   true,
 						},
@@ -269,7 +271,7 @@ func (r *SFController) makePreInitScript() string {
 				},
 				Failure: zuulcf.PipelineReporter{
 					GerritReporter: zuulcf.GerritReporterMap{
-						r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineGerritReporter{
+						configRepoConnectionName: zuulcf.PipelineGerritReporter{
 							Verified: zuulcf.GerritVotePointMinusTwo,
 						},
 					},
@@ -283,7 +285,7 @@ func (r *SFController) makePreInitScript() string {
 	projects := zuulcf.ProjectConfig{
 		{
 			Project: zuulcf.ZuulProjectBody{
-				Name: r.cr.Spec.ConfigLocation.Name,
+				Name: configRepoName,
 				Pipeline: zuulcf.ZuulProjectPipelineMap{
 					"check": zuulcf.ZuulProjectPipeline{
 						Jobs: []string{
@@ -310,19 +312,22 @@ func (r *SFController) makePreInitScript() string {
 	pipelineOutput, _ := yaml.Marshal(pipelines)
 	projectOutput, _ := yaml.Marshal(projects)
 
-	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# Semaphores", string(semaphoreOutput), 1)
-	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# JobsBase", string(jobbaseOutput), 1)
-	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# Pipelines", string(pipelineOutput), 1)
-	preInitScriptTemplate = strings.Replace(preInitScriptTemplate, "# Projects", string(projectOutput), 1)
+	// We need to copy the global value `preInitScriptTemplate` to avoid updating the global
+	// and thus loosing the markers.
+	template := preInitScriptTemplate
+	template = strings.Replace(template, "# Semaphores", string(semaphoreOutput), 1)
+	template = strings.Replace(template, "# JobsBase", string(jobbaseOutput), 1)
+	template = strings.Replace(template, "# Pipelines", string(pipelineOutput), 1)
+	template = strings.Replace(template, "# Projects", string(projectOutput), 1)
 
 	return strings.Replace(
-		preInitScriptTemplate,
+		template,
 		"# ZUUL_CONNECTIONS",
 		makeZuulConnectionConfig(&r.cr.Spec.Zuul), 1)
 }
 
 func (r *SFController) DeployGitServer() bool {
-	preInitScript := r.makePreInitScript()
+	preInitScript := r.MkPreInitScript()
 	cmData := make(map[string]string)
 	cmData["pre-init.sh"] = preInitScript
 	r.EnsureConfigMap(GitServerIdent+"-pi", cmData)
@@ -378,7 +383,7 @@ func (r *SFController) DeployGitServer() bool {
 	if r.isConfigRepoSet() {
 		initContainer.Env = append(initContainer.Env,
 			base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
-			base.MkEnvVar("CONFIG_ZUUL_CONNECTION_NAME", r.cr.Spec.ConfigLocation.ZuulConnectionName))
+		)
 	}
 
 	sts.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
