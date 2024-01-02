@@ -3,3 +3,4 @@ os_host: "{{ microshift_host }}"
 remote_os_host: true
 src_dir: "/tmp/sf-operator"
 zuul: { "project": { "src_dir": ".." } }
+test_monitoring: "false"
