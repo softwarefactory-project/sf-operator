@@ -389,6 +389,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		base.MkVolumeSecret("zookeeper-client-tls"),
 		base.MkVolumeSecret(NodepoolProvidersSecretsName),
 		base.MkEmptyDirVolume("nodepool-config"),
+		base.MkEmptyDirVolume("nodepool-ca"),
 		r.commonToolingVolume(),
 		{
 			Name: "nodepool-builder-ssh-key",
@@ -433,6 +434,10 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		{
 			Name:      "nodepool-config",
 			MountPath: "/etc/nodepool",
+		},
+		{
+			Name:      "nodepool-ca",
+			MountPath: "/etc/pki/ca-trust/extracted",
 		},
 		configScriptVolumeMount,
 		{
@@ -512,8 +517,9 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	nb.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nb.Spec.Template.Spec.Volumes = volumes
-	nb.Spec.Template.Spec.Containers[0].Command = []string{"/usr/local/bin/dumb-init", "--",
-		"/usr/local/bin/nodepool-builder", "-f", "-l", "/etc/nodepool-logging/logging.yaml"}
+	nb.Spec.Template.Spec.Containers[0].Command = []string{
+		"/usr/local/bin/dumb-init", "--", "bash", "-c", "mkdir /etc/pki/ca-trust/extracted/{pem,java,edk2,openssl} && update-ca-trust && /usr/local/bin/nodepool-builder -f -l /etc/nodepool-logging/logging.yaml",
+	}
 	nb.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 	nb.Spec.Template.Spec.Containers[0].Env = r.getNodepoolConfigEnvs()
 
@@ -604,6 +610,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		base.MkVolumeSecret(NodepoolProvidersSecretsName),
 		base.MkEmptyDirVolume("nodepool-config"),
 		base.MkEmptyDirVolume("nodepool-home"),
+		base.MkEmptyDirVolume("nodepool-ca"),
 		r.commonToolingVolume(),
 		base.MkVolumeCM("nodepool-launcher-extra-config-vol",
 			"nodepool-launcher-extra-config-config-map"),
@@ -619,6 +626,10 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		{
 			Name:      "nodepool-config",
 			MountPath: "/etc/nodepool/",
+		},
+		{
+			Name:      "nodepool-ca",
+			MountPath: "/etc/pki/ca-trust/extracted",
 		},
 		{
 			Name:      "nodepool-home",
@@ -650,8 +661,9 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 
 	container := base.MkContainer("launcher", base.NodepoolLauncherImage)
 	container.VolumeMounts = volumeMounts
-	container.Command = []string{"/usr/local/bin/dumb-init", "--",
-		"/usr/local/bin/nodepool-launcher", "-f", "-l", "/etc/nodepool-logging/logging.yaml"}
+	container.Command = []string{
+		"/usr/local/bin/dumb-init", "--", "bash", "-c", "mkdir /etc/pki/ca-trust/extracted/{pem,java,edk2,openssl} && update-ca-trust && /usr/local/bin/nodepool-launcher -f -l /etc/nodepool-logging/logging.yaml",
+	}
 	container.Env = r.getNodepoolConfigEnvs()
 
 	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-launcher", r.cr.Spec.FluentBitLogForwarding, nodepoolFluentBitLabels, annotations)

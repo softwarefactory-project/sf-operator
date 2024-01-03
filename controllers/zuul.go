@@ -122,6 +122,10 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 			ReadOnly:  true,
 			SubPath:   "ca.crt",
 		},
+		{
+			Name:      "zuul-ca",
+			MountPath: "/etc/pki/ca-trust/extracted",
+		},
 	}
 	envs := []apiv1.EnvVar{
 		base.MkEnvVar("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
@@ -149,7 +153,7 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 	container := apiv1.Container{
 		Name:         service,
 		Image:        base.ZuulImage(service),
-		Command:      []string{"/usr/local/bin/dumb-init", "--", "/usr/local/bin/" + service, "-f", "-d"},
+		Command:      []string{"/usr/local/bin/dumb-init", "--", "bash", "-c", "mkdir /etc/pki/ca-trust/extracted/{pem,java,edk2,openssl} && update-ca-trust && /usr/local/bin/" + service + " -f -d"},
 		Env:          envs,
 		VolumeMounts: volumes,
 	}
@@ -175,6 +179,7 @@ func mkZuulVolumes(service string, r *SFController) []apiv1.Volume {
 		},
 		base.MkVolumeCM("statsd-config", "zuul-statsd-config-map"),
 		base.MkVolumeCM("extra-config", "zuul-extra-config-map"),
+		base.MkEmptyDirVolume("zuul-ca"),
 	}
 	if !isStatefulset(service) {
 		// statefulset already has a PV for the service-name,
