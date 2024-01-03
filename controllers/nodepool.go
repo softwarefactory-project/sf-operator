@@ -356,12 +356,20 @@ func (r *SFController) setProviderSecretsVolumeMounts() ([]apiv1.VolumeMount, ap
 	return volumeMount, nodepoolProvidersSecrets, exists
 }
 
-func getProvidersSecretsVersion(providersSecrets apiv1.Secret, providersSecretsExists bool) string {
-	providersSecretsVersion := "0"
-	if providersSecretsExists {
-		providersSecretsVersion = string(providersSecrets.ResourceVersion)
+func getSecretsVersion(secret apiv1.Secret, secretExists bool) string {
+	secretVersion := "0"
+	if secretExists {
+		secretVersion = string(secret.ResourceVersion)
 	}
-	return providersSecretsVersion
+	return secretVersion
+}
+
+func getCMVersion(cm apiv1.ConfigMap, cmExists bool) string {
+	cmVersion := "0"
+	if cmExists {
+		cmVersion = string(cm.ResourceVersion)
+	}
+	return cmVersion
 }
 
 func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, nodepoolStatsdMappingConfig string,
@@ -416,6 +424,14 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		base.MkVolumeCM("nodepool-builder-extra-config-vol",
 			"nodepool-builder-extra-config-config-map"),
 		statsdExporterVolume,
+	}
+
+	// Check if Corporate Certificate exists
+	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
+
+	// Create the corporate CM based Volume when the Corporate CM exists
+	if corporateCMExists {
+		volumes = append(volumes, base.MkVolumeCM("nodepool-builder-corporate-ca-certs", "corporate-ca-certs"))
 	}
 
 	nodeExporterVolumeMount := []apiv1.VolumeMount{
@@ -484,6 +500,13 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	volumeMounts = append(volumeMounts, nodeExporterVolumeMount...)
 
+	if corporateCMExists {
+		volumeMounts = append(volumeMounts, apiv1.VolumeMount{
+			Name:      "nodepool-builder-corporate-ca-certs",
+			MountPath: UpdateCATrustAnchorsPath,
+		})
+	}
+
 	annotations := map[string]string{
 		"nodepool.yaml":              utils.Checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml":      utils.Checksum([]byte(loggingConfig)),
@@ -492,8 +515,9 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"buildlogs_httpd_config":     utils.Checksum([]byte(httpdBuildLogsDirConfig)),
 		"statsd_mapping":             utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		"image":                      base.NodepoolBuilderImage,
-		"nodepool-providers-secrets": getProvidersSecretsVersion(providersSecrets, providerSecretsExists),
+		"nodepool-providers-secrets": getSecretsVersion(providersSecrets, providerSecretsExists),
 		"serial":                     "13",
+		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", base.BusyboxImage)
@@ -614,6 +638,12 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 			"nodepool-launcher-extra-config-config-map"),
 		statsdExporterVolume,
 	}
+	// Check if Corporate Certificate exists
+	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
+
+	if corporateCMExists {
+		volumes = append(volumes, base.MkVolumeCM("nodepool-launcher-corporate-ca-certs", "corporate-ca-certs"))
+	}
 
 	volumeMounts := append(initialVolumeMounts, []apiv1.VolumeMount{
 		{
@@ -640,6 +670,12 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		},
 		configScriptVolumeMount}...,
 	)
+	if corporateCMExists {
+		volumeMounts = append(volumeMounts, apiv1.VolumeMount{
+			Name:      "nodepool-launcher-corporate-ca-certs",
+			MountPath: UpdateCATrustAnchorsPath,
+		})
+	}
 
 	annotations := map[string]string{
 		"nodepool.yaml":         utils.Checksum([]byte(generateConfigScript)),
@@ -648,7 +684,8 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		"serial":                "7",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"image":                      base.NodepoolLauncherImage,
-		"nodepool-providers-secrets": getProvidersSecretsVersion(providersSecrets, providerSecretsExists),
+		"nodepool-providers-secrets": getSecretsVersion(providersSecrets, providerSecretsExists),
+		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
 	if r.isConfigRepoSet() {

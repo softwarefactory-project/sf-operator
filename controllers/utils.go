@@ -44,8 +44,10 @@ import (
 )
 
 const (
-	BusyboxImage        = "quay.io/software-factory/sf-op-busybox:1.5-3"
-	CustomSSLSecretName = "sf-ssl-cert"
+	BusyboxImage             = "quay.io/software-factory/sf-op-busybox:1.5-3"
+	CustomSSLSecretName      = "sf-ssl-cert"
+	CorporateCACerts         = "corporate-ca-certs"
+	UpdateCATrustAnchorsPath = "/usr/share/pki/ca-trust-source/anchors/"
 )
 
 // HTTPDImage uses pinned/ubi8 based image for httpd
@@ -555,6 +557,15 @@ func (r *SFUtilContext) extractTLSFromLECertificateSecret(host string, le sfv1.L
 	}
 }
 
+// GetConfigMapByNameRef Get ConfigMap by Name Reference
+func (r *SFUtilContext) GetConfigMapByNameRef(name string) (apiv1.ConfigMap, error) {
+	var dep apiv1.ConfigMap
+	if r.GetM(name, &dep) {
+		return dep, nil
+	}
+	return apiv1.ConfigMap{}, fmt.Errorf("configmap name with ref %s not found", name)
+}
+
 // GetSecretbyNameRef Get Secret by Name Reference
 func (r *SFUtilContext) GetSecretbyNameRef(name string) (apiv1.Secret, error) {
 	var dep apiv1.Secret
@@ -574,6 +585,7 @@ func GetValueFromKeySecret(secret apiv1.Secret, keyname string) ([]byte, error) 
 	return keyvalue, nil
 }
 
+// GetSecretDataFromKey Get Data from Secret Key
 func (r *SFUtilContext) GetSecretDataFromKey(name string, key string) ([]byte, error) {
 	secret, err := r.GetSecretbyNameRef(name)
 	if err != nil {
@@ -758,4 +770,10 @@ func (r *SFUtilContext) ensureStatefulset(sts appsv1.StatefulSet) (*appsv1.State
 		return &current, true
 	}
 	return &current, false
+}
+
+// CorporateCAConfigMapExists check if the ConfigMap named "corporate-ca-certs" exists
+func (r *SFUtilContext) CorporateCAConfigMapExists() (apiv1.ConfigMap, bool) {
+	cm, corporateCA := r.GetConfigMapByNameRef(CorporateCACerts)
+	return cm, corporateCA == nil
 }
