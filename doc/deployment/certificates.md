@@ -21,12 +21,11 @@ The operator watches a `Secret` named `sf-ssl-cert` in the `SoftwareFactory` Cus
 When this `Secret`'s data hold a Certificate, Key and CA Certificate (following a specific scheme) then
 the sf-operator is able to reconfigure all managed `Route`'s TLS to use the TLS material stored in the secret.
 
+> Make sure that the certificate `CN` matches the `fqdn` setting of the `SoftwareFactory` Custom Resource.
+
 The `sfconfig` command can be used to configure these secrets.
 
 > The `create-service-ssl-secret` subcommand will validate the SSL certificate/key before updating the `Secret`.
-
-The `SoftwareFactory` Custom Resource will pass into a "non Ready" state until reconfiguration is completed.
-Once `Ready`, all managed `Route` will present the new certificate.
 
 ```sh
 ./tools/sfconfig create-service-ssl-secret \
@@ -34,6 +33,24 @@ Once `Ready`, all managed `Route` will present the new certificate.
     --sf-service-key /tmp/ssl/ssl.key \
     --sf-service-cert /tmp/ssl/ssl.crt
 ```
+
+Alternatively, the `sf-ssl-cert` `Secret` resource can be managed without the `sfconfig` helper by
+following this Secret's layout:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sf-ssl-cert
+data:
+  CA: "<CA Trust Chain>"
+  crt: "<Your Server Certificate>"
+  key: "<Your server Certificate's key>"
+```
+
+The `SoftwareFactory` Custom Resource will pass into a "non Ready" state until reconfiguration is completed.
+Once `Ready`, all managed `Route` will present the new certificate.
+
 
 ## Using Let's Encrypt
 
