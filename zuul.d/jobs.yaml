@@ -8,7 +8,6 @@
     name: sf-operator
     parent: sf-operator-microshift
     pre-run: &pre-run
-      - playbooks/health-check/dev-keys.yaml
       - playbooks/health-check/dstat-pre.yaml
     post-run: &post-run
       - playbooks/health-check/dstat-post.yaml
