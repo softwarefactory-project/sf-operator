@@ -12,5 +12,5 @@
 
 - name: "Fetch logserver content on locally in {{ output_dir }}"
   ansible.builtin.command: |
-    kubectl cp {{ _logserver_pod_name.stdout }}:/opt/rh/httpd24/root/var/www/logs -c {{ container_name }} {{ output_dir }}
+    kubectl cp {{ _logserver_pod_name.stdout }}:/var/www/html/logs -c {{ container_name }} {{ output_dir }}
   failed_when: false

@@ -12,7 +12,7 @@ import (
 
 // LogServerSpec defines the desired state of LogServer
 type LogServerSpec struct {
-	// The fully qualified domain name to use with the log server. Logs will be served at https://`FQDN`/logs
+	// The fully qualified domain name to use with the log server. Logs will be served at https://`FQDN`/logs/
 	FQDN string `json:"fqdn"`
 	// LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS
 	LetsEncrypt *LetsEncryptSpec `json:"LetsEncrypt,omitempty"`

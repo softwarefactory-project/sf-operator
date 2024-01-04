@@ -6,7 +6,7 @@
 
 - name: Create a local archive of the logserver content
   ansible.builtin.shell: >
-    kubectl exec {{ pod_name }} -c {{ container_name }} -- bash -c "cd /opt/rh/httpd24/root/var/www/logs/; tar -czf /tmp/logserver.tgz ."
+    kubectl exec {{ pod_name }} -c {{ container_name }} -- bash -c "cd /var/www/html/logs/; tar -czf /tmp/logserver.tgz ."
 
 - name: Save logserver content before changing the date
   ansible.builtin.shell: >
@@ -50,7 +50,7 @@
 - name: Restore logserver content
   ansible.builtin.shell: >
     kubectl exec {{ pod_name }} -c {{ container_name }} --
-    bash -c "mkdir -p /tmp/logs && tar -xvf /tmp/logserver.tgz -C /tmp/logs/ && cp -Rf /tmp/logs/* /opt/rh/httpd24/root/var/www/logs/"
+    bash -c "mkdir -p /tmp/logs && tar -xvf /tmp/logserver.tgz -C /tmp/logs/ && cp -Rf /tmp/logs/* /var/www/html/logs/"
 
 - name: Ensure logserver content restoring worked
   ansible.builtin.include_role:

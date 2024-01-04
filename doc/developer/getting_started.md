@@ -119,9 +119,9 @@ You can verify that the services are properly exposed with Firefox (you may have
 
 ```sh
 firefox https://<FQDN>/zuul
-firefox https://<FQDN>/logs
+firefox https://<FQDN>/logs/
 firefox https://<FQDN>/nodepool/api/image-list
-firefox https://<FQDN>/nodepool/builds
+firefox https://<FQDN>/nodepool/builds/
 firefox https://gerrit.<FQDN>
 firefox https://prometheus.<FQDN>
 ```

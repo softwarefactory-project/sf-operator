@@ -62,9 +62,9 @@ The `sf-operator` handles the `Route`s installation. Here is the lists of availa
 endpoints:
 
 - https://sfop.me/zuul
-- https://sfop.me/logs
+- https://sfop.me/logs/
 - https://sfop.me/nodepool/api/image-list
-- https://sfop.me/nodepool/builds
+- https://sfop.me/nodepool/builds/
 
 At that point you have successfully deployed a **SoftwareFactory** instance. You can access the Zuul Web UI at https://sfop.me/zuul.
 
