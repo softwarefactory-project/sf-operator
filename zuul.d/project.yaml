@@ -14,3 +14,8 @@
     release:
       jobs:
         - sf-operator-publish-olm-bundle-image
+    periodic-12h:
+      jobs:
+        - sf-operator-olm
+        - sf-operator-upgrade
+        - sf-operator-standalone
