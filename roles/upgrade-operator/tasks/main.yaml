@@ -8,7 +8,7 @@
 
 - name: Setting Variables
   ansible.builtin.set_fact:
-    version: "{{ gen_bundle_version.stdout }}"
+    version: "v{{ gen_bundle_version.stdout }}"
     imagename: "localhost:5000/sf-operator:{{ gen_bundle_version.stdout }}"
     bundlename: "localhost:5000/sf-operator-bundle:{{ gen_bundle_version.stdout }}"
     # bundleflags must have Major.Minor.Patch format
