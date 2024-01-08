@@ -323,7 +323,7 @@ func mkZuulGitHubSecretsVolumes(r *SFController) []apiv1.Volume {
 	for _, connection := range r.cr.Spec.Zuul.GitHubConns {
 		secretName := connection.Secrets
 
-		if _, err := r.GetSecretbyNameRef(secretName); err != nil {
+		if _, err := r.GetSecret(secretName); err != nil {
 			r.log.V(1).Error(err, "Error while getting secret "+secretName)
 			continue
 		}
@@ -851,17 +851,21 @@ func (r *SFController) AddGitHubConnection(cfg *ini.File, conn sfv1.GitHubConnec
 
 func (r *SFController) AddGitLabConnection(cfg *ini.File, conn sfv1.GitLabConnection) {
 
-	apiToken, _ := r.GetSecretDataFromKey(conn.Secrets, "api_token")
-	webHookToken, _ := r.GetSecretDataFromKey(conn.Secrets, "webhook_token")
+	apiToken, apiTokenErr := r.GetSecretDataFromKey(conn.Secrets, "api_token")
+	webHookToken, webHookTokenErr := r.GetSecretDataFromKey(conn.Secrets, "webhook_token")
+
+	if apiTokenErr != nil {
+		r.log.Error(apiTokenErr, "Use empty value for api_token on Gitlab connection due to err", "connection name", conn.Name)
+	}
+	if webHookTokenErr != nil {
+		r.log.Error(webHookTokenErr, "Use empty value for webhook_token on Gitlab connection due to err", "connection name", conn.Name)
+	}
 
 	section := "connection " + conn.Name
 	cfg.NewSection(section)
 
 	for key, value := range map[string]string{
 		"driver":                  "gitlab",
-		"api_token":               string(apiToken),
-		"api_token_name":          conn.APITokenName,
-		"webhook_token":           string(webHookToken),
 		"server":                  conn.Server,
 		"canonical_hostname":      conn.CanonicalHostname,
 		"baseurl":                 conn.BaseURL,
@@ -869,9 +873,15 @@ func (r *SFController) AddGitLabConnection(cfg *ini.File, conn sfv1.GitLabConnec
 		"cloneurl":                conn.CloneURL,
 		"keepalive":               fmt.Sprint(conn.KeepAlive),
 		"disable_connection_pool": fmt.Sprint(conn.DisableConnectionPool),
+		"api_token_name":          conn.APITokenName,
 	} {
 		addKeyToSection(cfg.Section(section), key, value)
 	}
+
+	// addKeyToSection drops null (like empty string) keys
+	// As those keys are mandatory for Zuul we simply adds them even with empty string
+	cfg.Section(section).NewKey("api_token", string(apiToken))
+	cfg.Section(section).NewKey("webhook_token", string(webHookToken))
 
 }
 
