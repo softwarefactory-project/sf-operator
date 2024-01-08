@@ -643,24 +643,20 @@ func GetTriggerPostByDriver(driver string, connection string) (PipelineGenericTr
 
 	switch driver {
 	case "gerrit":
-		trigger = PipelineGenericTrigger{
-			connection: PipelineTriggerArray{
-				{
-					Event: "ref-updated",
-					Ref: []string{
-						"^refs/heads/.*$",
-					},
+		trigger[connection] = PipelineTriggerArray{
+			{
+				Event: "ref-updated",
+				Ref: []string{
+					"^refs/heads/.*$",
 				},
 			},
 		}
 	case "gitlab":
-		trigger = PipelineGenericTrigger{
-			connection: PipelineTriggerArray{
-				{
-					Event: "gl_push",
-					Ref: []string{
-						"^refs/heads/.*$",
-					},
+		trigger[connection] = PipelineTriggerArray{
+			{
+				Event: "gl_push",
+				Ref: []string{
+					"^refs/heads/.*$",
 				},
 			},
 		}
