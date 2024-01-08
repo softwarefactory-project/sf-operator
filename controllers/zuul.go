@@ -95,8 +95,8 @@ func mkZuulGitHubSecretsMounts(r *SFController) []apiv1.VolumeMount {
 	return zuulConnectionMounts
 }
 
-func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
-	volumes := []apiv1.VolumeMount{
+func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) []apiv1.Container {
+	volumeMounts := []apiv1.VolumeMount{
 		{
 			Name:      "zuul-config",
 			MountPath: "/etc/zuul",
@@ -132,7 +132,7 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 		base.MkEnvVar("HOME", "/var/lib/zuul"),
 	}
 	if service == "zuul-scheduler" {
-		volumes = append(volumes,
+		volumeMounts = append(volumeMounts,
 			apiv1.VolumeMount{
 				Name:      "tooling-vol",
 				SubPath:   "generate-zuul-tenant-yaml.sh",
@@ -147,20 +147,27 @@ func (r *SFController) mkZuulContainer(service string) []apiv1.Container {
 		envs = append(envs, r.getTenantsEnvs()...)
 	}
 
-	volumes = append(volumes, mkZuulLoggingMount(service))
-	volumes = append(volumes, mkZuulGitHubSecretsMounts(r)...)
+	volumeMounts = append(volumeMounts, mkZuulLoggingMount(service))
+	volumeMounts = append(volumeMounts, mkZuulGitHubSecretsMounts(r)...)
+
+	if corporateCMExists {
+		volumeMounts = append(volumeMounts, apiv1.VolumeMount{
+			Name:      service + "-corporate-ca-certs",
+			MountPath: UpdateCATrustAnchorsPath,
+		})
+	}
 
 	container := apiv1.Container{
 		Name:         service,
 		Image:        base.ZuulImage(service),
 		Command:      []string{"/usr/local/bin/dumb-init", "--", "bash", "-c", "mkdir /etc/pki/ca-trust/extracted/{pem,java,edk2,openssl} && update-ca-trust && /usr/local/bin/" + service + " -f -d"},
 		Env:          envs,
-		VolumeMounts: volumes,
+		VolumeMounts: volumeMounts,
 	}
 	return []apiv1.Container{container}
 }
 
-func mkZuulVolumes(service string, r *SFController) []apiv1.Volume {
+func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []apiv1.Volume {
 	var mod int32 = 256 // decimal for 0400 octal
 
 	volumes := []apiv1.Volume{
@@ -202,6 +209,10 @@ func mkZuulVolumes(service string, r *SFController) []apiv1.Volume {
 	}
 
 	volumes = append(volumes, mkZuulGitHubSecretsVolumes(r)...)
+
+	if corporateCMExists {
+		volumes = append(volumes, base.MkVolumeCM(service+"-corporate-ca-certs", "corporate-ca-certs"))
+	}
 
 	return volumes
 }
@@ -329,15 +340,19 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	// TODO add statsd section in followup patch
 	sections = append(sections, "scheduler")
 
+	// Check if Corporate Certificate exists
+	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
+
 	annotations := map[string]string{
-		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            base.ZuulImage("zuul-scheduler"),
-		"statsd_mapping":        utils.Checksum([]byte(zuulStatsdMappingConfig)),
-		"serial":                "5",
-		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
-		"zuul-extra":            utils.Checksum([]byte(sshConfig)),
-		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
+		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
+		"zuul-image":                 base.ZuulImage("zuul-scheduler"),
+		"statsd_mapping":             utils.Checksum([]byte(zuulStatsdMappingConfig)),
+		"serial":                     "5",
+		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
+		"zuul-extra":                 utils.Checksum([]byte(sshConfig)),
+		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
+		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
 	if r.isConfigRepoSet() {
@@ -351,7 +366,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		relayAddress = &r.cr.Spec.Zuul.Scheduler.StatsdTarget
 	}
 
-	zuulContainers := r.mkZuulContainer("zuul-scheduler")
+	zuulContainers := r.mkZuulContainer("zuul-scheduler", corporateCMExists)
 
 	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-scheduler", r.cr.Spec.FluentBitLogForwarding, zuulFluentBitLabels, annotations)
 	zuulContainers[0].Env = append(zuulContainers[0].Env, extraLoggingEnvVars...)
@@ -378,7 +393,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 
 	r.EnsureConfigMap("zuul-scheduler-tooling", schedulerToolingData)
 
-	zsVolumes := mkZuulVolumes("zuul-scheduler", r)
+	zsVolumes := mkZuulVolumes("zuul-scheduler", r, corporateCMExists)
 
 	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), apiv1.ReadWriteOnce)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
@@ -405,18 +420,23 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	sections = append(sections, "executor")
+
+	// Check if Corporate Certificate exists
+	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
+
 	annotations := map[string]string{
-		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            base.ZuulImage("zuul-executor"),
-		"serial":                "3",
-		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
-		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
+		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
+		"zuul-image":                 base.ZuulImage("zuul-executor"),
+		"serial":                     "3",
+		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
+		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
+		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
 	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), apiv1.ReadWriteOnce)
-	ze.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-executor")
-	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor", r)
+	ze.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-executor", corporateCMExists)
+	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor", r, corporateCMExists)
 
 	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-executor", r.cr.Spec.FluentBitLogForwarding, zuulFluentBitLabels, annotations)
 	ze.Spec.Template.Spec.Containers[0].Env = append(ze.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
@@ -467,17 +487,21 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
 	sections = append(sections, "merger")
 
+	// Check if Corporate Certificate exists
+	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
+
 	annotations := map[string]string{
-		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            base.ZuulImage(service),
-		"serial":                "1",
-		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
+		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
+		"zuul-image":                 base.ZuulImage(service),
+		"serial":                     "1",
+		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
+		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
 	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), apiv1.ReadWriteOnce)
-	zm.Spec.Template.Spec.Containers = r.mkZuulContainer(service)
-	zm.Spec.Template.Spec.Volumes = mkZuulVolumes(service, r)
+	zm.Spec.Template.Spec.Containers = r.mkZuulContainer(service, corporateCMExists)
+	zm.Spec.Template.Spec.Volumes = mkZuulVolumes(service, r, corporateCMExists)
 
 	extraLoggingEnvVars := logging.SetupLogForwarding(service, r.cr.Spec.FluentBitLogForwarding, zuulFluentBitLabels, annotations)
 	zm.Spec.Template.Spec.Containers[0].Env = append(zm.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
@@ -526,8 +550,8 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	}
 
 	zw := base.MkDeployment("zuul-web", r.ns, "")
-	zw.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-web")
-	zw.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-web", r)
+	zw.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-web", false)
+	zw.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-web", r, false)
 
 	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-web", r.cr.Spec.FluentBitLogForwarding, zuulFluentBitLabels, annotations)
 	zw.Spec.Template.Spec.Containers[0].Env = append(zw.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)

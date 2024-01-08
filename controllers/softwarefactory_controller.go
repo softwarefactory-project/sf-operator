@@ -381,8 +381,40 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *SoftwareFactoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	mkReconcileRequest := func(softwareFactory sfv1.SoftwareFactory, a client.Object) []reconcile.Request {
+		return []reconcile.Request{
+			{NamespacedName: types.NamespacedName{
+				Name:      softwareFactory.Name,
+				Namespace: a.GetNamespace(),
+			}}}
+
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&sfv1.SoftwareFactory{}).
+		// Watch only specific Secrets resources
+		Watches(
+			&corev1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, a client.Object) []reconcile.Request {
+				softwareFactories := sfv1.SoftwareFactoryList{}
+				r.Client.List(ctx, &softwareFactories, &client.ListOptions{
+					Namespace: a.GetNamespace(),
+				})
+				if len(softwareFactories.Items) > 0 {
+					// We take the first one of the list
+					// sf-operator only manages one SoftwareFactory instance by namespace
+					softwareFactory := softwareFactories.Items[0]
+					req := mkReconcileRequest(softwareFactory, a)
+					switch updatedResourceName := a.GetName(); updatedResourceName {
+					case CorporateCACerts:
+						return req
+					default:
+						// All others ConfigMap must not trigger reconcile
+						return []reconcile.Request{}
+					}
+				}
+				return []reconcile.Request{}
+			}),
+		).
 		// Watch only specific Secrets resources
 		Watches(
 			&corev1.Secret{},
@@ -395,11 +427,7 @@ func (r *SoftwareFactoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					// We take the first one of the list
 					// sf-operator only manages one SoftwareFactory instance by namespace
 					softwareFactory := softwareFactories.Items[0]
-					req := []reconcile.Request{
-						{NamespacedName: types.NamespacedName{
-							Name:      softwareFactory.Name,
-							Namespace: a.GetNamespace(),
-						}}}
+					req := mkReconcileRequest(softwareFactory, a)
 					switch updatedResourceName := a.GetName(); updatedResourceName {
 					case NodepoolProvidersSecretsName:
 						return req
@@ -414,7 +442,7 @@ func (r *SoftwareFactoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 						if slices.Contains(otherSecretNames, a.GetName()) {
 							return req
 						}
-						// All others secrets must trigger reconcile
+						// All others secrets must not trigger reconcile
 						return []reconcile.Request{}
 					}
 				}
