@@ -1,5 +1,5 @@
 ---
-config_path: /tmp/config
+config_path: "{{ zuul.project.src_dir }}/deploy/config"
 fqdn: sfop.me
 
 validate_certs: false

@@ -24,7 +24,7 @@
   args:
     chdir: "{{ config_path }}"
   loop:
-    - "git add {{ config_path }}/nodepool/nodepool-builder.yaml"
+    - "git add nodepool/nodepool-builder.yaml"
     - "git commit -m 'Add nodepool/nodepool-builder.yaml'"
 
 - ansible.builtin.include_role:
@@ -126,9 +126,9 @@
   args:
     chdir: "{{ config_path }}"
   loop:
-    - "git add {{ config_path }}/nodepool/nodepool-builder.yaml"
-    - "git add {{ config_path }}/nodepool/dib-ansible/dummy.yaml"
-    - "git add {{ config_path }}/nodepool/dib-ansible/inventory.yaml"
+    - "git add nodepool/nodepool-builder.yaml"
+    - "git add nodepool/dib-ansible/dummy.yaml"
+    - "git add nodepool/dib-ansible/inventory.yaml"
     - "git commit -m 'Add nodepool builder image config'"
 
 - name: Update config repo change

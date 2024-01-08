@@ -32,8 +32,8 @@
   args:
     chdir: "{{ config_path }}"
   loop:
-    - "git add {{ config_path }}/zuul/main.yaml"
-    - "git commit -m 'Add {{ config_path }}/zuul/main.yaml'"
+    - "git add zuul/main.yaml"
+    - "git commit -m 'Add zuul/main.yaml'"
 
 - ansible.builtin.include_role:
     name: "health-check/config-repo-submit-change"
@@ -58,7 +58,7 @@
   args:
     chdir: "{{ config_path }}"
   loop:
-    - "git add {{ config_path }}/zuul/main.yaml"
+    - "git add zuul/main.yaml"
     - "git commit --amend --no-edit"
 
 - name: Submit change and verify Zuul console output

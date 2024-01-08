@@ -34,21 +34,10 @@ This Prometheus instance is configured to collect metrics from a deployed Softwa
 
 ## How to open a review on the test Gerrit
 
-First checkout the **config** repository.
+The checkout of the **config** repository is done by the `dev prepare` command.
 
 ```sh
-# Get the Gerrit admin user API key
-gerrit_admin_api_key=$(./tools/get-secret.sh gerrit-admin-api-key)
-# Then checkout the config repository
-git -c http.sslVerify=false clone "https://admin:${gerrit_admin_api_key}@gerrit.sfop.me/a/config" /tmp/config
-cd /tmp/config
-git config http.sslverify false
-git remote add gerrit "https://admin:${gerrit_admin_api_key}@gerrit.sfop.me/a/config"
-```
-
-Then add a change and send the review:
-
-```sh
+cd deploy/config
 touch myfile
 git add myfile && git commit -m"Add myfile"
 git review
