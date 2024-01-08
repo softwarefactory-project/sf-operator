@@ -51,6 +51,26 @@ func (r *SFController) MkPreInitScript() string {
 	configRepoConnectionName := r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName
 	configRepoName := r.cr.Spec.ConfigRepositoryLocation.Name
 
+	getConnectionDriver := func(r *SFController, connName string) string {
+
+		for _, con := range r.cr.Spec.Zuul.GerritConns {
+			if connName == con.Name {
+				return "gerrit"
+			}
+		}
+
+		for _, con := range r.cr.Spec.Zuul.GitLabConns {
+			if connName == con.Name {
+				return "gitlab"
+			}
+		}
+		// If not found, defaults to gerrit
+		return "gerrit"
+
+	}
+
+	driver := getConnectionDriver(r, configRepoConnectionName)
+
 	parentJobName := "base"
 
 	semaphore := zuulcf.Semaphores{
@@ -118,108 +138,49 @@ func (r *SFController) MkPreInitScript() string {
 		},
 	}
 
+	// Check Pipeline
+	requireCheck, err := zuulcf.GetRequireCheckByDriver(driver, configRepoConnectionName)
+	if err != nil {
+		fmt.Println(err)
+	}
+	triggerCheck, err := zuulcf.GetTriggerCheckByDriver(driver, configRepoConnectionName)
+	if err != nil {
+		fmt.Println(err)
+	}
+	reportersCheck, err := zuulcf.GetReportersCheckByDriver(driver, configRepoConnectionName)
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Gate Pipeline
+	requireGate, err := zuulcf.GetRequireGateByDriver(driver, configRepoConnectionName)
+	if err != nil {
+		fmt.Println(err)
+	}
+	triggerGate, err := zuulcf.GetTriggerGateByDriver(driver, configRepoConnectionName)
+	if err != nil {
+		fmt.Println(err)
+	}
+	reportersGate, err := zuulcf.GetReportersGateByDriver(driver, configRepoConnectionName)
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Post Pipeline
+	triggerPost, err := zuulcf.GetTriggerPostByDriver(driver, configRepoConnectionName)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	pipelines := zuulcf.PipelineConfig{
-		{
-			Pipeline: zuulcf.PipelineBody{
-				Name:        "post",
-				PostReview:  true,
-				Description: "This pipeline runs jobs that operate after each change is merged.",
-				Manager:     zuulcf.Supercedent,
-				Precedence:  zuulcf.Low,
-				Trigger: zuulcf.PipelineGenericTrigger{
-					"git-server": zuulcf.PipelineTriggerArray{
-						{
-							Event: "ref-updated",
-						},
-					},
-					configRepoConnectionName: zuulcf.PipelineTriggerArray{
-						{
-							Event: "ref-updated",
-							Ref: []string{
-								"^refs/heads/.*$",
-							},
-						},
-					},
-				},
-			},
-		},
 		{
 			Pipeline: zuulcf.PipelineBody{
 				Name:        "check",
 				Description: "Newly uploaded patchsets enter this pipeline to receive an initial +/-1 Verified vote.",
 				Manager:     zuulcf.Independent,
-				Require: zuulcf.PipelineRequire{
-					configRepoConnectionName: zuulcf.PipelineRequireApproval{
-						Open: true,
-						Gerrit: zuulcf.PipelineGerritRequirement{
-							CurrentPatchset: true,
-						},
-					},
-				},
-				Trigger: zuulcf.PipelineGenericTrigger{
-					configRepoConnectionName: zuulcf.PipelineTriggerArray{
-						{
-							Event: "patchset-created",
-						},
-						{
-							Event: "change-restored",
-						},
-						{
-							Event:   "comment-added",
-							Comment: "(?i)^(Patch Set [0-9]+:)?( [\\w\\+-]*)*(\\n\\n)?\\s*(recheck|reverify)",
-						},
-						{
-							Event: "comment-added",
-							GitTrigger: zuulcf.PipelineTriggerGit{
-								Gerrit: zuulcf.PipelineTriggerGitGerrit{
-									Approval: []zuulcf.PipelineRequireApproval{
-										{
-											Gerrit: zuulcf.PipelineGerritRequirement{
-												Verified: []zuulcf.GerritVotePoint{
-													zuulcf.GerritVotePointMinusOne,
-													zuulcf.GerritVotePointMinusTwo,
-												},
-												Username: "zuul",
-											},
-										},
-									},
-								},
-								Approval: []zuulcf.PipelineRequireGerritApproval{
-									{
-										Workflow: zuulcf.GetGerritWorkflowValue("1"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Start: zuulcf.PipelineReporter{
-					Reporter: zuulcf.ReporterMap{
-						configRepoConnectionName: zuulcf.PipelineDriverReporter{
-							Gerrit: &zuulcf.PipelineGerritReporter{
-								Verified: zuulcf.GerritVotePointZero,
-							},
-						},
-					},
-				},
-				Success: zuulcf.PipelineReporter{
-					Reporter: zuulcf.ReporterMap{
-						configRepoConnectionName: zuulcf.PipelineDriverReporter{
-							Gerrit: &zuulcf.PipelineGerritReporter{
-								Verified: zuulcf.GerritVotePointOne,
-							},
-						},
-					},
-				},
-				Failure: zuulcf.PipelineReporter{
-					Reporter: zuulcf.ReporterMap{
-						configRepoConnectionName: zuulcf.PipelineDriverReporter{
-							Gerrit: &zuulcf.PipelineGerritReporter{
-								Verified: zuulcf.GerritVotePointMinusOne,
-							},
-						},
-					},
-				},
+				Require:     requireCheck,
+				Trigger:     triggerCheck,
+				Start:       reportersCheck[0],
+				Success:     reportersCheck[1],
+				Failure:     reportersCheck[2],
 			},
 		},
 		{
@@ -233,75 +194,24 @@ func (r *SFController) MkPreInitScript() string {
 				Supercedes: []string{
 					"check",
 				},
-				PostReview: true,
-				Require: zuulcf.PipelineRequire{
-					configRepoConnectionName: zuulcf.PipelineRequireApproval{
-						Open: true,
-						Gerrit: zuulcf.PipelineGerritRequirement{
-							CurrentPatchset: true,
-							GerritApproval: []zuulcf.PipelineRequireGerritApproval{
-								{
-									Workflow: zuulcf.GetGerritWorkflowValue("1"),
-								},
-							},
-						},
-					},
-				},
-				Trigger: zuulcf.PipelineGenericTrigger{
-					r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName: zuulcf.PipelineTriggerArray{
-						{
-							Event: "comment-added",
-							GitTrigger: zuulcf.PipelineTriggerGit{
-								Approval: []zuulcf.PipelineRequireGerritApproval{
-									{
-										Workflow: zuulcf.GetGerritWorkflowValue("1"),
-									},
-								},
-							},
-						},
-						{
-							Event: "comment-added",
-							GitTrigger: zuulcf.PipelineTriggerGit{
-								Approval: []zuulcf.PipelineRequireGerritApproval{
-									{
-										Verified: zuulcf.GerritVotePointOne,
-									},
-								},
-								Username: "zuul",
-							},
-						},
-					},
-				},
-				Start: zuulcf.PipelineReporter{
-					Reporter: zuulcf.ReporterMap{
-						configRepoConnectionName: zuulcf.PipelineDriverReporter{
-							Gerrit: &zuulcf.PipelineGerritReporter{
-								Verified: zuulcf.GerritVotePointZero,
-							},
-						},
-					},
-				},
-				Success: zuulcf.PipelineReporter{
-					Reporter: zuulcf.ReporterMap{
-						configRepoConnectionName: zuulcf.PipelineDriverReporter{
-							Gerrit: &zuulcf.PipelineGerritReporter{
-								Verified: zuulcf.GerritVotePointTwo,
-								Submit:   true,
-							},
-						},
-					},
-				},
-				Failure: zuulcf.PipelineReporter{
-					Reporter: zuulcf.ReporterMap{
-						configRepoConnectionName: zuulcf.PipelineDriverReporter{
-							Gerrit: &zuulcf.PipelineGerritReporter{
-								Verified: zuulcf.GerritVotePointMinusTwo,
-							},
-						},
-					},
-				},
+				PostReview:           true,
+				Require:              requireGate,
+				Trigger:              triggerGate,
+				Start:                reportersGate[0],
+				Success:              reportersGate[1],
+				Failure:              reportersGate[2],
 				WindowFloor:          20,
 				WindowIncreaseFactor: 2,
+			},
+		},
+		{
+			Pipeline: zuulcf.PipelineBody{
+				Name:        "post",
+				PostReview:  true,
+				Description: "This pipeline runs jobs that operate after each change is merged.",
+				Manager:     zuulcf.Supercedent,
+				Precedence:  zuulcf.Low,
+				Trigger:     triggerPost,
 			},
 		},
 	}
