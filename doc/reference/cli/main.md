@@ -9,6 +9,9 @@ deployments, beyond what can be defined in a custom resource manifest.
 1. [Global Flags](#global-flags)
 1. [Configuration File](#configuration-file)
 1. [Subcommands](#subcommands)
+  1. [Dev](#dev)
+    1. [create gerrit](#create-gerrit)
+    1. [wipe gerrit](#wipe-gerrit)
   1. [Nodepool](#nodepool)
     1. [configure providers-secrets](#configure-providers-secrets)
     1. [get builder-ssh-key](#get-builder-ssh-key)
@@ -96,6 +99,58 @@ default-context: dev
 ```
 
 ## Subcommands
+
+### Dev
+
+The `dev` subcommand can be used to manage a development environment and run tests.
+
+### create gerrit
+
+Create a Gerrit stateful set that can be used to host repositories and code reviews with a SF deployment.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] dev create gerrit
+```
+
+To use this Gerrit instance with your Software Factory deployment, add the following to your SF manifest:
+
+```yaml
+[...]
+spec:
+  zuul:
+    gerritconns:
+      - name: gerrit
+        username: zuul
+        hostname: gerrit-sshd
+        puburl: "https://gerrit.<FQDN>"
+```
+
+where `<FQDN>` is your domain name.
+
+To host the config repository on this Gerrit instance, add the following to your SF manifest:
+
+```yaml
+[...]
+spec:
+  config-location:
+    base-url: "http://gerrit-httpd/"
+    name: config
+    zuul-connection-name: gerrit
+```
+
+### wipe gerrit
+
+Delete a Gerrit instance deployed with `dev create gerrit`.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] dev wipe gerrit [--rm-data]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --rm-data | boolean | Also delete persistent data (repositories, reviews) | yes | False |
 
 ### Nodepool
 

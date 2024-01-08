@@ -17,6 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/softwarefactory-project/sf-operator/cli/cmd"
+	dev "github.com/softwarefactory-project/sf-operator/cli/cmd/dev"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
@@ -98,6 +99,7 @@ func main() {
 		cmd.MkSFCmd(),
 		cmd.MkNodepoolCmd(),
 		operatorCmd,
+		dev.MkDevCmd(),
 	}
 	for _, c := range subcommands {
 		rootCmd.AddCommand(c)
