@@ -27,6 +27,7 @@
     - name: zuul-connections
     - name: zuul-authenticators
     - name: config-update-zuul
+    - name: zuul-demo-tenant-workflow
     - name: test-nodepool-providers-secrets
     - name: config-update-nodepool-launcher
     - name: config-update-nodepool-builder

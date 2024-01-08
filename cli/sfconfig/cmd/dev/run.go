@@ -17,6 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	bootstraptenantconfigrepo "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/bootstrap-tenant-config-repo"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sfprometheus"
@@ -40,12 +41,19 @@ var DevPrepareCmd = &cobra.Command{
 
 func init() {
 	var installPrometheus bool
-	DevPrepareCmd.Flags().BoolVar(&installPrometheus, "with-prometheus", false, "Add this flag to spin a prometheus instance as well")
+	var dontUpdateDemoTenantDefinition bool
+	DevPrepareCmd.Flags().BoolVar(
+		&installPrometheus, "with-prometheus", false,
+		"Add this flag to spin a prometheus instance as well")
+	DevPrepareCmd.Flags().BoolVar(
+		&dontUpdateDemoTenantDefinition, "dont-update-demo-tenant", false,
+		"Add this flag to avoid reseting demo-tenant tenant definition")
 	DevCmd.AddCommand(DevPrepareCmd)
 }
 
 func Run(cmd *cobra.Command) {
 	withPrometheus, _ := cmd.Flags().GetBool("with-prometheus")
+	dontUpdateDemoTenantDefinition, _ := cmd.Flags().GetBool("dont-update-demo-tenant")
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{Development: true})))
 	sfconfig := config.GetSFConfigOrDie()
 	fmt.Println("sfconfig started with: ", sfconfig)
@@ -69,22 +77,37 @@ func Run(cmd *cobra.Command) {
 	if withPrometheus {
 		sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN, false)
 	}
-	EnsureDemoConfig(&env, &sfconfig)
+	EnsureDemoConfig(&env, &sfconfig, !dontUpdateDemoTenantDefinition)
 	nodepool.CreateNamespaceForNodepool(&env, "", "nodepool", "")
 	EnsureCRD()
 }
 
 // EnsureDemoConfig prepares a demo config
-func EnsureDemoConfig(env *utils.ENV, sfconfig *config.SFConfig) {
-	fmt.Println("[+] Ensuring demo config")
+func EnsureDemoConfig(env *utils.ENV, sfconfig *config.SFConfig, updateDemoTenantDefinition bool) {
+	var (
+		configRepoPath     = "deploy/config"
+		demoConfigRepoPath = "deploy/demo-tenant-config"
+	)
 	apiKey := string(utils.GetSecret(env, "gerrit-admin-api-key"))
+	fmt.Println("[+] Ensuring demo config")
 	EnsureRepo(sfconfig, apiKey, "config")
+	EnsureRepo(sfconfig, apiKey, "demo-tenant-config")
 	EnsureRepo(sfconfig, apiKey, "demo-project")
-	SetupTenant("deploy/config", "demo-tenant")
-	PushRepoIfNeeded("deploy/config")
+	setupDemoTenantConfigRepo(demoConfigRepoPath)
+	PushRepoIfNeeded(demoConfigRepoPath)
+	if updateDemoTenantDefinition {
+		SetupTenantInMainYAMLFile(configRepoPath, "demo-tenant")
+		PushRepoIfNeeded(configRepoPath)
+	}
 }
 
-func SetupTenant(configPath string, tenantName string) {
+func setupDemoTenantConfigRepo(configPath string) {
+	bootstraptenantconfigrepo.InitConfigRepo(
+		"gerrit", "gerrit", configPath)
+	utils.RunCmd("git", "-C", configPath, "add", "zuul.d/", "playbooks/")
+}
+
+func SetupTenantInMainYAMLFile(configPath string, tenantName string) {
 	tenantDir := filepath.Join(configPath, "zuul")
 	if err := os.MkdirAll(tenantDir, 0755); err != nil {
 		panic(err)
@@ -96,8 +119,11 @@ func SetupTenant(configPath string, tenantName string) {
 			Tenant: zuulcf.TenantBody{
 				Name: tenantName,
 				Source: zuulcf.TenantConnectionSource{
+					"opendev.org": {
+						UntrustedProjects: []string{"zuul/zuul-jobs"},
+					},
 					"gerrit": {
-						ConfigProjects:    []string{"config"},
+						ConfigProjects:    []string{"demo-tenant-config"},
 						UntrustedProjects: []string{"demo-project"},
 					},
 				},
@@ -151,8 +177,10 @@ func EnsureRepo(sfconfig *config.SFConfig, apiKey string, name string) {
 	origin := fmt.Sprintf("https://admin:%s@gerrit.%s/a/%s", apiKey, sfconfig.FQDN, name)
 	if _, err := os.Stat(filepath.Join(path, ".git")); os.IsNotExist(err) {
 		utils.RunCmd("git", "-c", "http.sslVerify=false", "clone", origin, path)
+		utils.RunCmd("git", "-C", path, "remote", "add", "gerrit", origin)
 	} else {
 		utils.RunCmd("git", "-C", path, "remote", "set-url", "origin", origin)
+		utils.RunCmd("git", "-C", path, "remote", "set-url", "gerrit", origin)
 		utils.RunCmd("git", "-C", path, "fetch", "origin")
 	}
 	utils.RunCmd("git", "-C", path, "config", "http.sslverify", "false")

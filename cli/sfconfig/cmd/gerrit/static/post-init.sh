@@ -106,6 +106,7 @@ echo "Ensure Zuul user accounts added into Gerrit"
 # Ensure HTTP access via basic auth for further provisioning
 curl --fail -i -u admin:${GERRIT_ADMIN_API_KEY} http://gerrit-httpd:${GERRIT_HTTPD_SERVICE_PORT}/a/accounts/admin
 
+# Create the 'config' repository for the 'internal' Zuul tenant
 if ! $(ssh gerrit gerrit ls-projects | grep -q "^config$"); then
   echo "Create config repository and related groups"
   /usr/share/managesf/create-repo.sh config
@@ -113,6 +114,15 @@ else
   echo "config repository already exists"
 fi
 
+# Create the 'demo-tenant-config' to be the config repository of the 'demo-tenant' Zuul tenant
+if ! $(ssh gerrit gerrit ls-projects | grep -q "^demo-tenant-config$"); then
+  echo "Create demo-tenant-config repository and related groups"
+  /usr/share/managesf/create-repo.sh demo-tenant-config
+else
+  echo "demo-tenant-config repository already exists"
+fi
+
+# Create the 'demo-project' to be a untrusted repository part of the 'demo-tenant' Zuul tenant
 if ! $(ssh gerrit gerrit ls-projects | grep -q "^demo-project$"); then
   echo "Create demo-project repository and related groups"
   /usr/share/managesf/create-repo.sh demo-project

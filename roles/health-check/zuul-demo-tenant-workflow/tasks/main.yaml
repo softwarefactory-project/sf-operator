@@ -1,0 +1,10 @@
+---
+# First let's ensure that the demo-tenant tenant does not contain any Zuul configuration error
+- ansible.builtin.include_role:
+    name: "health-check/check-zuul-tenant"
+  vars:
+    tenant_name: "demo-tenant"
+#
+# TODO
+# - add file into into demo-tenant-config repo and submit with git-review
+# - submit CR+2/W+1 and ensure the change is merged by Zuul
