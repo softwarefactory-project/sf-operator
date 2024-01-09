@@ -1,14 +1,14 @@
 # Within the CI pipelines the VERSION number is auto managed
 # For an upgrade job the version number is generated to high N value
 # For the publish job we use the git tag name as the version number
-VERSION ?= v0.0.1
+VERSION ?= 0.0.1
 
 # Image URL to use all building/pushing image targets
 BASE_REPO ?= quay.io/software-factory/sf-operator
-IMG ?= $(BASE_REPO):$(VERSION)
+IMG ?= $(BASE_REPO):v$(VERSION)
 
 BUNDLE_REPO ?= $(BASE_REPO)-bundle
-BUNDLE_IMG ?= $(BUNDLE_REPO):$(VERSION)
+BUNDLE_IMG ?= $(BUNDLE_REPO):v$(VERSION)
 
 CATALOG_REPO ?= $(BASE_REPO)-catalog
 CATALOG_IMG ?= $(CATALOG_REPO):latest

@@ -15,6 +15,7 @@
     run: playbooks/main.yaml
     abstract: true
     timeout: 5200
+    attempts: 5
     irrelevant-files: &irrelevant-files
       - ".*.md$"
       - "doc/.*"
@@ -46,6 +47,7 @@
     pre-run: *pre-run
     post-run: *post-run
     timeout: 5200
+    attempts: 5
     run: playbooks/main.yaml
     abstract: true
     irrelevant-files: *irrelevant-files

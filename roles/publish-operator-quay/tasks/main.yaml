@@ -26,21 +26,22 @@
 - name: "Set Tag Version"
   ansible.builtin.set_fact:
     tag_version: "{{ zuul.tag }}"
+    version: "{{ zuul.tag | regex_replace('^v(.*)$', '\\1') }}"
 
 - name: Generate the Operator's Bundle files
   community.general.make:
     target: bundle
     chdir: "{{ zuul.project.src_dir }}"
     params:
-      VERSION: "{{ zuul.tag }}"
-      BUNDLE_GEN_FLAGS: "--version {{ zuul.tag }}"
+      VERSION: "{{ version }}"
+      BUNDLE_GEN_FLAGS: "--version {{ version }}"
 
 - name: Build the Operator and Bundle images
   community.general.make:
     target: "{{ item }}"
     chdir: "{{ zuul.project.src_dir }}"
     params:
-      VERSION: "{{ zuul.tag }}"
+      VERSION: "{{ version }}"
       BUNDLE_IMG: "{{ ci_bundle_img_registry }}:{{ tag_version }}"
       IMG: "{{ ci_operator_img_registry }}:{{ tag_version }}"
   loop:
@@ -83,14 +84,14 @@
     target: opm
     chdir: "{{ zuul.project.src_dir }}"
     params:
-      VERSION: "{{ zuul.tag }}"
+      VERSION: "{{ version }}"
 
 - name: Build the Operator's Catalog image
   community.general.make:
     target: "opm-build"
     chdir: "{{ zuul.project.src_dir }}"
     params:
-      VERSION: "{{ zuul.tag }}"
+      VERSION: "{{ version }}"
       BUNDLE_IMG: "{{ ci_bundle_img_registry }}:{{ tag_version }}"
       IMG: "{{ ci_operator_img_registry }}:{{ tag_version }}"
       CATALOG_IMG: "{{ ci_catalog_img_registry }}:latest"

@@ -14,9 +14,9 @@ This job builds and pushes the following assets to Quay.io:
 If you aren't a core contributor but would like to suggest the creation of a new tag,
 please contact us on [our matrix channel](https://matrix.to/#/#softwarefactory-project:matrix.org).
 
-Here are the commands to run (assuming releasing HEAD to 0.0.6 version):
+Here are the commands to run (assuming releasing HEAD to v0.0.20 version):
 
 ```sh
-git tag v0.0.13 HEAD
-git push gerrit v0.0.13
+git tag v0.0.20 HEAD
+git push gerrit v0.0.20
 ```
