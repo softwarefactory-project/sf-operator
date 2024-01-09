@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	_ "embed"
@@ -474,5 +475,73 @@ func WipeGerrit(env *cliutils.ENV, rmData bool) {
 	// Delete persistent volume for full wipe
 	if rmData {
 		cliutils.DeleteOrDie(env, &apiv1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "gerrit-gerrit-0", Namespace: ns}})
+	}
+}
+
+func GetAdminRepoURL(env *cliutils.ENV, fqdn string, repoName string) string {
+	var (
+		gerritAPIKey apiv1.Secret
+	)
+	if !cliutils.GetMOrDie(env, "gerrit-admin-api-key", &gerritAPIKey) {
+		ctrl.Log.Error(errors.New("secret 'gerrit-admin-api-key' does not exist"), "Cannot clone repo as admin")
+		os.Exit(1)
+	}
+	apiKey := string(gerritAPIKey.Data["gerrit-admin-api-key"])
+	ctrl.Log.V(5).Info("API Key: " + apiKey)
+	repoURL := fmt.Sprintf("https://admin:%s@gerrit.%s/a/%s", apiKey, fqdn, repoName)
+	return repoURL
+}
+
+func CloneAsAdmin(env *cliutils.ENV, fqdn string, repoName string, dest string, verify bool) {
+	var (
+		output string
+	)
+	repoURL := GetAdminRepoURL(env, fqdn, repoName)
+	if _, err := os.Stat(filepath.Join(dest, ".git")); os.IsNotExist(err) {
+		ctrl.Log.Info("Cloning repo at: " + repoURL)
+		args := []string{}
+		if !verify {
+			args = append(args, "-c", "http.sslVerify=false")
+		}
+		args = append(args, "clone", repoURL, dest)
+		output = cliutils.RunCmdOrDie("git", args...)
+		ctrl.Log.V(5).Info("captured output:\n" + output)
+		output = cliutils.RunCmdOrDie("git", "-C", dest, "remote", "add", "gerrit", repoURL)
+		ctrl.Log.V(5).Info("captured output:\n" + output)
+	} else {
+		ctrl.Log.Info("Repository exists. Resetting remotes...")
+		for _, o := range []string{
+			cliutils.RunCmdOrDie("git", "-C", dest, "remote", "set-url", "origin", repoURL),
+			cliutils.RunCmdOrDie("git", "-C", dest, "remote", "set-url", "gerrit", repoURL),
+			cliutils.RunCmdOrDie("git", "-C", dest, "fetch", "origin"),
+		} {
+			if o != "" {
+				ctrl.Log.V(5).Info("captured output:\n" + o)
+			}
+		}
+	}
+	ctrl.Log.Info("Configuring local repository for commits...")
+	for _, _args := range [][]string{
+		{
+			"-C", dest, "config", "user.email", "admin@" + fqdn,
+		},
+		{
+			"-C", dest, "config", "user.name", "admin",
+		},
+		{
+			"-C", dest, "reset", "--hard", "origin/master",
+		},
+	} {
+		output = cliutils.RunCmdOrDie("git", _args...)
+		if output != "" {
+			ctrl.Log.V(5).Info("captured output:\n" + output)
+		}
+	}
+	if !verify {
+		output = cliutils.RunCmdOrDie("git",
+			"-C", dest, "config", "http.sslverify", "false")
+		if output != "" {
+			ctrl.Log.V(5).Info("captured output:\n" + output)
+		}
 	}
 }

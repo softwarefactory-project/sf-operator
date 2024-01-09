@@ -90,11 +90,18 @@ func EnsureDemoConfig(env *utils.ENV, sfconfig *config.SFConfig, updateDemoTenan
 		configRepoPath     = "deploy/config"
 		demoConfigRepoPath = "deploy/demo-tenant-config"
 	)
-	apiKey := string(utils.GetSecret(env, "gerrit-admin-api-key"))
+	gEnv := cliutils.ENV{
+		Cli: env.Cli,
+		Ns:  env.Ns,
+		Ctx: env.Ctx,
+	}
 	fmt.Println("[+] Ensuring demo config")
-	EnsureRepo(sfconfig, apiKey, "config")
-	EnsureRepo(sfconfig, apiKey, "demo-tenant-config")
-	EnsureRepo(sfconfig, apiKey, "demo-project")
+	for _, repo := range []string{
+		"config", "demo-tenant-config", "demo-project",
+	} {
+		path := filepath.Join("deploy", repo)
+		cligerrit.CloneAsAdmin(&gEnv, sfconfig.FQDN, repo, path, false)
+	}
 	setupDemoTenantConfigRepo(demoConfigRepoPath)
 	PushRepoIfNeeded(demoConfigRepoPath)
 	if updateDemoTenantDefinition {
@@ -172,23 +179,6 @@ func EnsureGerritAccess(fqdn string) {
 			break
 		}
 	}
-}
-
-func EnsureRepo(sfconfig *config.SFConfig, apiKey string, name string) {
-	path := filepath.Join("deploy", name)
-	origin := fmt.Sprintf("https://admin:%s@gerrit.%s/a/%s", apiKey, sfconfig.FQDN, name)
-	if _, err := os.Stat(filepath.Join(path, ".git")); os.IsNotExist(err) {
-		utils.RunCmd("git", "-c", "http.sslVerify=false", "clone", origin, path)
-		utils.RunCmd("git", "-C", path, "remote", "add", "gerrit", origin)
-	} else {
-		utils.RunCmd("git", "-C", path, "remote", "set-url", "origin", origin)
-		utils.RunCmd("git", "-C", path, "remote", "set-url", "gerrit", origin)
-		utils.RunCmd("git", "-C", path, "fetch", "origin")
-	}
-	utils.RunCmd("git", "-C", path, "config", "http.sslverify", "false")
-	utils.RunCmd("git", "-C", path, "config", "user.email", "admin@"+sfconfig.FQDN)
-	utils.RunCmd("git", "-C", path, "config", "user.name", "admin")
-	utils.RunCmd("git", "-C", path, "reset", "--hard", "origin/master")
 }
 
 func EnsureCRD() {

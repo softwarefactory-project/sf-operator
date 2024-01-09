@@ -10,6 +10,7 @@ deployments, beyond what can be defined in a custom resource manifest.
 1. [Configuration File](#configuration-file)
 1. [Subcommands](#subcommands)
   1. [Dev](#dev)
+    1. [cloneAsAdmin](#cloneasadmin)
     1. [create gerrit](#create-gerrit)
     1. [wipe gerrit](#wipe-gerrit)
   1. [Nodepool](#nodepool)
@@ -103,6 +104,24 @@ default-context: dev
 ### Dev
 
 The `dev` subcommand can be used to manage a development environment and run tests.
+
+### cloneAsAdmin
+
+> ⚠️ A Gerrit instance must have been deployed with the [create gerrit](#create-gerrit) command first.
+
+Clone a given repository hosted on the Gerrit instance, as the admin user. You can then proceed to
+create patches and run them through CI with `git review`. If the repository already exists locally,
+refresh it by resetting the remotes and performing a [hard reset](https://git-scm.com/docs/git-reset#Documentation/git-reset.txt---hard) on the master branch.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] cloneAsAdmin REPO [DEST] [flags]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --verify | boolean | Enforce SSL validation | yes | False |
 
 ### create gerrit
 
