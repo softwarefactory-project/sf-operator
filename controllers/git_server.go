@@ -257,7 +257,6 @@ func (r *SFController) MkPreInitScript() string {
 										Workflow: zuulcf.GetGerritWorkflowValue("1"),
 									},
 								},
-								Username: "zuul",
 							},
 						},
 						{
