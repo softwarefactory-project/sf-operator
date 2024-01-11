@@ -55,7 +55,7 @@ OPTIONS
 			ansiblePlaybookOptions.Tags += "sf_delete_instance,"
 		}
 		if pvcs || all {
-			ansiblePlaybookOptions.Tags += "sf_delete_pcvs,"
+			ansiblePlaybookOptions.Tags += "sf_delete_pvcs,"
 		}
 
 		var playbookYAML = "playbooks/wipe.yaml"
