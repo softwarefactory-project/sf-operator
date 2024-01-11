@@ -48,8 +48,8 @@ func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
 }
 
 func (r *SFController) MkPreInitScript() string {
-	configRepoConnectionName := r.cr.Spec.ConfigLocation.ZuulConnectionName
-	configRepoName := r.cr.Spec.ConfigLocation.Name
+	configRepoConnectionName := r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName
+	configRepoName := r.cr.Spec.ConfigRepositoryLocation.Name
 
 	parentJobName := "base"
 
@@ -248,7 +248,7 @@ func (r *SFController) MkPreInitScript() string {
 					},
 				},
 				Trigger: zuulcf.PipelineGenericTrigger{
-					r.cr.Spec.ConfigLocation.ZuulConnectionName: zuulcf.PipelineTriggerArray{
+					r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName: zuulcf.PipelineTriggerArray{
 						{
 							Event: "comment-added",
 							GitTrigger: zuulcf.PipelineTriggerGit{
@@ -363,8 +363,8 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	if r.isConfigRepoSet() {
-		annotations["config-repo-name"] = r.cr.Spec.ConfigLocation.Name
-		annotations["config-zuul-connection-name"] = r.cr.Spec.ConfigLocation.ZuulConnectionName
+		annotations["config-repo-name"] = r.cr.Spec.ConfigRepositoryLocation.Name
+		annotations["config-zuul-connection-name"] = r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName
 	}
 
 	// Create the statefulset
@@ -406,7 +406,7 @@ func (r *SFController) DeployGitServer() bool {
 
 	if r.isConfigRepoSet() {
 		initContainer.Env = append(initContainer.Env,
-			base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+			base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigRepositoryLocation.Name),
 		)
 	}
 

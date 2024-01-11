@@ -690,9 +690,9 @@ func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) bas
 }
 
 func (r *SFController) isConfigRepoSet() bool {
-	return r.cr.Spec.ConfigLocation.BaseURL != "" &&
-		r.cr.Spec.ConfigLocation.Name != "" &&
-		r.cr.Spec.ConfigLocation.ZuulConnectionName != ""
+	return r.cr.Spec.ConfigRepositoryLocation.BaseURL != "" &&
+		r.cr.Spec.ConfigRepositoryLocation.Name != "" &&
+		r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName != ""
 }
 
 func (r *SFController) MkClientDNSNames(serviceName string) []string {

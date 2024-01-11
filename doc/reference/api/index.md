@@ -18,7 +18,7 @@ Package v1 contains API Schema definitions for the sf v1 API group
 
 
 
-#### ConfigLocationSpec
+#### ConfigRepositoryLocationSpec
 
 
 
@@ -417,7 +417,7 @@ _Appears in:_
 | `letsEncrypt` _[LetsEncryptSpec](#letsencryptspec)_ | LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS | -|
 | `FluentBitLogForwarding` _[FluentBitForwarderSpec](#fluentbitforwarderspec)_ | Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http) | -|
 | `storageClassName` _string_ | Default storage class to use by Persistent Volume Claims | -|
-| `config-location` _[ConfigLocationSpec](#configlocationspec)_ | Config repository spec | -|
+| `config-location` _[ConfigRepositoryLocationSpec](#configrepositorylocationspec)_ | Config repository spec | -|
 | `zuul` _[ZuulSpec](#zuulspec)_ | Zuul service spec | -|
 | `nodepool` _[NodepoolSpec](#nodepoolspec)_ | Nodepool services spec | -|
 | `zookeeper` _[ZookeeperSpec](#zookeeperspec)_ | Zookeeper service spec | -|

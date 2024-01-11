@@ -48,9 +48,7 @@ type StorageSpec struct {
 	ClassName string `json:"className,omitempty"`
 }
 
-// TODO rename to ConfigRepositoryLocationSpec?
-
-type ConfigLocationSpec struct {
+type ConfigRepositoryLocationSpec struct {
 	// Base URL to use to perform git-related actions on the config repository. For example, if hosted on GitHub, the Base URL would be `https://github.com/<username>/`
 	// +kubebuilder:validation:Pattern:=`^https?:\/\/.+$`
 	BaseURL string `json:"base-url"`
@@ -476,7 +474,7 @@ type SoftwareFactorySpec struct {
 	StorageClassName string `json:"storageClassName,omitempty"`
 
 	// Config repository spec
-	ConfigLocation ConfigLocationSpec `json:"config-location,omitempty"`
+	ConfigRepositoryLocation ConfigRepositoryLocationSpec `json:"config-location,omitempty"`
 
 	// Zuul service spec
 	Zuul ZuulSpec `json:"zuul,omitempty"`

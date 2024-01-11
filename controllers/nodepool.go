@@ -145,8 +145,8 @@ func (r *SFController) getNodepoolConfigEnvs() []apiv1.EnvVar {
 	if r.isConfigRepoSet() {
 		nodepoolEnvVars = append(nodepoolEnvVars,
 			base.MkEnvVar("CONFIG_REPO_SET", "TRUE"),
-			base.MkEnvVar("CONFIG_REPO_BASE_URL", r.cr.Spec.ConfigLocation.BaseURL),
-			base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigLocation.Name),
+			base.MkEnvVar("CONFIG_REPO_BASE_URL", r.cr.Spec.ConfigRepositoryLocation.BaseURL),
+			base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigRepositoryLocation.Name),
 		)
 	} else {
 		nodepoolEnvVars = append(nodepoolEnvVars,
@@ -689,7 +689,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	}
 
 	if r.isConfigRepoSet() {
-		annotations["config-repo-info-hash"] = r.cr.Spec.ConfigLocation.BaseURL + r.cr.Spec.ConfigLocation.Name
+		annotations["config-repo-info-hash"] = r.cr.Spec.ConfigRepositoryLocation.BaseURL + r.cr.Spec.ConfigRepositoryLocation.Name
 	}
 
 	nl := base.MkDeployment("nodepool-launcher", r.ns, "")
