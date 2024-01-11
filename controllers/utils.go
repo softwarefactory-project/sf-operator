@@ -44,15 +44,14 @@ import (
 )
 
 const (
-	BusyboxImage             = "quay.io/software-factory/sf-op-busybox:1.5-3"
 	CustomSSLSecretName      = "sf-ssl-cert"
 	CorporateCACerts         = "corporate-ca-certs"
 	UpdateCATrustAnchorsPath = "/usr/share/pki/ca-trust-source/anchors/"
+	UpdateCATrustCommand     = "set -x && mkdir -p /etc/pki/ca-trust/extracted/{pem,java,edk2,openssl} && update-ca-trust"
 )
 
-// HTTPDImage uses pinned/ubi8 based image for httpd
-// https://catalog.redhat.com/software/containers/ubi8/httpd-24/6065b844aee24f523c207943?q=httpd&architecture=amd64&image=651f274c8ce9242f7bb3e011
-const HTTPDImage = "registry.access.redhat.com/ubi8/httpd-24:1-284.1696531168"
+//go:embed static/fetch-config-repo.sh
+var fetchConfigRepoScript string
 
 type SFUtilContext struct {
 	Client     client.Client
@@ -776,4 +775,12 @@ func (r *SFUtilContext) ensureStatefulset(sts appsv1.StatefulSet) (*appsv1.State
 func (r *SFUtilContext) CorporateCAConfigMapExists() (apiv1.ConfigMap, bool) {
 	cm, corporateCA := r.GetConfigMapByNameRef(CorporateCACerts)
 	return cm, corporateCA == nil
+}
+
+func AppendCorporateCACertsVolumeMount(volumeMounts []apiv1.VolumeMount, volumeName string) []apiv1.VolumeMount {
+	volumeMounts = append(volumeMounts, apiv1.VolumeMount{
+		Name:      volumeName,
+		MountPath: UpdateCATrustAnchorsPath,
+	})
+	return volumeMounts
 }
