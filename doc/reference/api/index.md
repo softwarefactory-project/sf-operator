@@ -18,6 +18,24 @@ Package v1 contains API Schema definitions for the sf v1 API group
 
 
 
+#### BaseStatus
+
+
+
+BaseStatus struct which defines the observed state for a Controller Do not use this directy, it must be derived from.
+
+_Appears in:_
+- [LogServerStatus](#logserverstatus)
+- [SoftwareFactoryStatus](#softwarefactorystatus)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `ready` _boolean_ | The deployment status. | -|
+| `observedGeneration` _integer_ | The Generation of the related Custom Resource that was last processed by the operator controller | -|
+| `reconciledBy` _string_ | The name of the operator handling this Custom Resource's reconciliation | -|
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#condition-v1-meta) array_ | Information about ongoing or completed reconciliation processes between the Log server spec and the observed state of the cluster | -|
+
+
 #### ConfigRepositoryLocationSpec
 
 

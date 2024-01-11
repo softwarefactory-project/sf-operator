@@ -498,10 +498,9 @@ type SoftwareFactorySpec struct {
 	GitServer GitServerSpec `json:"gitserver,omitempty"`
 }
 
-// TODO the exact same struct exists as `LogServerStatus`, we could merge them.
-
-// SoftwareFactoryStatus defines the observed state of SoftwareFactory
-type SoftwareFactoryStatus struct {
+// BaseStatus struct which defines the observed state for a Controller
+// Do not use this directy, it must be derived from.
+type BaseStatus struct {
 	// The deployment status.
 	Ready bool `json:"ready,omitempty"`
 	// The Generation of the related Custom Resource that was last processed by the operator controller
@@ -511,6 +510,9 @@ type SoftwareFactoryStatus struct {
 	// Information about ongoing or completed reconciliation processes between the Log server spec and the observed state of the cluster
 	Conditions []metav1.Condition `json:"conditions,omitempty" optional:"true"`
 }
+
+// SoftwareFactoryStatus defines the observed state of SoftwareFactory
+type SoftwareFactoryStatus BaseStatus
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
