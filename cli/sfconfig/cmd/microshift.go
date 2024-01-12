@@ -25,10 +25,13 @@ var microshiftCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		skipLocalSetup, _ := cmd.Flags().GetBool("skip-local-setup")
 		skipDeploy, _ := cmd.Flags().GetBool("skip-deploy")
+		skipPostInstall, _ := cmd.Flags().GetBool("skip-post-install")
 
 		ansiblePlaybookOptions := &playbook.AnsiblePlaybookOptions{
 			Inventory: inventory,
 		}
+
+		var err error
 
 		// Here we ensure we have the ansible-microshift-role available
 		microshiftRoleSetup := &playbook.AnsiblePlaybookCmd{
@@ -36,7 +39,7 @@ var microshiftCmd = &cobra.Command{
 			Options:   ansiblePlaybookOptions,
 		}
 		fmt.Println(microshiftRoleSetup)
-		err := microshiftRoleSetup.Run(context.TODO())
+		err = microshiftRoleSetup.Run(context.TODO())
 		if err != nil {
 			panic(err)
 		}
@@ -48,7 +51,7 @@ var microshiftCmd = &cobra.Command{
 				Options:   ansiblePlaybookOptions,
 			}
 			fmt.Println(localSetup)
-			err := localSetup.Run(context.TODO())
+			err = localSetup.Run(context.TODO())
 			if err != nil {
 				panic(err)
 			}
@@ -56,17 +59,33 @@ var microshiftCmd = &cobra.Command{
 
 		// Here we setup the remote microshift machine and we fetch a working kube/config
 		if !skipDeploy {
+
 			ansiblePlaybookOptions.ExtraVarsFile = []string{"@tools/microshift/group_vars/all.yaml"}
 			deploy := &playbook.AnsiblePlaybookCmd{
 				Playbooks: []string{"tools/microshift/deploy-microshift.yaml"},
 				Options:   ansiblePlaybookOptions,
 			}
 			fmt.Println(deploy)
-			err := deploy.Run(context.TODO())
+			err = deploy.Run(context.TODO())
 			if err != nil {
 				panic(err)
 			}
 		}
+
+		// Prepare namespaces and install required operators
+		if !skipPostInstall {
+			ansiblePlaybookOptions.ExtraVarsFile = []string{"@tools/microshift/group_vars/all.yaml"}
+			postinstall := &playbook.AnsiblePlaybookCmd{
+				Playbooks: []string{"tools/microshift/post-install.yaml"},
+				Options:   ansiblePlaybookOptions,
+			}
+			fmt.Println(postinstall)
+			err = postinstall.Run(context.TODO())
+			if err != nil {
+				panic(err)
+			}
+		}
+
 	},
 }
 
@@ -75,4 +94,5 @@ func init() {
 	microshiftCmd.Flags().StringVarP(&inventory, "inventory", "i", "", "Specify ansible playbook inventory")
 	microshiftCmd.Flags().BoolP("skip-local-setup", "", false, "do not install local requirements")
 	microshiftCmd.Flags().BoolP("skip-deploy", "", false, "do not deploy microshift")
+	microshiftCmd.Flags().BoolP("skip-post-install", "", false, "do not setup namespaces and install operator dependencies")
 }
