@@ -20,7 +20,10 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
+	"reflect"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -179,17 +182,88 @@ func CreateKubernetesClientOrDie(contextName string) client.Client {
 	return cli
 }
 
-func GetMOrDie(env *ENV, name string, obj client.Object) bool {
+func GetM(env *ENV, name string, obj client.Object) (bool, error) {
 	err := env.Cli.Get(env.Ctx,
 		client.ObjectKey{
 			Name:      name,
 			Namespace: env.Ns,
 		}, obj)
+	if err != nil {
+		return false, err
+	} else {
+		return true, nil
+	}
+}
+
+func GetMOrDie(env *ENV, name string, obj client.Object) bool {
+	_, err := GetM(env, name, obj)
 	if apierrors.IsNotFound(err) {
 		return false
 	} else if err != nil {
-		ctrl.Log.Error(err, "Error while fetching object "+name)
+		msg := fmt.Sprintf("Error while fetching %s \"%s\"", reflect.TypeOf(obj).Name(), name)
+		ctrl.Log.Error(err, msg)
 		os.Exit(1)
 	}
 	return true
+}
+
+func UpdateROrDie(env *ENV, obj client.Object) {
+	var msg = fmt.Sprintf("Updating %s \"%s\" in %s", reflect.TypeOf(obj).Name(), obj.GetName(), env.Ns)
+	ctrl.Log.Info(msg)
+	if err := env.Cli.Update(env.Ctx, obj); err != nil {
+		msg = fmt.Sprintf("Error while updating %s \"%s\"", reflect.TypeOf(obj).Name(), obj.GetName())
+		ctrl.Log.Error(err, msg)
+		os.Exit(1)
+	}
+	msg = fmt.Sprintf("%s \"%s\" updated", reflect.TypeOf(obj).Name(), obj.GetName())
+	ctrl.Log.Info(msg)
+}
+
+func CreateROrDie(env *ENV, obj client.Object) {
+	var msg = fmt.Sprintf("Creating %s \"%s\" in %s", reflect.TypeOf(obj).Name(), obj.GetName(), env.Ns)
+	ctrl.Log.Info(msg)
+	obj.SetNamespace(env.Ns)
+	if err := env.Cli.Create(env.Ctx, obj); err != nil {
+		msg = fmt.Sprintf("Error while creating %s \"%s\"", reflect.TypeOf(obj).Name(), obj.GetName())
+		ctrl.Log.Error(err, msg)
+		os.Exit(1)
+	}
+	msg = fmt.Sprintf("%s \"%s\" created", reflect.TypeOf(obj).Name(), obj.GetName())
+	ctrl.Log.Info(msg)
+}
+
+func getCLIctxOrDie(kmd *cobra.Command, args []string, allowedArgs []string) SoftwareFactoryConfigContext {
+	cliCtx, err := GetCLIContext(kmd)
+	if err != nil {
+		ctrl.Log.Error(err, "Error initializing:")
+		os.Exit(1)
+	}
+	argumentError := errors.New("argument must be in: " + strings.Join(allowedArgs, ", "))
+	if len(args) != 1 {
+		ctrl.Log.Error(argumentError, "Need one argument")
+		os.Exit(1)
+	}
+	for _, a := range allowedArgs {
+		if args[0] == a {
+			return cliCtx
+		}
+	}
+	ctrl.Log.Error(argumentError, "Unknown argument "+args[0])
+	os.Exit(1)
+	return SoftwareFactoryConfigContext{}
+}
+
+func getFileContent(filePath string) ([]byte, error) {
+	if filePath == "" {
+		return []byte{}, nil
+	}
+	if _, err := os.Stat(filePath); err == nil {
+		if data, err := os.ReadFile(filePath); err == nil {
+			return data, nil
+		} else {
+			return nil, err
+		}
+	} else {
+		return nil, err
+	}
 }
