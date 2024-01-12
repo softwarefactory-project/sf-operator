@@ -557,22 +557,22 @@ func (r *SFUtilContext) extractTLSFromLECertificateSecret(host string, le sfv1.L
 	}
 }
 
-// GetConfigMapByNameRef Get ConfigMap by Name Reference
-func (r *SFUtilContext) GetConfigMapByNameRef(name string) (apiv1.ConfigMap, error) {
+// GetConfigMap Get ConfigMap by name
+func (r *SFUtilContext) GetConfigMap(name string) (apiv1.ConfigMap, error) {
 	var dep apiv1.ConfigMap
-	if r.GetM(name, &dep) {
+	if name != "" && r.GetM(name, &dep) {
 		return dep, nil
 	}
-	return apiv1.ConfigMap{}, fmt.Errorf("configmap name with ref %s not found", name)
+	return apiv1.ConfigMap{}, fmt.Errorf("configMap named '%s' was not found", name)
 }
 
-// GetSecretbyNameRef Get Secret by Name Reference
-func (r *SFUtilContext) GetSecretbyNameRef(name string) (apiv1.Secret, error) {
+// GetSecret Get Secret by name
+func (r *SFUtilContext) GetSecret(name string) (apiv1.Secret, error) {
 	var dep apiv1.Secret
-	if r.GetM(name, &dep) {
+	if name != "" && r.GetM(name, &dep) {
 		return dep, nil
 	}
-	return apiv1.Secret{}, fmt.Errorf("secret name with ref %s not found", name)
+	return apiv1.Secret{}, fmt.Errorf("secret named '%s' was not found", name)
 }
 
 // GetValueFromKeySecret gets the Value of the Keyname from a Secret
@@ -587,7 +587,7 @@ func GetValueFromKeySecret(secret apiv1.Secret, keyname string) ([]byte, error) 
 
 // GetSecretDataFromKey Get Data from Secret Key
 func (r *SFUtilContext) GetSecretDataFromKey(name string, key string) ([]byte, error) {
-	secret, err := r.GetSecretbyNameRef(name)
+	secret, err := r.GetSecret(name)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -774,6 +774,6 @@ func (r *SFUtilContext) ensureStatefulset(sts appsv1.StatefulSet) (*appsv1.State
 
 // CorporateCAConfigMapExists check if the ConfigMap named "corporate-ca-certs" exists
 func (r *SFUtilContext) CorporateCAConfigMapExists() (apiv1.ConfigMap, bool) {
-	cm, corporateCA := r.GetConfigMapByNameRef(CorporateCACerts)
+	cm, corporateCA := r.GetConfigMap(CorporateCACerts)
 	return cm, corporateCA == nil
 }
