@@ -1,6 +1,6 @@
 # Running the test suites locally
 
-Tests run in the [project's CI](https://zuul.microshift.softwarefactory-project.io/zuul/t/sf/buildsets) can also be run locally using the `sfconfig runTests` CLI.
+Tests run in the [project's CI](https://zuul.microshift.softwarefactory-project.io/zuul/t/sf/buildsets) can also be run locally using the [`sf-operator dev run-tests` CLI subcommand](./../reference/cli/index.md#run-tests).
 
 > This command is a wrapper on top of `ansible-playbook` to run the same Ansible playbook
 than the CI. This includes steps to deploy the operator if needed.
@@ -10,14 +10,14 @@ The command accepts extra Ansible parameters to be passed to `ansible-playbook` 
 For instance to override the default `microshift_host` variable:
 
 ```sh
-./tools/sfconfig runTests --extra-var "microshift_host=my-microshift"
+sf-operator dev run-tests TEST_NAME --extra-var "microshift_host=my-microshift"
 ```
 
 To get more Ansible output logs, you can use the `verbose (--v)` or `debug (--vvv)` parameter.
 For example:
 
 ```sh
-./tools/sfconfig runTests --v
+sf-operator dev run-tests TEST_NAME --v
 ```
 
 ## Available test suites
@@ -31,7 +31,7 @@ test suite.
 To perform this test, run the following command:
 
 ```sh
-./tools/sfconfig runTests
+sf-operator dev run-tests olm
 ```
 
 ### The OLM upgrade validation test
@@ -43,7 +43,7 @@ Finally, runs the validation test suite.
 To run the upgrade sf-operator test scenario, run the following command:
 
 ```sh
-/tools/sfconfig runTests --upgrade
+sf-operator dev run-tests upgrade
 ```
 
 ### The standalone validation test
@@ -54,7 +54,7 @@ a standalone deployment and run the validation test suite.
 > This is fastest way to run the test suite when iterating on the development of the `sf-operator`.
 
 ```sh
-./tools/sfconfig runTests --standalone
+sf-operator dev run-tests standalone
 ```
 
 ## Fetching test artifacts

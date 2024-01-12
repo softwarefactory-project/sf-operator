@@ -215,7 +215,7 @@ func MkInitCmd() *cobra.Command {
 		full        bool
 		connections []string
 		initCmd     = &cobra.Command{
-			Use:       "init",
+			Use:       "init {config,manifest}",
 			Short:     "CLI/project initialization subcommands",
 			Long:      "These subcommands can be used to generate a sample CLI context, or a sample Software Factory manifest.",
 			ValidArgs: initAllowedArgs,

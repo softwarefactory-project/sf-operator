@@ -1,290 +1,504 @@
-# sfconfig
+# CLI
 
-> ⚠️ As per [ADR12](../../adr/0012-CLI-overhaul.md) this CLI is getting phased out.
-> Its features are being reworked into the `main` binary of the operator.
-> Temporary documentation on this Work-In-Progress can be found [here](./main.md).
-
-SF-Operator comes with a Command Line Interface (CLI) called `sfconfig` that can be used to perform actions in relation with the lifecycle
-of the operator, of a deployment, or also to help with the development of the operator.
+The `sf-operator` executable can be used to perform various actions related to the management of Software Factory
+deployments, beyond what can be defined in a custom resource manifest.
 
 ## Table of Contents
 
-1. [Running sfconfig](#running-sfconfig)
-1. [sfconfig.yaml](#sfconfigyaml)
-1. [Operator management commands](#operator-management-commands)
-1. [Deployment management commands](#deployment-management-commands)
-1. [Development-related commands](#development-related-commands)
+1. [Installing the CLI](#installing-the-cli)
+1. [Global Flags](#global-flags)
+1. [Configuration File](#configuration-file)
+1. [Subcommands](#subcommands)
+  1. [Dev](#dev)
+    1. [cloneAsAdmin](#cloneasadmin)
+    1. [create demo-env](#create-demo-env)
+    1. [create gerrit](#create-gerrit)
+    1. [create microshift](#create-microshift)
+    1. [create standalone-sf](#create-standalone-sf)
+    1. [run-tests](#run-tests)
+    1. [wipe gerrit](#wipe-gerrit)
+  1. [Init](#init)
+  1. [Nodepool](#nodepool)
+    1. [configure providers-secrets](#configure-providers-secrets)
+    1. [create openshiftpods-namespace](#create-openshiftpods-namespace)
+    1. [get builder-ssh-key](#get-builder-ssh-key)
+    1. [get providers-secrets](#get-providers-secrets)
+  1. [Operator](#operator)
+  1. [SF](#sf)
+    1. [backup](#backup)
+    1. [bootstrap-tenant](#bootstrap-tenant)
+    1. [configure TLS](#configure-tls)
+    1. [restore](#restore)
+    1. [wipe](#wipe)
+  1. [Zuul](#zuul)
+    1. [create auth-token](#create-auth-token)
+    1. [create client-config](#create-client-config)
 
-## Running sfconfig
+## Installing the CLI
 
-The CLI can be run with
+To build the CLI, assuming you are at the root directory of the sf-operator repository:
 
 ```sh
-./tools/sfconfig
+go install
 ```
 
-And contextual help is available with
+Then the CLI can be used with:
 
 ```sh
-./tools/sfconfig [COMMAND] --help
+sf-operator [GLOBAL FLAGS] [ARGS] [SUBCOMMAND FLAGS]...
 ```
 
-Many options of the CLI can be passed through the `sfconfig.yaml` file. The path to this file can be passed to the CLI as the `--config` argument.
+## Global Flags
 
-## sfconfig.yaml
+These flags apply to every subcommand.
 
-The `sfconfig.yaml` file is used to pass some common parameters to the CLI. Here is its default structure:
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+|-n, --namespace |string | The namespace on which to perform actions | Dependent |-|
+|-k, --kube-context |string | The cluster context on which to operate | Dependent |-|
+|-d, --fqdn | string | The FQDN of the deployment (if no manifest is provided) | Yes | sfop.me |
+|-C, --config | string | Path to the CLI configuration file | Yes | - |
+|-c, --context | string | Context to use in the configuration file. Defaults to the "default-context" value in the config file if set, or the first available context | Yes | Dependent |
+
+## Configuration File
+
+The CLI supports using a configuration file to keep track of commonly used parameters and flags.
+The configuration file supports several **contexts** if you are working on several distinct Software Factory deployments
+(for example, a dev instance and a production instance).
+
+### Structure
 
 ```yaml
-ansible_microshift_role_path: ~/src/github.com/openstack-k8s-operators/ansible-microshift-role
-microshift:
-  host: microshift.dev
-  user: cloud-user
-fqdn: sfop.me
-nodepool:
-  clouds_file: /etc/sf-operator/nodepool/clouds.yaml
-  kube_file: /etc/sf-operator/nodepool/kubeconfig.yaml
+---
+contexts:
+  # the name of the context
+  dev:
+    # ALL FIELDS OPTIONAL
+    # ---
+    # the path to a local copy of the Software Factory's config repository
+    config-repository-path: /path/to/config-repo
+    # the path to the manifest defining the Software Factory deployment
+    manifest-file: /path/to/manifest
+    # specify whether the deployment was applied via an operator (standalone = false) or via the `apply` subcommand of the
+    # CLI (standalone = true)
+    standalone: false
+    # the cluster's namespace on which to perform actions
+    namespace: <namespace>
+    # the kube context to use to perform actions, in case you have several contexts
+    kube-context: <kube context>
+    # the FQDN of the deployment if no manifest file is provided. Used mostly to interact with services' APIs.
+    fqdn: <fqdn>
+    # Developer settings
+    development:
+      # the path to a local copy of the ansible-microshift-role repository
+      # (https://github.com/openstack-k8s-operators/ansible-microshift-role)
+      ansible-microshift-role-path: /path/to/ansible-microshift-role/repository
+      # path to a local copy of the sf-operator repository
+      sf-operator-repository-path: /path/to/sf-operator/repository
+      # Microshift deployment settings (used by the Ansible deployment playbook)
+      microshift:
+        host: microshift.dev
+        user: cloud-user
+        # The pull secret is required, see the MicroShift section of the developer documentation
+        openshift-pull-secret: |
+          PULL_SECRET
+        # extra configuration settings
+        # how much space to allocate for persistent volume storage
+        disk-file-size: 30G
+      # Settings used when running the test suite locally
+      tests:
+        # where to check out/create the demo repositories used by tests
+        demo-repos-path: deploy/
+        # Ansible extra variables to pass to the testing playbooks
+        extra-vars:
+          key1: value1
+          key2: value2
+    # SF components settings
+    components:
+      nodepool:
+        # path to the local copy of the `clouds.yaml` file used by the Openstack provider
+        clouds-file: /path/to/clouds-file
+        # path to the local copy of the `kube.config` file used by the K8s-based providers
+        kube-file: /path/to/kube-file
+default-context: dev
 ```
 
-## Operator management commands
+## Subcommands
 
-### operator
+### Dev
 
-#### create
+The `dev` subcommand can be used to manage a development environment and run tests.
 
-This command can be used to prepare namespaces on your cluster for the SF-Operator, for a SoftwareFactory deployment, and a namespace dedicated to running pods with Nodepool.
+#### cloneAsAdmin
 
-Usage:
-```sh
-sfconfig operator create [flags]
-```
-Flags:
+> ⚠️ A Gerrit instance must have been deployed with the [create gerrit](#create-gerrit) command first.
 
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-|-a, --all    | boolean |                executes all options in sequence|-|
-|-b, --bundle    |   boolean |           creates namespace for the bundle | operators|
-|-B, --bundlenamespace| string |  creates namespace for the bundle with specific name|-|
-|-n, --namespace   |   boolean |         creates namespace for Software Factory |sf|
-|-N, --namespacename |string   |  creates namespace for Software Factory with specific name|-|
-|-v, --verbose     |   boolean |         verbose|-|
-
-#### delete
-
-
-This command can be used to wipe SF-Operator off a cluster.
-
-Usage:
-```sh
-sfconfig operator delete [flags]
-```
-
-Flags:
-
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-|  -a, --all   |      boolean           | executes all options in sequence|-|
-|  -S, --catalogsource  |   boolean     | deletes Software Factory Catalog Source|-|
-|  -c, --clusterserviceversion| boolean | deletes Software Factory Cluster Service Version|-|
-|  -s, --subscription  |    boolean     | deletes Software Factory Operator's Subscription|-|
-
-
-## Deployment management commands
-
-### General
-#### create-service-ssl-secret
-
-This command configures a secret with the provided SSL context, and updates the given service's HTTPS route to use this context.
-
-Usage:
+Clone a given repository hosted on the Gerrit instance, as the admin user. You can then proceed to
+create patches and run them through CI with `git review`. If the repository already exists locally,
+refresh it by resetting the remotes and performing a [hard reset](https://git-scm.com/docs/git-reset#Documentation/git-reset.txt---hard) on the master branch.
 
 ```sh
-sfconfig create-service-ssl-secret [flags]
-```
-
-Flags:
-
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-|--sf-context |string    |    The kubeconfig context of the sf-namespace,| Default context|
-|--sf-namespace |string   |   Name of the namespace to copy the kubeconfig, or '-' for stdout |sf|
-|--sf-service-ca |string   |  Path for the service CA certificate| - |
-|--sf-service-cert |string  | Path for the service certificate file| - |
-|--sf-service-key |string   | Path for the service private key file| - |
-
-See [this section in the deployment documentation](./../deployment/certificates.md#using-x509-certificates) for more details.
-
-#### sf delete
-
-This command can be used to wipe a deployment at the desired depth.
-
-Usage:
-```sh
-sfconfig sf delete [flags]
+sf-operator [GLOBAL FLAGS] cloneAsAdmin REPO [DEST] [flags]
 ```
 
 Flags:
 
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-|  -a, --all  |  boolean  |  executes --delete and --remove options in sequence|-|
-|  -i, --instance|boolean|  deletes Software Factory Instance|-|
-|  -p, --pvcs |  boolean  |  deletes Software Factory including PVCs and PVs|-|
-|  -v, --verbose |boolean |  verbose|-|
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --verify | boolean | Enforce SSL validation | yes | False |
 
+#### create demo-env
+
+Create a Gerrit instance if needed, then clone and populate demo repositories that will set up
+a demo tenant.
+
+> ⚠️ This command will also install the operator's Custom Resource Definitions, so you need to run `make manifests` beforehand.
+
+```sh
+sf-operator [GLOBAL FLAGS] dev create demo-env [FLAGS]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --keep-tenant-config | boolean | Do not update the demo tenant configuration | yes | False |
+| --repos-path | string | Where to clone the demo repositories | yes | ./deploy/ |
+
+#### create gerrit
+
+Create a Gerrit stateful set that can be used to host repositories and code reviews with a SF deployment.
+
+```sh
+sf-operator [GLOBAL FLAGS] dev create gerrit
+```
+
+To use this Gerrit instance with your Software Factory deployment, add the following to your SF manifest:
+
+```yaml
+[...]
+spec:
+  zuul:
+    gerritconns:
+      - name: gerrit
+        username: zuul
+        hostname: gerrit-sshd
+        puburl: "https://gerrit.<FQDN>"
+```
+
+where `<FQDN>` is your domain name.
+
+To host the config repository on this Gerrit instance, add the following to your SF manifest:
+
+```yaml
+[...]
+spec:
+  config-location:
+    base-url: "http://gerrit-httpd/"
+    name: config
+    zuul-connection-name: gerrit
+```
+
+#### create microshift
+
+Install and configure a MicroShift instance on a given server. This instance can then be used to host, develop and test the operator.
+
+> ⚠️ `ansible-playbook` is required to run this command. Make sure it is installed on your system.
+
+> ⚠️ the "Local Setup" step of the installation requires local root access to install required development dependencies. If you don't want to automate this process, run the command with the `--dry-run --skip-deploy --skip-post-install` flags to inspect the generated playbook and figure out what you need.
+
+```sh
+sf-operator [GLOBAL FLAGS] dev create microshift [FLAGS]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --dry-run | boolean | Create the playbooks but do not run them. | yes | False |
+| --skip-local-setup | boolean | Do not install requirements and dependencies locally | yes | False |
+| --skip-deploy | boolean | Do not install and start MicroShift on the target host | yes | False |
+| --skip-post-install | boolean | Do not install operator dependencies, pre-configure namespaces | yes | False |
+
+#### create standalone-sf
+
+Deploy a "standalone" Software Factory. In standalone mode, you do not need to install or run the operator
+controller within your cluster. You do not need to install the Software Factory CRDs as well. The CLI will take
+a Software Factory manifest as input and deploy all the required services as a one-shot.
+
+```sh
+sf-operator [GLOBAL FLAGS] dev create standalone-sf --cr /path/to/manifest
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+|--cr |string | The path to the custom resource to apply | No | If a config file is used and the flag not provided, will default to the context's `manifest-file` if set |
+
+#### run-tests
+
+Run the playbook for a given test suite. Extra variables can be specified.
+
+```sh
+sf-operator [GLOBAL FLAGS] dev run-tests {olm,standalone,upgrade} [FLAGS]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+|--extra-var | string | Set an extra variable in the form `key=value` to pass to the test playbook. Repeatable | Yes | - |
+|--v | boolean | Run playbook in verbose mode | Yes | false |
+|--vvv | boolean | Run playbook in debug mode | Yes | false |
+|--prepare-demo-env | boolean | Prepare a demo environment before running the test suite (see [dev create demo-env](#create-demo-env)) | Yes | false |
+
+#### wipe gerrit
+
+Delete a Gerrit instance deployed with `dev create gerrit`.
+
+```sh
+sf-operator [GLOBAL FLAGS] dev wipe gerrit [--rm-data]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --rm-data | boolean | Also delete persistent data (repositories, reviews) | yes | False |
+
+### Init
+
+The `init` subcommand can be used to initialize a CLI configuration file, or a sample manifest for deploying Software Factory.
+
+#### config
+
+Generate a simple CLI configuration tree with one context. It is up to you to save it to a chosen 
+file, and to edit it to suit your requirements.
+
+```sh
+sf-operator [GLOBAL FLAGS] init config [--dev] > /path/to/sfcli.config
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --dev | boolean | Include development-related configuration parameters | yes | False |
+
+#### manifest
+
+Generate a basic Software Factory manifest that can be used to deploy a Software Factory. It is up to you to
+save it a chosen file, edit it as you see fit and then apply it to your cluster.
+
+```sh
+sf-operator [GLOBAL FLAGS] init manifest [FLAGS] > /path/to/sf.yaml
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --connection | string, repeatable | Include connection. The first connection of the list will be assumed to host the deployment's config repository | yes | gerrit |
+| --full | boolean | Include optional fields in the manifest, for a more fine-tuned deployment | yes | False |
+| --with-auth | boolean | Include OIDC authentication configuration | yes | False |
+| --with-builder | boolean | Include nodepool builder configuration | yes | False |
 
 ### Nodepool
-#### create-namespace-for-nodepool
 
-This command creates
+The `nodepool` subcommand can be used to interact with the Nodepool component of a Software Factory deployment.
 
-* a suitable namespace on the OpenShift cluster,
-* a kube configuration set to this namespace,
+#### configure providers-secrets
 
-that can be used with Nodepool's `openshiftpods` driver. if the `--sf-namespace` argument is set to
-your deployment's namespace, `sfconfig` will also update Nodepool's secrets on your deployment.
+Set or update Nodepool's providers secrets (OpenStack's clouds.yaml and Kubernetes/OpenShift's kube.config).
 
-Usage:
+> ⚠️ At least one of the `--kube` or `--clouds` flags must be provided.
 
 ```sh
-sfconfig create-namespace-for-nodepool [flags]
+sf-operator [GLOBAL FLAGS] nodepool configure providers-secrets [--kube /path/to/kube.config --clouds /path/to/clouds.yaml]
 ```
 
 Flags:
 
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-| --nodepool-context | string  |   The kubeconfig context for the nodepool-namespace| Default context |
-|  --nodepool-namespace | string |  The namespace name for nodepool |nodepool|
-|  --sf-context | string          | The kubeconfig context of the sf-namespace| Default context|
-|  --sf-namespace | string     |    Name of the namespace to copy the kubeconfig, or '-' for stdout |sf |
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --kube | string | The file from which to read nodepool's kube.config | yes | - |
+| --clouds | string | The file from which to read nodepool's clouds.yaml | yes | - |
 
-See [this section in the deployment documentation](./../deployment/nodepool.md#using-the-openshiftpods-driver-with-your-cluster) for more details.
+#### create openshiftpods-namespace
 
-#### nodepool-providers-secrets
+Create and set up a dedicated namespace on a cluster, so that nodepool can spawn pods with the [openshiftpods](https://zuul-ci.org/docs/nodepool/latest/openshift-pods.html) driver.
 
-This command provides capabilities to dump and update a clouds.yaml and a kube.config file for Nodepool
-
-Usage:
 ```sh
-sfconfig nodepool-providers-secrets [flags]
+sf-operator [GLOBAL FLAGS] nodepool create openshiftpods-namespace [FLAGS]
 ```
 
 Flags:
 
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-|  -d, --dump  |       boolean     |    Dump the providers secrets from the sf namespace to the local config (exclusive with '-u')|-|
-|     --sf-context| string  |   The kubeconfig context of the sf-namespace| Default context|
-|     --sf-namespace| string |  Name of the namespace to copy the kubeconfig, or '-' for stdout |sf|
-| -u, --update  |       boolean     |  Update the providers secrets from local config to the sf namespace (exclusive with '-d')|-|
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --nodepool-context | string | The kube context to use to set up the namespace | yes | default context set with `kubectl` |
+| --nodepool-namespace | string | The namespace to set up | yes | nodepool |
+| --show-config-template | boolean | Display a nodepool configuration snippet that can be used to enable an openshiftpods provider using the created namespace | yes | false |
+| --skip-providers-secrets | boolean | Do not update or create nodepool's providers secrets after setting up the namespace | yes | false |
 
-See [this section in the deployment documentation](./../deployment/nodepool.md#setting-up-provider-secrets) for more details.
+#### get builder-ssh-key
+
+The Nodepool builder component should be used with at least one `image-builder` companion machine.
+It must have the capablility to connect via SSH to the builder machine(s). In order to do so, you need
+to install the builder's SSH public key as an authorized key on the builder machine(s). This subcommand
+fetches that key and can save it to a speficied file path.
+
+```sh
+sf-operator [GLOBAL FLAGS] nodepool get builder-ssh-key [--pubkey /path/to/key]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --pubkey | string | The destination file where to save the builder's public key | yes | - |
+
+#### get providers-secrets
+
+Get the currently set providers secrets (OpenStack's clouds.yaml and Kubernetes/OpenShift's kube.config) and optionally
+write the secrets to a local file.
+
+> ⚠️ The local files will be overwritten with the downloaded contents without warning!
+
+```sh
+sf-operator [GLOBAL FLAGS] nodepool get providers-secrets [--kube /path/to/kube.config --clouds /path/to/clouds.yaml]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --kube | string | The destination file where to save nodepool's kube.config | yes | - |
+| --clouds | string | The destination file where to save nodepool's clouds.yaml | yes | - |
+
+### Operator
+
+To start the operator controller locally, run:
+
+```sh
+sf-operator operator [FLAGS]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+|--metrics-bind-address |string  | The address the metric endpoint binds to. | Yes | :8080 |
+|--health-probe-bind-address |string  | The address the probe endpoint binds to. | Yes | :8081 |
+|--leader-elect |boolean  | Enable leader election for controller manager. | Yes | false |
+
+### SF
+
+The following subcommands can be used to manage a Software Factory deployment and its lifecycle.
+
+#### backup
+
+Not implemented yet
+
+#### bootstrap-tenant
+
+Initialize a Zuul tenant's config repository with boilerplate code that define standard pipelines:
+
+* "check" for pre-commit validation
+* "gate" for approved commits gating
+* "post for post-commit actions
+
+it also includes a boilerplate job and pre-run playbook.
+
+```sh
+sf-operator SF bootstrap-tenant [FLAGS] /path/to/tenant-config-repo
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+|--connection |string  | The name of the Zuul connection to use for pipelines | No | - |
+|--driver |string  | The driver used by the Zuul connection | No | - |
+
+#### configure TLS
+
+The `configure TLS` subcommand can be used to inject a pre-existing set of certificates to secure
+the HTTPS endpoints of a Software Factory deployment.
+
+```sh
+sf-operator [GLOBAL FLAGS] SF configure TLS --CA /path/to/CA --cert /path/to/cert --key /path/to/privatekey
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --CA | string | The path to the PEM-encoded Certificate Authority file | no | - |
+| --cert | string | The path to the domain certificate file | no | - |
+| --key | string | The path to the private key file | no | - |
+
+#### restore
+
+Not implemented yet
+
+#### wipe
+
+The `wipe` subcommand can be used to remove all Software Factory instances in the provided namespace,
+their persistent volumes, and even remove the SF operator completely.
+
+The default behavior is to stop and remove all containers related to a Software Factory deployment, and
+keep the existing persistent volumes.
+
+```sh
+sf-operator [GLOBAL FLAGS] SF wipe [FLAGS]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --rm-data | boolean | Also delete all persistent volumes after removing the instances | yes | False |
+| --all | boolean | Remove all data like with the `--rm-data` flag, and remove the operator from the cluster | yes | False |
 
 ### Zuul
 
-#### create-auth-token
+These subcommands can be used to interact with the Zuul component of a deployment.
 
-This command is a proxy for the "zuul-admin create-auth-token" command run on a scheduler pod.
+#### create auth-token
 
-The command will output a JWT that can be passed to the zuul-client CLI or used with cURL to perform
-administrative actions on a specified tenant.
+The `create auth-token` subcommand can be used to create a custom authentication token that can be used with the [zuul-client CLI utility](https://zuul-ci.org/docs/zuul-client/).
 
-Usage:
 ```sh
-sfconfig zuul create-auth-token [flags]
+go run ./main.go [GLOBAL FLAGS] zuul create auth-token [FLAGS]
 ```
 
 Flags:
 
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-|  -x, --expires-in| int32 |  The lifespan in seconds of the token. | 15 minutes (900s)|
-|  -n, --namespace| string|   Name of the namespace where Zuul is deployed| "sf"|
-|  -t, --tenant| string  |    The Zuul tenant on which to grant administrative powers| "local"|
-|  -u, --user| string   |     A username for the token holder. Used for logs auditing only |"cli_user"|
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --auth-config | string | The authentication configuration to use | yes | zuul_client |
+| --tenant | string | The tenant on which to grant admin access | no | - |
+| --user | string | a username, used for audit purposes in Zuul's access logs | yes | "John Doe" |
+| --expiry | int | How long in seconds the authentication token should be valid for | yes | 3600 |
 
-See [Zuul's upstream documentation](https://zuul-ci.org/docs/zuul/latest/client.html#create-auth-token)
-for more details.
+#### create client-config
 
-#### zuul-client
+The `create client-config` generates a configuration file that can be used with the [zuul-client CLI utility](https://zuul-ci.org/docs/zuul-client/) against the Software Factory deployment.
 
-This command provides a "proxy" of sorts to the `zuul-client` CLI.
+> ⚠️ The command provisions authentication tokens that grant admin access to all tenants. It is recommended to review and eventually edit the output of the command before forwarding it to third parties.
 
-Usage:
 ```sh
-sfconfig zuul-client [...]
-```
-
-See the [zuul-client documentation](https://zuul-ci.org/docs/zuul-client/) for more details.
-
-## Development-related commands
-
-### gerrit
-This command manages the lifecycle of a demo Gerrit instance to hack on sf-operator.
-
-Usage:
-```sh
-sfconfig gerrit [flags]
+go run ./main.go [GLOBAL FLAGS] zuul create client-config [FLAGS] > zuul-client.conf
 ```
 
 Flags:
 
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-|      --deploy |  boolean   |  Deploy Gerrit on the cluster|-|
-|  -f, --fqdn| string |  The FQDN of gerrit (gerrit.FQDN)|sfop.me|
-|      --wipe |   boolean    |  Wipe Gerrit deployment|-|
-
-### microshift
-
-This command can be used to set up a test MicroShift cluster, similar to the ones that are used
-for this project's CI and development.
-
-Usage:
-  sfconfig microshift [flags]
-
-Flags:
-
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-|  -i, --inventory |string  | Specify ansible playbook inventory|-|
-|      --skip-deploy |   boolean   | do not deploy microshift|-|
-|      --skip-local-setup| boolean  |do not install local requirements|-|
-
-See [this section in the developer documentation](./../developer/microshift.md) for more details.
-### prometheus
-
-This command manages the lifecycle of a demo Prometheus instance to experiment with operand monitoring.
-
-Usage:
-```sh
-sfconfig prometheus [flags]
-```
-
-Flags:
-
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-|  -f, --fqdn| string |  The FQDN for prometheus (prometheus.FQDN)|sfop.me|
-|      --skip-operator-installation |   boolean    | Do not attempt to install the prometheus operator prior to deploying a Prometheus instance|-|
-
-### runTests
-
-This command enables running the CI test suite locally. This is basically a wrapper to the project's Ansible test playbooks.
-
-Usage:
-```sh
-sfconfig runTests [flags]
-```
-
-Flags:
-
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-|  -e, --extra-var |string |  Set extra variables, the format of each variable must be `key`=`value`|-|
-|  -h, --help      | boolean       |  help for runTests|-|
-|  -s, --standalone |   boolean     |  run standalone test|-|
-|  -u, --upgrade  |   boolean      |  run upgrade test|-|
-|      --v        |boolean         |  run ansible in verbose mode|-|
-|      --vvv      |  boolean      |   run ansible in debug mode|-|
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --auth-config | string | The authentication configuration to use | yes | zuul_client |
+| --tenant | string | The tenant on which to grant admin access | no | - |
+| --user | string | a username, used for audit purposes in Zuul's access logs | yes | "John Doe" |
+| --expiry | int | How long in seconds the authentication token should be valid for | yes | 3600 |
+| --insecure | boolean | skip SSL validation when connecting to Zuul | yes | False |

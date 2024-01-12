@@ -19,22 +19,12 @@ or you may need to run a Prometheus instance to develop monitoring rules for a d
 You can deploy a test Gerrit with the CLI:
 
 ```sh
-./tools/sfconfig gerrit --deploy
+sf-operator dev create gerrit
 ```
-
-### Prometheus
-
-You can deploy a test Prometheus with the CLI:
-
-```sh
-./tools/sfconfig prometheus
-```
-
-This Prometheus instance is configured to collect metrics from a deployed Software Factory resource automatically.
 
 ## How to open a review on the test Gerrit
 
-The checkout of the **config** repository is done by the `dev prepare` command.
+The checkout of the **config** repository is done by the [`dev create demo-env` command](./../../reference/cli/index.md#create-demo-env). Then, for example:
 
 ```sh
 cd deploy/config
@@ -77,7 +67,7 @@ Here is an usage example of this resource:
 # Create a dedicated namespace
 kubectl create ns logserver
 # Start the operator for the dedicated namespace
-go run ./main.go --namespace logserver operator
+sf-operator --namespace logserver operator
 ```
 
 ```shell

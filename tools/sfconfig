@@ -1,4 +1,0 @@
-#!/bin/bash
-
-go env -w GOSUMDB="sum.golang.org" GOPROXY="https://proxy.golang.org,direct"
-go run cli/sfconfig/main.go $*

@@ -56,7 +56,7 @@ While the tenant's config project could be setup manually, we also provide a `cl
 
 ### Bootstrap a config-project
 
-sfconfig allows you to create a scaffolding for a new tenant's config repository. It defines:
+[`sf-operator`](./../reference/cli/index.md#bootstrap-tenant) allows you to create a scaffolding for a new tenant's config repository. It defines:
 
 * the `check`, `gate` and `post` pipelines
 * the `base job` and `playbooks`
@@ -66,7 +66,7 @@ sfconfig allows you to create a scaffolding for a new tenant's config repository
 Get a local checkout of the tenant's config project/repository then run:
 
 ```sh
-go run ./main.go SF bootstrap-tenant --connection [connection] [/path/to/repository]
+sf-operator SF bootstrap-tenant --connection [connection] [/path/to/repository]
 ```
 
 ### Modify and merge

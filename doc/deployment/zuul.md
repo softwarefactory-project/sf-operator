@@ -40,26 +40,21 @@ deployment; then commit your changes for review and CI validation.
 
 Zuul can generate temporary tokens to use with `zuul-client`. These tokens allow
 a user to perform administrative tasks such as managing autoholds, promoting changes
- and re-enqueueing buildsets on a given tenant. This feature is documented [here] in
+ and re-enqueueing buildsets on a given tenant. This feature is documented [here](https://zuul-ci.org/docs/zuul/latest/client.html#create-auth-token) in
  Zuul's upstream documentation.
 
-Use the following command to generate a token:
+There are two ways to generate such a token:
+
+* Run the `zuul-admin` CLI on a scheduler pod to [generate a token](#zuul-admin)
+* Run `sf-operator` to streamline the token's generation:
 
  ```bash
- ./tools/sfconfig zuul create-auth-token -h
+ sf-operator zuul create auth-token [FLAGS]
  ```
-
-> You can also run `zuul-admin` directly as explained [below](#zuul-admin).
-
- This command is further documented [here](./../cli/index.md#create-auth-token).
 
 ## Zuul-Client
 
-The `sfconfig` CLI can act as a "proxy" of sorts for the `zuul-client` CLI, by directly calling  `zuul-client` from a running Zuul web pod. For example, to read zuul-client's help message:
-
-```bash
-./tools/sfconfig zuul-client -h
-```
+You can [generate a configuration file for zuul-client](../reference/cli/index.md#create-client-config) with the `sf-operator` CLI.
 
 ## Zuul-Admin
 

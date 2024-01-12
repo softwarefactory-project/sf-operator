@@ -8,7 +8,7 @@ This section covers the basics to get started with the development on the SF-Ope
 1. [Run the operator](#run-the-operator)
 1. [Access the services web UI](#access-the-services-web-ui)
 1. [Delete the development deployment](#delete-the-development-deployment)
-1. [To go further](#to-go-further)
+1. [Next actions](#next-actions)
 
 ## Requirements
 
@@ -49,22 +49,19 @@ kubectl create namespace sf
 kubectl config set-context microshift --namespace=sf
 ```
 
-Edit the [sfconfig.yaml](./../../sfconfig.yaml) configuration file to your liking, for example by setting up a custom FQDN.
+Edit the [sf-operator CLI configuration file](./../../sfcli.config) to your liking, for example by setting up a custom FQDN.
 
-Then run the `sfconfig` command:
+Then run the `sf-operator` command:
 
 ```sh
-./tools/sfconfig dev prepare
+sf-operator dev create demo-env
 ```
 
-This command performs the following tasks:
+[This command](./../reference/cli/index.md#create-demo-env) performs the following tasks:
 
-- ensure namespace permissions
-- ensure the installation of the Cert-manager and Prometheus operators
-- ensure the deployment of Gerrit
-- ensure the deployment of Prometheus
-- ensure the checkout of the `config`, `demo-tenant-config` and `demo-project` git repositories in the `deploy` directory
-- ensure the creation of dedicated namespace for nodepool-launcher
+- ensure the deployment of a test Gerrit instance
+- ensure the checkout of the `config`, `demo-tenant-config` and `demo-project` git repositories in the directory of your choosing (defaults to `deploy`)
+- ensure the configuration of a test openshiftpods provider for nodepool
 
 The context is now ready to run the sf-operator using the `manager` or the `standalone` modes.
 
@@ -90,7 +87,7 @@ kubectl apply -f playbooks/files/sf.yaml
 then run the operator with the following command:
 
 ```sh
-go run ./main.go --namespace sf operator
+sf-operator --namespace sf operator
 ```
 
 > The command does not return and wait for events to run the reconcile.
@@ -105,7 +102,7 @@ Any change on the applied `SofwareFactory`'s `CR` re-trigger the reconcile.
 Run the operator with the following command:
 
 ```sh
-go run ./main.go --namespace sf apply --cr playbooks/files/sf.yaml
+sf-operator --namespace sf apply --cr playbooks/files/sf.yaml
 ```
 
 > The command returns when the expected state is applied.
@@ -123,20 +120,16 @@ firefox https://<FQDN>/logs/
 firefox https://<FQDN>/nodepool/api/image-list
 firefox https://<FQDN>/nodepool/builds/
 firefox https://gerrit.<FQDN>
-firefox https://prometheus.<FQDN>
 ```
 
 ## Delete the development deployment
 
-Run the deletion with the following command:
+Wipe your deployment by running:
 
+```sh
+sf-operator SF wipe --all
 ```
-./tools/sfconfig sf delete -a
-```
 
-## To go further
+## Next actions
 
-The run to `sfconfig prepare dev` setups a `Gerrit` instance with a [a **config** repository](../deployment/config_repository.md). This repository can be used to play with the deployment.
-
-
-You may want to [run the test suite on your modifications](./testing.md).
+Now that you have a testing environment set up, you may want to [run the test suite on your modifications](./testing.md).

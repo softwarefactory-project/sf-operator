@@ -1,3 +1,0 @@
-- hosts: "{{ hostname | default('all') }}"
-  roles:
-    - clean-installations

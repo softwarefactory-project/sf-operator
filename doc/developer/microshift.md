@@ -68,35 +68,6 @@ sudo dnf install -y ansible-core golang
 ## Install MicroShift
 
 Installing Microshift is straightforward with the [ansible-microshift-role](https://github.com/openstack-k8s-operators/ansible-microshift-role).
-The sfconfig CLI provides a subcommand (`microshift`) that prepares, downloads and runs the role
-on the target host.
+The [sf-operator](./../reference/cli/index.md) CLI also provides the [`dev create microshift` subcommand](./../reference/cli/index.md#create-microshift) that sets up a microshift host from start to finish. Please refer to the documentation of this subcommand to learn how to use it.
 
-### Inventory file
-
-Make a copy of the [sample inventory file](./../../tools/microshift/inventory.yaml) to set:
-
-- the *openshift_pull_secret*: copy the content from the *pull-secret* file previously downloaded
-- the *ansible_user* and *ansible_host* (to enable ansible connection via SSH to the microshift host)
-
-### Install with the CLI
-
-Assuming your new inventory file is `$HOME/my-inventory.yaml`, run `sfconfig microshift`:
-
-```sh
-./tools/sfconfig microshift -i $HOME/my-inventory.yaml
-```
-
-`sfconfig` will also prepare your development machine by installing additional required packages, ansible collections, and adding entries in your /etc/hosts file.
-If you'd rather do this yourself or if you're already matching these requirements,
-you can use the *--skip-local-setup* option to skip the setup phase on you local (dev) machine.
-
-Once the deployment has ended successfully, you can configure kubectl to
-use Microshift:
-
-```sh
-# Add microshift config to watched configs
-export KUBECONFIG=${PWD}/microshift-config:~/.kube/config:$KUBECONFIG
-kubectl config use-context microshift
-```
-
-You are now ready to deploy and hack SF-Operator, congratulations!
+Once the deployment has ended successfully, you are now ready to deploy and hack SF-Operator, congratulations!

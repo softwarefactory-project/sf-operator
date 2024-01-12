@@ -23,18 +23,17 @@ the sf-operator is able to reconfigure all managed `Route`'s TLS to use the TLS 
 
 > Make sure that the certificate `CN` matches the `fqdn` setting of the `SoftwareFactory` Custom Resource.
 
-The `sfconfig` command can be used to configure these secrets.
+The [sf-operator](./../reference/cli/index.md) CLI can be used to configure these secrets.
 
-> The `create-service-ssl-secret` subcommand will validate the SSL certificate/key before updating the `Secret`.
+> The [`SF configure TLS`](./../reference/cli/index.md#configure-tls) subcommand will validate the SSL certificate/key before updating the `Secret`.
 
 ```sh
-./tools/sfconfig create-service-ssl-secret \
-    --sf-service-ca /tmp/ssl/localCA.pem \
-    --sf-service-key /tmp/ssl/ssl.key \
-    --sf-service-cert /tmp/ssl/ssl.crt
+sf-operator SF configure TLS --CA /tmp/ssl/localCA.pem \
+    --key /tmp/ssl/ssl.key \
+    --cert /tmp/ssl/ssl.crt
 ```
 
-Alternatively, the `sf-ssl-cert` `Secret` resource can be managed without the `sfconfig` helper by
+Alternatively, the `sf-ssl-cert` `Secret` resource can be managed without the CLI by
 following this Secret's layout:
 
 ```yaml

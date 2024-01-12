@@ -42,28 +42,13 @@ unstable but the ultimate source of truth for documentation about its properties
 Currently the SF Operator supports OpenStack (`clouds.yaml`) and Kubernetes (`kube.config`) configuration files. These files are used by Nodepool to manage resources on its providers.
 They are managed by the SF Operator in a secret called `nodepool-providers-secrets`.
 
-To push your configuration file(s) to Nodepool:
-
-1. Edit your [sfconfig.yaml](./../../sfconfig.yaml) to add the paths to your configuration files:
-
-```yaml
-ansible_microshift_role_path: ~/src/github.com/openstack-k8s-operators/ansible-microshift-role
-microshift:
-  host: microshift.dev
-  user: cloud-user
-fqdn: sfop.me
-nodepool:
-  clouds_file: /path/to/clouds.yaml
-  kube_file: /path/to/kube/config
-```
-
-2. Run sfconfig:
+To push your configuration file(s) to Nodepool, run sf-operator's [`nodepool configure providers-secrets` subcommand](./../reference/cli/index.md#configure-providers-secrets):
 
 ```sh
-./tools/sfconfig nodepool-providers-secrets --update
+sf-operator nodepool configure providers-secrets --kube /path/to/kube.config --clouds /path/to/clouds.yaml
 ```
 
-3. Wait until your deployment becomes ready again:
+Then wait until your deployment becomes ready again:
 
 ```sh
 kubectl get sf -n sf -w
@@ -71,9 +56,7 @@ kubectl get sf -n sf -w
 
 When your deployment is ready, the provider secrets have been updated in Nodepool.
 
-> You can also fetch the currently used configurations by running `./tools/sfconfig nodepool-providers-secrets --dump` ,
-which will copy the configuration files from Nodepool into the files defined in sfconfig.yaml. Be careful not to erase
-important data!
+> You can also fetch the currently used configurations with the [`nodepool get providers-secrets` subcommand](./../reference/cli/index.md#get-providers-secrets).
 
 ## Get the builder's SSH public key
 
@@ -89,7 +72,7 @@ kubectl get secret nodepool-builder-ssh-key -n sf -o jsonpath={.data.pub} | base
 or
 
 ```sh
-go run ./main.go --namespace sf nodepool get builder-ssh-key
+sf-operator --namespace sf nodepool get builder-ssh-key
 ```
 
 ## Accept an image-builder's SSH Host key
@@ -107,10 +90,10 @@ Zuul to request pods from an OpenShift cluster to run jobs.
 
 We recommend using a dedicated namespace with the driver (if you intend to spawn pods in the same OpenShift cluster than the one your deployment lives in).
 
-The `sfconfig` CLI can automate the creation of such a namespace, and set up the associated kube config as a Nodepool secret:
+The [`sf-operator` CLI](./../reference/cli/index.md#create-openshiftpods-namespace) can automate the creation of such a namespace, and set up the required kube config as a Nodepool secret:
 
 ```sh
-sfconfig create-namespace-for-nodepool --nodepool-context my-context --nodepool-namespace nodepool-pods
+sf-operator [GLOBAL FLAGS] nodepool create openshiftpods-namespace [FLAGS]
 ```
 
 Once Nodepool is ready, add the following snippet in the `nodepool/nodepool.yaml` file in your `config` repository:
@@ -124,7 +107,7 @@ providers:
       - name: main
         labels:
           - name: my-pod
-            image: quay.io/fedora/fedora:38
+            image: quay.io/fedora/fedora:latest
 ```
 
 Commit your change, review it and validate it. After a run of `config-update`, your new provider and
