@@ -22,6 +22,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
+//go:embed static/nodepool/init-container.sh
+var initContainerScript string
+
 //go:embed static/nodepool/generate-config.sh
 var generateConfigScript string
 
@@ -68,11 +71,19 @@ const (
 
 var NodepoolStatsdExporterPortName = monitoring.GetStatsdExporterPort(shortIdent)
 
-var configScriptVolumeMount = apiv1.VolumeMount{
-	Name:      "nodepool-tooling-vol",
-	SubPath:   "generate-config.sh",
-	MountPath: "/usr/local/bin/generate-config.sh",
-	ReadOnly:  true,
+var configScriptsVolumeMounts = []apiv1.VolumeMount{
+	{
+		Name:      "nodepool-tooling-vol",
+		SubPath:   "generate-config.sh",
+		MountPath: "/usr/local/bin/generate-config.sh",
+		ReadOnly:  true,
+	},
+	{
+		Name:      "nodepool-tooling-vol",
+		SubPath:   "fetch-config-repo.sh",
+		MountPath: "/usr/local/bin/fetch-config-repo.sh",
+		ReadOnly:  true,
+	},
 }
 
 var nodepoolFluentBitLabels = []logging.FluentBitLabel{
@@ -118,7 +129,9 @@ func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string
 
 func (r *SFController) setNodepoolTooling() {
 	toolingData := make(map[string]string)
+	toolingData["init-container.sh"] = initContainerScript
 	toolingData["generate-config.sh"] = generateConfigScript
+	toolingData["fetch-config-repo.sh"] = fetchConfigRepoScript
 	toolingData["dib-ansible.py"] = dibAnsibleWrapper
 	toolingData["ssh_config"] = builderSSHConfig
 	toolingData["timestamp.py"] = timestampOutputCallback
@@ -455,7 +468,6 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 			Name:      "nodepool-ca",
 			MountPath: "/etc/pki/ca-trust/extracted",
 		},
-		configScriptVolumeMount,
 		{
 			Name:      "nodepool-tooling-vol",
 			SubPath:   "dib-ansible.py",
@@ -498,14 +510,8 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		},
 	}...)
 
+	volumeMounts = append(volumeMounts, configScriptsVolumeMounts...)
 	volumeMounts = append(volumeMounts, nodeExporterVolumeMount...)
-
-	if corporateCMExists {
-		volumeMounts = append(volumeMounts, apiv1.VolumeMount{
-			Name:      "nodepool-builder-corporate-ca-certs",
-			MountPath: UpdateCATrustAnchorsPath,
-		})
-	}
 
 	annotations := map[string]string{
 		"nodepool.yaml":              utils.Checksum([]byte(generateConfigScript)),
@@ -516,24 +522,39 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"statsd_mapping":             utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		"image":                      base.NodepoolBuilderImage,
 		"nodepool-providers-secrets": getSecretsVersion(providersSecrets, providerSecretsExists),
-		"serial":                     "13",
+		"serial":                     "14",
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
-	initContainer := base.MkContainer("nodepool-builder-init", base.BusyboxImage)
+	initContainer := base.MkContainer("nodepool-builder-init", base.NodepoolBuilderImage)
 
-	initContainer.Command = []string{"bash", "-c", "mkdir -p ~/dib ~/nodepool/builds; /usr/local/bin/generate-config.sh"}
+	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
 	initContainer.Env = append(r.getNodepoolConfigEnvs(),
 		base.MkEnvVar("NODEPOOL_CONFIG_FILE", "nodepool-builder.yaml"),
 	)
 	initContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
+			Name:      "nodepool-tooling-vol",
+			SubPath:   "init-container.sh",
+			MountPath: "/usr/local/bin/init-container.sh",
+			ReadOnly:  true,
+		},
+		{
 			Name:      "nodepool-config",
 			MountPath: "/etc/nodepool/",
 		},
-		configScriptVolumeMount,
+		{
+			Name:      "nodepool-ca",
+			MountPath: "/etc/pki/ca-trust/extracted",
+		},
 	}
+
+	initContainer.VolumeMounts = append(initContainer.VolumeMounts, configScriptsVolumeMounts...)
 	initContainer.VolumeMounts = append(initContainer.VolumeMounts, nodeExporterVolumeMount...)
+
+	if corporateCMExists {
+		initContainer.VolumeMounts = AppendCorporateCACertsVolumeMount(initContainer.VolumeMounts, "nodepool-builder-corporate-ca-certs")
+	}
 
 	nb := r.mkStatefulSet(
 		BuilderIdent, base.NodepoolBuilderImage, r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage),
@@ -542,7 +563,8 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	nb.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nb.Spec.Template.Spec.Volumes = volumes
 	nb.Spec.Template.Spec.Containers[0].Command = []string{
-		"/usr/local/bin/dumb-init", "--", "bash", "-c", "mkdir /etc/pki/ca-trust/extracted/{pem,java,edk2,openssl} && update-ca-trust && /usr/local/bin/nodepool-builder -f -l /etc/nodepool-logging/logging.yaml",
+		"/usr/local/bin/dumb-init", "--", "bash", "-c",
+		"/usr/local/bin/nodepool-builder -f -l /etc/nodepool-logging/logging.yaml",
 	}
 	nb.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 	nb.Spec.Template.Spec.Containers[0].Env = r.getNodepoolConfigEnvs()
@@ -566,7 +588,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers, diskUsageExporter)
 
 	// Append image build logs HTTPD sidecar
-	buildLogsContainer := base.MkContainer("build-logs-httpd", HTTPDImage)
+	buildLogsContainer := base.MkContainer("build-logs-httpd", base.HTTPDImage)
 	buildLogsContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      BuilderIdent,
@@ -668,20 +690,15 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 			SubPath:   "logging.yaml",
 			MountPath: "/etc/nodepool-logging/logging.yaml",
 		},
-		configScriptVolumeMount}...,
-	)
-	if corporateCMExists {
-		volumeMounts = append(volumeMounts, apiv1.VolumeMount{
-			Name:      "nodepool-launcher-corporate-ca-certs",
-			MountPath: UpdateCATrustAnchorsPath,
-		})
-	}
+	}...)
+
+	volumeMounts = append(volumeMounts, configScriptsVolumeMounts...)
 
 	annotations := map[string]string{
 		"nodepool.yaml":         utils.Checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml": utils.Checksum([]byte(loggingConfig)),
 		"statsd_mapping":        utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
-		"serial":                "7",
+		"serial":                "8",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"image":                      base.NodepoolLauncherImage,
 		"nodepool-providers-secrets": getSecretsVersion(providersSecrets, providerSecretsExists),
@@ -692,23 +709,17 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		annotations["config-repo-info-hash"] = r.cr.Spec.ConfigRepositoryLocation.BaseURL + r.cr.Spec.ConfigRepositoryLocation.Name
 	}
 
-	nl := base.MkDeployment("nodepool-launcher", r.ns, "")
+	initContainer := base.MkContainer("nodepool-launcher-init", base.NodepoolLauncherImage)
 
-	container := base.MkContainer("launcher", base.NodepoolLauncherImage)
-	container.VolumeMounts = volumeMounts
-	container.Command = []string{
-		"/usr/local/bin/dumb-init", "--", "bash", "-c", "mkdir /etc/pki/ca-trust/extracted/{pem,java,edk2,openssl} && update-ca-trust && /usr/local/bin/nodepool-launcher -f -l /etc/nodepool-logging/logging.yaml",
-	}
-	container.Env = r.getNodepoolConfigEnvs()
-
-	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-launcher", r.cr.Spec.FluentBitLogForwarding, nodepoolFluentBitLabels, annotations)
-	container.Env = append(container.Env, extraLoggingEnvVars...)
-
-	initContainer := base.MkContainer("nodepool-launcher-init", base.BusyboxImage)
-
-	initContainer.Command = []string{"/usr/local/bin/generate-config.sh"}
+	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
 	initContainer.Env = r.getNodepoolConfigEnvs()
 	initContainer.VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      "nodepool-tooling-vol",
+			SubPath:   "init-container.sh",
+			MountPath: "/usr/local/bin/init-container.sh",
+			ReadOnly:  true,
+		},
 		{
 			Name:      "nodepool-config",
 			MountPath: "/etc/nodepool/",
@@ -717,8 +728,30 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 			Name:      "nodepool-home",
 			MountPath: "/var/lib/nodepool",
 		},
-		configScriptVolumeMount,
+		{
+			Name:      "nodepool-ca",
+			MountPath: "/etc/pki/ca-trust/extracted",
+		},
 	}
+
+	initContainer.VolumeMounts = append(initContainer.VolumeMounts, configScriptsVolumeMounts...)
+
+	if corporateCMExists {
+		initContainer.VolumeMounts = AppendCorporateCACertsVolumeMount(initContainer.VolumeMounts, "nodepool-launcher-corporate-ca-certs")
+	}
+
+	nl := base.MkDeployment("nodepool-launcher", r.ns, "")
+
+	container := base.MkContainer("launcher", base.NodepoolLauncherImage)
+	container.VolumeMounts = volumeMounts
+	container.Command = []string{
+		"/usr/local/bin/dumb-init", "--", "bash", "-c",
+		"/usr/local/bin/nodepool-launcher -f -l /etc/nodepool-logging/logging.yaml",
+	}
+	container.Env = r.getNodepoolConfigEnvs()
+
+	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-launcher", r.cr.Spec.FluentBitLogForwarding, nodepoolFluentBitLabels, annotations)
+	container.Env = append(container.Env, extraLoggingEnvVars...)
 
 	nl.Spec.Template.Spec.Volumes = volumes
 	nl.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}

@@ -45,6 +45,9 @@ var (
 	//go:embed static/zuul/statsd_mapping.yaml
 	zuulStatsdMappingConfig string
 
+	//go:embed static/zuul/scheduler-init-container.sh
+	zuulSchedulerInitContainerScript string
+
 	//go:embed static/zuul/generate-tenant-config.sh
 	zuulGenerateTenantConfig string
 
@@ -136,7 +139,15 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) [
 			apiv1.VolumeMount{
 				Name:      "tooling-vol",
 				SubPath:   "generate-zuul-tenant-yaml.sh",
-				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
+				MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh",
+				ReadOnly:  true,
+			},
+			apiv1.VolumeMount{
+				Name:      "tooling-vol",
+				SubPath:   "fetch-config-repo.sh",
+				MountPath: "/usr/local/bin/fetch-config-repo.sh",
+				ReadOnly:  true,
+			},
 			apiv1.VolumeMount{
 				Name:      "extra-config",
 				SubPath:   "ssh_config",
@@ -151,19 +162,25 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) [
 	volumeMounts = append(volumeMounts, mkZuulGitHubSecretsMounts(r)...)
 
 	if corporateCMExists {
-		volumeMounts = append(volumeMounts, apiv1.VolumeMount{
-			Name:      service + "-corporate-ca-certs",
-			MountPath: UpdateCATrustAnchorsPath,
-		})
+		volumeMounts = AppendCorporateCACertsVolumeMount(volumeMounts, service+"-corporate-ca-certs")
 	}
 
 	container := apiv1.Container{
-		Name:         service,
-		Image:        base.ZuulImage(service),
-		Command:      []string{"/usr/local/bin/dumb-init", "--", "bash", "-c", "mkdir /etc/pki/ca-trust/extracted/{pem,java,edk2,openssl} && update-ca-trust && /usr/local/bin/" + service + " -f -d"},
+		Name:  service,
+		Image: base.ZuulImage(service),
+		Command: []string{"/usr/local/bin/dumb-init", "--", "bash", "-c", UpdateCATrustCommand + " && " +
+			"/usr/local/bin/" + service + " -f -d"},
 		Env:          envs,
 		VolumeMounts: volumeMounts,
 	}
+
+	if service == "zuul-scheduler" {
+		// For the scheduler we do not run the update-ca-trust because the initContainer
+		// already handles that task.
+		container.Command = []string{"/usr/local/bin/dumb-init", "--", "bash", "-c",
+			"/usr/local/bin/zuul-scheduler -f -d"}
+	}
+
 	return []apiv1.Container{container}
 }
 
@@ -230,21 +247,6 @@ func (r *SFController) getTenantsEnvs() []apiv1.EnvVar {
 			base.MkEnvVar("CONFIG_REPO_SET", "FALSE"),
 		}
 	}
-}
-
-func (r *SFController) mkInitSchedulerConfigContainer() apiv1.Container {
-	container := base.MkContainer("init-scheduler-config", base.BusyboxImage)
-	container.Command = []string{"/usr/local/bin/generate-zuul-tenant-yaml.sh"}
-	container.Env = append(r.getTenantsEnvs(),
-		base.MkEnvVar("HOME", "/var/lib/zuul"), base.MkEnvVar("INIT_CONTAINER", "1"))
-	container.VolumeMounts = []apiv1.VolumeMount{
-		{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
-		{
-			Name:      "tooling-vol",
-			SubPath:   "generate-zuul-tenant-yaml.sh",
-			MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh"},
-	}
-	return container
 }
 
 func (r *SFController) setZuulLoggingfile() {
@@ -348,7 +350,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 base.ZuulImage("zuul-scheduler"),
 		"statsd_mapping":             utils.Checksum([]byte(zuulStatsdMappingConfig)),
-		"serial":                     "5",
+		"serial":                     "6",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
 		"zuul-extra":                 utils.Checksum([]byte(sshConfig)),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
@@ -383,13 +385,43 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 
 	zuulContainers = append(zuulContainers, statsdSidecar, nodeExporterSidecar)
 
-	var setAdditionalContainers = func(sts *appsv1.StatefulSet) {
-		sts.Spec.Template.Spec.InitContainers = []apiv1.Container{r.mkInitSchedulerConfigContainer()}
-		sts.Spec.Template.Spec.Containers = zuulContainers
+	initContainer := base.MkContainer("init-scheduler-config", base.ZuulImage("zuul-scheduler"))
+	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
+	initContainer.Env = append(r.getTenantsEnvs(),
+		base.MkEnvVar("HOME", "/var/lib/zuul"), base.MkEnvVar("INIT_CONTAINER", "1"))
+	initContainer.VolumeMounts = []apiv1.VolumeMount{
+		{Name: "zuul-scheduler", MountPath: "/var/lib/zuul"},
+		{
+			Name:      "tooling-vol",
+			SubPath:   "init-container.sh",
+			MountPath: "/usr/local/bin/init-container.sh",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "tooling-vol",
+			SubPath:   "fetch-config-repo.sh",
+			MountPath: "/usr/local/bin/fetch-config-repo.sh",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "tooling-vol",
+			SubPath:   "generate-zuul-tenant-yaml.sh",
+			MountPath: "/usr/local/bin/generate-zuul-tenant-yaml.sh",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "zuul-ca",
+			MountPath: "/etc/pki/ca-trust/extracted",
+		},
+	}
+	if corporateCMExists {
+		initContainer.VolumeMounts = AppendCorporateCACertsVolumeMount(initContainer.VolumeMounts, "zuul-scheduler-corporate-ca-certs")
 	}
 
 	schedulerToolingData := make(map[string]string)
+	schedulerToolingData["init-container.sh"] = zuulSchedulerInitContainerScript
 	schedulerToolingData["generate-zuul-tenant-yaml.sh"] = zuulGenerateTenantConfig
+	schedulerToolingData["fetch-config-repo.sh"] = fetchConfigRepoScript
 
 	r.EnsureConfigMap("zuul-scheduler-tooling", schedulerToolingData)
 
@@ -397,7 +429,8 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 
 	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), apiv1.ReadWriteOnce)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
-	setAdditionalContainers(&zs)
+	zs.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
+	zs.Spec.Template.Spec.Containers = zuulContainers
 	zs.Spec.Template.Spec.Volumes = zsVolumes
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
 	zs.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/health/live", zuulPrometheusPort)
@@ -428,7 +461,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 base.ZuulImage("zuul-executor"),
-		"serial":                     "3",
+		"serial":                     "4",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
@@ -494,7 +527,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 base.ZuulImage(service),
-		"serial":                     "1",
+		"serial":                     "2",
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
@@ -544,7 +577,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            base.ZuulImage("zuul-web"),
-		"serial":                "3",
+		"serial":                "4",
 		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
