@@ -18,11 +18,27 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"errors"
+	"os"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
+	apiroutev1 "github.com/openshift/api/route/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	monitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
+	opv1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 )
 
 // CLI config struct
@@ -104,6 +120,10 @@ func GetCLIContext(command *cobra.Command) (SoftwareFactoryConfigContext, error)
 	if cliContext.Namespace == "" {
 		cliContext.Namespace = ns
 	}
+	kubeContext, _ := command.Flags().GetString("kube-context")
+	if cliContext.KubeContext == "" {
+		cliContext.KubeContext = kubeContext
+	}
 	fqdn, _ := command.Flags().GetString("fqdn")
 	if fqdn == "" {
 		fqdn = "sfop.me"
@@ -112,4 +132,64 @@ func GetCLIContext(command *cobra.Command) (SoftwareFactoryConfigContext, error)
 		cliContext.FQDN = fqdn
 	}
 	return cliContext, nil
+}
+
+func GetCRUDSubcommands() (*cobra.Command, *cobra.Command, *cobra.Command) {
+	createCmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a resource",
+	}
+	configureCmd := &cobra.Command{
+		Use:   "configure",
+		Short: "Configure a resource",
+	}
+	getCmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get a resource",
+	}
+	return createCmd, configureCmd, getCmd
+}
+
+// Moving code from cli/sfconfig/cmd/utils/utils.go as we need it to avoid dead code
+type ENV struct {
+	Cli client.Client
+	Ns  string
+	Ctx context.Context
+}
+
+func CreateKubernetesClient(contextName string) (client.Client, error) {
+	scheme := runtime.NewScheme()
+	monitoring.AddToScheme(scheme)
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(apiroutev1.AddToScheme(scheme))
+	utilruntime.Must(opv1.AddToScheme(scheme))
+	utilruntime.Must(sfv1.AddToScheme(scheme))
+	var conf = controllers.GetConfigContextOrDie(contextName)
+	return client.New(conf, client.Options{
+		Scheme: scheme,
+	})
+}
+
+func CreateKubernetesClientOrDie(contextName string) client.Client {
+	cli, err := CreateKubernetesClient(contextName)
+	if err != nil {
+		ctrl.Log.Error(err, "Error creating Kubernetes client")
+		os.Exit(1)
+	}
+	return cli
+}
+
+func GetMOrDie(env *ENV, name string, obj client.Object) bool {
+	err := env.Cli.Get(env.Ctx,
+		client.ObjectKey{
+			Name:      name,
+			Namespace: env.Ns,
+		}, obj)
+	if apierrors.IsNotFound(err) {
+		return false
+	} else if err != nil {
+		ctrl.Log.Error(err, "Error while fetching object "+name)
+		os.Exit(1)
+	}
+	return true
 }

@@ -10,8 +10,9 @@ deployments, beyond what can be defined in a custom resource manifest.
 1. [Configuration File](#configuration-file)
 1. [Subcommands](#subcommands)
   1. [Apply](#apply)
-  1. [Operator](#apply)
   1. [Backup](#backup)
+  1. [Nodepool](#nodepool)
+  1. [Operator](#apply)
   1. [Restore](#restore)
 
 ## Running the CLI
@@ -29,6 +30,7 @@ These flags apply
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 |-n, --namespace |string | The namespace on which to perform actions | Dependent |-|
+|-k, --kube-context |string | The cluster context on which to operate | Dependent |-|
 |-d, --fqdn | string | The FQDN of the deployment (if no manifest is provided) | Yes | sfop.me |
 |-C, --config | string | Path to the CLI configuration file | Yes | - |
 |-c, --context | string | Context to use in the configuration file. Defaults to the "default-context" value in the config file if set, or the first available context | Yes | Dependent |
@@ -105,6 +107,49 @@ Flags:
 |----------|------|-------|----|----|
 |--cr |string | The path to the custom resource to apply | No | If a config file is used and the flag not provided, will default to the context's `manifest-file` if set |
 
+### Backup
+
+Not implemented yet
+
+### Nodepool
+
+The `nodepool` subcommand can be used to interact with the Nodepool component of a Software Factory deployment.
+
+#### get builder-ssh-key
+
+The Nodepool builder component should be used with at least one `image-builder` companion machine.
+It must have the capablility to connect via SSH to the builder machine(s). In order to do so, you need
+to install the builder's SSH public key as an authorized key on the builder machine(s). This subcommand
+fetches that key and can save it to a speficied file path.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] nodepool get builder-ssh-key [--pubkey /path/to/key]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --pubkey | string | The destination file where to save the builder's public key | yes | - |
+
+#### get providers-secrets
+
+Get the currently set providers secrets (OpenStack's clouds.yaml and Kubernetes/OpenShift's kube.config) and optionally
+write the secrets to a local file.
+
+> ⚠️ The local files will be overwritten with the downloaded contents without warning!
+
+```sh
+go run ./main.go [GLOBAL FLAGS] nodepool get providers-secrets [--kube /path/to/kube.config --clouds /path/to/clouds.yaml]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --kube | string | The destination file where to save nodepool's kube.config | yes | - |
+| --clouds | string | The destination file where to save nodepool's clouds.yaml | yes | - |
+
 ### Operator
 
 To start the operator controller locally, run:
@@ -120,9 +165,6 @@ Flags:
 |--metrics-bind-address |string  | The address the metric endpoint binds to. | Yes | :8080 |
 |--health-probe-bind-address |string  | The address the probe endpoint binds to. | Yes | :8081 |
 |--leader-elect |boolean  | Enable leader election for controller manager. | Yes | false |
-### Backup
-
-Not implemented yet
 
 ### Restore
 

@@ -1,7 +1,6 @@
 # sfconfig
 
-> [!NOTE]
-> As per [ADR12](../../adr/0012-CLI-overhaul.md) this CLI is getting phased out.
+> ⚠️ As per [ADR12](../../adr/0012-CLI-overhaul.md) this CLI is getting phased out.
 > Its features are being reworked into the `main` binary of the operator.
 > Temporary documentation on this Work-In-Progress can be found [here](./main.md).
 

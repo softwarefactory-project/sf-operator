@@ -60,6 +60,7 @@ func main() {
 		enableLeaderElection bool
 		probeAddr            string
 		ns                   string
+		kubeContext          string
 		fqdn                 string
 		cliContext           string
 		configFile           string
@@ -79,6 +80,7 @@ func main() {
 
 	// Global flags
 	rootCmd.PersistentFlags().StringVarP(&ns, "namespace", "n", "", "The namespace on which to perform actions.")
+	rootCmd.PersistentFlags().StringVarP(&kubeContext, "kube-context", "k", "", "The cluster context to use to perform calls to the K8s API.")
 	rootCmd.PersistentFlags().StringVarP(&fqdn, "fqdn", "d", "", "The FQDN of the deployment (if no manifest is provided).")
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "C", "", "Path to the CLI configuration file.")
 	rootCmd.PersistentFlags().StringVarP(&cliContext, "context", "c", "", "Context to use in the configuration file. Defaults to the \"default-context\" value in the config file if set, or the first available context in the config file.")
@@ -96,6 +98,7 @@ func main() {
 		cmd.MkApplyCmd(),
 		cmd.MkBackupCmd(),
 		cmd.MkRestoreCmd(),
+		cmd.MkNodepoolCmd(),
 	}
 	for _, c := range subcommands {
 		rootCmd.AddCommand(c)

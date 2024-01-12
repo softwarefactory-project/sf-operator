@@ -86,6 +86,12 @@ Here is the command to fetch the builder SSH public key:
 kubectl get secret nodepool-builder-ssh-key -n sf -o jsonpath={.data.pub} | base64 -d
 ```
 
+or
+
+```sh
+go run ./main.go --namespace sf nodepool get builder-ssh-key
+```
+
 ## Accept an image-builder's SSH Host key
 
 Once an account has been created to an `image-builder` host the `nodepool-builder` must trust the SSH Host key before being able to connect. Run the following command to initiate a SSH connection and trust the host key:
