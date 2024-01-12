@@ -409,7 +409,7 @@ func (r *SFUtilContext) ensureLetsEncryptIssuer(le sfv1.LetsEncryptSpec) bool {
 }
 
 //----------------------------------------------------------------------------
-// --- TODO clean functions below / remove useless code and set doc string ---
+// --- TODO clean functions below / remove useless code ---
 //----------------------------------------------------------------------------
 
 func getStorageClassname(storageClassName string) string {
@@ -420,7 +420,7 @@ func getStorageClassname(storageClassName string) string {
 	}
 }
 
-// Create a default statefulset.
+// mkStatefulSet Create a default statefulset.
 func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, accessMode apiv1.PersistentVolumeAccessMode, nameSuffix ...string) appsv1.StatefulSet {
 	serviceName := name
 	if nameSuffix != nil {
@@ -432,13 +432,14 @@ func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig b
 	return base.MkStatefulset(name, r.ns, 1, serviceName, container, pvc)
 }
 
-// Create a default headless statefulset.
+// mkHeadlessSatefulSet Create a default headless statefulset.
 func (r *SFUtilContext) mkHeadlessSatefulSet(
 	name string, image string, storageConfig base.StorageConfig,
 	accessMode apiv1.PersistentVolumeAccessMode) appsv1.StatefulSet {
 	return r.mkStatefulSet(name, image, storageConfig, accessMode, "headless")
 }
 
+// IsStatefulSetReady checks if StatefulSet is ready
 func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 	if dep.Status.ReadyReplicas > 0 {
 		var podList apiv1.PodList
@@ -476,6 +477,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 	return false
 }
 
+// IsDeploymentReady checks if StatefulSet is ready
 func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 	if base.IsDeploymentReady(dep) {
 		return true
@@ -484,6 +486,7 @@ func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 	return false
 }
 
+// DebugStatefulSet disables StatefulSet main container probes
 func (r *SFUtilContext) DebugStatefulSet(name string) {
 	var dep appsv1.StatefulSet
 	if !r.GetM(name, &dep) {
@@ -498,6 +501,8 @@ func (r *SFUtilContext) DebugStatefulSet(name string) {
 	r.log.V(1).Info("Debugging service", "name", name)
 }
 
+// extractStaticTLSFromSecret gets secret keys from sf-ssl-cert secret
+// Returns CA, key and crt keys.
 func (r *SFUtilContext) extractStaticTLSFromSecret() ([]byte, []byte, []byte) {
 	var customSSLSecret apiv1.Secret
 
@@ -509,6 +514,7 @@ func (r *SFUtilContext) extractStaticTLSFromSecret() ([]byte, []byte, []byte) {
 	}
 }
 
+// extractTLSFromLECertificateSecret gets LetsEncrypt Certificate
 func (r *SFUtilContext) extractTLSFromLECertificateSecret(host string, le sfv1.LetsEncryptSpec) (bool, []byte, []byte, []byte) {
 	_, issuerName := getLetsEncryptServer(le)
 	const sfLECertName = "sf-le-certificate"
@@ -603,11 +609,12 @@ func (r *SFUtilContext) GetSecretDataFromKey(name string, key string) ([]byte, e
 	return data, nil
 }
 
-// Gets Secret Data in which the Keyname is the same as the Secret Name
+// getSecretData Gets Secret Data in which the Keyname is the same as the Secret Name
 func (r *SFUtilContext) getSecretData(name string) ([]byte, error) {
 	return r.GetSecretDataFromKey(name, "")
 }
 
+// BaseGetStorageConfOrDefault sets the default storageClassName
 func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName string) base.StorageConfig {
 	var size = utils.Qty1Gi()
 	var className = getStorageClassname(storageClassName)
@@ -623,6 +630,7 @@ func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName 
 	}
 }
 
+// reconcileExpandPVC  resizes the pvc with the spec
 func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.StorageSpec) bool {
 	newQTY := newStorageSpec.Size
 
@@ -684,16 +692,19 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 
 // SFController struct-context scoped utils //
 
+// getStorageConfOrDefault get storage configuration or sets the default configuration
 func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) base.StorageConfig {
 	return BaseGetStorageConfOrDefault(storageSpec, r.cr.Spec.StorageClassName)
 }
 
+// isConfigRepoSet checks if config repository is set in the CR
 func (r *SFController) isConfigRepoSet() bool {
 	return r.cr.Spec.ConfigRepositoryLocation.BaseURL != "" &&
 		r.cr.Spec.ConfigRepositoryLocation.Name != "" &&
 		r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName != ""
 }
 
+// MkClientDNSNames returns an array of DNS Names
 func (r *SFController) MkClientDNSNames(serviceName string) []string {
 	return []string{
 		serviceName,
@@ -703,6 +714,7 @@ func (r *SFController) MkClientDNSNames(serviceName string) []string {
 	}
 }
 
+// EnsureDiskUsagePromRule sync Prometheus Rules
 func (r *SFController) EnsureDiskUsagePromRule(ruleGroups []monitoringv1.RuleGroup) bool {
 	desiredDUPromRule := sfmonitoring.MkDiskUsagePromRule(ruleGroups, r.ns)
 	currentPromRule := monitoringv1.PrometheusRule{}
@@ -721,6 +733,7 @@ func (r *SFController) EnsureDiskUsagePromRule(ruleGroups []monitoringv1.RuleGro
 	return true
 }
 
+// EnsureSFPodMonitor Create or Updates Software Factory Monitor for metrics
 func (r *SFController) EnsureSFPodMonitor(ports []string, selector metav1.LabelSelector) bool {
 	desiredPodMonitor := sfmonitoring.MkPodMonitor("sf-monitor", r.ns, ports, selector)
 	// add annotations so we can handle lifecycle
