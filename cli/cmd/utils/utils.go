@@ -55,10 +55,12 @@ type SoftwareFactoryConfigContext struct {
 	FQDN             string `mapstructure:"fqdn"`
 	Dev              struct {
 		AnsibleMicroshiftRolePath string `mapstructure:"ansible-microshift-role-path"`
+		SFOperatorRepositoryPath  string `mapstructure:"sf-operator-repository-path"`
 		Microshift                struct {
-			Host          string `mapstructure:"host"`
-			User          string `mapstructure:"user"`
-			InventoryFile string `mapstructure:"inventory-file"`
+			Host                string `mapstructure:"host"`
+			User                string `mapstructure:"user"`
+			OpenshiftPullSecret string `mapstructure:"openshift-pull-secret"`
+			DiskFileSize        string `mapstructure:"disk-file-size"`
 		} `mapstructure:"microshift"`
 		Tests struct {
 			ExtraVars map[string]string `mapstructure:"extra-vars"`

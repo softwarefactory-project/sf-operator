@@ -1,0 +1,10 @@
+all:
+  hosts:
+    microshift:
+      ansible_user: "{{ .User }}"
+      ansible_host: "{{ .Host }}"
+      ansible_connection: {{ if eq .Host "127.0.0.1" "localhost" }}{{ "local" }}{{ else }}{{ "ssh" }}{{ end }}
+  vars:
+    # should be set to deploy microshift
+    openshift_pull_secret: |
+      {{ .PullSecret }}

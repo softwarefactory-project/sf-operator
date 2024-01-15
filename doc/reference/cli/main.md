@@ -12,6 +12,7 @@ deployments, beyond what can be defined in a custom resource manifest.
   1. [Dev](#dev)
     1. [cloneAsAdmin](#cloneasadmin)
     1. [create gerrit](#create-gerrit)
+    1. [create microshift](#create-microshift)
     1. [wipe gerrit](#wipe-gerrit)
   1. [Nodepool](#nodepool)
     1. [configure providers-secrets](#configure-providers-secrets)
@@ -78,11 +79,18 @@ contexts:
       # the path to a local copy of the ansible-microshift-role repository
       # (https://github.com/openstack-k8s-operators/ansible-microshift-role)
       ansible-microshift-role-path: /path/to/ansible-microshift-role/repository
+      # path to a local copy of the sf-operator repository
+      sf-operator-repository-path: /path/to/sf-operator/repository
       # Microshift deployment settings (used by the Ansible deployment playbook)
       microshift:
         host: microshift.dev
         user: cloud-user
-        inventory-file: /path/to/inventory
+        # The pull secret is required, see the MicroShift section of the developer documentation
+        openshift-pull-secret: |
+          PULL_SECRET
+        # extra configuration settings
+        # how much space to allocate for persistent volume storage
+        disk-file-size: 30G
       # Settings used when running the test suite locally
       tests:
         # Ansible extra variables to pass to the testing playbooks
@@ -105,7 +113,7 @@ default-context: dev
 
 The `dev` subcommand can be used to manage a development environment and run tests.
 
-### cloneAsAdmin
+#### cloneAsAdmin
 
 > ⚠️ A Gerrit instance must have been deployed with the [create gerrit](#create-gerrit) command first.
 
@@ -123,7 +131,7 @@ Flags:
 |----------|------|-------|----|----|
 | --verify | boolean | Enforce SSL validation | yes | False |
 
-### create gerrit
+#### create gerrit
 
 Create a Gerrit stateful set that can be used to host repositories and code reviews with a SF deployment.
 
@@ -157,7 +165,28 @@ spec:
     zuul-connection-name: gerrit
 ```
 
-### wipe gerrit
+#### create microshift
+
+Install and configure a MicroShift instance on a given server. This instance can then be used to host, develop and test the operator.
+
+> ⚠️ `ansible-playbook` is required to run this command. Make sure it is installed on your system.
+
+> ⚠️ the "Local Setup" step of the installation requires local root access to install required development dependencies. If you don't want to automate this process, run the command with the `--dry-run --skip-deploy --skip-post-install` flags to inspect the generated playbook and figure out what you need.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] dev create microshift [FLAGS]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --dry-run | boolean | Create the playbooks but do not run them. | yes | False |
+| --skip-local-setup | boolean | Do not install requirements and dependencies locally | yes | False |
+| --skip-deploy | boolean | Do not install and start MicroShift on the target host | yes | False |
+| --skip-post-install | boolean | Do not install operator dependencies, pre-configure namespaces | yes | False |
+
+#### wipe gerrit
 
 Delete a Gerrit instance deployed with `dev create gerrit`.
 
@@ -175,7 +204,7 @@ Flags:
 
 The `nodepool` subcommand can be used to interact with the Nodepool component of a Software Factory deployment.
 
-### configure providers-secrets
+#### configure providers-secrets
 
 Set or update Nodepool's providers secrets (OpenStack's clouds.yaml and Kubernetes/OpenShift's kube.config).
 

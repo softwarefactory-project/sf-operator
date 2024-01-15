@@ -1,0 +1,11 @@
+---
+microshift_ip: {{ "\"{{ hostvars.microshift.ansible_host }}\"" }}
+microshift_fqdn: microshift.dev
+sf_fqdn: {{ .FQDN }}
+disk_file_sparsed: true
+disk_file_size: {{ .DiskFileSize }}
+setup_olm: true
+microshift_additional_addresses:
+  - {{ "\"{{ microshift_fqdn }}\"" }}
+  - {{ "\"{{ sf_fqdn }}\"" }}
+microshift_role_path: "{{ .MicroshiftRolePath }}"

@@ -1,0 +1,16 @@
+- hosts: localhost
+  tasks:
+    - name: Install ansible collection
+      command: ansible-galaxy collection install community.general community.crypto ansible.posix
+
+    - name: Install required packages
+      ansible.builtin.include_role:
+        name: "roles/setup-env"
+
+    - name: Populate /etc/hosts
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        block: |
+          {{ microshift_ip }} {{ microshift_fqdn }}
+          {{ microshift_ip }} {{ sf_fqdn }}
+      become: yes

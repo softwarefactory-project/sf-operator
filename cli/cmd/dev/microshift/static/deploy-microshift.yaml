@@ -1,0 +1,26 @@
+- hosts: microshift
+  roles:
+    - "{{ microshift_role_path }}"
+  tasks:
+    - name: Install rpms
+      ansible.builtin.package:
+        name: podman
+      become: yes
+
+    - name: Ensure ~/.kube
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: ~/.kube
+        mode: 0700
+        state: directory
+
+    - name: Get kubeconfig
+      ansible.builtin.fetch:
+        src: /var/lib/microshift/resources/kubeadmin/microshift.dev/kubeconfig
+        dest: ~/.kube/microshift-config
+        flat: true
+      become: yes
+
+    - name: Validate kubectl works
+      delegate_to: localhost
+      ansible.builtin.command: kubectl --kubeconfig="$HOME/.kube/microshift-config" get pods

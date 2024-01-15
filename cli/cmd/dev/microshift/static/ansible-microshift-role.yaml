@@ -1,0 +1,5 @@
+- hosts: localhost
+  tasks:
+    - ansible.builtin.include_role:
+        name: "roles/setup-env"
+        tasks_from: clone-microshift-role
