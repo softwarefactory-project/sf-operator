@@ -81,7 +81,13 @@ To iterate on the development of the `sf-operator` you can either start the oper
 
 ### Run the operator with the manager mode
 
-Run the operator with the following command:
+First, apply the `SoftwareFactory`'s `CR`:
+
+```sh
+kubectl apply -f playbooks/files/sf.yaml
+```
+
+then run the operator with the following command:
 
 ```sh
 go run ./main.go --namespace sf operator
@@ -92,13 +98,7 @@ go run ./main.go --namespace sf operator
 You can kill and restart this process every time you modify the code base
 to see your changes applied to the deployed resources.
 
-In another terminal, apply the `SoftwareFactory`'s `CR`:
-
-```sh
-kubectl apply -f playbooks/files/sf.yaml
-```
-
-Any change on the applied resource re-trigger the reconcile.
+Any change on the applied `SofwareFactory`'s `CR` re-trigger the reconcile.
 
 ### Run the operator in standalone mode
 
