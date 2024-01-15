@@ -5,10 +5,12 @@
 1. [Concept](#concept)
 1. [Repository content](#repository-content)
 1. [Setting up the repository](#setting-up-the-repository)
-    1. [Gerrit](#gerrit)
+    1. [Gerrit](#hosting-on-gerrit)
         1. [Prerequisites](#prerequisites-on-gerrit)
-        1. [Configuring Gerrit](#configuring-Gerrit)
-        1. [Configuring the deployment](#configuring-the-deployment)
+        1. [Configuring Gerrit](#configuring-gerrit)
+        1. [Configuring the Zuul connection](#configuring-the-zuul-connection)
+    1. [GitLab](#hosting-on-gitlab)
+        1. [Configuring the Zuul connection](#configuring-the-zuul-connection-1)
 1. [Next Steps](#next-steps)
 
 ## Concept
@@ -40,11 +42,13 @@ Any other file or folder will be ignored.
 
 ## Setting up the repository
 
-As of the current version of the SF-Operator, Gerrit is the only supported hosting option for the config repository. You can follow the [developer's documentation to deploy a test Gerrit instance](../developer/howtos/index.md#gerrit) if needed.
+As of the current version of the SF-Operator, Gerrit and GitLab are the only supported hosting options for the config repository.
+
+> You can follow the [developer's documentation to deploy a test Gerrit instance](../developer/howtos/index.md#gerrit) if needed.
 
 ### Hosting on Gerrit
 
-### Prerequisites on Gerrit
+#### Prerequisites on Gerrit
 
 1. Make sure the deployment and the Gerrit host can communicate, especially via Gerrit's SSH port (usually TCP/29418).
 2. Make sure you can create accounts on the Gerrit host, or at least set their SSH public key.
@@ -115,7 +119,7 @@ Here are the required labels to define in the repository's *Access* settings (*m
 
 For further information check the [Gerrit section](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#gerrit) in Zuul's documentation.
 
-#### Configuring the deployment
+#### Configuring the Zuul connection
 
 In order for Zuul to start listening to Gerrit events, add a `gerritconn` property in your deployed **SoftwareFactory**'s Spec:
 
@@ -136,14 +140,74 @@ spec:
 
 You can check the [CRD's OpenAPI schema](config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml) for specification details.
 
-Then specify the config repository location:
+At that step you can continue the setting by [configuring the location of the config repository](#set-the-config-repository-location).
+
+### Hosting on GitLab
+
+Zuul needs:
+
+* an API token to communicate with the GitLab's API
+* a WebHook token in order to authenticate the WebHook's payloads sent by the GitLab instance.
+
+It is advised to request a bot account to your GitLab admin, especially if Zuul must act on repositories spread across multiple
+Gitlab project groups. However if all repositories are located inside the same project's group then a simple group's token
+is sufficient.
+
+Please refer to the [upstream's Zuul documentation for more information about the GitLab's driver and how to define
+an API Token and WebHook token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#gitlab).
+
+> Note that the WebHook URL to configure on the project or on the project's group setting must
+be `https://<fqdn>/zuul/api/connection/<zuul-connection-name>/payload`
+
+The `gate` pipeline defined for the `config` repository workflow relies in the `gateit` label for the pipeline
+trigger rule. Thus, a GitLab label named `gateit` must be defined in the `Settings` the `config` repository.
+
+#### Configuring the Zuul connection
+
+To setup the zuul's connection to the GitLab instance, first you need a `Secret` resource (eg. named `gitlab-com-secret`)
+to store the API and WebHook tokens. The `Secret`'s scheme is a follow:
+
+```yaml
+kind: Secret
+apiVersion: v1
+metadata:
+  name: gitlab-conn-secret
+  namespace: sf
+type: Opaque
+data:
+  api_token: <api-token-in-base64>
+  webhook_token: <web-hook-token-in-base64>
+```
+
+This `Secret` resource must be applied to the same `Namespace` than the `SoftwareFactory` resource.
+
+Then, edit the SoftwareFactory's CR:
+
+```sh
+kubectl edit sf my-sf
+[...]
+spec:
+    zuul:
+      gitlabconns:
+        - name: <zuul-connection-name>
+          server: gitlab.com
+          baseurl: https://gitlab.com
+          secrets: gitlab-com-secret
+[...]
+```
+
+At that step you can continue the setting by [configuring the location of the config repository](#set-the-config-repository-location).
+
+### Set the config repository location
+
+Specify the config repository location (adapt according to your connection/reposiory name and location):
 
 ```sh
 kubectl edit sf my-sf
 [...]
 spec:
   config-location:
-    base-url: "<gerrit_url"
+    base-url: "<gerrit_url>"
     name: <config repository name>
     zuul-connection-name: gerrit
 [...]
@@ -157,7 +221,7 @@ kubectl get sf my-sf -o jsonpath='{.status}'
 {"observedGeneration":1,"ready":true}
 ```
 
-Once the resource is ready, the config repository will appear listed in the internal tenant's projects page at `https://zuul.<FQDN>/t/internal/projects` .
+Once the resource is ready, the config repository will appear listed in the internal tenant's projects page at `https://<FQDN>/zuul/t/internal/projects` .
 
 ## Next Steps
 
