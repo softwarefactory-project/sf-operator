@@ -522,12 +522,14 @@ spec:
                             keys: the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token)
                             the [api_token_name](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name)
                             the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.webhook_token)'
+                          minLength: 1
                           type: string
                         server:
                           description: the [server](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.server)
                           type: string
                       required:
                       - name
+                      - secrets
                       type: object
                     type: array
                   merger:

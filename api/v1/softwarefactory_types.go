@@ -74,7 +74,8 @@ type GitLabConnection struct {
 	// the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token)
 	// the [api_token_name](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name)
 	// the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.webhook_token)
-	Secrets string `json:"secrets,omitempty"`
+	// +kubebuilder:validation:MinLength:=1
+	Secrets string `json:"secrets"`
 	// the [apiTokenName](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name)
 	APITokenName string `json:"apiTokenName,omitempty"`
 	// the [cloneUrl](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.cloneurl)
