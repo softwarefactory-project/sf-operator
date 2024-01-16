@@ -38,16 +38,7 @@ type LogServerSpecSettings struct {
 }
 
 // LogServerStatus defines the observed state of a Log server
-type LogServerStatus struct {
-	// The deployment status.
-	Ready bool `json:"ready,omitempty"`
-	// The Generation of the related Custom Resource that was last processed by the operator controller
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// The name of the operator handling this Custom Resource's reconciliation
-	ReconciledBy string `json:"reconciledBy,omitempty"`
-	// Information about ongoing or completed reconciliation processes between the Log server spec and the observed state of the cluster
-	Conditions []metav1.Condition `json:"conditions,omitempty" optional:"true"`
-}
+type LogServerStatus BaseStatus
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
