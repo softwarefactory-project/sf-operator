@@ -93,12 +93,10 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 
 	// Add sub commands
-	rootCmd.AddCommand(operatorCmd)
 	subcommands := []*cobra.Command{
-		cmd.MkApplyCmd(),
-		cmd.MkBackupCmd(),
-		cmd.MkRestoreCmd(),
+		cmd.MkSFCmd(),
 		cmd.MkNodepoolCmd(),
+		operatorCmd,
 	}
 	for _, c := range subcommands {
 		rootCmd.AddCommand(c)
