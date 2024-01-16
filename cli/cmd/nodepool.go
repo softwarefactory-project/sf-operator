@@ -61,12 +61,12 @@ func npConfigure(kmd *cobra.Command, args []string) {
 	}
 	cloudsContent, err := getFileContent(cloudsFile)
 	if err != nil {
-		ctrl.Log.Error(err, "Error opening %s", cloudsContent)
+		ctrl.Log.Error(err, "Error opening %s", cloudsFile)
 		os.Exit(1)
 	}
 	kubeContent, err := getFileContent(kubeFile)
 	if err != nil {
-		ctrl.Log.Error(err, "Error opening %s", kubeContent)
+		ctrl.Log.Error(err, "Error opening %s", kubeFile)
 		os.Exit(1)
 	}
 	ensureNodepoolProvidersSecrets(ns, kubeContext, cloudsContent, kubeContent)
