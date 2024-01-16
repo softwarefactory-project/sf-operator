@@ -15,6 +15,7 @@ deployments, beyond what can be defined in a custom resource manifest.
     1. [create microshift](#create-microshift)
     1. [create standalone-sf](#create-standalone-sf)
     1. [wipe gerrit](#wipe-gerrit)
+  1. [Init](#init)
   1. [Nodepool](#nodepool)
     1. [configure providers-secrets](#configure-providers-secrets)
     1. [get builder-ssh-key](#get-builder-ssh-key)
@@ -215,6 +216,43 @@ Flags:
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 | --rm-data | boolean | Also delete persistent data (repositories, reviews) | yes | False |
+
+### Init
+
+The `init` subcommand can be used to initialize a CLI configuration file, or a sample manifest for deploying Software Factory.
+
+#### config
+
+Generate a simple CLI configuration tree with one context. It is up to you to save it to a chosen 
+file, and to edit it to suit your requirements.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] init config [--dev] > /path/to/sfcli.config
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --dev | boolean | Include development-related configuration parameters | yes | False |
+
+#### manifest
+
+Generate a basic Software Factory manifest that can be used to deploy a Software Factory. It is up to you to
+save it a chosen file, edit it as you see fit and then apply it to your cluster.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] init manifest [FLAGS] > /path/to/sf.yaml
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --connection | string, repeatable | Include connection. The first connection of the list will be assumed to host the deployment's config repository | yes | gerrit |
+| --full | boolean | Include optional fields in the manifest, for a more fine-tuned deployment | yes | False |
+| --with-auth | boolean | Include OIDC authentication configuration | yes | False |
+| --with-builder | boolean | Include nodepool builder configuration | yes | False |
 
 ### Nodepool
 
