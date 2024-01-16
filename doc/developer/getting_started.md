@@ -63,7 +63,7 @@ This command performs the following tasks:
 - ensure the installation of the Cert-manager and Prometheus operators
 - ensure the deployment of Gerrit
 - ensure the deployment of Prometheus
-- ensure the checkout of the config and demo-project git repositories in the `deploy` directory
+- ensure the checkout of the `config`, `demo-tenant-config` and `demo-project` git repositories in the `deploy` directory
 - ensure the creation of dedicated namespace for nodepool-launcher
 
 The context is now ready to run the sf-operator using the `manager` or the `standalone` modes.

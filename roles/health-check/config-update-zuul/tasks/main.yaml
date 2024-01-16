@@ -1,22 +1,9 @@
 ---
 # First let's ensure that the internal tenant does not contain any Zuul configuration error
-- name: Get configuration errors/warnings into the internal tenant
-  ansible.builtin.uri:
-    url: "https://{{ zuul_endpoint }}/api/tenant/internal/config-errors"
-    validate_certs: "{{ validate_certs }}"
-    method: GET
-    return_content: true
-    body_format: json
-  register: internal_tenant_errors
-  until:
-    - "'json' in internal_tenant_errors"
-  retries: "{{ zuul_api_retries }}"
-  delay: "{{ zuul_api_delay }}"
-
-- name: Ensure no configuration errors/warnings into the internal tenant
-  ansible.builtin.fail:
-    msg: "The 'internal' Zuul tenant contains error(s) or warning(s)"
-  when: "{{ internal_tenant_errors.json }} | length > 0"
+- ansible.builtin.include_role:
+    name: "health-check/check-zuul-tenant"
+  vars:
+    tenant_name: "internal"
 
 - name: Set random value
   ansible.builtin.set_fact:

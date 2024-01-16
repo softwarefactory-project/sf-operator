@@ -2,7 +2,7 @@
 - name: Submit change
   ansible.builtin.command: git review
   args:
-    chdir: "{{ config_path}}"
+    chdir: "{{ config_path }}"
   tags:
     - skip_ansible_lint
 

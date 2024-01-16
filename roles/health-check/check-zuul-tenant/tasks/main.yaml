@@ -1,0 +1,18 @@
+---
+- name: Get configuration errors/warnings into the {{ tenant_name }} tenant
+  ansible.builtin.uri:
+    url: "https://{{ zuul_endpoint }}/api/tenant/{{ tenant_name }}/config-errors"
+    validate_certs: "{{ validate_certs }}"
+    method: GET
+    return_content: true
+    body_format: json
+  register: tenant_errors
+  until:
+    - "'json' in tenant_errors"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+
+- name: Fail when errors/warnings into the {{ tenant_name }} tenant
+  ansible.builtin.fail:
+    msg: "The '{{ tenant_name }}' tenant contains error(s) or warning(s)"
+  when: tenant_errors.json | length > 0
