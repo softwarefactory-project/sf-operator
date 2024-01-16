@@ -122,7 +122,7 @@ Set or update Nodepool's providers secrets (OpenStack's clouds.yaml and Kubernet
 > ⚠️ At least one of the `--kube` or `--clouds` flags must be provided.
 
 ```sh
-go run ./main.go [GLOBAL FLAGS] nodepool get providers-secrets [--kube /path/to/kube.config --clouds /path/to/clouds.yaml]
+go run ./main.go [GLOBAL FLAGS] nodepool configure providers-secrets [--kube /path/to/kube.config --clouds /path/to/clouds.yaml]
 ```
 
 Flags:
