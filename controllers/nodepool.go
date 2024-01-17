@@ -526,6 +526,10 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
+	if r.isConfigRepoSet() {
+		annotations["config-repo-info-hash"] = r.cr.Spec.ConfigRepositoryLocation.BaseURL + r.cr.Spec.ConfigRepositoryLocation.Name
+	}
+
 	initContainer := base.MkContainer("nodepool-builder-init", base.NodepoolBuilderImage)
 
 	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
