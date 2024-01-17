@@ -472,6 +472,7 @@ type SoftwareFactorySpec struct {
 	FluentBitLogForwarding *FluentBitForwarderSpec `json:"FluentBitLogForwarding,omitempty"`
 
 	// Default storage class to use by Persistent Volume Claims
+	// +kubebuilder:default:=topolvm-provisioner
 	StorageClassName string `json:"storageClassName,omitempty"`
 
 	// Config repository spec

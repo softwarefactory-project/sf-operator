@@ -412,14 +412,6 @@ func (r *SFUtilContext) ensureLetsEncryptIssuer(le sfv1.LetsEncryptSpec) bool {
 // --- TODO clean functions below / remove useless code ---
 //----------------------------------------------------------------------------
 
-func getStorageClassname(storageClassName string) string {
-	if storageClassName != "" {
-		return storageClassName
-	} else {
-		return "topolvm-provisioner"
-	}
-}
-
 // mkStatefulSet Create a default statefulset.
 func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, accessMode apiv1.PersistentVolumeAccessMode, nameSuffix ...string) appsv1.StatefulSet {
 	serviceName := name
@@ -617,7 +609,10 @@ func (r *SFUtilContext) getSecretData(name string) ([]byte, error) {
 // BaseGetStorageConfOrDefault sets the default storageClassName
 func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName string) base.StorageConfig {
 	var size = utils.Qty1Gi()
-	var className = getStorageClassname(storageClassName)
+	if storageClassName == "" {
+		storageClassName = "topolvm-provisioner"
+	}
+	var className = storageClassName
 	if !storageSpec.Size.IsZero() {
 		size = storageSpec.Size
 	}
