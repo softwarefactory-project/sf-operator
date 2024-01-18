@@ -10,7 +10,7 @@ for development purposes.
 1. [Root access inside containers](#root-access-inside-containers)
 1. [Modify an existing image](#modify-an-existing-image)
 1. [Create and use an image from a Containerfile](#create-and-use-an-image-from-a-containerfile)
-1. [Edit source code and mount in a pod](#edit-source-code-and-mount-in-a-pod)
+1. [Edit Zuul source code and mount in a pod](#edit-the-zuul-source-code-and-mount-in-a-pod)
 
 ## Root access inside containers
 
@@ -41,7 +41,7 @@ kubectl edit deployment.apps/nodepool-launcher
 ## Modify an existing image
 
 If you want to modify an image for testing, you can use [buildah](https://buildah.io/).
-It requires that at least one SoftwareFactory Custom Resource has been created on your MicroShift 
+It requires that at least one SoftwareFactory Custom Resource has been created on your MicroShift
 instance (to populate the local registry).
 The example below adds the `acl` package on the zuul-executor image; as root on the MicroShift instance, run:
 
@@ -79,127 +79,54 @@ const BUSYBOX_IMAGE = "localhost/sf-op-busybox:1.4-4"
 
 Then you can re-do a deployment to use the newly built image.
 
-## Edit source code and mount in a pod
+## Edit the Zuul source code and mount in a pod
+
+We provide a facility (currently only for Zuul) to mount a local source tree on the
+running Zuul pods.
 
 Follow these steps on your MicroShift instance
 
-* Clone required project
+```sh
+mkdir -p /home/centos/git && cd /home/centos/git
+git clone https://opendev.org/zuul/zuul
+# Clone at the current version provided by sf-operator or use master branch
+git checkout 9.3.0
+```
 
-NOTE: Do not create directory in HOME dir or other location, where
-SELinux label might be not fine for containers.
-NOTE: That step needs to be done on the Microshift host.
+Then you can run the operator by providing the environment variable `ZUUL_LOCAL_SOURCE=<full-path-to-zuul-source>`.
+For instance (using the standalone mode):
+
+```
+ZUUL_LOCAL_SOURCE=/home/cloud-user/git/zuul/zuul go run ./main.go --namespace sf apply --cr playbooks/files/sf.yaml
+```
+
+After any code change, you can restart the Zuul pods, for instance the zuul-scheduler pod:
+
+```
+kubectl rollout restart -n sf sts/zuul-scheduler
+kubectl rollout restart -n sf sts/zuul-executor
+kubectl rollout restart -n sf sts/zuul-merger
+kubectl rollout restart -n sf deploy/zuul-web
+```
+
+### Zuul-web
+
+zuul-web static assets are located under the Zuul source tree on the container image. The local copy, from
+the git clone, does not provide the static assets.
+
+Either,
+
+- [Build the static assets](https://zuul-ci.org/docs/zuul/latest/developer/javascript.html#deploying) and store them into
+/usr/local/lib/python3.11/site-packages/zuul/web/static.
+- Fetch the built asset from the zuul-web container image (see below).
+
+To Fetch the built asset from the zuul-web container image, run the following process from the microshift machine.
 
 ```sh
-sudo mkdir -p /mnt/serviceDev ; sudo chmod 0777 /mnt/serviceDev
-git clone https://opendev.org/zuul/nodepool /mnt/serviceDev/nodepool && cd /mnt/serviceDev/nodepool
-git checkout 8.2.0
+cd /home/centos/git/zuul/zuul/web
+podman create --name zuul-web quay.io/software-factory/zuul-web:9.3.0-1
+podman export -o /tmp/zuul-web.tar zuul-web
+tar -xf /tmp/zuul-web.tar usr/local/lib/python3.11/site-packages/zuul/web/static
+mv usr/local/lib/python3.11/site-packages/zuul/web/static static
+rm -Rf usr
 ```
-
-* Create local storageclass with name `manual`
-
-```sh
-kubectl apply -f - << EOF
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: manual
-provisioner: kubernetes.io/no-provisioner
-volumeBindingMode: WaitForFirstConsumer
-EOF
-```
-
-* Create PV:
-
-```sh
-kubectl apply -f - << EOF
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: my-pv-volume
-  labels:
-    type: local
-spec:
-  storageClassName: manual
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  hostPath:
-    path: "/mnt/serviceDev/nodepool/nodepool"
-EOF
-```
-
-* Create PVC:
-
-```sh
-kubectl apply -f - << EOF
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: my-pvc-volume
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-  storageClassName: manual
-EOF
-```
-
-* And add the volume into the app:
-
-```sh
-kubectl edit deployment.apps/nodepool-launcher
-```
-
-End edit configuration to follow:
-
-```yaml
-(...)
-spec:
-  containers:
-    ...
-    securityContext:
-      privileged: true
-    volumeMounts:
-    - name: host-mount
-      mountPath: /usr/local/lib/python3.11/site-packages/nodepool
-  ...
-  securityContext: {}
-  volumes:
-    - name: host-mount
-      persistentVolumeClaim:
-        claimName: my-pvc-volume
-```
-
-For example output:
-
-```yaml
-    spec:
-      ...
-      containers:
-      - image: quay.io/software-factory/nodepool-launcher:8.2.0-2 # E: wrong indentation: expected 8 but found 6
-        name: launcher
-        securityContext:
-          privileged: true
-        volumeMounts:
-        - mountPath: /usr/local/lib/python3.11/site-packages/nodepool
-          name: host-mount
-        # container is using root, so $HOME is /root, where .kube/config does not exists.
-        - mountPath: /root/.kube/config
-          name: nodepool-kubeconfig
-          subPath: config
-      ...
-      securityContext: {}
-      volumes:
-      - name: host-mount
-        persistentVolumeClaim:
-          claimName: my-pvc-volume
-```
-
-Make sure, that `securityContext` are set as in the example!
-
-Helpful [lecture](https://docs.openshift.com/container-platform/4.13/storage/persistent_storage/persistent_storage_local/persistent-storage-hostpath.html)
-Also helpful would be change scc to anyuid with [example](https://examples.openshift.pub/deploy/scc-anyuid/)

@@ -68,6 +68,28 @@ var (
 	}
 )
 
+func enableZuulLocalSource(template *apiv1.PodTemplateSpec, zuulSourceHostPath string, withInitContainer bool) {
+	template.Spec.Volumes = append(template.Spec.Volumes, apiv1.Volume{
+		Name: "host-mount",
+		VolumeSource: apiv1.VolumeSource{
+			HostPath: &apiv1.HostPathVolumeSource{
+				Path: zuulSourceHostPath,
+			},
+		},
+	})
+	template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(true)
+	template.Spec.SecurityContext.RunAsNonRoot = pointer.Bool(false)
+	template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts,
+		apiv1.VolumeMount{
+			Name:      "host-mount",
+			MountPath: "/usr/local/lib/python3.11/site-packages/zuul",
+		})
+	if withInitContainer {
+		template.Spec.InitContainers[0].SecurityContext = base.MkSecurityContext(true)
+	}
+	template.ObjectMeta.Annotations["zuul-local-source"] = "true"
+}
+
 func isStatefulset(service string) bool {
 	return service == "zuul-scheduler" || service == "zuul-executor" || service == "zuul-merger"
 }
@@ -135,6 +157,12 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) [
 			ReadOnly:  true,
 		},
 		{
+			Name:      "extra-config",
+			SubPath:   "ssh_config",
+			MountPath: "/etc/ssh/ssh_config.d/99-sf-operator.conf",
+			ReadOnly:  true,
+		},
+		{
 			Name:      "ca-cert",
 			MountPath: "/etc/pki/ca-trust/source/anchors/ca.crt",
 			ReadOnly:  true,
@@ -163,12 +191,6 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) [
 				MountPath: "/usr/local/bin/fetch-config-repo.sh",
 				ReadOnly:  true,
 			},
-			apiv1.VolumeMount{
-				Name:      "extra-config",
-				SubPath:   "ssh_config",
-				MountPath: "/var/lib/zuul/.ssh/config",
-				ReadOnly:  true,
-			},
 		)
 		envs = append(envs, r.getTenantsEnvs()...)
 	}
@@ -183,8 +205,15 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) [
 	container := apiv1.Container{
 		Name:  service,
 		Image: base.ZuulImage(service),
-		Command: []string{"/usr/local/bin/dumb-init", "--", "bash", "-c", UpdateCATrustCommand + " && " +
-			"/usr/local/bin/" + service + " -f -d"},
+		Command: []string{"/usr/local/bin/dumb-init", "--", "bash", "-c",
+			// Trigger the update of the CA Trust chain
+			UpdateCATrustCommand + " && " +
+				// https://git-scm.com/docs/git-config#Documentation/git-config.txt-safedirectory
+				// This is needed when we mount the local zuul source from the host
+				// to bypass the git ownership verification
+				"git config --global --add safe.directory '*'" + " && " +
+				// Start the service
+				"/usr/local/bin/" + service + " -f -d"},
 		Env:          envs,
 		VolumeMounts: volumeMounts,
 	}
@@ -380,7 +409,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 base.ZuulImage("zuul-scheduler"),
 		"statsd_mapping":             utils.Checksum([]byte(zuulStatsdMappingConfig)),
-		"serial":                     "6",
+		"serial":                     "7",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
 		"zuul-extra":                 utils.Checksum([]byte(sshConfig)),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
@@ -469,6 +498,11 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 	}
 
+	// Mount a local directory in place of the Zuul source from the container image
+	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
+		enableZuulLocalSource(&zs.Spec.Template, path, true)
+	}
+
 	current, changed := r.ensureStatefulset(zs)
 	if changed {
 		return false
@@ -491,7 +525,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 base.ZuulImage("zuul-executor"),
-		"serial":                     "4",
+		"serial":                     "5",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
@@ -532,6 +566,11 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	ze.Spec.Template.Spec.Containers[1].SecurityContext = base.MkSecurityContext(true)
 	ze.Spec.Template.Spec.Containers[1].SecurityContext.RunAsUser = pointer.Int64(1000)
 
+	// Mount a local directory in place of the Zuul source from the container image
+	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
+		enableZuulLocalSource(&ze.Spec.Template, path, false)
+	}
+
 	current, changed := r.ensureStatefulset(ze)
 	if changed {
 		return false
@@ -557,7 +596,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 base.ZuulImage(service),
-		"serial":                     "2",
+		"serial":                     "3",
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
@@ -587,6 +626,11 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 	}
 
+	// Mount a local directory in place of the Zuul source from the container image
+	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
+		enableZuulLocalSource(&zm.Spec.Template, path, false)
+	}
+
 	current, changed := r.ensureStatefulset(zm)
 	if changed {
 		return false
@@ -607,7 +651,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":            base.ZuulImage("zuul-web"),
-		"serial":                "4",
+		"serial":                "5",
 		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
@@ -626,6 +670,11 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	zw.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
+	}
+
+	// Mount a local directory in place of the Zuul source from the container image
+	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
+		enableZuulLocalSource(&zw.Spec.Template, path, false)
 	}
 
 	current := appsv1.Deployment{}
