@@ -330,3 +330,19 @@ func EnsureServiceAccountOrDie(env *ENV, name string) {
 		CreateROrDie(env, &sa)
 	}
 }
+
+func VarListToMap(varsList []string) map[string]string {
+
+	var vars = make(map[string]string)
+
+	for _, v := range varsList {
+		tokens := strings.Split(v, "=")
+
+		if len(tokens) != 2 {
+			ctrl.Log.Error(errors.New("parse error"), "parsed value `"+v+"` needs to be defined as 'foo=bar'")
+			os.Exit(1)
+		}
+		vars[tokens[0]] = tokens[1]
+	}
+	return vars
+}
