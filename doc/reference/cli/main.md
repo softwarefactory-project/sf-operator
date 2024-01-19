@@ -18,6 +18,7 @@ deployments, beyond what can be defined in a custom resource manifest.
   1. [Init](#init)
   1. [Nodepool](#nodepool)
     1. [configure providers-secrets](#configure-providers-secrets)
+    1. [create openshiftpods-namespace]
     1. [get builder-ssh-key](#get-builder-ssh-key)
     1. [get providers-secrets](#get-providers-secrets)
   1. [Operator](#apply)
@@ -274,6 +275,22 @@ Flags:
 |----------|------|-------|----|----|
 | --kube | string | The file from which to read nodepool's kube.config | yes | - |
 | --clouds | string | The file from which to read nodepool's clouds.yaml | yes | - |
+
+#### create openshiftpods-namespace
+
+Create and set up a dedicated namespace on a cluster, so that nodepool can spawn pods with the [openshiftpods](https://zuul-ci.org/docs/nodepool/latest/openshift-pods.html) driver.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] nodepool create openshiftpods-namespace [FLAGS]
+```
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --nodepool-context | string | The kube context to use to set up the namespace | yes | default context set with `kubectl` |
+| --nodepool-namespace | string | The namespace to set up | yes | nodepool |
+| --show-config-template | boolean | Display a nodepool configuration snippet that can be used to enable an openshiftpods provider using the created namespace | yes | false |
+| --skip-providers-secrets | boolean | Do not update or create nodepool's providers secrets after setting up the namespace | yes | false |
 
 #### get builder-ssh-key
 

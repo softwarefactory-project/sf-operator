@@ -21,7 +21,6 @@ import (
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 
 	bootstraptenantconfigrepo "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/bootstrap-tenant-config-repo"
-	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sfprometheus"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/config"
@@ -80,7 +79,6 @@ func Run(cmd *cobra.Command) {
 		sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN, false)
 	}
 	EnsureDemoConfig(&env, &sfconfig, !dontUpdateDemoTenantDefinition)
-	nodepool.CreateNamespaceForNodepool(&env, "", "nodepool", "")
 	EnsureCRD()
 }
 
