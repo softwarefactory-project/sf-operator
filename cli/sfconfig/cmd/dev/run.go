@@ -67,11 +67,6 @@ func Run(cmd *cobra.Command) {
 		Cli: cli,
 	}
 	// TODO: only do gerrit when provision demo is on?
-	EnsureNamespaces(&env)
-	EnsureMicroshiftWorkarounds(&env)
-	EnsureCertManager(&env)
-	// the Prometheus Operator is a dependency of the SF Operator so we must install it regardless of the --with-prometheus flag
-	EnsurePrometheusOperator(&env)
 	gerrit.EnsureGerrit(&env, sfconfig.FQDN)
 	EnsureGerritAccess(sfconfig.FQDN)
 	if withPrometheus {
@@ -189,49 +184,8 @@ func EnsureRepo(sfconfig *config.SFConfig, apiKey string, name string) {
 	utils.RunCmd("git", "-C", path, "reset", "--hard", "origin/master")
 }
 
-func EnsureNamespaces(env *utils.ENV) {
-	// TODO: implement natively
-	utils.EnsureNamespace(env, env.Ns)
-	utils.RunCmd("kubectl", "config", "set-context", "microshift", "--namespace="+env.Ns)
-	utils.RunCmd("kubectl", "label", "--overwrite", "ns", env.Ns, "pod-security.kubernetes.io/enforce=privileged")
-	utils.RunCmd("kubectl", "label", "--overwrite", "ns", env.Ns, "pod-security.kubernetes.io/enforce-version=v1.24")
-	utils.RunCmd("oc", "adm", "policy", "add-scc-to-user", "privileged", "-z", "default")
-
-	utils.EnsureNamespace(env, "operators")
-	utils.RunCmd("oc", "adm", "policy", "add-scc-to-user", "privileged", "system:serviceaccount:operators:default")
-}
-
-func EnsureMicroshiftWorkarounds(env *utils.ENV) {
-	// TODO: migrate from Makefile to here
-	utils.RunCmd("make", "setup-prometheus-operator-serviceaccount", "OPERATOR_NAMESPACE=operators")
-}
-
 func EnsureCRD() {
 	// TODO: implement natively and avoir re-entry
 	fmt.Println("[+] Installing CRD...")
 	utils.RunMake("install")
-}
-
-func EnsureCertManager(env *utils.ENV) {
-	// TODO: implement natively
-	fmt.Println("[+] Installing Cert-Manager...")
-	utils.RunMake("install-cert-manager")
-	// Mitigate the issue
-	// failed calling webhook "mutate.webhooks.cert-manager.io": failed to call webhook: Post "https://cert-manager-webhook-service.operators.svc:443/mutate?timeout=10s": no endpoints available for service "cert-manager-webhook-service"
-	fmt.Println("[+] Waiting for Cert-Manager")
-	for i := 0; i < 10; i++ {
-		if utils.IsCertManagerRunning(env) {
-			return
-		}
-		time.Sleep(6 * time.Second)
-	}
-	panic("cert-manager didn't become ready")
-}
-
-func EnsurePrometheusOperator(env *utils.ENV) {
-	fmt.Println("[+] Installing prometheus-operator...")
-	err := sfprometheus.EnsurePrometheusOperator(env)
-	if err != nil {
-		panic(fmt.Errorf("could not install prometheus-operator: %s", err))
-	}
 }
