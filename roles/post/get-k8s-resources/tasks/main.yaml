@@ -51,6 +51,14 @@
   tags:
     - skip_ansible_lint
 
+- name: Fetch decoded secrets
+  ansible.builtin.shell: |
+    mkdir -p {{ dest_dir }}/secret_data
+    for item in $(kubectl {{ namespace_opt }} get secret -o name); do
+      kubectl {{ namespace_opt }} get $item -o json | jq -r ".data | map_values(@base64d)" > {{ dest_dir }}/secret_data/$(basename $item)
+    done
+  ignore_errors: true
+
 - name: Create Pods Logs directory
   ansible.builtin.file:
     path: "{{ dest_dir }}/pod"
