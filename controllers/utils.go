@@ -628,6 +628,9 @@ func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName 
 // reconcileExpandPVC  resizes the pvc with the spec
 func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.StorageSpec) bool {
 	newQTY := newStorageSpec.Size
+	if newQTY.Sign() <= 0 {
+		return true
+	}
 
 	foundPVC := &apiv1.PersistentVolumeClaim{}
 	if !r.GetM(pvcName, foundPVC) {
