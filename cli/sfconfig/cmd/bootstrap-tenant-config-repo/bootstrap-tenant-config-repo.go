@@ -204,7 +204,7 @@ pipeline to receive an initial +/-1 Verified vote.`,
 						getAnsibleIncludeRole("prepare-workspace"),
 						getAnsibleIncludeRole("add-build-sshkey"),
 					},
-					"when": `'ansible_connection != "kubectl"'`,
+					"when": "ansible_connection != 'kubectl'",
 				},
 				{
 					"block": []map[string]any{

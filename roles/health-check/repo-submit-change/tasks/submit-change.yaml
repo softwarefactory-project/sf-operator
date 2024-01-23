@@ -2,14 +2,14 @@
 - name: Submit change
   ansible.builtin.command: git review
   args:
-    chdir: "{{ config_path }}"
+    chdir: "{{ repo_path }}"
   tags:
     - skip_ansible_lint
 
 - name: Get Change-id
   ansible.builtin.shell: git log -n 1 | awk '/Change-Id/ {print $2}'
   args:
-    chdir: "{{ config_path }}"
+    chdir: "{{ repo_path }}"
   register: _change_id
   tags:
     - skip_ansible_lint
@@ -29,3 +29,5 @@
       }
     validate_certs: "{{ validate_certs }}"
     method: POST
+  when:
+    - approve | bool

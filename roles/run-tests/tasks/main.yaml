@@ -31,7 +31,7 @@
     - name: test-nodepool-providers-secrets
     - name: config-update-nodepool-launcher
     - name: config-update-nodepool-builder
-    - name: pod-spawning
+    - name: test-nodepool-launcher-pod
     - name: test-volumestats-sidecar
     - name: expand-volume
     - name: validate-purgelogs

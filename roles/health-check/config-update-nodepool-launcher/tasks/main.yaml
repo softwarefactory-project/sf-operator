@@ -25,9 +25,9 @@
     - "git commit -m 'Add nodepool/nodepool.yaml'"
 
 - ansible.builtin.include_role:
-    name: "health-check/config-repo-submit-change"
+    name: "health-check/repo-submit-change"
   vars:
-    ensure_config_check_failure: true
+    ensure_job_failure: true
 
 # Now proceed with adding a correct tenant file
 - name: Reset the config repo
@@ -118,7 +118,7 @@
 
 - name: Update config repo change
   ansible.builtin.include_role:
-    name: "health-check/config-repo-submit-change"
+    name: "health-check/repo-submit-change"
 
 - name: Get nodepool-launcher pod name
   ansible.builtin.shell: |

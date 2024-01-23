@@ -1,0 +1,12 @@
+---
+validate_certs: true
+zuul_api_retries: 60
+zuul_api_delay: 10
+repo_path: "{{ config_path }}"
+failed_job: config-check
+success_job: config-update
+zuul_tenant: internal
+check_zuul_console: false
+ensure_job_failure: false
+approve: true
+post_job: true

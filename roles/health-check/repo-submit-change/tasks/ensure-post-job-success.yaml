@@ -2,15 +2,15 @@
 - name: Register commit sha
   ansible.builtin.shell: git log -1 --format="%H"
   args:
-    chdir: "{{ config_path }}"
+    chdir: "{{ repo_path }}"
   register: commitsha
 
-- name: Wait config-update SUCCESS result using zuul-web API
+- name: "Wait {{ success_job }} SUCCESS result using zuul-web API"
   ansible.builtin.uri:
-    url: "https://{{ zuul_endpoint }}/api/tenant/{{ zuul_tenant | default('internal') }}/builds?job_name=config-update&newrev={{ commitsha.stdout }}"
+    url: "https://{{ zuul_endpoint }}/api/tenant/{{ zuul_tenant }}/builds?job_name={{ success_job }}&newrev={{ commitsha.stdout }}"
     return_content: true
     body_format: json
-    validate_certs: false
+    validate_certs: "{{ validate_certs }}"
   register: zuul_job_result
   until:
     - "'json' in zuul_job_result"

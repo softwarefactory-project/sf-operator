@@ -1,0 +1,25 @@
+---
+- name: Submit change
+  ansible.builtin.include_tasks: submit-change.yaml
+
+- name: "Ensure a failure for {{ failed_job }} job"
+  ansible.builtin.include_tasks: ensure-job-failure.yaml
+  when: ensure_job_failure
+
+- name: Verify Zuul Console output
+  ansible.builtin.include_tasks: ensure-zuul-console-success.yaml
+  when:
+    - check_zuul_console
+    - not ensure_job_failure
+
+- name: Ensure a success for {{ success_job }} post job
+  ansible.builtin.include_tasks: ensure-post-job-success.yaml
+  when:
+    - not ensure_job_failure
+    - post_job | bool
+
+- name: Ensure a success for {{ success_job }} job
+  ansible.builtin.include_tasks: ensure-job-success.yaml
+  when:
+    - not ensure_job_failure
+    - not (post_job | bool)
