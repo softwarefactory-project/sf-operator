@@ -20,7 +20,7 @@ import (
 	cligerrit "github.com/softwarefactory-project/sf-operator/cli/cmd/dev/gerrit"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 
-	bootstraptenantconfigrepo "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/bootstrap-tenant-config-repo"
+	bootstraptenantconfigrepo "github.com/softwarefactory-project/sf-operator/cli/cmd/bootstrap-tenant-config-repo"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sfprometheus"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/config"

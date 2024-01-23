@@ -18,10 +18,14 @@ limitations under the License.
 package gerrit
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	_ "embed"
@@ -498,7 +502,7 @@ func CloneAsAdmin(env *cliutils.ENV, fqdn string, repoName string, dest string, 
 	)
 	repoURL := GetAdminRepoURL(env, fqdn, repoName)
 	if _, err := os.Stat(filepath.Join(dest, ".git")); os.IsNotExist(err) {
-		ctrl.Log.Info("Cloning repo at: " + repoURL)
+		ctrl.Log.Info("Cloning repo " + repoURL + " in " + dest)
 		args := []string{}
 		if !verify {
 			args = append(args, "-c", "http.sslVerify=false")
@@ -543,5 +547,49 @@ func CloneAsAdmin(env *cliutils.ENV, fqdn string, repoName string, dest string, 
 		if output != "" {
 			ctrl.Log.V(5).Info("captured output:\n" + output)
 		}
+	}
+}
+
+func EnsureGerritAccess(fqdn string) {
+	attempt := 1
+	maxTries := 10
+	delay := 6 * time.Second
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+	client := &http.Client{Transport: tr}
+	var (
+		resp      *http.Response
+		err       error
+		bodyBytes []byte
+	)
+	for {
+		if attempt > maxTries {
+			endpointError := errors.New("endpoint failure")
+			ctrl.Log.Error(endpointError, "Could not reach gerrit after "+strconv.Itoa(maxTries)+" tries")
+			defer resp.Body.Close()
+			bodyBytes, err = io.ReadAll(resp.Body)
+			if err != nil {
+				ctrl.Log.Error(err, "Error reading Gerrit response")
+			} else {
+				ctrl.Log.Error(endpointError, fmt.Sprintf("Last status:%d - Last response body:\"%s\"", resp.StatusCode, string(bodyBytes)))
+			}
+			os.Exit(1)
+		}
+		url := fmt.Sprintf("https://gerrit.%s/projects/", fqdn)
+		ctrl.Log.Info(fmt.Sprintf("Querying Gerrit projects endpoint... [attempt %d/%d]", attempt, maxTries))
+		resp, err := client.Get(url)
+		if err != nil {
+			ctrl.Log.Error(err, "Redirect failure or HTTP protocol error")
+			os.Exit(1)
+		}
+		if resp.StatusCode < 400 {
+			ctrl.Log.Info("Gerrit is up and available")
+			break
+		}
+		attempt += 1
+		time.Sleep(delay)
 	}
 }

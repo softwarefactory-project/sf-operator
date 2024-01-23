@@ -1,12 +1,7 @@
 ---
-- name: Prepare a minimal sfconfig.yaml file
-  ansible.builtin.copy:
-    content: "{{ sf_config_yaml | to_yaml }}"
-    dest: /tmp/sfconfig.yaml
-
 - name: Dump current secrets from nodepool
   command: >
-    go run ./main.go --namespace sf nodepool get providers-secrets --clouds /tmp/clouds.yaml --kube /tmp/kubeconfig.yaml
+    go run ./main.go --config /home/zuul-worker/sfcontext.yaml nodepool get providers-secrets --clouds /tmp/clouds.yaml --kube /tmp/kubeconfig.yaml
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
@@ -17,7 +12,7 @@
 
 - name: Upload clouds secrets to nodepool
   command: >
-    go run ./main.go --namespace sf nodepool configure providers-secrets --clouds /tmp/clouds.yaml --kube /tmp/kubeconfig.yaml
+    go run ./main.go --config /home/zuul-worker/sfcontext.yaml nodepool configure providers-secrets --clouds /tmp/clouds.yaml --kube /tmp/kubeconfig.yaml
   args:
     chdir: "{{ zuul.project.src_dir }}"
 

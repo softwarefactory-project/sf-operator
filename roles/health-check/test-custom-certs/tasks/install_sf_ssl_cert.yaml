@@ -1,6 +1,6 @@
 ---
 - name: Add custom self signed cert
   ansible.builtin.shell: >
-    go run ./main.go --namespace sf SF configure TLS --CA {{ ssl_path }}/localCA.pem --cert {{ ssl_path }}/ssl.crt --key {{ ssl_path }}/ssl.key
+    go run ./main.go --config /home/zuul-worker/sfcontext.yaml SF configure TLS --CA {{ ssl_path }}/localCA.pem --cert {{ ssl_path }}/ssl.crt --key {{ ssl_path }}/ssl.key
   args:
     chdir: "{{ zuul.project.src_dir | default(src_dir) }}"

@@ -13,7 +13,6 @@ of the operator, of a deployment, or also to help with the development of the op
 1. [sfconfig.yaml](#sfconfigyaml)
 1. [Operator management commands](#operator-management-commands)
 1. [Deployment management commands](#deployment-management-commands)
-1. [Deployment user commands](#deployment-user-commands)
 1. [Development-related commands](#development-related-commands)
 
 ## Running sfconfig
@@ -218,26 +217,6 @@ sfconfig zuul-client [...]
 ```
 
 See the [zuul-client documentation](https://zuul-ci.org/docs/zuul-client/) for more details.
-
-## Deployment user commands
-
-### bootstrap-tenant-config-repo
-
-This command creates a scaffolding in a repository that can be modified to enable Zuul to trigger jobs on various git events.
-
-Usage:
-```sh
-sfconfig bootstrap-tenant-config-repo [...]
-```
-
-Flags:
-
-| Argument | Type | Description | Default |
-|----------|------|-------|----|
-|      --connection |string  | Name of the connection or a source|-|
-|      --outpath |string    | Path to create file structure|-|
-
-See the [user documemtation](./../user/index.md) for more details.
 
 ## Development-related commands
 

@@ -11,6 +11,7 @@ deployments, beyond what can be defined in a custom resource manifest.
 1. [Subcommands](#subcommands)
   1. [Dev](#dev)
     1. [cloneAsAdmin](#cloneasadmin)
+    1. [create demo-env](#create-demo-env)
     1. [create gerrit](#create-gerrit)
     1. [create microshift](#create-microshift)
     1. [create standalone-sf](#create-standalone-sf)
@@ -25,6 +26,7 @@ deployments, beyond what can be defined in a custom resource manifest.
   1. [Operator](#apply)
   1. [SF](#sf)
     1. [backup](#backup)
+    1. [bootstrap-tenant]()
     1. [configure TLS](#configure-tls)
     1. [restore](#restore)
     1. [wipe](#wipe)
@@ -96,6 +98,8 @@ contexts:
         disk-file-size: 30G
       # Settings used when running the test suite locally
       tests:
+        # where to check out/create the demo repositories used by tests
+        demo-repos-path: deploy/
         # Ansible extra variables to pass to the testing playbooks
         extra-vars:
           key1: value1
@@ -133,6 +137,24 @@ Flags:
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 | --verify | boolean | Enforce SSL validation | yes | False |
+
+#### create demo-env
+
+Create a Gerrit instance if needed, then clone and populate demo repositories that will set up
+a demo tenant.
+
+> ⚠️ This command will also install the operator's Custom Resource Definitions, so you need to run `make manifests` beforehand.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] dev create demo-env [FLAGS]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --keep-tenant-config | boolean | Do not update the demo tenant configuration | yes | False |
+| --repos-path | string | Where to clone the demo repositories | yes | ./deploy/ |
 
 #### create gerrit
 
@@ -220,6 +242,7 @@ Flags:
 |--extra-var | string | Set an extra variable in the form `key=value` to pass to the test playbook. Repeatable | Yes | - |
 |--v | boolean | Run playbook in verbose mode | Yes | false |
 |--vvv | boolean | Run playbook in debug mode | Yes | false |
+|--prepare-demo-env | boolean | Prepare a demo environment before running the test suite (see [dev create demo-env](#create-demo-env)) | Yes | false |
 
 #### wipe gerrit
 
@@ -367,6 +390,27 @@ The following subcommands can be used to manage a Software Factory deployment an
 #### backup
 
 Not implemented yet
+
+#### bootstrap-tenant
+
+Initialize a Zuul tenant's config repository with boilerplate code that define standard pipelines:
+
+* "check" for pre-commit validation
+* "gate" for approved commits gating
+* "post for post-commit actions
+
+it also includes a boilerplate job and pre-run playbook.
+
+```sh
+go run ./main.go SF bootstrap-tenant [FLAGS] /path/to/tenant-config-repo
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+|--connection |string  | The name of the Zuul connection to use for pipelines | No | - |
+|--driver |string  | The driver used by the Zuul connection | No | - |
 
 #### configure TLS
 

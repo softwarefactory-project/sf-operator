@@ -6,7 +6,7 @@
       chdir: "{{ loki_dir }}"
 
   - name: Wait for Fluent Bit pod to be ready
-    ansible.builtin.command: kubectl get pod test-fluentbit -o=jsonpath='{.status.phase}'
+    ansible.builtin.command: kubectl get pod test-fluentbit -n {{ namespace }} -o=jsonpath='{.status.phase}'
     register: fb_ready
     until:
       - fb_ready.stdout != ""
