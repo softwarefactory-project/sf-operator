@@ -17,8 +17,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	cligerrit "github.com/softwarefactory-project/sf-operator/cli/cmd/dev/gerrit"
+	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
+
 	bootstraptenantconfigrepo "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/bootstrap-tenant-config-repo"
-	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/sfprometheus"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/utils"
@@ -66,8 +68,13 @@ func Run(cmd *cobra.Command) {
 		Ns:  "sf",
 		Cli: cli,
 	}
+	gEnv := cliutils.ENV{
+		Cli: cli,
+		Ns:  "sf",
+		Ctx: context.TODO(),
+	}
 	// TODO: only do gerrit when provision demo is on?
-	gerrit.EnsureGerrit(&env, sfconfig.FQDN)
+	cligerrit.EnsureGerrit(&gEnv, sfconfig.FQDN)
 	EnsureGerritAccess(sfconfig.FQDN)
 	if withPrometheus {
 		sfprometheus.EnsurePrometheus(&env, sfconfig.FQDN, false)

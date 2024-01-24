@@ -195,8 +195,8 @@ func GetM(env *ENV, name string, obj client.Object) (bool, error) {
 	}
 }
 
-func DeleteOrDie(env *ENV, obj client.Object) bool {
-	err := env.Cli.Delete(env.Ctx, obj)
+func DeleteOrDie(env *ENV, obj client.Object, opts ...client.DeleteOption) bool {
+	err := env.Cli.Delete(env.Ctx, obj, opts...)
 	if apierrors.IsNotFound(err) {
 		return false
 	} else if err != nil {
