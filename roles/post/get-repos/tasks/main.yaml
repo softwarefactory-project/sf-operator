@@ -1,0 +1,15 @@
+---
+- name: Set proper facts
+  ansible.builtin.set_fact:
+    dest_dir: "{{ output_dir }}/repos/"
+
+- name: "Ensure {{ dest_dir }}"
+  ansible.builtin.file:
+    path: "{{ dest_dir }}"
+    state: directory
+
+- name: Copy repositories
+  ansible.builtin.copy:
+    src: "{{ zuul.project.src_dir }}/deploy/"
+    dest: "{{ dest_dir }}"
+    remote_src: yes
