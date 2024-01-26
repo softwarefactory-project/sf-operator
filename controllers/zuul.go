@@ -80,7 +80,7 @@ func mkZuulLoggingMount(service string) apiv1.VolumeMount {
 	}
 }
 
-func mkZuulGitHubSecretsMounts(r *SFController) []apiv1.VolumeMount {
+func mkZuulConnectionsSecretsMount(r *SFController) []apiv1.VolumeMount {
 	zuulConnectionMounts := []apiv1.VolumeMount{}
 	secretkey := "app_key"
 	for _, connection := range r.cr.Spec.Zuul.GitHubConns {
@@ -95,6 +95,21 @@ func mkZuulGitHubSecretsMounts(r *SFController) []apiv1.VolumeMount {
 			})
 		}
 	}
+
+	for _, conn := range r.cr.Spec.Zuul.GerritConns {
+		if conn.Sshkey != "" {
+			_, err := r.GetSecretDataFromKey(conn.Sshkey, "priv")
+			if err != nil {
+				r.log.V(1).Error(err, "Unknown secret "+conn.Sshkey)
+			}
+			keyMount := apiv1.VolumeMount{
+				Name:      "zuul-ssh-key-" + conn.Sshkey,
+				MountPath: "/var/lib/zuul-" + conn.Sshkey + "/",
+			}
+			zuulConnectionMounts = append(zuulConnectionMounts, keyMount)
+		}
+	}
+
 	return zuulConnectionMounts
 }
 
@@ -159,7 +174,7 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) [
 	}
 
 	volumeMounts = append(volumeMounts, mkZuulLoggingMount(service))
-	volumeMounts = append(volumeMounts, mkZuulGitHubSecretsMounts(r)...)
+	volumeMounts = append(volumeMounts, mkZuulConnectionsSecretsMount(r)...)
 
 	if corporateCMExists {
 		volumeMounts = AppendCorporateCACertsVolumeMount(volumeMounts, service+"-corporate-ca-certs")
@@ -223,6 +238,21 @@ func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []ap
 			},
 		}
 		volumes = append(volumes, toolingVol)
+	}
+
+	for _, conn := range r.cr.Spec.Zuul.GerritConns {
+		if conn.Sshkey != "" {
+			keyVol := apiv1.Volume{
+				Name: "zuul-ssh-key-" + conn.Sshkey,
+				VolumeSource: apiv1.VolumeSource{
+					Secret: &apiv1.SecretVolumeSource{
+						SecretName:  conn.Sshkey,
+						DefaultMode: &mod,
+					},
+				},
+			}
+			volumes = append(volumes, keyVol)
+		}
 	}
 
 	volumes = append(volumes, mkZuulGitHubSecretsVolumes(r)...)
@@ -801,7 +831,11 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	cfg.NewSection(section)
 	cfg.Section(section).NewKey("driver", "gerrit")
 	cfg.Section(section).NewKey("server", conn.Hostname)
-	cfg.Section(section).NewKey("sshkey", "/var/lib/zuul-ssh/..data/priv")
+	if conn.Sshkey != "" {
+		cfg.Section(section).NewKey("sshkey", "/var/lib/zuul-"+conn.Sshkey+"/..data/priv")
+	} else {
+		cfg.Section(section).NewKey("sshkey", "/var/lib/zuul-ssh/..data/priv")
+	}
 	cfg.Section(section).NewKey("gitweb_url_template", "{baseurl}/plugins/gitiles/{project.name}/+/{sha}^!/")
 	// Optional fields (set as omitempty in GerritConnection struct definition)
 	if conn.Username != "" {
