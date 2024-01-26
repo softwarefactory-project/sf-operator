@@ -6,7 +6,7 @@
 # Base CI job
 - job:
     name: sf-operator
-    parent: sf-operator-microshift
+    parent: sf-operator-microshift-cli-overhaul
     pre-run: &pre-run
       - playbooks/health-check/dstat-pre.yaml
     post-run: &post-run
@@ -43,7 +43,7 @@
 
 - job:
     name: sf-operator-multinode
-    parent: sf-operator-microshift-multinode
+    parent: sf-operator-microshift-multinode-cli-overhaul
     pre-run: *pre-run
     post-run: *post-run
     timeout: 5200
