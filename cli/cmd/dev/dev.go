@@ -69,15 +69,35 @@ func devWipe(kmd *cobra.Command, args []string) {
 	}
 }
 
-func devCloneAsAdmin(kmd *cobra.Command, args []string) {}
+func devCloneAsAdmin(kmd *cobra.Command, args []string) {
+	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, []string{})
+	repoName := args[0]
+	var dest string
+	if len(args) > 1 {
+		dest = args[1]
+	} else {
+		dest = "."
+	}
+	ns := cliCtx.Namespace
+	kubeContext := cliCtx.KubeContext
+	fqdn := cliCtx.FQDN
+	verify, _ := kmd.Flags().GetBool("verify")
+	env := cliutils.ENV{
+		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
+		Ctx: context.TODO(),
+		Ns:  ns,
+	}
+	gerrit.CloneAsAdmin(&env, fqdn, repoName, dest, verify)
+}
 
 func devRunTests(kmd *cobra.Command, args []string) {}
 
 func MkDevCmd() *cobra.Command {
 
 	var (
-		deleteData bool
-		devCmd     = &cobra.Command{
+		deleteData     bool
+		verifyCloneSSL bool
+		devCmd         = &cobra.Command{
 			Use:   "dev",
 			Short: "development subcommands",
 			Long:  "These subcommands can be used to manage a dev environment and streamline recurrent development tasks like running the operator's test suite.",
@@ -95,12 +115,12 @@ func MkDevCmd() *cobra.Command {
 			Run:       devWipe,
 		}
 		cloneAsAdminCmd = &cobra.Command{
-			Use:  "clone-as-admin REPO DEST",
+			Use:  "cloneAsAdmin REPO [DEST]",
 			Long: "Clone a repo hosted on the dev code review system as an admin user.",
 			Run:  devCloneAsAdmin,
 		}
 		runTestsCmd = &cobra.Command{
-			Use:       "run-tests TESTNAME",
+			Use:       "runTests TESTNAME",
 			Long:      "Wipe a development resource. The resource can be a gerrit instance.",
 			ValidArgs: devRunTestsAllowedArgs,
 			Run:       devRunTests,
@@ -108,6 +128,7 @@ func MkDevCmd() *cobra.Command {
 	)
 	// args
 	wipeCmd.Flags().BoolVar(&deleteData, "rm-data", false, "Delete also persistent data. This will result in data loss, like review history.")
+	cloneAsAdminCmd.Flags().BoolVar(&verifyCloneSSL, "verify", false, "Verify SSL endpoint")
 
 	devCmd.AddCommand(createCmd)
 	devCmd.AddCommand(wipeCmd)

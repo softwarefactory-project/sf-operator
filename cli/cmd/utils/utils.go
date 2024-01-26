@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"reflect"
 	"strings"
 
@@ -258,18 +259,23 @@ func GetCLIctxOrDie(kmd *cobra.Command, args []string, allowedArgs []string) Sof
 		ctrl.Log.Error(err, "Error initializing:")
 		os.Exit(1)
 	}
-	argumentError := errors.New("argument must be in: " + strings.Join(allowedArgs, ", "))
-	if len(args) != 1 {
-		ctrl.Log.Error(argumentError, "Need one argument")
+	if len(allowedArgs) == 0 {
+		// no more validation needed
+		return cliCtx
+	} else {
+		argumentError := errors.New("argument must be in: " + strings.Join(allowedArgs, ", "))
+		if len(args) != 1 {
+			ctrl.Log.Error(argumentError, "Need one argument")
+			os.Exit(1)
+		}
+		for _, a := range allowedArgs {
+			if args[0] == a {
+				return cliCtx
+			}
+		}
+		ctrl.Log.Error(argumentError, "Unknown argument "+args[0])
 		os.Exit(1)
 	}
-	for _, a := range allowedArgs {
-		if args[0] == a {
-			return cliCtx
-		}
-	}
-	ctrl.Log.Error(argumentError, "Unknown argument "+args[0])
-	os.Exit(1)
 	return SoftwareFactoryConfigContext{}
 }
 
@@ -286,4 +292,20 @@ func GetFileContent(filePath string) ([]byte, error) {
 	} else {
 		return nil, err
 	}
+}
+
+func RunCmdWithEnvOrDie(environ []string, cmd string, args ...string) string {
+	kmd := exec.Command(cmd, args...)
+	kmd.Env = append(os.Environ(), environ...)
+	out, err := kmd.CombinedOutput()
+	if err != nil {
+		ctrl.Log.Error(err, "Could not run command '"+cmd+"'")
+		ctrl.Log.Info("Captured output:\n" + string(out))
+		os.Exit(1)
+	}
+	return string(out)
+}
+
+func RunCmdOrDie(cmd string, args ...string) string {
+	return RunCmdWithEnvOrDie([]string{}, cmd, args...)
 }
