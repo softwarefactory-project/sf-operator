@@ -13,6 +13,7 @@ deployments, beyond what can be defined in a custom resource manifest.
     1. [cloneAsAdmin](#cloneasadmin)
     1. [create gerrit](#create-gerrit)
     1. [create microshift](#create-microshift)
+    1. [create standalone-sf](#create-standalone-sf)
     1. [wipe gerrit](#wipe-gerrit)
   1. [Nodepool](#nodepool)
     1. [configure providers-secrets](#configure-providers-secrets)
@@ -20,7 +21,6 @@ deployments, beyond what can be defined in a custom resource manifest.
     1. [get providers-secrets](#get-providers-secrets)
   1. [Operator](#apply)
   1. [SF](#sf)
-    1. [apply](#apply)
     1. [backup](#backup)
     1. [configure TLS](#configure-tls)
     1. [restore](#restore)
@@ -186,6 +186,22 @@ Flags:
 | --skip-deploy | boolean | Do not install and start MicroShift on the target host | yes | False |
 | --skip-post-install | boolean | Do not install operator dependencies, pre-configure namespaces | yes | False |
 
+#### create standalone-sf
+
+Deploy a "standalone" Software Factory. In standalone mode, you do not need to install or run the operator
+controller within your cluster. You do not need to install the Software Factory CRDs as well. The CLI will take
+a Software Factory manifest as input and deploy all the required services as a one-shot.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] dev create standalone-sf --cr /path/to/manifest
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+|--cr |string | The path to the custom resource to apply | No | If a config file is used and the flag not provided, will default to the context's `manifest-file` if set |
+
 #### wipe gerrit
 
 Delete a Gerrit instance deployed with `dev create gerrit`.
@@ -275,22 +291,6 @@ Flags:
 ### SF
 
 The following subcommands can be used to manage a Software Factory deployment and its lifecycle.
-
-#### apply
-
-The `apply` subcommand can be used to deploy a SoftwareFactory resource without installing the operator or its
-associated CRDs on a cluster. This will run the operator runtime locally, deploy the resource's components
-on the cluster, then exit.
-
-```sh
-go run ./main.go [GLOBAL FLAGS] SF apply --cr /path/to/manifest
-```
-
-Flags:
-
-| Argument | Type | Description | Optional | Default |
-|----------|------|-------|----|----|
-|--cr |string | The path to the custom resource to apply | No | If a config file is used and the flag not provided, will default to the context's `manifest-file` if set |
 
 #### backup
 

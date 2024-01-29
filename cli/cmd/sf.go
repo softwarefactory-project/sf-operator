@@ -62,7 +62,6 @@ func MkSFCmd() *cobra.Command {
 	configureCmd.Flags().StringVar(&CertificatePath, "cert", "", "path to the domain certificate file")
 	configureCmd.Flags().StringVar(&KeyPath, "key", "", "path to the private key file")
 
-	sfCmd.AddCommand(MkApplyCmd())
 	sfCmd.AddCommand(MkBackupCmd())
 	sfCmd.AddCommand(MkRestoreCmd())
 	sfCmd.AddCommand(configureCmd)

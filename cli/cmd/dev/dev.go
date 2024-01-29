@@ -31,12 +31,89 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var devCreateAllowedArgs = []string{"gerrit", "microshift"}
+var devCreateAllowedArgs = []string{"gerrit", "microshift", "standalone-sf"}
 var devWipeAllowedArgs = []string{"gerrit"}
 var devRunTestsAllowedArgs = []string{"olm", "standalone", "upgrade"}
 
 var microshiftUser = "cloud-user"
 var defaultDiskSpace = "20G"
+
+func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigContext) {
+	skipLocalSetup, _ := kmd.Flags().GetBool("skip-local-setup")
+	skipDeploy, _ := kmd.Flags().GetBool("skip-deploy")
+	skipPostInstall, _ := kmd.Flags().GetBool("skip-post-install")
+	dryRun, _ := kmd.Flags().GetBool("dry-run")
+	rootDir := ms.CreateTempRootDir()
+
+	// Arg validation
+	missingArgError := errors.New("missing argument")
+	msHost := cliCtx.Dev.Microshift.Host
+	if msHost == "" {
+		ctrl.Log.Error(missingArgError, "Host must be set in `microshift` section of the configuration")
+		os.Exit(1)
+	}
+	msUser := cliCtx.Dev.Microshift.User
+	if msUser == "" {
+		// set default of "cloud-user" since these playbooks are meant to target a CentOS deployment
+		msUser = microshiftUser
+		ctrl.Log.Info("Host user not set, defaulting to " + microshiftUser)
+	}
+	msOpenshiftPullSecret := cliCtx.Dev.Microshift.OpenshiftPullSecret
+	if msOpenshiftPullSecret == "" {
+		ctrl.Log.Error(missingArgError, "A valid OpenShift pull secret must be set in `microshift` section of the configuration")
+		os.Exit(1)
+	}
+	msDiskFileSize := cliCtx.Dev.Microshift.DiskFileSize
+	if msDiskFileSize == "" {
+		msDiskFileSize = defaultDiskSpace
+		ctrl.Log.Info("disk-file-size not set, defaulting to " + defaultDiskSpace)
+	}
+	msAnsibleMicroshiftRolePath := cliCtx.Dev.AnsibleMicroshiftRolePath
+	if msAnsibleMicroshiftRolePath == "" {
+		msAnsibleMicroshiftRolePath = rootDir + "/ansible-microshift-role"
+		ctrl.Log.Info("No path to ansible-microshift-role provided, the role will be cloned into " + msAnsibleMicroshiftRolePath)
+	}
+	msSFOperatorRepositoryPath := cliCtx.Dev.SFOperatorRepositoryPath
+	if msSFOperatorRepositoryPath == "" {
+		ctrl.Log.Error(missingArgError, "The path to the sf-operator repository must be set in `dev` section of the configuration")
+		os.Exit(1)
+	}
+
+	options := ms.MkAnsiblePlaybookOptions(msHost, msUser, msOpenshiftPullSecret, rootDir)
+	varsFile := ms.MkTemporaryVarsFile(cliCtx.FQDN, msDiskFileSize, msAnsibleMicroshiftRolePath, rootDir)
+	options.ExtraVarsFile = []string{"@" + varsFile}
+	// Ensure ansible-microshift-role is available
+	ms.MkMicroshiftRoleSetupPlaybook(rootDir)
+	if !dryRun {
+		ms.RunMicroshiftRoleSetup(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
+	}
+	// Ensure tooling and prerequisites are installed
+	if !skipLocalSetup {
+		ms.MkLocalSetupPlaybook(rootDir)
+		if !dryRun {
+			ms.RunLocalSetup(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
+		}
+	}
+	// Deploy MicroShift
+	if !skipDeploy {
+		ms.MkDeployMicroshiftPlaybook(rootDir)
+		if !dryRun {
+			ms.RunDeploy(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
+		}
+	}
+	// Configure cluster for development and testing
+	if !skipPostInstall {
+		ms.MkPostInstallPlaybook(rootDir)
+		if !dryRun {
+			ms.RunPostInstall(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
+		}
+	}
+	if !dryRun {
+		defer os.RemoveAll(rootDir)
+	} else {
+		ctrl.Log.Info("Playbooks can be found in " + rootDir)
+	}
+}
 
 func devCreate(kmd *cobra.Command, args []string) {
 	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, devCreateAllowedArgs)
@@ -52,80 +129,19 @@ func devCreate(kmd *cobra.Command, args []string) {
 		}
 		gerrit.EnsureGerrit(&env, fqdn)
 	} else if target == "microshift" {
-		skipLocalSetup, _ := kmd.Flags().GetBool("skip-local-setup")
-		skipDeploy, _ := kmd.Flags().GetBool("skip-deploy")
-		skipPostInstall, _ := kmd.Flags().GetBool("skip-post-install")
-		dryRun, _ := kmd.Flags().GetBool("dry-run")
-		rootDir := ms.CreateTempRootDir()
-
-		// Arg validation
-		missingArgError := errors.New("missing argument")
-		msHost := cliCtx.Dev.Microshift.Host
-		if msHost == "" {
-			ctrl.Log.Error(missingArgError, "Host must be set in `microshift` section of the configuration")
+		createMicroshift(kmd, cliCtx)
+	} else if target == "standalone-sf" {
+		sfResource, _ := kmd.Flags().GetString("cr")
+		hasManifest := &cliCtx.Manifest
+		if sfResource == "" && hasManifest != nil {
+			sfResource = cliCtx.Manifest
+		}
+		if (sfResource != "" && ns == "") || (sfResource == "" && ns != "") {
+			err := errors.New("standalone mode requires both --cr and --namespace to be set")
+			ctrl.Log.Error(err, "Argument error:")
 			os.Exit(1)
 		}
-		msUser := cliCtx.Dev.Microshift.User
-		if msUser == "" {
-			// set default of "cloud-user" since these playbooks are meant to target a CentOS deployment
-			msUser = microshiftUser
-			ctrl.Log.Info("Host user not set, defaulting to " + microshiftUser)
-		}
-		msOpenshiftPullSecret := cliCtx.Dev.Microshift.OpenshiftPullSecret
-		if msOpenshiftPullSecret == "" {
-			ctrl.Log.Error(missingArgError, "A valid OpenShift pull secret must be set in `microshift` section of the configuration")
-			os.Exit(1)
-		}
-		msDiskFileSize := cliCtx.Dev.Microshift.DiskFileSize
-		if msDiskFileSize == "" {
-			msDiskFileSize = defaultDiskSpace
-			ctrl.Log.Info("disk-file-size not set, defaulting to " + defaultDiskSpace)
-		}
-		msAnsibleMicroshiftRolePath := cliCtx.Dev.AnsibleMicroshiftRolePath
-		if msAnsibleMicroshiftRolePath == "" {
-			msAnsibleMicroshiftRolePath = rootDir + "/ansible-microshift-role"
-			ctrl.Log.Info("No path to ansible-microshift-role provided, the role will be cloned into " + msAnsibleMicroshiftRolePath)
-		}
-		msSFOperatorRepositoryPath := cliCtx.Dev.SFOperatorRepositoryPath
-		if msSFOperatorRepositoryPath == "" {
-			ctrl.Log.Error(missingArgError, "The path to the sf-operator repository must be set in `dev` section of the configuration")
-			os.Exit(1)
-		}
-
-		options := ms.MkAnsiblePlaybookOptions(msHost, msUser, msOpenshiftPullSecret, rootDir)
-		varsFile := ms.MkTemporaryVarsFile(fqdn, msDiskFileSize, msAnsibleMicroshiftRolePath, rootDir)
-		options.ExtraVarsFile = []string{"@" + varsFile}
-		// Ensure ansible-microshift-role is available
-		ms.MkMicroshiftRoleSetupPlaybook(rootDir)
-		if !dryRun {
-			ms.RunMicroshiftRoleSetup(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
-		}
-		// Ensure tooling and prerequisites are installed
-		if !skipLocalSetup {
-			ms.MkLocalSetupPlaybook(rootDir)
-			if !dryRun {
-				ms.RunLocalSetup(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
-			}
-		}
-		// Deploy MicroShift
-		if !skipDeploy {
-			ms.MkDeployMicroshiftPlaybook(rootDir)
-			if !dryRun {
-				ms.RunDeploy(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
-			}
-		}
-		// Configure cluster for development and testing
-		if !skipPostInstall {
-			ms.MkPostInstallPlaybook(rootDir)
-			if !dryRun {
-				ms.RunPostInstall(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
-			}
-		}
-		if !dryRun {
-			defer os.RemoveAll(rootDir)
-		} else {
-			ctrl.Log.Info("Playbooks can be found in " + rootDir)
-		}
+		applyStandalone(ns, sfResource, kubeContext)
 	} else {
 		ctrl.Log.Error(errors.New("unsupported target"), "Invalid argument '"+target+"'")
 	}
@@ -181,6 +197,7 @@ func MkDevCmd() *cobra.Command {
 		msSkipLocalSetup  bool
 		msSkipPostInstall bool
 		msDryRun          bool
+		sfResource        string
 		devCmd            = &cobra.Command{
 			Use:   "dev",
 			Short: "development subcommands",
@@ -188,7 +205,7 @@ func MkDevCmd() *cobra.Command {
 		}
 		createCmd = &cobra.Command{
 			Use:       "create {" + strings.Join(devCreateAllowedArgs, ", ") + "}",
-			Long:      "Create a development resource. The resource can be a MicroShift cluster or a gerrit instance",
+			Long:      "Create a development resource. The resource can be a MicroShift cluster, a standalone SF deployment, or a gerrit instance",
 			ValidArgs: devCreateAllowedArgs,
 			Run:       devCreate,
 		}
@@ -219,6 +236,8 @@ func MkDevCmd() *cobra.Command {
 	createCmd.Flags().BoolVar(&msSkipDeploy, "skip-deploy", false, "(microshift) Do not deploy MicroShift")
 	createCmd.Flags().BoolVar(&msSkipPostInstall, "skip-post-install", false, "(microshift) Do not setup namespace or install required operators")
 	createCmd.Flags().BoolVar(&msDryRun, "dry-run", false, "(microshift) only create the playbook files, do not run them")
+
+	createCmd.Flags().StringVar(&sfResource, "cr", "", "The path to the CR defining the Software Factory deployment.")
 
 	devCmd.AddCommand(createCmd)
 	devCmd.AddCommand(wipeCmd)
