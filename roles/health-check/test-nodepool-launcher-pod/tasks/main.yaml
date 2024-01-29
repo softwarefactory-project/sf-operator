@@ -1,0 +1,66 @@
+---
+# These tasks must run after the 'config-update-nodepool-launcher' role' tasks
+# as we expect a 'microshiftLocal' provider to be available with a node label:
+# {{ zuul_worker_ci_label }}
+
+- name: Reset config dir to HEAD
+  ansible.builtin.command: "{{ item }}"
+  loop:
+    - "git remote update"
+    - "git reset --hard origin/master"
+  args:
+    chdir: "{{ demo_project_path }}"
+
+- name: Ensure playbooks and zuul.d dir exists
+  ansible.builtin.file:
+    path: "{{ demo_project_path }}/{{ item }}"
+    state: directory
+  loop:
+    - "playbooks"
+    - "zuul.d"
+
+- name: Create new zuul config
+  ansible.builtin.copy:
+    content: |
+      ---
+      - job:
+          name: microshift-pod
+          run: playbooks/microshift-pod.yml
+          nodeset:
+            nodes:
+              - name: container
+                label: {{ zuul_worker_ci_label }}
+
+      - project:
+          check:
+            jobs:
+              - microshift-pod
+    dest: "{{ demo_project_path }}/zuul.d/config.yaml"
+
+- name: Create simple playbook
+  ansible.builtin.copy:
+    content: |
+      ---
+      - hosts: localhost,all
+        tasks:
+          - name: Doing command
+            command: sleep 15
+    dest: "{{ demo_project_path }}/playbooks/microshift-pod.yml"
+
+- name: Create git commit message
+  ansible.builtin.command: "{{ item }}"
+  args:
+    chdir: "{{ demo_project_path }}"
+  loop:
+    - "git add ."
+    - "git commit -m 'Provide a demo job for testing the local pod spawning'"
+
+- name: Submit change and validate job success
+  ansible.builtin.include_role:
+    name: health-check/repo-submit-change
+  vars:
+    repo_path: "{{ demo_project_path }}"
+    success_job: microshift-pod
+    zuul_tenant: demo-tenant
+    approve: false
+    post_job: false

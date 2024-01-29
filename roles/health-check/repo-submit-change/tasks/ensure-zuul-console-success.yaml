@@ -1,8 +1,8 @@
 ---
 # FROM: https://opendev.org/zuul/zuul-operator/src/branch/master/playbooks/zuul-operator-functional/test.yaml#L157-L187
-- name: Wait for config-update post job
+- name: "Wait for {{ success_job }} job"
   ansible.builtin.shell: |
-    curl -sk https://{{ zuul_endpoint }}/api/tenant/internal/status | jq -r '.pipelines[].change_queues[].heads[][].jobs[]' | jq -rc 'select(.name == "config-update")' | jq -r '.uuid'
+    curl -sk https://{{ zuul_endpoint }}/api/tenant/{{ zuul_tenant }}/status | jq -r '.pipelines[].change_queues[].heads[][].jobs[]' | jq -rc 'select(.name == "{{ success_job }}")' | jq -r '.uuid'
   register: _job_uuid
   until: _job_uuid.stdout != "" and "null" not in _job_uuid.stdout
   retries: "{{ zuul_api_retries }}"

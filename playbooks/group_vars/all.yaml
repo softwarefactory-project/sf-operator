@@ -1,5 +1,6 @@
 ---
 config_path: "{{ zuul.project.src_dir }}/deploy/config"
+demo_project_path: "{{ zuul.project.src_dir }}/deploy/demo-project"
 fqdn: sfop.me
 
 validate_certs: false

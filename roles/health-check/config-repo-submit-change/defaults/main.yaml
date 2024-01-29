@@ -1,8 +1,0 @@
----
-validate_certs: true
-zuul_api_retries: 60
-zuul_api_delay: 10
-config_file_path: "resources/myfile-test.yaml"
-repository_name: "ichiban-config-test"
-check_zuul_console: false
-ensure_config_check_failure: false
