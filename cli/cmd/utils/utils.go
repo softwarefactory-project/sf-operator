@@ -47,36 +47,36 @@ import (
 
 // CLI config struct
 type SoftwareFactoryConfigContext struct {
-	ConfigRepository string `mapstructure:"config-repository-path"`
-	Manifest         string `mapstructure:"manifest-file"`
-	IsStandalone     bool   `mapstructure:"standalone"`
-	Namespace        string `mapstructure:"namespace"`
-	KubeContext      string `mapstructure:"kube-context"`
-	FQDN             string `mapstructure:"fqdn"`
+	ConfigRepository string `json:"config-repository-path" mapstructure:"config-repository-path"`
+	Manifest         string `json:"manifest-file" mapstructure:"manifest-file"`
+	IsStandalone     bool   `json:"standalone" mapstructure:"standalone"`
+	Namespace        string `json:"namespace" mapstructure:"namespace"`
+	KubeContext      string `json:"kube-context" mapstructure:"kube-context"`
+	FQDN             string `json:"fqdn" mapstructure:"fqdn"`
 	Dev              struct {
-		AnsibleMicroshiftRolePath string `mapstructure:"ansible-microshift-role-path"`
-		SFOperatorRepositoryPath  string `mapstructure:"sf-operator-repository-path"`
+		AnsibleMicroshiftRolePath string `json:"ansible-microshift-role-path" mapstructure:"ansible-microshift-role-path"`
+		SFOperatorRepositoryPath  string `json:"sf-operator-repository-path" mapstructure:"sf-operator-repository-path"`
 		Microshift                struct {
-			Host                string `mapstructure:"host"`
-			User                string `mapstructure:"user"`
-			OpenshiftPullSecret string `mapstructure:"openshift-pull-secret"`
-			DiskFileSize        string `mapstructure:"disk-file-size"`
-		} `mapstructure:"microshift"`
+			Host                string `json:"host" mapstructure:"host"`
+			User                string `json:"user" mapstructure:"user"`
+			OpenshiftPullSecret string `json:"openshift-pull-secret" mapstructure:"openshift-pull-secret"`
+			DiskFileSize        string `json:"disk-file-size" mapstructure:"disk-file-size"`
+		} `json:"microshift" mapstructure:"microshift"`
 		Tests struct {
-			ExtraVars map[string]string `mapstructure:"extra-vars"`
-		} `mapstructure:"tests"`
-	} `mapstructure:"development"`
+			ExtraVars map[string]string `json:"extra-vars" mapstructure:"extra-vars"`
+		} `json:"tests" mapstructure:"tests"`
+	} `json:"development" mapstructure:"development"`
 	Components struct {
 		Nodepool struct {
-			CloudsFile string `mapstructure:"clouds-file"`
-			KubeFile   string `mapstructure:"kube-file"`
-		} `mapstructure:"nodepool"`
-	} `mapstructure:"components"`
+			CloudsFile string `json:"clouds-file" mapstructure:"clouds-file"`
+			KubeFile   string `json:"kube-file" mapstructure:"kube-file"`
+		} `json:"nodepool" mapstructure:"nodepool"`
+	} `json:"components" mapstructure:"components"`
 }
 
 type SoftwareFactoryConfig struct {
-	Contexts map[string]SoftwareFactoryConfigContext `mapstructure:"contexts"`
-	Default  string                                  `mapstructure:"default-context"`
+	Contexts map[string]SoftwareFactoryConfigContext `json:"contexts" mapstructure:"contexts"`
+	Default  string                                  `json:"default-context" mapstructure:"default-context"`
 }
 
 func loadConfigFile(command *cobra.Command) (cliConfig SoftwareFactoryConfig, err error) {

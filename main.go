@@ -96,6 +96,7 @@ func main() {
 
 	// Add sub commands
 	subcommands := []*cobra.Command{
+		cmd.MkInitCmd(),
 		cmd.MkSFCmd(),
 		cmd.MkNodepoolCmd(),
 		operatorCmd,
