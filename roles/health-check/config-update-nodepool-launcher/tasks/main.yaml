@@ -65,7 +65,7 @@
     microshift_provider:
       - name: microshiftLocal
         driver: openshiftpods
-        context: microshift
+        context: openshiftpods
         pools:
           # NOTE: name is a name of the namespace
           # https://github.com/softwarefactory-project/sf-config/blob/master/ansible/roles/sf-repos/files/config/nodepool/openshift.yaml#L30

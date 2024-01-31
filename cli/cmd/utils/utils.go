@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"strings"
 
+	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	apiroutev1 "github.com/openshift/api/route/v1"
@@ -310,4 +311,22 @@ func RunCmdWithEnvOrDie(environ []string, cmd string, args ...string) string {
 
 func RunCmdOrDie(cmd string, args ...string) string {
 	return RunCmdWithEnvOrDie([]string{}, cmd, args...)
+}
+
+func EnsureNamespaceOrDie(env *ENV, name string) {
+	var ns apiv1.Namespace
+	if err := env.Cli.Get(env.Ctx, client.ObjectKey{Name: name}, &ns); apierrors.IsNotFound(err) {
+		ns.Name = name
+		CreateROrDie(env, &ns)
+	} else if err != nil {
+		ctrl.Log.Error(err, "Error checking namespace "+name)
+		os.Exit(1)
+	}
+}
+func EnsureServiceAccountOrDie(env *ENV, name string) {
+	var sa apiv1.ServiceAccount
+	if !GetMOrDie(env, name, &sa) {
+		sa.Name = name
+		CreateROrDie(env, &sa)
+	}
 }

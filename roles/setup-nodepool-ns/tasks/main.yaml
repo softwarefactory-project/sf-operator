@@ -1,5 +1,6 @@
 ---
-- name: Setup nodepool namespace
-  command: "tools/sfconfig create-namespace-for-nodepool"
+- name: Set up nodepool namespace
+  ansible.builtin.shell: >
+    go run ./main.go --namespace sf nodepool create openshiftpods-namespace
   args:
-    chdir: "{{ zuul.project.src_dir }}"
+    chdir: "{{ zuul.project.src_dir | default(src_dir) }}"
