@@ -280,18 +280,50 @@ func (r *SFUtilContext) EnsureService(service *apiv1.Service) {
 	}
 }
 
-// EnsureLocalCA ensures cert-manager resources exists to enable of local CA Issuer
+// EnsureLocalCA ensures 3 secrets containing TLS material for zookeeper/zuul/nodepool
+// connections
 // This function does not support update
-func (r *SFUtilContext) EnsureLocalCA() {
-	// https://cert-manager.io/docs/configuration/selfsigned/#bootstrapping-ca-issuers
-	selfSignedIssuer := cert.MkSelfSignedIssuer("selfsigned-issuer", r.ns)
-	CAIssuer := cert.MkCAIssuer("ca-issuer", r.ns)
-	commonName := "cacert"
-	rootCACertificate := cert.MkBaseCertificate(cert.LocalCACertSecretName, r.ns, "selfsigned-issuer", []string{"caroot"},
-		cert.LocalCACertSecretName, true, cert.EonDuration, nil, &commonName, nil)
-	r.GetOrCreate(&selfSignedIssuer)
-	r.GetOrCreate(&CAIssuer)
-	r.GetOrCreate(&rootCACertificate)
+func (r *SFUtilContext) EnsureLocalCA(dnsNames []string) {
+
+	caCert, caPrivKey, caPEM, caPrivKeyPEM := cert.X509CA()
+	certificateCASecret := apiv1.Secret{
+		Data: map[string][]byte{
+			"ca.crt":  caPEM.Bytes(),
+			"tls.crt": caPEM.Bytes(),
+			"tls.key": caPrivKeyPEM.Bytes(),
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "ca-cert", Namespace: r.ns},
+		Type:       "kubernetes.io/tls",
+	}
+	r.GetOrCreate(&certificateCASecret)
+
+	// server cert
+	certPEM, certPrivKeyPEM := cert.X509Cert(caCert, caPrivKey, dnsNames)
+
+	certificateSecret := apiv1.Secret{
+		Data: map[string][]byte{
+			"ca.crt":  caPEM.Bytes(),
+			"tls.crt": certPEM.Bytes(),
+			"tls.key": certPrivKeyPEM.Bytes(),
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "zookeeper-server-tls", Namespace: r.ns},
+		Type:       "kubernetes.io/tls",
+	}
+	r.GetOrCreate(&certificateSecret)
+
+	// client cert
+	certPEM2, certPrivKeyPEM2 := cert.X509Cert(caCert, caPrivKey, dnsNames)
+
+	certificateSecret2 := apiv1.Secret{
+		Data: map[string][]byte{
+			"ca.crt":  caPEM.Bytes(),
+			"tls.crt": certPEM2.Bytes(),
+			"tls.key": certPrivKeyPEM2.Bytes(),
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "zookeeper-client-tls", Namespace: r.ns},
+		Type:       "kubernetes.io/tls",
+	}
+	r.GetOrCreate(&certificateSecret2)
 }
 
 //----------------------------------------------------------------------------

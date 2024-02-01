@@ -21,7 +21,7 @@ func (r *SFController) EnsureZuulWeeder(checksum string) bool {
 
 	annotations := map[string]string{
 		"zuul-conf": checksum,
-		"serial":    "1",
+		"serial":    "2",
 	}
 
 	dep := base.MkDeployment(ident, r.ns, "ghcr.io/softwarefactory-project/zuul-weeder:latest", r.cr.Spec.ExtraLabels, r.isOpenShift)

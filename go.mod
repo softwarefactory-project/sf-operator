@@ -24,6 +24,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.30.2
+	k8s.io/apiextensions-apiserver v0.30.2
 	k8s.io/apimachinery v0.30.2
 	k8s.io/client-go v0.30.2
 	k8s.io/kubectl v0.30.2
@@ -99,7 +100,6 @@ require (
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-	k8s.io/apiextensions-apiserver v0.30.2 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // indirect
 	sigs.k8s.io/gateway-api v1.1.0 // indirect

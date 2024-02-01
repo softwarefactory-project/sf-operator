@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+- The local certificate infrastructure (certificate authority and certificates) used by Zookeeper, Zuul and Zuul-Weeder
+  is managed by the golang `crypto` library instead of by the cert-manager API. The associated
+  cert-manager resources will be removed, and the existing certificate infrastructure will be replaced by a newly-generated
+  one at upgrade time, which will trigger a restart of the Zookeeper, Zuul, Nodepole and Zuul-Weeder components to update their
+  respective configurations.
+  The remaining dependency to the cert-manager operator will be removed in the next release of sf-operator.
+
 ### Deprecated
 ### Removed
 ### Fixed

@@ -6,9 +6,7 @@ package controllers
 import (
 	_ "embed"
 
-	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
@@ -71,21 +69,6 @@ func createZKLogForwarderSidecar(r *SFController, annotations map[string]string)
 }
 
 func (r *SFController) DeployZookeeper() bool {
-	dnsNames := r.MkClientDNSNames(ZookeeperIdent)
-	privateKey := certv1.CertificatePrivateKey{
-		Encoding: certv1.PKCS8,
-	}
-	certificate := cert.MkCertificate(
-		"zookeeper-server", r.ns, "ca-issuer", dnsNames, "zookeeper-server-tls", &privateKey, cert.EonDuration)
-	certClient := cert.MkCertificate(
-		"zookeeper-client", r.ns, "ca-issuer", dnsNames, "zookeeper-client-tls", &privateKey, cert.EonDuration)
-	r.GetOrCreate(&certificate)
-	r.GetOrCreate(&certClient)
-
-	if !cert.IsCertificateReady(&certificate) || !cert.IsCertificateReady(&certClient) {
-		return false
-	}
-
 	cmData := make(map[string]string)
 	cmData["probe.sh"] = zookeeperProbe
 	cmData["run.sh"] = zookeeperRun
@@ -97,7 +80,7 @@ func (r *SFController) DeployZookeeper() bool {
 	annotations := map[string]string{
 		"configuration": utils.Checksum([]byte(configChecksumable)),
 		"image":         base.ZookeeperImage(),
-		"serial":        "6",
+		"serial":        "7",
 	}
 
 	volumeMountsStatsExporter := []apiv1.VolumeMount{

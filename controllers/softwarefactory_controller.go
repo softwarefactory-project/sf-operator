@@ -105,52 +105,40 @@ func isOperatorReady(services map[string]bool) bool {
 // cleanup ensures removal of legacy resources
 func (r *SFController) cleanup() {
 
-	caCert := certv1.Certificate{}
-	if r.GetM(cert.LocalCACertSecretName, &caCert) {
-		// Here we are detecting the previous version duration to ensure we have to run the cleanup
-		prevDuration, _ := time.ParseDuration("219000h") // 25y
-		if caCert.Spec.Duration.Duration.String() == prevDuration.String() {
-			for _, name := range []string{"zookeeper-server", "zookeeper-client", "ca-cert"} {
-				// remove invalid certificate resource
-				r.DeleteR(&certv1.Certificate{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: r.ns,
-					},
-				})
-			}
-			for _, name := range []string{"zookeeper-server-tls", "zookeeper-client-tls", "ca-cert"} {
-				// Remove matching secrets
-				r.DeleteR(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: r.ns,
-					},
-				})
+	//--TODO-- Remove this chunk after release v0.0.54
+
+	// We need to clean the Local CA resources managed by cert-manager
+	// This means deleting the Certificate resources and related
+	// We need to ensure that ca-cert, zookeeper-client-tls, zookeeper-server-tls Secrets are deleted
+	// but only if those secrets have been created by cert-manager.
+	for _, name := range []string{"zookeeper-server", "zookeeper-client", "ca-cert"} {
+		// Remove Certificate Resources that are no longer needed
+		r.DeleteR(&certv1.Certificate{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			},
+		})
+	}
+
+	for _, name := range []string{"zookeeper-server-tls", "zookeeper-client-tls", "ca-cert"} {
+		// Remove Secrets generated via cert-manager related to the deleted Certificats
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: r.ns,
+			}}
+		found := r.GetM(name, &secret)
+		if found {
+			_, ok := secret.Annotations["cert-manager.io/certificate-name"]
+			if ok {
+				r.DeleteR(&secret)
 			}
 		}
 	}
 
-	// remove managed certificate resource
-	r.DeleteR(&certv1.Certificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sf-le-certificate",
-			Namespace: r.ns,
-		},
-	})
-	// remove managed cert-manager issuers
-	r.DeleteR(&certv1.Issuer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cm-le-issuer-production",
-			Namespace: r.ns,
-		},
-	})
-	r.DeleteR(&certv1.Issuer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cm-le-issuer-staging",
-			Namespace: r.ns,
-		},
-	})
+	//--END TODO--
+
 }
 
 func (r *SFController) validateZuulConnectionsSecrets() error {
@@ -238,8 +226,9 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 
 	services["Zuul"] = false
 
-	// Setup a Self-Signed certificate issuer
-	r.EnsureLocalCA()
+	// Setup the Certificate Authority for Zookeeper/Zuul/Nodepool usage
+	dnsNames := r.MkClientDNSNames(ZookeeperIdent)
+	r.EnsureLocalCA(dnsNames)
 
 	// Ensure SF Admin ssh key pair
 	r.DeployZuulSecrets()
