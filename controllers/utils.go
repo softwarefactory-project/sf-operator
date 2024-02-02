@@ -438,7 +438,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 		matchLabels := dep.Spec.Selector.MatchLabels
 		labels := labels.SelectorFromSet(labels.Set(matchLabels))
 		labelSelectors := client.MatchingLabelsSelector{Selector: labels}
-		if err := r.Client.List(r.ctx, &podList, labelSelectors); err != nil {
+		if err := r.Client.List(r.ctx, &podList, labelSelectors, client.InNamespace(r.ns)); err != nil {
 			panic(err.Error())
 		}
 		for _, pod := range podList.Items {
