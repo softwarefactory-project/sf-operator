@@ -102,6 +102,10 @@ func (r *SFController) DeployLogserverResource() bool {
 	if err != nil {
 		return false
 	}
+	storageclassname := r.cr.Spec.Logserver.Storage.ClassName
+	if storageclassname == "" {
+		storageclassname = r.cr.Spec.StorageClassName
+	}
 	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
 	cr := sfv1.LogServer{
 		ObjectMeta: metav1.ObjectMeta{
@@ -110,7 +114,7 @@ func (r *SFController) DeployLogserverResource() bool {
 		Spec: sfv1.LogServerSpec{
 			FQDN:             r.cr.Spec.FQDN,
 			LetsEncrypt:      r.cr.Spec.LetsEncrypt,
-			StorageClassName: r.cr.Spec.Logserver.Storage.ClassName,
+			StorageClassName: storageclassname,
 			AuthorizedSSHKey: pubKeyB64,
 			Settings:         r.cr.Spec.Logserver,
 		},
