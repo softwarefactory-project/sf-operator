@@ -14,6 +14,7 @@ deployments, beyond what can be defined in a custom resource manifest.
     1. [create gerrit](#create-gerrit)
     1. [create microshift](#create-microshift)
     1. [create standalone-sf](#create-standalone-sf)
+    1. [run-tests](#run-tests)
     1. [wipe gerrit](#wipe-gerrit)
   1. [Init](#init)
   1. [Nodepool](#nodepool)
@@ -203,6 +204,22 @@ Flags:
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 |--cr |string | The path to the custom resource to apply | No | If a config file is used and the flag not provided, will default to the context's `manifest-file` if set |
+
+#### run-tests
+
+Run the playbook for a given test suite. Extra variables can be specified.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] dev run-tests {olm,standalone,upgrade} [FLAGS]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+|--extra-var | string | Set an extra variable in the form `key=value` to pass to the test playbook. Repeatable | Yes | - |
+|--v | boolean | Run playbook in verbose mode | Yes | false |
+|--vvv | boolean | Run playbook in debug mode | Yes | false |
 
 #### wipe gerrit
 

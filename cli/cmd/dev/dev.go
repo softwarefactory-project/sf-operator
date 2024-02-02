@@ -38,6 +38,8 @@ var devRunTestsAllowedArgs = []string{"olm", "standalone", "upgrade"}
 var microshiftUser = "cloud-user"
 var defaultDiskSpace = "20G"
 
+var errMissingArg = errors.New("missing argument")
+
 func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigContext) {
 	skipLocalSetup, _ := kmd.Flags().GetBool("skip-local-setup")
 	skipDeploy, _ := kmd.Flags().GetBool("skip-deploy")
@@ -45,11 +47,9 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 	dryRun, _ := kmd.Flags().GetBool("dry-run")
 	rootDir := ms.CreateTempRootDir()
 
-	// Arg validation
-	missingArgError := errors.New("missing argument")
 	msHost := cliCtx.Dev.Microshift.Host
 	if msHost == "" {
-		ctrl.Log.Error(missingArgError, "Host must be set in `microshift` section of the configuration")
+		ctrl.Log.Error(errMissingArg, "Host must be set in `microshift` section of the configuration")
 		os.Exit(1)
 	}
 	msUser := cliCtx.Dev.Microshift.User
@@ -60,7 +60,7 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 	}
 	msOpenshiftPullSecret := cliCtx.Dev.Microshift.OpenshiftPullSecret
 	if msOpenshiftPullSecret == "" {
-		ctrl.Log.Error(missingArgError, "A valid OpenShift pull secret must be set in `microshift` section of the configuration")
+		ctrl.Log.Error(errMissingArg, "A valid OpenShift pull secret must be set in `microshift` section of the configuration")
 		os.Exit(1)
 	}
 	msDiskFileSize := cliCtx.Dev.Microshift.DiskFileSize
@@ -75,7 +75,7 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 	}
 	msSFOperatorRepositoryPath := cliCtx.Dev.SFOperatorRepositoryPath
 	if msSFOperatorRepositoryPath == "" {
-		ctrl.Log.Error(missingArgError, "The path to the sf-operator repository must be set in `dev` section of the configuration")
+		ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration")
 		os.Exit(1)
 	}
 
@@ -112,6 +112,37 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 		defer os.RemoveAll(rootDir)
 	} else {
 		ctrl.Log.Info("Playbooks can be found in " + rootDir)
+	}
+}
+
+func devRunTests(kmd *cobra.Command, args []string) {
+	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, runTestsAllowedArgs)
+	target := args[0]
+	sfOperatorRepositoryPath := cliCtx.Dev.SFOperatorRepositoryPath
+	extraVars := cliCtx.Dev.Tests.ExtraVars
+	if len(extraVars) == 0 {
+		vars, _ := kmd.Flags().GetStringSlice("extra-var")
+		extraVars = cliutils.VarListToMap(vars)
+	}
+	if sfOperatorRepositoryPath == "" {
+		ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration")
+		os.Exit(1)
+	}
+	var verbosity string
+	verbose, _ := kmd.Flags().GetBool("v")
+	debug, _ := kmd.Flags().GetBool("vvv")
+	if verbose {
+		verbosity = "verbose"
+	}
+	if debug {
+		verbosity = "debug"
+	}
+	if target == "olm" {
+		runTestOLM(extraVars, sfOperatorRepositoryPath, verbosity)
+	} else if target == "standalone" {
+		runTestStandalone(extraVars, sfOperatorRepositoryPath, verbosity)
+	} else if target == "upgrade" {
+		runTestUpgrade(extraVars, sfOperatorRepositoryPath, verbosity)
 	}
 }
 
@@ -186,8 +217,6 @@ func devCloneAsAdmin(kmd *cobra.Command, args []string) {
 	gerrit.CloneAsAdmin(&env, fqdn, repoName, dest, verify)
 }
 
-func devRunTests(kmd *cobra.Command, args []string) {}
-
 func MkDevCmd() *cobra.Command {
 
 	var (
@@ -198,6 +227,9 @@ func MkDevCmd() *cobra.Command {
 		msSkipPostInstall bool
 		msDryRun          bool
 		sfResource        string
+		extraVars         []string
+		testVerbose       bool
+		testDebug         bool
 		devCmd            = &cobra.Command{
 			Use:   "dev",
 			Short: "development subcommands",
@@ -221,8 +253,8 @@ func MkDevCmd() *cobra.Command {
 			Run:  devCloneAsAdmin,
 		}
 		runTestsCmd = &cobra.Command{
-			Use:       "runTests TESTNAME",
-			Long:      "Wipe a development resource. The resource can be a gerrit instance.",
+			Use:       "run-tests TESTNAME",
+			Long:      "Runs a test suite locally. TESTNAME can be `olm`, `standalone` or `upgrade`",
 			ValidArgs: devRunTestsAllowedArgs,
 			Run:       devRunTests,
 		}
@@ -238,6 +270,10 @@ func MkDevCmd() *cobra.Command {
 	createCmd.Flags().BoolVar(&msDryRun, "dry-run", false, "(microshift) only create the playbook files, do not run them")
 
 	createCmd.Flags().StringVar(&sfResource, "cr", "", "The path to the CR defining the Software Factory deployment.")
+
+	runTestsCmd.Flags().StringSliceVar(&extraVars, "extra-var", []string{}, "Set an extra variable in the form `key=value` to pass to the test playbook. Repeatable")
+	runTestsCmd.Flags().BoolVar(&testVerbose, "v", false, "run ansible in verbose mode")
+	runTestsCmd.Flags().BoolVar(&testDebug, "vvv", false, "run ansible in debug mode")
 
 	devCmd.AddCommand(createCmd)
 	devCmd.AddCommand(wipeCmd)
