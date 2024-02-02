@@ -104,26 +104,19 @@ func mkZuulLoggingMount(service string) apiv1.VolumeMount {
 
 func mkZuulConnectionsSecretsMount(r *SFController) []apiv1.VolumeMount {
 	zuulConnectionMounts := []apiv1.VolumeMount{}
-	secretkey := "app_key"
 	for _, connection := range r.cr.Spec.Zuul.GitHubConns {
 		secretName := connection.Secrets
-
-		_, err := r.GetSecretDataFromKey(secretName, secretkey)
-		if err == nil {
+		if connection.AppID > 0 {
 			zuulConnectionMounts = append(zuulConnectionMounts, apiv1.VolumeMount{
 				Name:      secretName,
-				MountPath: "/var/lib/zuul/" + secretName + "/" + secretkey,
-				SubPath:   secretkey,
+				MountPath: "/var/lib/zuul/" + secretName + "/app_key",
+				SubPath:   "app_key",
 			})
 		}
 	}
 
 	for _, conn := range r.cr.Spec.Zuul.GerritConns {
 		if conn.Sshkey != "" {
-			_, err := r.GetSecretDataFromKey(conn.Sshkey, "priv")
-			if err != nil {
-				r.log.V(1).Error(err, "Unknown secret "+conn.Sshkey)
-			}
 			keyMount := apiv1.VolumeMount{
 				Name:      "zuul-ssh-key-" + conn.Sshkey,
 				MountPath: "/var/lib/zuul-" + conn.Sshkey + "/",
@@ -383,12 +376,6 @@ func mkZuulGitHubSecretsVolumes(r *SFController) []apiv1.Volume {
 	gitConnectionSecretVolumes := []apiv1.Volume{}
 	for _, connection := range r.cr.Spec.Zuul.GitHubConns {
 		secretName := connection.Secrets
-
-		if _, err := r.GetSecret(secretName); err != nil {
-			r.log.V(1).Error(err, "Error while getting secret "+secretName)
-			continue
-		}
-
 		gitConnectionSecretVolumes = append(gitConnectionSecretVolumes, base.MkVolumeSecret(secretName))
 	}
 	return gitConnectionSecretVolumes
@@ -923,12 +910,6 @@ func (r *SFController) AddGitHubConnection(cfg *ini.File, conn sfv1.GitHubConnec
 
 	appID := fmt.Sprintf("%d", conn.AppID)
 	appKey := "/var/lib/zuul/" + conn.Secrets + "/app_key"
-
-	_, err := r.GetSecretDataFromKey(conn.Secrets, "app_key")
-	if err != nil {
-		r.log.V(1).Info(err.Error(), "app_key", conn.Secrets)
-		appKey = ""
-	}
 
 	if appKey == "" || appID == "0" {
 		r.log.V(1).Info("app_key or app_id is not defined", "app_key", appKey, "app_id", appID)

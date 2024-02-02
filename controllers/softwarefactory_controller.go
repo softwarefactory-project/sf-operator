@@ -8,6 +8,7 @@ package controllers
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -165,9 +166,41 @@ func (r *SFController) cleanup() {
 	})
 }
 
+func (r *SFController) validate() error {
+	// Validate github secrets
+	for _, connection := range r.cr.Spec.Zuul.GitHubConns {
+		secret, err := r.GetSecret(connection.Secrets)
+		if err != nil {
+			return errors.New("Missing github secret: " + connection.Secrets)
+		}
+		if connection.AppID > 0 && len(secret.Data["app_key"]) == 0 {
+			return errors.New("Missing github app_key field in: " + connection.Secrets)
+		}
+	}
+
+	// Validate gerrit secrets
+	for _, conn := range r.cr.Spec.Zuul.GerritConns {
+		if conn.Sshkey != "" {
+			_, err := r.GetSecretDataFromKey(conn.Sshkey, "priv")
+			if err != nil {
+				return errors.New("Missing gerrit secret: " + conn.Sshkey)
+			}
+		}
+	}
+	return nil
+}
+
 func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	r.cleanup()
+
+	if err := r.validate(); err != nil {
+		r.log.V(1).Error(err, "Validation failed")
+		// TODO: add error as a new status conditions
+		status := r.cr.Status.DeepCopy()
+		status.Ready = false
+		return *status
+	}
 
 	DURuleGroups := []monitoringv1.RuleGroup{
 		sfmonitoring.MkDiskUsageRuleGroup(r.ns, "sf"),
