@@ -1,10 +1,9 @@
- # Nodepool
+# Nodepool
 
 Here you will find information about managing the Nodepool service when deployed with the SF Operator.
 It does not replace [Nodepool's documentation](https://zuul-ci.org/docs/nodepool/latest/),
 but addresses specificities and idiosyncrasies induced by deploying Nodepool with the SF Operator.
 
-## Table of Contents
 
 1. [Architecture](#architecture)
 1. [Services configuration](#services-configuration)
@@ -26,13 +25,15 @@ Nodepool is deployed by SF-Operator as micro-services:
 `nodepool-builder` requires access to at least one `image-builder` machine that is to be deployed out-of-band. Due to security limitations,
 it is impossible (or at least very hard) to build Nodepool images on a pod, which is why this process must be delegated remotely to an `image-builder` machine.
 
-> The only requirement for the `image-builder` machine is that the `nodepool-builder` is able to run Ansible tasks via SSH. Please refer to sections [Get the builder's SSH public key](#get-the-builders-ssh-public-key) and [Configuring Nodepool builder](../user/nodepool_config_repository#configuring-nodepool-builder).
+!!! note
+    The only requirement for the `image-builder` machine is that the `nodepool-builder` is able to run Ansible tasks via SSH. Please refer to sections [Get the builder's SSH public key](#get-the-builders-ssh-public-key) and [Configuring Nodepool builder](../user/nodepool_config_repository.md#configuring-nodepool-builder).
 
-> There is no assumption about the processes and toolings used to build images on the `image-builder`, except that the workflow must be driven by an Ansible playbook from the `nodepool-builder`.
+!!! note
+    There is no assumption about the processes and toolings used to build images on the `image-builder`, except that the workflow must be driven by an Ansible playbook from the `nodepool-builder`.
 
 ## Services configuration
 
-Configuring the Nodepool micro-services is done through the SoftwareFactory deployment's manifest. Many configuration parameters are exposed by The [SoftwareFactory Custom Resource spec](./../../config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml).
+Configuring the Nodepool micro-services is done through the SoftwareFactory deployment's manifest. Many configuration parameters are exposed by The [SoftwareFactory Custom Resource spec](../deployment/crds.md#softwarefactory).
 
 The spec is constantly evolving during alpha development, and should be considered
 unstable but the ultimate source of truth for documentation about its properties.
@@ -42,7 +43,7 @@ unstable but the ultimate source of truth for documentation about its properties
 Currently the SF Operator supports OpenStack (`clouds.yaml`) and Kubernetes (`kube.config`) configuration files. These files are used by Nodepool to manage resources on its providers.
 They are managed by the SF Operator in a secret called `nodepool-providers-secrets`.
 
-To push your configuration file(s) to Nodepool, run sf-operator's [`nodepool configure providers-secrets` subcommand](./../reference/cli/index.md#configure-providers-secrets):
+To push your configuration file(s) to Nodepool, run sf-operator's [`nodepool configure providers-secrets` subcommand](../reference/cli/index.md#configure-providers-secrets):
 
 ```sh
 sf-operator nodepool configure providers-secrets --kube /path/to/kube.config --clouds /path/to/clouds.yaml
@@ -56,24 +57,29 @@ kubectl get sf -n sf -w
 
 When your deployment is ready, the provider secrets have been updated in Nodepool.
 
-> You can also fetch the currently used configurations with the [`nodepool get providers-secrets` subcommand](./../reference/cli/index.md#get-providers-secrets).
+!!! warning
+    You can also fetch the currently used configurations with the [`nodepool get providers-secrets` subcommand](./../reference/cli/index.md#get-providers-secrets),
+    which will copy the configuration files from Nodepool into the files defined in the CLI's configuration. **Be careful not to erase
+    important data!**
 
 ## Get the builder's SSH public key
 
 The Nodepool builder component should be used with at least one `image-builder` companion machine.
 It must have the capablility to connect via SSH to the builder machine.
 
-Here is the command to fetch the builder SSH public key:
+There are two ways to fetch the builder SSH public key: with kubectl, or with the [sf-operator CLI](../reference/cli/index.md).
 
-```sh
-kubectl get secret nodepool-builder-ssh-key -n sf -o jsonpath={.data.pub} | base64 -d
-```
+=== "sf-operator"
 
-or
+    ```sh
+    sf-operator --namespace sf nodepool get builder-ssh-key
+    ```
 
-```sh
-sf-operator --namespace sf nodepool get builder-ssh-key
-```
+=== "kubectl"
+
+    ```sh
+    kubectl get secret nodepool-builder-ssh-key -n sf -o jsonpath={.data.pub} | base64 -d
+    ```
 
 ## Accept an image-builder's SSH Host key
 

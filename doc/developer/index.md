@@ -1,8 +1,11 @@
+---
+title: About
+---
+
 # Developer documentation
 
 Welcome to the developer documentation. You can find here what you need to spin up a development and testing environment for SF-Operator.
 
-## Table of Contents
 
 1. [Contribution guidelines](./CONTRIBUTING.md)
 1. [Setting up a development environment](./getting_started.md)

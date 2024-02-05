@@ -1,5 +1,5 @@
 ---
-status: {proposed | rejected | accepted | deprecated | … | superseded by [ADR-0005](0005-example.md)}
+status: {proposed | rejected | accepted | deprecated | … | superseded by ADR-000XXX (add link)}
 date: {YYYY-MM-DD when the decision was last updated}
 ---
 

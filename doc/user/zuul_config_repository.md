@@ -1,6 +1,5 @@
 # Zuul configuration
 
-## Table of Contents
 
 1. [File structure](#file-structure)
 1. [Defining a Zuul tenant](#defining-a-zuul-tenant)
@@ -15,19 +14,27 @@ When the `config-check` and `config-update` jobs are run on git events occurring
        |_ main.yaml
 ```
 
-> if the file structure is missing or partial the jobs will skip the related configuration check and update.
+!!! note
+    if the file structure is missing or partial the jobs will skip the related configuration check and update.
 
 The file `zuul/main.yaml` holds the [tenants configuration](https://zuul-ci.org/docs/zuul/latest/tenants.html) that will be applied the deployment.
 
-> A git repository is called a `project` within the Zuul terminology.
+!!! info "Definition"
+    A git repository is called a `project` within the Zuul terminology.
 
 ## Defining a Zuul tenant
 
 A Zuul tenant is defined through the `zuul/main.yaml` file. A Zuul tenant holds an isolated Zuul configuration from others Zuul tenants.
 
-The configuration provided into `zuul/main.yaml` will be appended to the [base configuration](../../controllers/static/zuul/generate-tenant-config.sh).
+The configuration provided into `zuul/main.yaml` will be appended to the base configuration.
 
-> Please take care not to override the `internal` tenant definition.
+??? question "What happens during a `config-update` job?"
+
+    When a change to `zuul/main.yaml` is merged, the following script is run to update Zuul's tenant configuration on the scheduler:
+
+    ``` title="controllers/static/zuul/generate-tenant-config.sh"
+    --8<-- "controllers/static/zuul/generate-tenant-config.sh"
+    ```
 
 Here is an example of a minimal tenant defintion:
 
@@ -44,15 +51,20 @@ Here is an example of a minimal tenant defintion:
           - zuul/zuul-jobs
 ```
 
+!!! danger
+    Please take care not to override the `internal` tenant definition.
+
 A minimal Zuul tenant should be populated with at least one [config/trusted](https://zuul-ci.org/docs/zuul/latest/tenants.html#attr-tenant.config-projects) project.
 This tenant's config project (`my-tenant-config-repo` in the example above) defines Zuul configuration such as the `pipelines`, the `base job` and related base Ansible `playbooks`.
 
 While the tenant's config project could be setup manually, we also provide a `cli` command to scaffold its content.
 
-> Note that [zuul/zuul-jobs](https://zuul-ci.org/docs/zuul-jobs/latest/) should be part of a new tenant. The `SF boostrap-tenant` command expects that
-  this repository is part of the tenant.
+!!! note 
+    The [zuul/zuul-jobs](https://zuul-ci.org/docs/zuul-jobs/latest/) project should always be part of a new tenant. The `SF boostrap-tenant` command expects that
+    this repository is part of the tenant.
 
-> The `opendev.org` connection is available by default on any Software-Factory deployment.
+!!! info
+    The `opendev.org` connection is preconfigured on any Software-Factory deployment.
 
 ### Bootstrap a config-project
 
@@ -61,7 +73,8 @@ While the tenant's config project could be setup manually, we also provide a `cl
 * the `check`, `gate` and `post` pipelines
 * the `base job` and `playbooks`
 
-> The tool only supports the definition of `pipelines` compatible with a `Gerrit` connection.
+!!! warning
+    The tool only supports the definition of `pipelines` compatible with a `Gerrit` connection.
 
 Get a local checkout of the tenant's config project/repository then run:
 
@@ -88,4 +101,4 @@ Zuul bot account for the related connection is authorized to set approvals, repo
 
 See the related section by connection type:
 
-- Gerrit: [Set the Gerrit ACLs for repository](../deployment/config_repository#repository-acls-and-labels)
+- Gerrit: [Set the Gerrit ACLs for repository](../deployment/config_repository.md#repository-acls-and-labels)

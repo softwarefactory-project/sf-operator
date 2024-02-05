@@ -1,6 +1,5 @@
 # Getting Started with the SF Operator
 
-## Table of Contents
 
 1. [Prerequisites](#prerequisites)
 2. [Installing the Operator](#installing-the-operator)

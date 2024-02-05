@@ -2,7 +2,6 @@
 
 This section covers the basics to get started with the development on the SF-Operator's code base.
 
-## Table of Contents
 
 1. [Requirements](#requirements)
 1. [Run the operator](#run-the-operator)
@@ -49,12 +48,24 @@ kubectl create namespace sf
 kubectl config set-context microshift --namespace=sf
 ```
 
-Edit the [sf-operator CLI configuration file](./../../sfcli.config) to your liking, for example by setting up a custom FQDN.
+[Create a sf-operator configuration file](../reference/cli/index.md#config) to your liking:
+
+```sh
+sf-operator init config --dev > /path/to/sfcli.yaml
+```
+
+Then edit it as necessary, for example by setting up a custom FQDN. Below is an example you can copy and edit.
+
+??? abstract "CLI configuration example"
+
+    ```yaml title="sfcli.yaml"
+    --8<-- "sfcli.yaml"
+    ```
 
 Then run the `sf-operator` command:
 
 ```sh
-sf-operator dev create demo-env
+sf-operator --config /path/to/sfcli.yaml dev create demo-env
 ```
 
 [This command](./../reference/cli/index.md#create-demo-env) performs the following tasks:
@@ -76,38 +87,40 @@ To iterate on the development of the `sf-operator` you can either start the oper
   client is used to perform a `SofwareFactory` deployment based on `yaml` definition passed
   as parameter.
 
-### Run the operator with the manager mode
+=== "manager mode"
 
-First, apply the `SoftwareFactory`'s `CR`:
+    First, apply the `SoftwareFactory`'s `CR`:
+    
+    ```sh
+    kubectl apply -f playbooks/files/sf.yaml
+    ```
+    
+    then run the operator with the following command:
+    
+    ```sh
+    sf-operator --namespace sf operator
+    ```
 
-```sh
-kubectl apply -f playbooks/files/sf.yaml
-```
+    !!! note
+        The command does not return and wait for events to run the reconcile.
+    
+    You can kill and restart this process every time you modify the code base
+    to see your changes applied to the deployed resources.
+    
+    Any change on the applied `SofwareFactory`'s `CR` will re-trigger the reconcile.
 
-then run the operator with the following command:
+=== "standalone mode"
 
-```sh
-sf-operator --namespace sf operator
-```
-
-> The command does not return and wait for events to run the reconcile.
-
-You can kill and restart this process every time you modify the code base
-to see your changes applied to the deployed resources.
-
-Any change on the applied `SofwareFactory`'s `CR` re-trigger the reconcile.
-
-### Run the operator in standalone mode
-
-Run the operator with the following command:
-
-```sh
-sf-operator --namespace sf apply --cr playbooks/files/sf.yaml
-```
-
-> The command returns when the expected state is applied.
-
-Each change to the `CR`, passed as parameter, will require a new run of the command to `reconcile` the change.
+    Run the operator with the following command:
+     
+    ```sh
+    sf-operator --namespace sf apply --cr playbooks/files/sf.yaml
+    ```
+     
+    !!! note
+        The command returns when the expected state is applied.
+     
+    Each change to the `CR`, passed as parameter, will require a new run of the command to `reconcile` the change.
 
 
 ## Access the services web UI

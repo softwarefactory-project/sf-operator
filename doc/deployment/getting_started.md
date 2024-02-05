@@ -1,6 +1,5 @@
 # Getting Started with a deployment
 
-## Table of Contents
 
 1. [Prerequisites](#prerequisites)
 1. [Installation](#installation)
@@ -19,12 +18,14 @@ In order to deploy a Software Factory with the SF-Operator on an OpenShift clust
 
 We recommend using a dedicated namespace to deploy your Software Factory. Furthermore, only one instance of a Software Factory must be deployed per namespace due to name and label collisions.
 
-> Currently, the namespace must allow `privileged` containers to run. Indeed the `zuul-executor` container requires
-extra privileges because of [bubblewrap](https://github.com/containers/bubblewrap).
+!!! note
+    Currently, the namespace must allow `privileged` containers to run. Indeed the `zuul-executor` container requires
+    extra privileges because of [bubblewrap](https://github.com/containers/bubblewrap).
 
 In this example we will create a dedicated namespace called **sf**. Then the next three commands below configure privileged access on this namespace; modify the commands as needed if using a different namespace.
 
-> Note that these commands might need to be run by a user with enough privileges to create and modify namespaces and policies.
+!!! note
+    Note that these commands might need to be run by a user with enough privileges to create and modify namespaces and policies.
 
 ```sh
 kubectl create namespace sf

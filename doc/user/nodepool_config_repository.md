@@ -1,6 +1,5 @@
 # Nodepool configuration
 
-## Table of Contents
 
 1. [File structure](#file-structure)
 1. [Configuring Nodepool launcher](#configuring-nodepool-launcher)
@@ -20,7 +19,8 @@ When the `config-check` and `config-update` jobs are run on git events occurring
                          |_ my-cloud-image-1.yaml
 ```
 
-> if the file structure is missing or partial the jobs will skip the related configuration check and update.
+!!! note
+    If the file structure is missing or partial the jobs will skip the related configuration check and update.
 
 The file `nodepool.yaml` holds [the labels and node providers configuration](https://zuul-ci.org/docs/nodepool/latest/configuration.html). This configuration is used by the `nodepool-launcher` process.
 
@@ -30,11 +30,20 @@ The `dib-ansible` directory is used by `nodepool-builder` as the images build de
 
 ## Configuring Nodepool launcher
 
-The configuration provided in `nodepool/nodepool.yaml` will be appended to the [base configuration](../../controllers/static/nodepool/generate-config.sh).
+!!! danger
+    Please take care not to override any of the base settings!
 
-> Please take care not to override any of the base settings
+The configuration provided in `nodepool/nodepool.yaml` will be appended to the base configuration.
 
-For each provider used in the Nodepool launcher configuration, nodepool must be able to find the required connection credentials. Please refer the deployment documentation about [setting up provider secrets](../deployment/nodepool#setting-up-provider-secrets).
+??? question "What happens during a `config-update` job?"
+
+    When a change to nodepool's configuration is merged, the following script is run to update the pods running nodepool:
+
+    ```bash title="controllers/static/nodepool/generate-config.sh"
+    --8<-- "controllers/static/nodepool/generate-config.sh"
+    ```
+
+For each provider used in the Nodepool launcher configuration, nodepool must be able to find the required connection credentials. Please refer the deployment documentation about [setting up provider secrets](../deployment/nodepool.md#setting-up-provider-secrets).
 
 ### Use an official cloud image within an OpenStack cloud
 
@@ -78,15 +87,20 @@ providers:
 4. If the `min-ready` property is over 0, you should see in the Zuul web UI, the new label and
    a ready node under the `labels` and `nodes` pages.
 
-> Please refer to the [troubleshooting guide](../deployment/nodepool#troubleshooting) if needed.
+!!! tip
+    If you encounter issues, please refer to the [troubleshooting guide](../deployment/nodepool.md#troubleshooting).
 
 ## Configuring Nodepool builder
 
-The configuration provided in `nodepool/nodepool-builder.yaml` will be appended to the [base configuration](../../controllers/static/nodepool/generate-config.sh).
+!!! danger
+    Please take care not to override any of the base settings!
 
-> Please take care not to override any of the base settings
+The configuration provided in `nodepool/nodepool-builder.yaml` will be appended to the base configuration. (1)
+{ .annotate }
 
-For each provider used in the Nodepool builder configuration, nodepool must be able to find the required connection credentials. Please refer the deployment documentation about [setting up provider secrets](../deployment/nodepool#setting-up-provider-secrets).
+1. See ["What happens during a `config-update` job?"](#configuring-nodepool-launcher) for implementation details.
+
+For each provider used in the Nodepool builder configuration, nodepool must be able to find the required connection credentials. Please refer the deployment documentation about [setting up provider secrets](../deployment/nodepool.md#setting-up-provider-secrets).
 
 ### disk-image-builder
 
@@ -94,7 +108,10 @@ Due to the security restrictions related to the OpenShift platform, the use of [
 
 ### dib-ansible
 
-[dib-ansible](../../controllers/static/nodepool/dib-ansible.py) is an alternative [dib-cmd](https://zuul-ci.org/docs/nodepool/latest/configuration.html#attr-diskimages.dib-cmd) wrapper that we provide within the `sf-operator` project. It is a `dib-cmd` wrapper to the `ansible-playbook` command.
+`dib-ansible` (1) is an alternative [dib-cmd](https://zuul-ci.org/docs/nodepool/latest/configuration.html#attr-diskimages.dib-cmd) wrapper that we provide within the `sf-operator` project. It is a `dib-cmd` wrapper to the `ansible-playbook` command.
+{ .annotate }
+
+1. For implementation details, the wrapper can be found at [controllers/static/nodepool/dib-ansible.py](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/controllers/static/nodepool/dib-ansible.py)
 
 We recommend using `dib-ansible` to externalize the image build process on at least one image builder machine.
 
@@ -153,9 +170,10 @@ Here are the available variables and their meaning:
 - qcow2_type: is a boolean specifying if the built image format is `qcow2`.
 - raw_type: is a boolean specifying if the built image format is `raw`.
 
-> Zuul needs to authenticate via SSH onto Virtual Machines spawned from built cloud images. Thus, the Zuul SSH public key should be added as
-an authorized key for the user Zuul will connect to. The Zuul SSH public key is available on the `nodepool-builder` into the file
-`/var/lib/zuul-ssh-key/pub`. A cloud image build playbook can read that file to prepare a cloud image.
+!!! note
+    Zuul needs to authenticate via SSH onto Virtual Machines spawned from built cloud images. Thus, the Zuul SSH public key should be added as
+    an authorized key for the user Zuul will connect to. The Zuul SSH public key is available on the `nodepool-builder` into the file
+    `/var/lib/zuul-ssh-key/pub`. A cloud image build playbook can read that file to prepare a cloud image.
 
 Finally we need an `inventory.yaml` file. It must be defined into `nodepool/dib-ansible/inventory.yaml`:
 
@@ -163,15 +181,17 @@ Finally we need an `inventory.yaml` file. It must be defined into `nodepool/dib-
 ungrouped:
   hosts:
     image-builder:
-      ansible_host: <my-builder-ip-or-hostname>
+      ansible_host: <my-builder-ip-or-hostname>/
       ansible_user: nodepool
 ```
 
-> Nodepool builder must be able to connect via SSH to your image-builder machine. Thus please refer to the section [Get the Nodepool builder SSH public key](../deployment/nodepool#get-the-builders-ssh-public-key).
+!!! note
+    Nodepool builder must be able to connect via SSH to your image-builder machine. Thus please refer to the section [Get the Nodepool builder SSH public key](../deployment/nodepool.md#get-the-builders-ssh-public-key).
 
 Once these three files `nodepool/dib-ansible/inventory.yaml`, `nodepool/dib-ansible/my-cloud-image.yaml` and `nodepool/nodepool-builder.yaml` are merged into the Software Factory `config` repository and the `config-update` has succeeded then Nodepool will run the build proces.
 
-> At the first connection attempt of the `nodepool-builder` to an `image-builder` host, Ansible will refuse to connect because the SSH Host key is not known. Please refer to the section [Accept an image-builder's SSH Host key](../deployment/nodepool#accept-an-image-builders-ssh-host-key).
+??? tip "SSH connection issues with an image-builder host?"
+    At the first connection attempt of the `nodepool-builder` to an `image-builder` host, Ansible will refuse to connect because the SSH Host key is not known. Please refer to the section [Accept an image-builder's SSH Host key](../deployment/nodepool.md#accept-an-image-builders-ssh-host-key).
 
 The image builds status can be consulted by accessing this endpoint: `https://<fqdn>/nodepool/api/dib-image-list`.
 
