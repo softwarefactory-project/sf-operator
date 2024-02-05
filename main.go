@@ -57,6 +57,12 @@ func operatorCmd(kmd *cobra.Command, args []string) {
 }
 
 func main() {
+	opts := zap.Options{
+		Development: true,
+		DestWriter:  os.Stderr,
+	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
 	var (
 		metricsAddr          string
 		enableLeaderElection bool
@@ -105,11 +111,6 @@ func main() {
 	for _, c := range subcommands {
 		rootCmd.AddCommand(c)
 	}
-
-	opts := zap.Options{
-		Development: true,
-	}
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	rootCmd.Execute()
 }

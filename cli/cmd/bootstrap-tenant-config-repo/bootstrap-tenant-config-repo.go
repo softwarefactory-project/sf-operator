@@ -3,34 +3,34 @@
 package bootstraptenantconfigrepo
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 
 	utils "github.com/softwarefactory-project/sf-operator/controllers/libs/zuulcf"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var zuuldropindir = "zuul.d"
 var zuulplaybooks = "playbooks"
 
-func createDirectoryStructure(path string) error {
+func createDirectoryStructureOrDie(path string) {
 
 	for _, dir := range []string{path, filepath.Join(path, zuulplaybooks), filepath.Join(path, zuuldropindir)} {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf(err.Error())
+			ctrl.Log.Error(err, "Unable to create directory structure")
+			os.Exit(1)
 		}
 	}
-	return nil
 }
 
-func writeFile[F any](filestructure F, path string) error {
+func writeFileOrDie[F any](filestructure F, path string) {
 	dataOutput, _ := yaml.Marshal(filestructure)
 	if err := os.WriteFile(path, dataOutput, 0666); err != nil {
-		return fmt.Errorf(err.Error())
+		ctrl.Log.Error(err, "Unable to write file "+path)
 	}
-	return nil
 }
 
 func getAnsibleIncludeRole(rolename string) map[string]any {
@@ -43,77 +43,87 @@ func getAnsibleIncludeRole(rolename string) map[string]any {
 
 // BootstrapTenantConfigRepoCmd command
 var BootstrapTenantConfigRepoCmd = &cobra.Command{
-	Use:   "bootstrap-tenant-config-repo",
-	Short: "Zuul Config Generate command",
-	Long: `Zuul Config Generate command
-Expands sfconfig command tool
-Generates Base Zuul Configurations
+	Use:   "bootstrap-tenant",
+	Short: "bootstrap a tenant's config repository",
+	Long: `Initialize a Zuul tenant's config repository
+with boilerplate code that define standard pipelines:
 
-This will generate the the following files:
+* "check" for pre-commit validation
+* "gate" for approved commits gating
+* "post for post-commit actions
+
+it also includes a boilerplate job and pre-run playbook.
+
+This will generate the following files:
 <Path to Project>/zuul.d/<CONNECTION NAME>-base-jobs.yaml
 <Path to Project>/zuul.d/<CONNECTION NAME>-pipeline.yaml
 <Path to Project>/playbooks/<CONNECTION NAME>-pre.yaml
 
-Note: If the directories does not exit they will be created
+Note: If the directories does not exit they will be created.
 
 	`,
-	Example: `
-	./tools/sfconfig bootstrap-tenant-config-repo --connection gerrit-conn --driver gerrit --outpath <Path to Project>/
-	./tools/sfconfig bootstrap-tenant-config-repo --connection github-conn --driver github --outpath <Path to Project>/
-	`,
-	Aliases: []string{"boot"},
 	Run: func(cmd *cobra.Command, args []string) {
 
 		connection, _ := cmd.Flags().GetString("connection")
 		driver, _ := cmd.Flags().GetString("driver")
-		outpath, _ := cmd.Flags().GetString("outpath")
+
+		if len(args) != 1 {
+			ctrl.Log.Error(errors.New("incorrect argument"), "the command accepts only one argument as destination path")
+			os.Exit(1)
+		}
+		outpath := args[0]
 
 		InitConfigRepo(driver, connection, outpath)
 
-		fmt.Println("Files generated at ", outpath)
+		ctrl.Log.Info("Repository bootstrapped at " + outpath)
 	},
 }
 
 func InitConfigRepo(driver string, connection string, zuulrootdir string) {
 
-	if err := createDirectoryStructure(zuulrootdir); err != nil {
-		fmt.Println(err)
-	}
+	createDirectoryStructureOrDie(zuulrootdir)
 
 	// Check Pipeline
 	requireCheck, err := utils.GetRequireCheckByDriver(driver, connection)
 	if err != nil {
-		fmt.Println(err)
+		ctrl.Log.Error(err, "Could not define check pipeline require config for "+driver)
+		os.Exit(1)
 	}
 	triggerCheck, err := utils.GetTriggerCheckByDriver(driver, connection)
 	if err != nil {
-		fmt.Println(err)
+		ctrl.Log.Error(err, "Could not define check pipeline trigger config for "+driver)
+		os.Exit(1)
 	}
 	reportersCheck, err := utils.GetReportersCheckByDriver(driver, connection)
 	if err != nil {
-		fmt.Println(err)
+		ctrl.Log.Error(err, "Could not define check pipeline reporters config for "+driver)
+		os.Exit(1)
 	}
 	// Gate Pipeline
 	requireGate, err := utils.GetRequireGateByDriver(driver, connection)
 	if err != nil {
-		fmt.Println(err)
+		ctrl.Log.Error(err, "Could not define gate pipeline require config for "+driver)
+		os.Exit(1)
 	}
 	triggerGate, err := utils.GetTriggerGateByDriver(driver, connection)
 	if err != nil {
-		fmt.Println(err)
+		ctrl.Log.Error(err, "Could not define gate pipeline trigger config for "+driver)
+		os.Exit(1)
 	}
 	reportersGate, err := utils.GetReportersGateByDriver(driver, connection)
 	if err != nil {
-		fmt.Println(err)
+		ctrl.Log.Error(err, "Could not define gate pipeline trigger config for "+driver)
+		os.Exit(1)
 	}
 	// Post Pipeline
 	triggerPost, err := utils.GetTriggerPostByDriver(driver, connection)
 	if err != nil {
-		fmt.Println(err)
+		ctrl.Log.Error(err, "Could not define post pipeline trigger config for "+driver)
+		os.Exit(1)
 	}
 
 	zuulpipelinefilepath := filepath.Join(zuulrootdir, zuuldropindir, connection+"-pipeline.yaml")
-	if err := writeFile(utils.PipelineConfig{
+	writeFileOrDie(utils.PipelineConfig{
 		{
 			Pipeline: utils.PipelineBody{
 				Name: "check",
@@ -154,12 +164,10 @@ pipeline to receive an initial +/-1 Verified vote.`,
 				Trigger:     triggerPost,
 			},
 		},
-	}, zuulpipelinefilepath); err != nil {
-		fmt.Println(err)
-	}
+	}, zuulpipelinefilepath)
 
 	zuuljobfilepath := filepath.Join(zuulrootdir, zuuldropindir, connection+"-base-jobs.yaml")
-	if err := writeFile(utils.JobConfig{
+	writeFileOrDie(utils.JobConfig{
 		{
 			Job: utils.JobBody{
 				Name:        "base",
@@ -177,12 +185,10 @@ pipeline to receive an initial +/-1 Verified vote.`,
 				Attempts: 3,
 			},
 		},
-	}, zuuljobfilepath); err != nil {
-		fmt.Println(err)
-	}
+	}, zuuljobfilepath)
 
 	zuuljobplaybookfilepath := filepath.Join(zuulrootdir, zuulplaybooks, connection+"-pre.yaml")
-	if err := writeFile(utils.AnsiblePlayBook{
+	writeFileOrDie(utils.AnsiblePlayBook{
 		{
 			Hosts: "localhost",
 			Tasks: []map[string]any{
@@ -222,12 +228,10 @@ pipeline to receive an initial +/-1 Verified vote.`,
 				},
 			},
 		},
-	}, zuuljobplaybookfilepath); err != nil {
-		fmt.Println(err)
-	}
+	}, zuuljobplaybookfilepath)
 
 	zuulppfilepath := filepath.Join(zuulrootdir, zuuldropindir, connection+"-project-pipeline.yaml")
-	if err := writeFile(utils.ProjectConfig{{
+	writeFileOrDie(utils.ProjectConfig{{
 		Project: utils.ZuulProjectBody{
 			Pipeline: utils.ZuulProjectPipelineMap{
 				"check": utils.ZuulProjectPipeline{
@@ -241,16 +245,15 @@ pipeline to receive an initial +/-1 Verified vote.`,
 					},
 				},
 			},
-		}}}, zuulppfilepath); err != nil {
-		fmt.Println(err)
-	}
+		}}}, zuulppfilepath)
 }
 
-func init() {
-	BootstrapTenantConfigRepoCmd.Flags().String("connection", "", "Name of the connection or a source")
-	BootstrapTenantConfigRepoCmd.MarkFlagRequired("connection")
-	BootstrapTenantConfigRepoCmd.Flags().String("driver", "", "Driver type of the connection")
-	BootstrapTenantConfigRepoCmd.MarkFlagRequired("driver")
-	BootstrapTenantConfigRepoCmd.Flags().String("outpath", "", "Path to create file structure")
-	BootstrapTenantConfigRepoCmd.MarkFlagRequired("outpath")
+func MkBootstrapCmd() *cobra.Command {
+	var (
+		connection string
+		driver     string
+	)
+	BootstrapTenantConfigRepoCmd.Flags().StringVar(&connection, "connection", "", "Name of the connection or a source")
+	BootstrapTenantConfigRepoCmd.Flags().StringVar(&driver, "driver", "", "Driver type of the connection")
+	return BootstrapTenantConfigRepoCmd
 }

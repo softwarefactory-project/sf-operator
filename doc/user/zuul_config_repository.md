@@ -49,7 +49,7 @@ This tenant's config project (`my-tenant-config-repo` in the example above) defi
 
 While the tenant's config project could be setup manually, we also provide a `cli` command to scaffold its content.
 
-> Note that [zuul/zuul-jobs](https://zuul-ci.org/docs/zuul-jobs/latest/) should be part of a new tenant. The `bootstrap-tenant-config-repo` command expects that
+> Note that [zuul/zuul-jobs](https://zuul-ci.org/docs/zuul-jobs/latest/) should be part of a new tenant. The `SF boostrap-tenant` command expects that
   this repository is part of the tenant.
 
 > The `opendev.org` connection is available by default on any Software-Factory deployment.
@@ -66,7 +66,7 @@ sfconfig allows you to create a scaffolding for a new tenant's config repository
 Get a local checkout of the tenant's config project/repository then run:
 
 ```sh
-./tools/sfconfig bootstrap-tenant-config-repo --connection [connection] --outpath [/path/to/repository]
+go run ./main.go SF bootstrap-tenant --connection [connection] [/path/to/repository]
 ```
 
 ### Modify and merge

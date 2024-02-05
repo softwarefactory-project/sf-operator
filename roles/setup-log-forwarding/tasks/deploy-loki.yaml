@@ -6,7 +6,7 @@
       chdir: "{{ loki_dir }}"
 
   - name: Wait for Loki deployment to be ready
-    ansible.builtin.command: kubectl get deployment test-loki -o=jsonpath='{.status.readyReplicas}'
+    ansible.builtin.command: kubectl get deployment test-loki -n {{ namespace }} -o=jsonpath='{.status.readyReplicas}'
     register: loki_ready
     until:
       - loki_ready.stdout != ""

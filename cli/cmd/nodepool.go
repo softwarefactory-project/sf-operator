@@ -217,8 +217,8 @@ func getProvidersSecret(ns string, kubeContext string, cloudsFile string, kubeFi
 	if cliutils.GetMOrDie(&sfEnv, controllers.NodepoolProvidersSecretsName, &secret) {
 		if len(secret.Data["clouds.yaml"]) > 0 {
 			if cloudsFile == "" {
-				println("clouds.yaml:")
-				println(string(secret.Data["clouds.yaml"]))
+				fmt.Println("clouds.yaml:")
+				fmt.Println(string(secret.Data["clouds.yaml"]))
 			} else {
 				// TODO before we write to file, we should ensure the file, if it exists, is older than
 				// the upstream secret to avoid losing more recent secrets.
@@ -228,8 +228,8 @@ func getProvidersSecret(ns string, kubeContext string, cloudsFile string, kubeFi
 		}
 		if len(secret.Data["kube.config"]) > 0 {
 			if kubeFile == "" {
-				println("kube.config:")
-				println(string(secret.Data["kube.config"]))
+				fmt.Println("kube.config:")
+				fmt.Println(string(secret.Data["kube.config"]))
 			} else {
 				os.WriteFile(kubeFile, secret.Data["kube.config"], 0644)
 				ctrl.Log.Info("File " + kubeFile + " updated")
@@ -251,7 +251,7 @@ func getBuilderSSHKey(ns string, kubeContext string, pubKey string) {
 	var secret apiv1.Secret
 	if cliutils.GetMOrDie(&sfEnv, "nodepool-builder-ssh-key", &secret) {
 		if pubKey == "" {
-			println(string(secret.Data["pub"]))
+			fmt.Println(string(secret.Data["pub"]))
 		} else {
 			os.WriteFile(pubKey, secret.Data["pub"], 0600)
 			ctrl.Log.Info("File " + pubKey + " saved")

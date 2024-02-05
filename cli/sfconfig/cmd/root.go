@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 
-	bootstrap "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/bootstrap-tenant-config-repo"
 	cli "github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/dev"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/gerrit"
 	"github.com/softwarefactory-project/sf-operator/cli/sfconfig/cmd/nodepool"
@@ -67,7 +66,6 @@ func init() {
 	rootCmd.AddCommand(sfprometheus.PrometheusCmd)
 	rootCmd.AddCommand(nodepool.ProvidersSecretsCmd)
 	rootCmd.AddCommand(zuul.ZuulCmd)
-	rootCmd.AddCommand(bootstrap.BootstrapTenantConfigRepoCmd)
 	rootCmd.AddCommand(cli.DevCmd)
 
 }

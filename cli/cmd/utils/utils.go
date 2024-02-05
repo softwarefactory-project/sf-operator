@@ -64,7 +64,8 @@ type SoftwareFactoryConfigContext struct {
 			DiskFileSize        string `json:"disk-file-size" mapstructure:"disk-file-size"`
 		} `json:"microshift" mapstructure:"microshift"`
 		Tests struct {
-			ExtraVars map[string]string `json:"extra-vars" mapstructure:"extra-vars"`
+			DemoReposPath string            `json:"demo-repos-path" mapstructure:"demo-repos-path"`
+			ExtraVars     map[string]string `json:"extra-vars" mapstructure:"extra-vars"`
 		} `json:"tests" mapstructure:"tests"`
 	} `json:"development" mapstructure:"development"`
 	Components struct {
@@ -118,7 +119,7 @@ func GetCLIContext(command *cobra.Command) (SoftwareFactoryConfigContext, error)
 		if err != nil {
 			ctrl.Log.Error(err, "Could not load config file")
 		} else {
-			ctrl.Log.Info("Using configuration context " + ctxName)
+			ctrl.Log.V(5).Info("Using configuration context " + ctxName)
 		}
 	}
 	// Override with defaults

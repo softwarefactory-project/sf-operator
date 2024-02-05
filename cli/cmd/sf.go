@@ -24,6 +24,7 @@ import (
 	"errors"
 	"os"
 
+	bootstraptenantconfigrepo "github.com/softwarefactory-project/sf-operator/cli/cmd/bootstrap-tenant-config-repo"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -66,6 +67,7 @@ func MkSFCmd() *cobra.Command {
 	sfCmd.AddCommand(MkRestoreCmd())
 	sfCmd.AddCommand(configureCmd)
 	sfCmd.AddCommand(MkWipeCmd())
+	sfCmd.AddCommand(bootstraptenantconfigrepo.MkBootstrapCmd())
 
 	return sfCmd
 }

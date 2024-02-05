@@ -21,17 +21,20 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/softwarefactory-project/sf-operator/cli/cmd/dev/gerrit"
 	ms "github.com/softwarefactory-project/sf-operator/cli/cmd/dev/microshift"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
+	"github.com/softwarefactory-project/sf-operator/controllers"
+	"k8s.io/client-go/rest"
 
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var devCreateAllowedArgs = []string{"gerrit", "microshift", "standalone-sf"}
+var devCreateAllowedArgs = []string{"gerrit", "microshift", "standalone-sf", "demo-env"}
 var devWipeAllowedArgs = []string{"gerrit"}
 var devRunTestsAllowedArgs = []string{"olm", "standalone", "upgrade"}
 
@@ -39,6 +42,23 @@ var microshiftUser = "cloud-user"
 var defaultDiskSpace = "20G"
 
 var errMissingArg = errors.New("missing argument")
+
+func createDemoEnv(env cliutils.ENV, restConfig *rest.Config, fqdn string, reposPath, sfOperatorRepoPath string, keepDemoTenantDefinition bool) {
+
+	gerrit.EnsureGerrit(&env, fqdn)
+	ctrl.Log.Info("Making sure Gerrit is up and ready...")
+	gerrit.EnsureGerritAccess(fqdn)
+	for _, repo := range []string{
+		"config", "demo-tenant-config", "demo-project",
+	} {
+		ctrl.Log.Info("Cloning " + repo + "...")
+		path := filepath.Join(reposPath, repo)
+		gerrit.CloneAsAdmin(&env, fqdn, repo, path, false)
+	}
+	SetupDemoConfigRepo(reposPath, "gerrit", "gerrit", !keepDemoTenantDefinition)
+	ctrl.Log.Info("Applying CRDs (did you run \"make manifests\" first?)...")
+	ApplyCRDs(restConfig, sfOperatorRepoPath)
+}
 
 func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigContext) {
 	skipLocalSetup, _ := kmd.Flags().GetBool("skip-local-setup")
@@ -119,10 +139,10 @@ func devRunTests(kmd *cobra.Command, args []string) {
 	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, runTestsAllowedArgs)
 	target := args[0]
 	sfOperatorRepositoryPath := cliCtx.Dev.SFOperatorRepositoryPath
-	extraVars := cliCtx.Dev.Tests.ExtraVars
+	vars, _ := kmd.Flags().GetStringSlice("extra-var")
+	extraVars := cliutils.VarListToMap(vars)
 	if len(extraVars) == 0 {
-		vars, _ := kmd.Flags().GetStringSlice("extra-var")
-		extraVars = cliutils.VarListToMap(vars)
+		extraVars = cliCtx.Dev.Tests.ExtraVars
 	}
 	if sfOperatorRepositoryPath == "" {
 		ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration")
@@ -131,11 +151,34 @@ func devRunTests(kmd *cobra.Command, args []string) {
 	var verbosity string
 	verbose, _ := kmd.Flags().GetBool("v")
 	debug, _ := kmd.Flags().GetBool("vvv")
+	prepareDemoEnv, _ := kmd.Flags().GetBool("prepare-demo-env")
 	if verbose {
 		verbosity = "verbose"
 	}
 	if debug {
 		verbosity = "debug"
+	}
+	if prepareDemoEnv {
+		ns := cliCtx.Namespace
+		kubeContext := cliCtx.KubeContext
+		restConfig := controllers.GetConfigContextOrDie(kubeContext)
+		fqdn := cliCtx.FQDN
+		env := cliutils.ENV{
+			Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
+			Ctx: context.TODO(),
+			Ns:  ns,
+		}
+		reposPath := cliCtx.Dev.Tests.DemoReposPath
+		if reposPath == "" {
+			ctrl.Log.Info("Demo repos path unset; repos will be cloned into ./deploy")
+			reposPath = "deploy"
+		}
+		// overwrite demo_repos_path ansible variable
+		if extraVars == nil {
+			extraVars = make(map[string]string)
+		}
+		extraVars["demo_repos_path"] = reposPath
+		createDemoEnv(env, restConfig, fqdn, reposPath, sfOperatorRepositoryPath, false)
 	}
 	if target == "olm" {
 		runTestOLM(extraVars, sfOperatorRepositoryPath, verbosity)
@@ -152,15 +195,18 @@ func devCreate(kmd *cobra.Command, args []string) {
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
 	fqdn := cliCtx.FQDN
-	if target == "gerrit" {
-		env := cliutils.ENV{
-			Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-			Ctx: context.TODO(),
-			Ns:  ns,
-		}
-		gerrit.EnsureGerrit(&env, fqdn)
-	} else if target == "microshift" {
+	// we can't initialize an env if deploying microshift, so deal this case first and exit early
+	if target == "microshift" {
 		createMicroshift(kmd, cliCtx)
+		return
+	}
+	env := cliutils.ENV{
+		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
+		Ctx: context.TODO(),
+		Ns:  ns,
+	}
+	if target == "gerrit" {
+		gerrit.EnsureGerrit(&env, fqdn)
 	} else if target == "standalone-sf" {
 		sfResource, _ := kmd.Flags().GetString("cr")
 		hasManifest := &cliCtx.Manifest
@@ -173,6 +219,24 @@ func devCreate(kmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 		applyStandalone(ns, sfResource, kubeContext)
+	} else if target == "demo-env" {
+		restConfig := controllers.GetConfigContextOrDie(kubeContext)
+		reposPath, _ := kmd.Flags().GetString("repos-path")
+		if reposPath == "" {
+			reposPath = cliCtx.Dev.Tests.DemoReposPath
+		}
+		if reposPath == "" {
+			ctrl.Log.Info("Demo repos path unset; repos will be cloned into ./deploy")
+			reposPath = "deploy"
+		}
+		sfOperatorRepositoryPath := cliCtx.Dev.SFOperatorRepositoryPath
+		if sfOperatorRepositoryPath == "" {
+			ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration")
+			os.Exit(1)
+		}
+		keepDemoTenantDefinition, _ := kmd.Flags().GetBool("keep-demo-tenant")
+		createDemoEnv(env, restConfig, fqdn, reposPath, sfOperatorRepositoryPath, keepDemoTenantDefinition)
+
 	} else {
 		ctrl.Log.Error(errors.New("unsupported target"), "Invalid argument '"+target+"'")
 	}
@@ -220,24 +284,27 @@ func devCloneAsAdmin(kmd *cobra.Command, args []string) {
 func MkDevCmd() *cobra.Command {
 
 	var (
-		deleteData        bool
-		verifyCloneSSL    bool
-		msSkipDeploy      bool
-		msSkipLocalSetup  bool
-		msSkipPostInstall bool
-		msDryRun          bool
-		sfResource        string
-		extraVars         []string
-		testVerbose       bool
-		testDebug         bool
-		devCmd            = &cobra.Command{
+		deleteData              bool
+		verifyCloneSSL          bool
+		msSkipDeploy            bool
+		msSkipLocalSetup        bool
+		msSkipPostInstall       bool
+		msDryRun                bool
+		sfResource              string
+		extraVars               []string
+		testVerbose             bool
+		testDebug               bool
+		demoEnvReposPath        string
+		demoEnvKeepTenantConfig bool
+		prepareDemoEnv          bool
+		devCmd                  = &cobra.Command{
 			Use:   "dev",
 			Short: "development subcommands",
 			Long:  "These subcommands can be used to manage a dev environment and streamline recurrent development tasks like running the operator's test suite.",
 		}
 		createCmd = &cobra.Command{
 			Use:       "create {" + strings.Join(devCreateAllowedArgs, ", ") + "}",
-			Long:      "Create a development resource. The resource can be a MicroShift cluster, a standalone SF deployment, or a gerrit instance",
+			Long:      "Create a development resource. The resource can be a MicroShift cluster, a standalone SF deployment, a demo environment or a gerrit instance",
 			ValidArgs: devCreateAllowedArgs,
 			Run:       devCreate,
 		}
@@ -254,7 +321,7 @@ func MkDevCmd() *cobra.Command {
 		}
 		runTestsCmd = &cobra.Command{
 			Use:       "run-tests TESTNAME",
-			Long:      "Runs a test suite locally. TESTNAME can be `olm`, `standalone` or `upgrade`",
+			Long:      "Runs a test suite locally. TESTNAME can be `olm`, `standalone` or `upgrade`. A demo environment must be ready before running the tests, either by invoking `dev create demo-env` or using the `--prepare-demo-env` flag",
 			ValidArgs: devRunTestsAllowedArgs,
 			Run:       devRunTests,
 		}
@@ -271,9 +338,13 @@ func MkDevCmd() *cobra.Command {
 
 	createCmd.Flags().StringVar(&sfResource, "cr", "", "The path to the CR defining the Software Factory deployment.")
 
+	createCmd.Flags().BoolVar(&demoEnvKeepTenantConfig, "keep-tenant-config", false, "(demo-env) Do not update the demo tenant configuration")
+	createCmd.Flags().StringVar(&demoEnvReposPath, "repos-path", "", "(demo-env) the path to clone demo repos at")
+
 	runTestsCmd.Flags().StringSliceVar(&extraVars, "extra-var", []string{}, "Set an extra variable in the form `key=value` to pass to the test playbook. Repeatable")
 	runTestsCmd.Flags().BoolVar(&testVerbose, "v", false, "run ansible in verbose mode")
 	runTestsCmd.Flags().BoolVar(&testDebug, "vvv", false, "run ansible in debug mode")
+	runTestsCmd.Flags().BoolVar(&prepareDemoEnv, "prepare-demo-env", false, "prepare demo environment")
 
 	devCmd.AddCommand(createCmd)
 	devCmd.AddCommand(wipeCmd)

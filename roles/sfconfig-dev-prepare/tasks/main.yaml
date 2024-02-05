@@ -1,8 +1,5 @@
 ---
-- set_fact:
-    with_prometheus_flag: "{{ '--with-prometheus' if test_monitoring == 'true' else '' }}"
-
-- name: Run the sfconfig dev prepare
-  command: "tools/sfconfig dev prepare {{ with_prometheus_flag }}"
+- name: Run the CLI dev create demo-env
+  command: "go run ./main.go --config /home/zuul-worker/sfcontext.yaml dev create demo-env --repos-path {{ demo_repos_path }}"
   args:
     chdir: "{{ zuul.project.src_dir }}"
