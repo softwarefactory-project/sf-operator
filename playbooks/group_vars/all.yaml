@@ -3,6 +3,8 @@ demo_repos_path: "deploy"
 config_path: "{{ zuul.project.src_dir }}/{{ demo_repos_path }}/config"
 demo_project_path: "{{ zuul.project.src_dir }}/{{ demo_repos_path }}/demo-project"
 
+cli_global_flags: "--config /home/zuul-worker/sfcontext.yaml"
+
 fqdn: sfop.me
 
 validate_certs: false
