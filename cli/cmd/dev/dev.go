@@ -180,6 +180,19 @@ func devRunTests(kmd *cobra.Command, args []string) {
 		extraVars["demo_repos_path"] = reposPath
 		createDemoEnv(env, restConfig, fqdn, reposPath, sfOperatorRepositoryPath, false)
 	}
+	// use config file and context for CLI calls in the tests
+	var cliGlobalFlags string
+	configPath, _ := kmd.Flags().GetString("config")
+	cliContext, _ := kmd.Flags().GetString("context")
+	if configPath == "" {
+		ctrl.Log.Error(errMissingArg, "A CLI configuration file with a development/testing context is required")
+		os.Exit(1)
+	}
+	cliGlobalFlags = "--config " + configPath + " "
+	if cliContext != "" {
+		cliGlobalFlags += "--context " + cliContext + " "
+	}
+	extraVars["cli_global_flags"] = cliGlobalFlags
 	if target == "olm" {
 		runTestOLM(extraVars, sfOperatorRepositoryPath, verbosity)
 	} else if target == "standalone" {
