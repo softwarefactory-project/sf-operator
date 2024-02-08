@@ -1,61 +1,30 @@
-- name: Checking if zuul-client command exists
-  ansible.builtin.command: |
-    tools/sfconfig zuul-client -h
-  register: _zuul_client
-  args:
-    chdir: "{{ zuul.project.src_dir }}"
-
-- name: Checking "zuul-client -h" command result
-  ansible.builtin.assert:
-     that:
-       - '"usage: zuul-client" in _zuul_client.stdout'
-     fail_msg: "Something wrong with zuul-client subcommand, run 'tools/sfconfig zuul-client -h' manually or check the container"
-     success_msg: "zuul-client subcommand output return successfully"
-
-- name: Checking zuul-client api call
-  ansible.builtin.command: |
-    tools/sfconfig zuul-client autohold-list --tenant internal
-  register: _zuul_client
-  args:
-    chdir: "{{ zuul.project.src_dir }}"
-
-- name: Checking "zuul-client autohold-list" command result
-  ansible.builtin.assert:
-     that:
-       - '"No autohold requests found" in _zuul_client.stdout'
-     fail_msg: "Something wrong with zuul-client subcommand, run 'tools/sfconfig zuul-client -h' manually or check the container"
-     success_msg: "zuul-client subcommand output return successfully"
-
-- name: Check CLI Token generation with sfconfig tool
+- name: Create a zuul-client configuration file
   ansible.builtin.shell: >
-    tools/sfconfig zuul create-auth-token --tenant internal --user testCI -x 99999
-  register: bearer_token
+    go run ./main.go --config /home/zuul-worker/sfcontext.yaml zuul create client-config --insecure
+  register: zc_config
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
-- debug:
-    msg: "{{ bearer_token }}"
+- name: Save zuul-client configuration to file
+  ansible.builtin.copy:
+    content: "{{ zc_config.stdout }}"
+    dest: /home/zuul-worker/zuul-client.conf
 
-# FIXME: sfconfig zuul-client doesn't parse args correctly; --reason "X Y Z" will result in an error "unknown parameter Y"
-- name: Create a autohold request with zuul-client proxy
+- name: Create a autohold request with zuul-client and the generated config
   ansible.builtin.command: |
-    tools/sfconfig zuul-client --auth-token {{ bearer_token.stdout_lines[-1] | split(' ') | last }} autohold --tenant internal --project config --job config-update --reason CI_TEST
+    zuul-client -c /home/zuul-worker/zuul-client.conf --use-config internal autohold --project config --job config-update --reason CI_TEST
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
 - name: Ensure autohold was set properly
   ansible.builtin.command: |
-    tools/sfconfig zuul-client autohold-list --tenant internal
+    zuul-client -c /home/zuul-worker/zuul-client.conf --use-config internal autohold-list
   register: _ah_list
-  args:
-    chdir: "{{ zuul.project.src_dir }}"
   failed_when: "\"CI_TEST\" not in _ah_list.stdout"
 
 - name: Remove autohold
   ansible.builtin.shell: >
     echo "{{ _ah_list.stdout }}" |
-    grep -oE "0+[0-9]+" |
-    xargs tools/sfconfig zuul-client autohold-delete --tenant internal
-  args:
-    chdir: "{{ zuul.project.src_dir }}"
+    grep -oE "0000[0-9]+" |
+    xargs zuul-client -c /home/zuul-worker/zuul-client.conf --use-config internal autohold-delete
 

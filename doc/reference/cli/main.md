@@ -30,6 +30,9 @@ deployments, beyond what can be defined in a custom resource manifest.
     1. [configure TLS](#configure-tls)
     1. [restore](#restore)
     1. [wipe](#wipe)
+  1. [Zuul](#zuul)
+    1. [create auth-token](#create-auth-token)
+    1. [create client-config](#create-client-config)
 
 ## Running the CLI
 
@@ -451,3 +454,44 @@ Flags:
 |----------|------|-------|----|----|
 | --rm-data | boolean | Also delete all persistent volumes after removing the instances | yes | False |
 | --all | boolean | Remove all data like with the `--rm-data` flag, and remove the operator from the cluster | yes | False |
+
+### Zuul
+
+These subcommands can be used to interact with the Zuul component of a deployment.
+
+#### create auth-token
+
+The `create auth-token` subcommand can be used to create a custom authentication token that can be used with the [zuul-client CLI utility](https://zuul-ci.org/docs/zuul-client/).
+
+```sh
+go run ./main.go [GLOBAL FLAGS] zuul create auth-token [FLAGS]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --auth-config | string | The authentication configuration to use | yes | zuul_client |
+| --tenant | string | The tenant on which to grant admin access | no | - |
+| --user | string | a username, used for audit purposes in Zuul's access logs | yes | "John Doe" |
+| --expiry | int | How long in seconds the authentication token should be valid for | yes | 3600 |
+
+#### create client-config
+
+The `create client-config` generates a configuration file that can be used with the [zuul-client CLI utility](https://zuul-ci.org/docs/zuul-client/) against the Software Factory deployment.
+
+> ⚠️ The command provisions authentication tokens that grant admin access to all tenants. It is recommended to review and eventually edit the output of the command before forwarding it to third parties.
+
+```sh
+go run ./main.go [GLOBAL FLAGS] zuul create client-config [FLAGS] > zuul-client.conf
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --auth-config | string | The authentication configuration to use | yes | zuul_client |
+| --tenant | string | The tenant on which to grant admin access | no | - |
+| --user | string | a username, used for audit purposes in Zuul's access logs | yes | "John Doe" |
+| --expiry | int | How long in seconds the authentication token should be valid for | yes | 3600 |
+| --insecure | boolean | skip SSL validation when connecting to Zuul | yes | False |

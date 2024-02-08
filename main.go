@@ -19,6 +19,7 @@ import (
 	"github.com/softwarefactory-project/sf-operator/cli/cmd"
 	dev "github.com/softwarefactory-project/sf-operator/cli/cmd/dev"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
+	zuul "github.com/softwarefactory-project/sf-operator/cli/cmd/zuul"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	//+kubebuilder:scaffold:imports
@@ -107,6 +108,7 @@ func main() {
 		cmd.MkNodepoolCmd(),
 		operatorCmd,
 		dev.MkDevCmd(),
+		zuul.MkZuulCmd(),
 	}
 	for _, c := range subcommands {
 		rootCmd.AddCommand(c)
