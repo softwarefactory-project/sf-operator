@@ -279,12 +279,22 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, sshdContainer)
 
+	retentionDays := r.cr.Spec.Settings.RetentionDays
+	if retentionDays == 0 {
+		retentionDays = 60
+	}
+
+	loopDelay := r.cr.Spec.Settings.LoopDelay
+	if loopDelay == 0 {
+		loopDelay = 3600
+	}
+
 	purgelogsContainer := base.MkContainer(purgelogIdent, base.PurgeLogsImage)
 	purgelogsContainer.Command = []string{
 		"/usr/local/bin/purgelogs",
 		"--retention-days",
-		strconv.Itoa(r.cr.Spec.Settings.RetentionDays),
-		"--loop", strconv.Itoa(r.cr.Spec.Settings.LoopDelay),
+		strconv.Itoa(retentionDays),
+		"--loop", strconv.Itoa(loopDelay),
 		"--log-path-dir",
 		purgelogsLogsDir,
 		"--debug"}
