@@ -231,6 +231,10 @@ type ZuulExecutorSpec struct {
 	// Changing this value will restart the service.
 	// +optional
 	LogLevel LogLevel `json:"logLevel,omitempty"`
+	// +kubebuilder:default:=true
+	// +optional
+	// If set to false, the zuul-executor deployment won't be applied
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 type ZuulWebSpec struct {

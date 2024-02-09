@@ -336,6 +336,11 @@ spec:
                   executor:
                     description: Configuration of the executor microservices
                     properties:
+                      enabled:
+                        default: true
+                        description: If set to false, the zuul-executor deployment
+                          won't be applied
+                        type: boolean
                       logLevel:
                         description: 'Specify the Log Level of the zuul-executor service.
                           Valid values are: "INFO" (default), "WARN", "DEBUG". Changing

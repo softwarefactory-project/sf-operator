@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/exp/maps"
 	ini "gopkg.in/ini.v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -694,16 +695,32 @@ func (r *SFController) EnsureZuulComponentsFrontServices() {
 
 }
 
+func (r *SFController) IsExecutorEnabled() bool {
+	if r.cr.Spec.Zuul.Executor.Enabled != nil && !*r.cr.Spec.Zuul.Executor.Enabled {
+		return false
+	} else {
+		return true
+	}
+}
+
 func (r *SFController) EnsureZuulComponents(cfg *ini.File) bool {
 
 	zuulServices := map[string]bool{}
 	r.setZuulLoggingfile()
 	zuulServices["scheduler"] = r.EnsureZuulScheduler(cfg)
-	zuulServices["executor"] = r.EnsureZuulExecutor(cfg)
+	if r.IsExecutorEnabled() {
+		zuulServices["executor"] = r.EnsureZuulExecutor(cfg)
+	}
 	zuulServices["web"] = r.EnsureZuulWeb(cfg)
 	zuulServices["merger"] = r.EnsureZuulMerger(cfg)
 
-	return zuulServices["scheduler"] && zuulServices["executor"] && zuulServices["web"] && zuulServices["merger"]
+	for _, ready := range maps.Values(zuulServices) {
+		if !ready {
+			return false
+		}
+	}
+
+	return true
 }
 
 // create default alerts
