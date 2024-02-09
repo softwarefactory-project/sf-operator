@@ -276,7 +276,7 @@ The `init` subcommand can be used to initialize a CLI configuration file, or a s
 
 #### config
 
-Generate a simple CLI configuration tree with one context. It is up to you to save it to a chosen 
+Generate a simple CLI configuration tree with one context. It is up to you to save it to a chosen
 file, and to edit it to suit your requirements.
 
 ```sh
@@ -407,7 +407,28 @@ The following subcommands can be used to manage a Software Factory deployment an
 
 #### backup
 
-Not implemented yet
+The `backup` subcommand lets you dump a Software Factory's most important files for safekeeping,
+most important files, such as:
+
+- MariaDB Zuul database copy
+- secrets backup
+- Zuul project private keys
+
+To create a backup located in `/tmp/backup` directory of all important objects, run the following command:
+
+```sh
+sf-operator SF backup --namespace sf --backup_dir /tmp/backup
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --all | bool | Make backup of all important content | yes | true |
+| --backup_dir | string | The path to the backup directory | no | - |
+| --db | bool | Enable backup for DB's | yes | false |
+| --secrets | bool | Enable backup for secrets | yes | false |
+| --zuul | bool | Enable backup for Zuul private key | yes | false |
 
 #### bootstrap-tenant
 

@@ -1,0 +1,3 @@
+---
+backup_dir: /tmp/backup
+namespace: sf

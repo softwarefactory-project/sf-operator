@@ -18,24 +18,18 @@ limitations under the License.
 package zuul
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 
-	"github.com/softwarefactory-project/sf-operator/controllers"
+	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/kubectl/pkg/scheme"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -82,20 +76,10 @@ func GetTenants(fqdn string, verify bool) []string {
 	return tenants
 }
 
-func getClientset(kubeContext string) (*rest.Config, *kubernetes.Clientset) {
-	restConfig := controllers.GetConfigContextOrDie(kubeContext)
-	kubeClientset, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		ctrl.Log.Error(err, "Could not instantiate Clientset")
-		os.Exit(1)
-	}
-	return restConfig, kubeClientset
-}
-
 func getFirstPod(prefix string, namespace string, kubeContext string) *v1.Pod {
 	var ctr *v1.Pod = nil
 
-	_, kubeClientset := getClientset(kubeContext)
+	_, kubeClientset := cliutils.GetClientset(kubeContext)
 
 	podslist, _ := kubeClientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 	for _, container := range podslist.Items {
@@ -105,32 +89,4 @@ func getFirstPod(prefix string, namespace string, kubeContext string) *v1.Pod {
 		}
 	}
 	return ctr
-}
-
-func runRemoteCmd(kubeContext string, namespace string, podName string, containerName string, cmdArgs []string) *bytes.Buffer {
-	restConfig, kubeClientset := getClientset(kubeContext)
-	buffer := &bytes.Buffer{}
-	errorBuffer := &bytes.Buffer{}
-	request := kubeClientset.CoreV1().RESTClient().Post().Resource("Pods").Namespace(namespace).Name(podName).SubResource("exec").VersionedParams(
-		&v1.PodExecOptions{
-			Container: containerName,
-			Command:   cmdArgs,
-			Stdin:     false,
-			Stdout:    true,
-			Stderr:    true,
-		},
-		scheme.ParameterCodec,
-	)
-	exec, _ := remotecommand.NewSPDYExecutor(restConfig, "POST", request.URL())
-	err := exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
-		Stdout: buffer,
-		Stderr: errorBuffer,
-	})
-	if err != nil {
-		errMsg := fmt.Sprintf("Command \"%s\" [Pod: %s - Container: %s] failed with the following stderr: %s",
-			strings.Join(cmdArgs, " "), podName, containerName, errorBuffer.String())
-		ctrl.Log.Error(err, errMsg)
-		os.Exit(1)
-	}
-	return buffer
 }

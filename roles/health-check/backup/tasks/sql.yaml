@@ -1,0 +1,14 @@
+---
+- name: Check if sql backup contains CREATE DATABASE phrase
+  ansible.builtin.find:
+    paths: "{{ backup_dir }}"
+    patterns: "*.sql"
+    contains: 'CREATE DATABASE .*zuul.*utf8'
+    read_whole_file: true
+    recurse: true
+  register: _sql_output
+
+- name: Ensure CREATE DATABASE for zuul has been called once
+  ansible.builtin.assert:
+    that:
+      - _sql_output.files | length == 1

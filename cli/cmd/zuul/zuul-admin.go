@@ -17,6 +17,7 @@ limitations under the License.
 package zuul
 
 import "strconv"
+import cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 
 // zuul-admin proxy commands.
 
@@ -34,6 +35,6 @@ func CreateAuthToken(kubeContext string, namespace string, authConfig string, te
 		"--user", user,
 		"--expires-in", strconv.Itoa(expiry),
 	}
-	token := runRemoteCmd(kubeContext, namespace, scheduler.Name, "zuul-scheduler", createAuthTokenCmd)
+	token := cliutils.RunRemoteCmd(kubeContext, namespace, scheduler.Name, "zuul-scheduler", createAuthTokenCmd)
 	return token.String()
 }

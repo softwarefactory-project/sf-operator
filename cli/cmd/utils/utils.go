@@ -18,9 +18,11 @@ limitations under the License.
 package utils
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"reflect"
@@ -35,6 +37,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/kubectl/pkg/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,6 +49,9 @@ import (
 	opv1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 // CLI config struct
@@ -332,6 +340,14 @@ func EnsureServiceAccountOrDie(env *ENV, name string) {
 	}
 }
 
+func WriteContentToFile(filePath string, content []byte, mode fs.FileMode) {
+	err := os.WriteFile(filePath, content, mode)
+	if err != nil {
+		ctrl.Log.Error(err, "Can not write a file "+filePath)
+		os.Exit(1)
+	}
+}
+
 func VarListToMap(varsList []string) map[string]string {
 
 	var vars = make(map[string]string)
@@ -346,4 +362,100 @@ func VarListToMap(varsList []string) map[string]string {
 		vars[tokens[0]] = tokens[1]
 	}
 	return vars
+}
+
+func CreateDirectory(dirPath string, mode fs.FileMode) {
+	err := os.MkdirAll(dirPath, mode)
+	if err != nil {
+		ctrl.Log.Error(err, "Can not create directory "+dirPath)
+		os.Exit(1)
+	}
+}
+
+func ConvertMapOfBytesToMapOfStrings(contentMap map[string][]byte) map[string]string {
+	strMap := map[string]string{}
+	for key, value := range contentMap {
+		strValue := string(value)
+		strMap[key] = strValue
+	}
+	return strMap
+}
+
+func getSecrets(ns string, kubeClientSet *kubernetes.Clientset) *apiv1.SecretList {
+	secrets, err := kubeClientSet.CoreV1().Secrets(ns).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		ctrl.Log.Error(err, "Can not get secrets!")
+		os.Exit(1)
+	}
+	return secrets
+}
+
+func GetSecretValue(ns string, kubeClientSet *kubernetes.Clientset, secretName string) *string {
+	secrets := getSecrets(ns, kubeClientSet)
+	if secrets != nil && len(secrets.Items) > 0 {
+		for _, secret := range secrets.Items {
+			if secret.ObjectMeta.Name == secretName {
+				strMap := ConvertMapOfBytesToMapOfStrings(secret.Data)
+				secretValue := strMap[secretName]
+				return &secretValue
+			}
+		}
+	}
+	return nil
+}
+
+func GetClientset(kubeContext string) (*rest.Config, *kubernetes.Clientset) {
+	restConfig := controllers.GetConfigContextOrDie(kubeContext)
+	kubeClientset, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		ctrl.Log.Error(err, "Could not instantiate Clientset")
+		os.Exit(1)
+	}
+	return restConfig, kubeClientset
+}
+
+func RunRemoteCmd(kubeContext string, namespace string, podName string, containerName string, cmdArgs []string) *bytes.Buffer {
+	restConfig, kubeClientset := GetClientset(kubeContext)
+	buffer := &bytes.Buffer{}
+	errorBuffer := &bytes.Buffer{}
+	request := kubeClientset.CoreV1().RESTClient().Post().Resource("Pods").Namespace(namespace).Name(podName).SubResource("exec").VersionedParams(
+		&apiv1.PodExecOptions{
+			Container: containerName,
+			Command:   cmdArgs,
+			Stdin:     false,
+			Stdout:    true,
+			Stderr:    true,
+		},
+		scheme.ParameterCodec,
+	)
+	exec, _ := remotecommand.NewSPDYExecutor(restConfig, "POST", request.URL())
+	err := exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
+		Stdout: buffer,
+		Stderr: errorBuffer,
+	})
+	if err != nil {
+		errMsg := fmt.Sprintf("Command \"%s\" [Pod: %s - Container: %s] failed with the following stderr: %s",
+			strings.Join(cmdArgs, " "), podName, containerName, errorBuffer.String())
+		ctrl.Log.Error(err, errMsg)
+		os.Exit(1)
+	}
+	return buffer
+}
+
+func GetPodByName(podName string, ns string, kubeClientSet *kubernetes.Clientset) *apiv1.Pod {
+	pod, err := kubeClientSet.CoreV1().Pods(ns).Get(context.TODO(), podName, metav1.GetOptions{})
+	if err != nil {
+		ctrl.Log.Error(err, "Can not get pod "+podName)
+		os.Exit(1)
+	}
+	return pod
+}
+
+func GetSecretByName(secretName string, ns string, kubeClientSet *kubernetes.Clientset) *apiv1.Secret {
+	secret, err := kubeClientSet.CoreV1().Secrets(ns).Get(context.TODO(), secretName, metav1.GetOptions{})
+	if err != nil {
+		ctrl.Log.Error(err, "Can not get pod "+secretName)
+		os.Exit(1)
+	}
+	return secret
 }

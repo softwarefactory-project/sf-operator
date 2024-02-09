@@ -35,6 +35,7 @@ const (
 
 	zuulPrometheusPort     = 9090
 	ZuulPrometheusPortName = "zuul-metrics"
+	ZuulSchedulerIdent     = "zuul-scheduler"
 )
 
 var (
@@ -415,7 +416,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		relayAddress = &r.cr.Spec.Zuul.Scheduler.StatsdTarget
 	}
 
-	zuulContainers := r.mkZuulContainer("zuul-scheduler", corporateCMExists)
+	zuulContainers := r.mkZuulContainer(ZuulSchedulerIdent, corporateCMExists)
 
 	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-scheduler", r.cr.Spec.FluentBitLogForwarding, zuulFluentBitLabels, annotations)
 	zuulContainers[0].Env = append(zuulContainers[0].Env, extraLoggingEnvVars...)

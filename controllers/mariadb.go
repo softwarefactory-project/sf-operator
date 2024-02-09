@@ -26,6 +26,7 @@ const (
 	mariadbPort        = 3306
 	mariaDBPortName    = "mariadb-port"
 	zuulDBConfigSecret = "zuul-db-connection"
+	MariadbAdminPass   = "mariadb-root-password"
 )
 
 //go:embed static/mariadb/fluentbit/fluent-bit.conf.tmpl
@@ -65,7 +66,7 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 			MountPath: "/fluent-bit/etc/",
 		},
 	}
-	sidecar := logging.CreateFluentBitSideCarContainer("mariadb", []logging.FluentBitLabel{}, volumeMounts)
+	sidecar := logging.CreateFluentBitSideCarContainer(MariaDBIdent, []logging.FluentBitLabel{}, volumeMounts)
 	annotations["mariadb-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["mariadb-fluent-bit-image"] = base.FluentBitImage
 	return volume, sidecar
@@ -159,8 +160,7 @@ func (r *SFController) DBPostInit(configSecret apiv1.Secret) apiv1.Secret {
 }
 
 func (r *SFController) DeployMariadb() bool {
-	passName := "mariadb-root-password"
-	r.EnsureSecretUUID(passName)
+	r.EnsureSecretUUID(MariadbAdminPass)
 
 	sts := r.mkStatefulSet(MariaDBIdent, base.MariabDBImage, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce)
 

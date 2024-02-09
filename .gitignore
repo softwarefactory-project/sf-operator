@@ -42,3 +42,6 @@ sf_operator.egg-info
 /tools/microshift/microshift-config
 /tools/microshift/my-inventory.yaml
 .vscode
+
+# Ignore backup dir if exists
+backup/*
