@@ -265,13 +265,20 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		monitoredPorts = append(
 			monitoredPorts,
 			sfmonitoring.GetTruncatedPortName("zuul-scheduler", sfmonitoring.NodeExporterPortNameSuffix),
-			sfmonitoring.GetTruncatedPortName("zuul-executor", sfmonitoring.NodeExporterPortNameSuffix),
 			sfmonitoring.GetTruncatedPortName("zuul-merger", sfmonitoring.NodeExporterPortNameSuffix),
 			sfmonitoring.GetTruncatedPortName("zuul-web", sfmonitoring.NodeExporterPortNameSuffix),
 			ZuulPrometheusPortName,
 			ZuulStatsdExporterPortName,
 		)
-		selectorRunList = append(selectorRunList, "zuul-scheduler", "zuul-executor", "zuul-merger", "zuul-web")
+		selectorRunList = append(selectorRunList, "zuul-scheduler", "zuul-merger", "zuul-web")
+
+		if r.IsExecutorEnabled() {
+			monitoredPorts = append(
+				monitoredPorts,
+				sfmonitoring.GetTruncatedPortName("zuul-executor", sfmonitoring.NodeExporterPortNameSuffix))
+			selectorRunList = append(selectorRunList, "zuul-executor")
+		}
+
 		services["Config"] = r.SetupConfigJob()
 		if services["Config"] {
 			conds.RefreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")

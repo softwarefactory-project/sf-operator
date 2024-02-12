@@ -496,6 +496,7 @@ _Appears in:_
 | --- | --- | --- |
 | `storage` _[StorageSpec](#storagespec)_ | Storage-related settings | -|
 | `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-executor service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
+| `enabled` _boolean_ | If set to false, the zuul-executor deployment won't be applied | {true}|
 
 
 #### ZuulMergerSpec
