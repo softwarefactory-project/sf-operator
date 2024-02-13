@@ -5,11 +5,11 @@
 1. [Repository content](#repository-content)
 1. [Setting up the repository](#setting-up-the-repository)
     1. [Gerrit](#hosting-on-gerrit)
-        1. [Prerequisites](#prerequisites-on-gerrit)
-        1. [Configuring Gerrit](#configuring-gerrit)
-        1. [Configuring the Zuul connection](#configuring-the-zuul-connection)
+        - [Prerequisites](#prerequisites-on-gerrit)
+        - [Configuring Gerrit](#configuring-gerrit)
+        - [Configuring the Zuul connection](#configuring-the-zuul-connection)
     1. [GitLab](#hosting-on-gitlab)
-        1. [Configuring the Zuul connection](#configuring-the-zuul-connection-1)
+        - [Configuring the Zuul connection](#configuring-the-zuul-connection-1)
 1. [Next Steps](#next-steps)
 
 ## Concept

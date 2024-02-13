@@ -8,7 +8,7 @@
 
 ## About
 
-SF-Operator is an Operator that simplifies the deployment and operation of Software Factory instances on the OpenShift Container Platform. An instance of Software Factory is composed of [Zuul](https://zuul-ci.org) and its dependencies ([NodePool](https://zuul-ci.org/docs/nodepool/latest/), Zookeeper, MariaDB, Log Server).
+SF-Operator is an Operator that simplifies the deployment and operation of Software Factory instances on the OpenShift Container Platform. An instance of Software Factory is composed of [Zuul](https://zuul-ci.org) and its dependencies ([NodePool](https://zuul-ci.org/docs/nodepool/latest/), [Zookeeper](https://zookeeper.apache.org/doc/r3.8.3/index.html), [MariaDB](https://mariadb.org/documentation/#entry-header), [Log Server](./deployment/logserver.md)).
 
 It is the natural evolution of the [Software Factory project](https://softwarefactory-project.io): the 3.8.x release of Software Factory saw the containerization of every major service, but was still delivered as RPM packages, in the form of a custom CentOS 7 distribution.
 SF-Operator builds upon this containerization effort to move from a distro-centric approach to a cloud-native deployment.
@@ -18,12 +18,12 @@ SF-Operator is built mostly in Go upon the [Operator Framework](https://operator
 
 Furthermore, SF-Operator takes advantage of some of the specificities of OpenShift as a container orchestration platform:
 
-* Improved routes API
+* Improved ingress management with OpenShift's Route Custom Resources
 * Integration with OLM for streamlined operator and operands' lifecycle management
 * If [enabled in OpenShift](https://docs.openshift.com/container-platform/4.13/monitoring/enabling-monitoring-for-user-defined-projects.html#enabling-monitoring-for-user-defined-projects), SF-Operator comes with default monitoring and alerting configurations that can be used out of the box. The default alerting rules are honed from years of maintaining and running several large Zuul deployments at scale for [Fedora](https://fedora.softwarefactory-project.io/zuul/status), [Ansible](https://ansible.softwarefactory-project.io/zuul/status) and [RDO](https://review.rdoproject.org/zuul/status).
 * If [enabled](https://docs.openshift.com/container-platform/4.13/logging/cluster-logging.html), OpenShift provides application logs aggregation with its logging subsystem out of the box.
 
-Finally, we also provide a Command Line Interface (CLI) called sfconfig to simplify common tasks related to the operator, management of the operands, development and testing.
+Finally, we also provide a [Command Line Interface (CLI)](reference/cli/index.md) to simplify common tasks related to the operator, management of the operands, development and testing.
 
 ## Status
 
@@ -35,7 +35,7 @@ The current project status is: **Alpha - NOT PRODUCTION READY**
     - Zuul Scheduler: ✅
     - Zuul Executor: ✅
     - Zuul Web: ✅
-    - Zuul Merger: ❌
+    - Zuul Merger: ✅
     - Nodepool Launcher: ✅
     - Nodepool Builder: ✅
     - Zookeeper: ✅

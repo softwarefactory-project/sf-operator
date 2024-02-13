@@ -63,17 +63,17 @@ extra:
 
 nav:
   - Home: README.md
-  - Operator: 
+  - Operator:
     - operator/index.md
     - Getting started: operator/getting_started.md
     - Uninstall: operator/uninstall.md
-  - Deploy: 
+  - Deploy:
     - deployment/index.md
     - Getting started: deployment/getting_started.md
     - Configuration repository: deployment/config_repository.md
     - Services reference:
       - Backing services: deployment/backing_services.md
-      # - Log server
+      - Log server: deployment/logserver.md
       - Nodepool: deployment/nodepool.md
       - Zuul: deployment/zuul.md
     - TLS:
