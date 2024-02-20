@@ -14,7 +14,7 @@ In order to install the SF Operator on OpenShift, you will need:
 1. [OLM](https://olm.operatorframework.io/) running on your cluster. For most flavors of OpenShift [this is already the case](https://docs.openshift.com/container-platform/4.13/operators/understanding/olm/olm-understanding-olm.html#olm-overview_olm-understanding-olm).
 1. The community operators CatalogSource, to handle operator dependencies for SF-Operator. For most standard installations of OLM, [this CatalogSource is already installed](https://operatorhub.io/how-to-install-an-operator#How-do-I-get-Operator-Lifecycle-Manager?).
 1. A valid kubeconfig file, for a user with enough permissions to create a CatalogSource and a Subscription Custom Resources, on the `olm` and `operators` namespaces respectively.
-1. The [kubectl utility](https://kubernetes.io/docs/tasks/tools/#kubectl), to apply and create new resources on the OpenShift cluster.
+1. The [kubectl utility](https://kubernetes.io/docs/tasks/tools/#kubectl), to apply and create new resources on the OpenShift cluster. It is also required to use `restore` functionality.
 
 ## Installing the operator
 

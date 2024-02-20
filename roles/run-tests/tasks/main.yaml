@@ -43,5 +43,6 @@
     - name: test-external-ze
     - name: test-log-forwarding
     - name: backup
+    - name: restore
   loop_control:
     loop_var: role

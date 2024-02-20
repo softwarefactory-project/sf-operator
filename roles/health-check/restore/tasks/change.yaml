@@ -1,0 +1,84 @@
+---
+- name: Set facts for secret manipulation
+  ansible.builtin.set_fact:
+    test_secret_key: "{{ secret_before.data | first }}"
+    test_secret_value: "{{ 'restoreTest' | b64encode }}"
+
+- name: "Replace secret with random data - {{ restore_secret_name }}"
+  kubernetes.core.k8s:
+    state: patched
+    kind: Secret
+    name: "{{ secret_before.metadata.name }}"
+    namespace: "{{ namespace }}"
+    definition:
+      data:
+        zuul-keystore-password: "{{ test_secret_value }}"
+
+- name: "Get secret result {{ restore_secret_name }} in namespace sf after change"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ restore_secret_name }}"
+    namespace: "{{ namespace }}"
+  register: secret_result
+
+- name: Get base64 for fake data value
+  ansible.builtin.set_fact:
+    secret_fake: "{{ secret_result.resources[0] }}"
+
+- name: Assert that secrets b64 are different
+  ansible.builtin.assert:
+    that:
+      - secret_before.data != secret_fake.data
+
+- name: Create test table in zuul db - zuul_restore_test
+  kubernetes.core.k8s_exec:
+    namespace: "{{ namespace }}"
+    pod: mariadb-0
+    command: >
+      mysql -h 0 -u root
+      -p{{ db_root_pass }}
+      -e "USE zuul; CREATE TABLE zuul_restore_test (ID int);"
+
+- name: Get available tables
+  kubernetes.core.k8s_exec:
+    namespace: "{{ namespace }}"
+    pod: mariadb-0
+    command: >
+      mysql -h 0 -u root
+      -p{{ db_root_pass }}
+      -e "USE zuul; SHOW TABLES;"
+  register: _show_tables
+
+- name: Ensure that there is zuul_restore_test table
+  ansible.builtin.assert:
+    that:
+      - "'zuul_restore_test' in _show_tables.stdout"
+
+- name: Remove the project key from Zuul
+  kubernetes.core.k8s_exec:
+    namespace: "{{ namespace }}"
+    pod: zuul-scheduler-0
+    command: >
+      zuul-admin delete-keys gerrit demo-tenant-config
+
+- name: Export current Zuul keys after deletion
+  kubernetes.core.k8s_exec:
+    namespace: "{{ namespace }}"
+    pod: zuul-scheduler-0
+    command: >
+      zuul-admin export-keys /tmp/removed-key
+
+- name: Check if the demo-tenant-config is in new exported file
+  kubernetes.core.k8s_exec:
+    namespace: "{{ namespace }}"
+    pod: zuul-scheduler-0
+    command: >
+      grep -c demo-tenant-config /tmp/removed-key
+  register: _count_project_remove_key
+  failed_when: _count_project_remove_key.rc not in [0,1]
+
+- name: Assert that the demo-tenant-config has been removed
+  ansible.builtin.assert:
+    that:
+      - _count_project_remove_key.stdout | int == 0

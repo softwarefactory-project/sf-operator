@@ -1,0 +1,40 @@
+---
+# This playbook will just check if base64 encode is same as before
+- name: Create working dir
+  ansible.builtin.file:
+    path: "{{ restore_dir }}"
+    state: directory
+
+- name: "Get secret {{ restore_secret_name }} content in namespace {{ namespace }}"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ restore_secret_name }}"
+    namespace: "{{ namespace }}"
+  register: secret_result
+
+- name: Get base64 for current secret
+  ansible.builtin.set_fact:
+    secret_before: "{{ secret_result.resources[0] }}"
+
+- name: Get MariaDB root password
+  kubernetes.core.k8s_exec:
+    namespace: "{{ namespace }}"
+    pod: mariadb-0
+    command: |
+      bash -c "env | grep MYSQL_ROOT_PASSWORD | cut -f2 -d'=' | tr -d '[:space:]'"
+  register: _db_pass
+
+- ansible.builtin.set_fact:
+    db_root_pass: "{{ _db_pass.stdout }}"
+
+# zuul-admin delete-keys gerrit demo-tenant-config
+- name: Check if the demo-tenant-config is in backup
+  ansible.builtin.shell: |
+    grep -c demo-tenant-config {{ restore_zuul_path }}
+  register: _count_project
+
+- name: Assert that the demo-tenant-config exists
+  ansible.builtin.assert:
+    that:
+      - _count_project.stdout | int > 0

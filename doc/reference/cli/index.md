@@ -24,11 +24,11 @@ deployments, beyond what can be defined in a custom resource manifest.
     - [get providers-secrets](#get-providers-secrets)
   1. [Operator](#operator)
   1. [SF](#sf)
-    - [backup](#backup)
-    - [bootstrap-tenant](#bootstrap-tenant)
-    - [configure TLS](#configure-tls)
-    - [restore](#restore)
-    - [wipe](#wipe)
+    1. [backup](#backup)
+    1. [bootstrap-tenant](#bootstrap-tenant)
+    1. [configure TLS](#configure-tls)
+    1. [restore](#restore)
+    1. [wipe](#wipe)
   1. [Zuul](#zuul)
     - [create auth-token](#create-auth-token)
     - [create client-config](#create-client-config)
@@ -466,7 +466,28 @@ Flags:
 
 #### restore
 
-Not implemented yet
+!!! warning
+    The command requires to to have `kubectl` binary installed in the system
+
+The `restore` subcommand lets you restore:
+
+- Secrets
+- MariaDB Zuul database
+- Zuul project private keys
+
+that has been done by the `backup` command.
+
+For example:
+
+```sh
+sf-operator SF restore --namespace sf --backup_dir my_backup_dir
+```
+
+Available flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --backup_dir | string | The path to the backup directory to restore | yes | - |
 
 #### wipe
 

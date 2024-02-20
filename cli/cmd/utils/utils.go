@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -381,29 +382,6 @@ func ConvertMapOfBytesToMapOfStrings(contentMap map[string][]byte) map[string]st
 	return strMap
 }
 
-func getSecrets(ns string, kubeClientSet *kubernetes.Clientset) *apiv1.SecretList {
-	secrets, err := kubeClientSet.CoreV1().Secrets(ns).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		ctrl.Log.Error(err, "Can not get secrets!")
-		os.Exit(1)
-	}
-	return secrets
-}
-
-func GetSecretValue(ns string, kubeClientSet *kubernetes.Clientset, secretName string) *string {
-	secrets := getSecrets(ns, kubeClientSet)
-	if secrets != nil && len(secrets.Items) > 0 {
-		for _, secret := range secrets.Items {
-			if secret.ObjectMeta.Name == secretName {
-				strMap := ConvertMapOfBytesToMapOfStrings(secret.Data)
-				secretValue := strMap[secretName]
-				return &secretValue
-			}
-		}
-	}
-	return nil
-}
-
 func GetClientset(kubeContext string) (*rest.Config, *kubernetes.Clientset) {
 	restConfig := controllers.GetConfigContextOrDie(kubeContext)
 	kubeClientset, err := kubernetes.NewForConfig(restConfig)
@@ -458,4 +436,41 @@ func GetSecretByName(secretName string, ns string, kubeClientSet *kubernetes.Cli
 		os.Exit(1)
 	}
 	return secret
+}
+
+func ReadYAMLToMapOrDie(filePath string) map[string]interface{} {
+	readFile, _ := GetFileContent(filePath)
+	secretContent := make(map[string]interface{})
+	err := yaml.Unmarshal(readFile, &secretContent)
+	if err != nil {
+		ctrl.Log.Error(err, "Problem on reading the file content")
+	}
+	if len(secretContent) == 0 {
+		ctrl.Log.Error(errors.New("file is empty"), "The file is empty or it does not exist!")
+		os.Exit(1)
+	}
+	return secretContent
+}
+
+func GetKubectlPath() string {
+	kubectlPath, err := exec.LookPath("kubectl")
+	if err != nil {
+		ctrl.Log.Error(errors.New("no kubectl binary"),
+			"No 'kubectl' binary found. Please install the 'kubectl' binary before attempting a restore")
+		os.Exit(1)
+	}
+	return kubectlPath
+}
+
+func ExecuteKubectlClient(ns string, podName string, containerName string, executeCommand string) {
+	cmd := exec.Command("sh", "-c", executeCommand)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+
+	err := cmd.Run()
+	if err != nil {
+		ctrl.Log.Error(err, "There is an issue on executing command: "+executeCommand)
+		os.Exit(1)
+	}
+
 }
