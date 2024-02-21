@@ -62,7 +62,7 @@
     key: "{{ nodepool_get_key.stdout }}"
 
 - name: Ensure nodepool-builder pod can connect via SSH using the 'nodepool' user to the image-builder machine
-  command: >
+  ansible.builtin.command: >
     kubectl exec -it nodepool-builder-0 -c nodepool-builder
     -- ssh -o StrictHostKeyChecking=no nodepool@{{ microshift_host }} hostname
 
@@ -104,7 +104,7 @@
       - name: Dummy cloud image build playbook
         hosts: image-builder
         tasks:
-          - debug:
+          - ansible.builtin.debug:
               msg: "Hello from build of {{ nodepool_diskimage_name }}"
           - name: Copy Zuul public key on the image-builder
             copy:

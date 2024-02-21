@@ -1,12 +1,12 @@
 ---
 - name: Start port forwarding to loki-http
-  shell: |
+  ansible.builtin.shell: |
     kubectl port-forward service/loki-http 3100 -n sf
   async: 60
   poll: 0
 
 - name: Ensure loki is reachable
-  uri:
+  ansible.builtin.uri:
     url: http://localhost:3100/loki/api/v1/status/buildinfo
     return_content: yes
   register: loki_buildinfo

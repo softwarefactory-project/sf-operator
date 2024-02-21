@@ -8,7 +8,7 @@
   delay: 10
 
 - name: Start port forwarding to logserver sidecar
-  shell: |
+  ansible.builtin.shell: |
     kubectl port-forward service/logserver 9100 -n sf
   async: 60
   poll: 0
@@ -18,7 +18,7 @@
     seconds: 20
 
 - name: Ensure volume info is exposed by metrics
-  uri:
+  ansible.builtin.uri:
     url: http://localhost:9100/metrics
     return_content: yes
   register: logserver_metrics

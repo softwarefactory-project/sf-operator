@@ -16,7 +16,7 @@
 # This partialy verifies the flow with Let's Encrypt.
 
 - name: Ensure nodepool service Certificate not Ready for expected reason
-  shell: "kubectl -n sf get challenge -o json | grep {{ fqdn }}"
+  ansible.builtin.shell: "kubectl -n sf get challenge -o json | grep {{ fqdn }}"
   register: result
   until:
     - result is success

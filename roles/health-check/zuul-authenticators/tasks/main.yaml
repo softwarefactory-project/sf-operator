@@ -1,6 +1,6 @@
 ---
 - name: Initialize new authenticator config
-  set_fact:
+  ansible.builtin.set_fact:
     test_authenticator:
       - name: keycloak
         realm: my_test_realm

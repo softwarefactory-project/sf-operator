@@ -26,7 +26,7 @@
         loopDelay: 5
 
 - name: Ensure logserver/purgelog restarted with correct loopDelay
-  command: kubectl get pods {{ pod_name }} -o jsonpath="{.spec.containers[?(@.name=='purgelogs')].command}"
+  ansible.builtin.command: kubectl get pods {{ pod_name }} -o jsonpath="{.spec.containers[?(@.name=='purgelogs')].command}"
   register: purgelogs_command
   until: purgelogs_command is not failed and "5" in purgelogs_command.stdout
   delay: 5

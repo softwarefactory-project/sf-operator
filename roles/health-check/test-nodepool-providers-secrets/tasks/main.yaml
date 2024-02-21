@@ -1,6 +1,6 @@
 ---
 - name: Dump current secrets from nodepool
-  command: >
+  ansible.builtin.command: >
     go run ./main.go {{ cli_global_flags }} nodepool get providers-secrets --clouds /tmp/clouds.yaml --kube /tmp/kubeconfig.yaml
   args:
     chdir: "{{ zuul.project.src_dir }}"
@@ -11,7 +11,7 @@
     dest: /tmp/clouds.yaml
 
 - name: Upload clouds secrets to nodepool
-  command: >
+  ansible.builtin.command: >
     go run ./main.go {{ cli_global_flags }} nodepool configure providers-secrets --clouds /tmp/clouds.yaml --kube /tmp/kubeconfig.yaml
   args:
     chdir: "{{ zuul.project.src_dir }}"

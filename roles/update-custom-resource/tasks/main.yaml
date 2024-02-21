@@ -21,12 +21,12 @@
   when: mode == 'standalone'
   block:
     - name: read current crd
-      slurp:
+      ansible.builtin.slurp:
         src: "/tmp/current_cr.yaml"
       register: base_cr
 
     - name: merge the new cr
-      copy:
+      ansible.builtin.copy:
         content: "{{ base_cr['content'] | b64decode | from_yaml | combine(new_cr, recursive=true) }}"
         dest: "/tmp/current_cr.yaml"
       vars:

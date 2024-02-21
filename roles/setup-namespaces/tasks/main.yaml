@@ -1,7 +1,7 @@
 ---
 # Where the operator will be installed via the OLM bundle
 - name: Create the {{ bundlenamespace }} namespace
-  shell: |
+  ansible.builtin.shell: |
     kubectl create namespace {{ bundlenamespace }}
     oc adm policy add-scc-to-user privileged system:serviceaccount:{{ bundlenamespace }}:default
   when: create_test_bundle_ns
@@ -10,7 +10,7 @@
 
 # Where sf instance will be reclaimed
 - name: Create namespace
-  shell: |
+  ansible.builtin.shell: |
     kubectl create namespace {{ namespace }}
     kubectl config set-context {{ context }} --namespace={{ namespace }}
     kubectl label --overwrite ns {{ namespace }} pod-security.kubernetes.io/enforce=privileged

@@ -1,6 +1,6 @@
 ---
 - name: "Collect {{ service.kind }} log before executing the scale command"
-  shell: |
+  ansible.builtin.shell: |
     mkdir -p ~/zuul-output/logs/k8s-resources/sf/pod
     kubectl logs {{ service.kind }}/{{ service.name }} > ~/zuul-output/logs/k8s-resources/sf/pod/{{ service.name }}-0-{{ service.name }}-logs0.txt
 

@@ -1,7 +1,7 @@
 ---
 - name: "Sync sf-operator to {{ microshift_host }}:{{ src_dir }} instance"
   when: remote_os_host
-  command: "rsync -av ../../sf-operator/ {{ microshift_host }}:{{ src_dir }} --exclude=.git --delete"
+  ansible.builtin.command: "rsync -av ../../sf-operator/ {{ microshift_host }}:{{ src_dir }} --exclude=.git --delete"
   tags:
     - skip_ansible_lint
 

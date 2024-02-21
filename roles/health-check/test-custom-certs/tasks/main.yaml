@@ -1,6 +1,6 @@
 ---
 - name: Create temporary directory for the custom CA and Route certificate
-  tempfile:
+  ansible.builtin.tempfile:
     state: directory
     suffix: ssl
   register: tempdir

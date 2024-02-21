@@ -1,7 +1,7 @@
 ---
 - name: Install dependencies
   become: true
-  package:
+  ansible.builtin.package:
     name:
       - golang
       - make
@@ -18,7 +18,7 @@
   no_log: true
 
 - name: Check if the tag variable is set
-  fail:
+  ansible.builtin.fail:
     msg: The version of the repo tag 'zuul.tag' is not defined
   when:
     - "'tag' not in zuul"
