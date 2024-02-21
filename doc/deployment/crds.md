@@ -2,17 +2,25 @@
 
 This document gives details about the Custom Resource Definitions (CRDs) that the SF-Operator installs on a cluster.
 
-## Table of Contents
+The specs are constantly evolving during alpha development, and should be considered
+unstable but the ultimate source of truth for documentation about their properties.
 
-1. [CRDs](#crds)
 
-## CRDs
+1. [SoftwareFactory](#crds)
+1. [LogServer]()
 
-The Custom Resources installed by the SF-Operator are described in the following OpenAPI specs:
+## SoftwareFactory
 
-* [SoftwareFactory](https://github.com/softwarefactory-project/sf-operator/blob/master/config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml)
-* [LogServer](https://github.com/softwarefactory-project/sf-operator/blob/master/config/crd/bases/sf.softwarefactory-project.io_logservers.yaml)
+This custom resource describes a Software Factory instance.
 
-The spec is constantly evolving during alpha development, and should be considered
-unstable but the ultimate source of truth for documentation about its properties.
+```yaml
+--8<-- "config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml"
+```
 
+## LogServer
+
+This custom resource describes a standalone Log Server (SSH/rsync endpoint + HTTP server).
+
+```yaml
+--8<-- "config/crd/bases/sf.softwarefactory-project.io_logservers.yaml"
+```

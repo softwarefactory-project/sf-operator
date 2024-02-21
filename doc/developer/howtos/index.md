@@ -2,7 +2,6 @@
 
 This document lists tips and methods to perform tasks that may be useful to a developer.
 
-## Table of Contents
 
 1. [How to run helper services](#how-to-run-helper-services)
 2. [How to open a review on the test Gerrit](#how-to-open-a-review-on-the-test-gerrit)

@@ -3,7 +3,6 @@
 The `sf-operator` executable can be used to perform various actions related to the management of Software Factory
 deployments, beyond what can be defined in a custom resource manifest.
 
-## Table of Contents
 
 1. [Installing the CLI](#installing-the-cli)
 1. [Global Flags](#global-flags)
@@ -131,7 +130,8 @@ The `dev` subcommand can be used to manage a development environment and run tes
 
 #### cloneAsAdmin
 
-> ⚠️ A Gerrit instance must have been deployed with the [create gerrit](#create-gerrit) command first.
+!!! warning
+    A Gerrit instance must have been deployed with the [create gerrit](#create-gerrit) command first.
 
 Clone a given repository hosted on the Gerrit instance, as the admin user. You can then proceed to
 create patches and run them through CI with `git review`. If the repository already exists locally,
@@ -152,7 +152,8 @@ Flags:
 Create a Gerrit instance if needed, then clone and populate demo repositories that will set up
 a demo tenant.
 
-> ⚠️ This command will also install the operator's Custom Resource Definitions, so you need to run `make manifests` beforehand.
+!!! warning
+    This command will also install the operator's Custom Resource Definitions, so you need to run `make manifests` beforehand.
 
 ```sh
 sf-operator [GLOBAL FLAGS] dev create demo-env [FLAGS]
@@ -203,13 +204,15 @@ spec:
 
 Install and configure a MicroShift instance on a given server. This instance can then be used to host, develop and test the operator.
 
-> ⚠️ `ansible-playbook` is required to run this command. Make sure it is installed on your system.
-
-> ⚠️ the "Local Setup" step of the installation requires local root access to install required development dependencies. If you don't want to automate this process, run the command with the `--dry-run --skip-deploy --skip-post-install` flags to inspect the generated playbook and figure out what you need.
+!!! warning
+    `ansible-playbook` is required to run this command. Make sure it is installed on your system.
 
 ```sh
 sf-operator [GLOBAL FLAGS] dev create microshift [FLAGS]
 ```
+
+!!! warning
+    The "Local Setup" step of the installation requires local root access to install required development dependencies. If you don't want to automate this process, run the command with the `--dry-run --skip-deploy --skip-post-install` flags to inspect the generated playbook and figure out what you need.
 
 Flags:
 
@@ -312,7 +315,8 @@ The `nodepool` subcommand can be used to interact with the Nodepool component of
 
 Set or update Nodepool's providers secrets (OpenStack's clouds.yaml and Kubernetes/OpenShift's kube.config).
 
-> ⚠️ At least one of the `--kube` or `--clouds` flags must be provided.
+!!! warning
+    At least one of the `--kube` or `--clouds` flags must be provided.
 
 ```sh
 sf-operator [GLOBAL FLAGS] nodepool configure providers-secrets [--kube /path/to/kube.config --clouds /path/to/clouds.yaml]
@@ -328,6 +332,9 @@ Flags:
 #### create openshiftpods-namespace
 
 Create and set up a dedicated namespace on a cluster, so that nodepool can spawn pods with the [openshiftpods](https://zuul-ci.org/docs/nodepool/latest/openshift-pods.html) driver.
+
+!!! note
+    See [this section in the deployment documentation](../../deployment/nodepool.md#using-the-openshiftpods-driver-with-your-cluster) for more details.
 
 ```sh
 sf-operator [GLOBAL FLAGS] nodepool create openshiftpods-namespace [FLAGS]
@@ -364,7 +371,8 @@ Flags:
 Get the currently set providers secrets (OpenStack's clouds.yaml and Kubernetes/OpenShift's kube.config) and optionally
 write the secrets to a local file.
 
-> ⚠️ The local files will be overwritten with the downloaded contents without warning!
+!!! danger
+    The local files will be overwritten with the downloaded contents without warning!
 
 ```sh
 sf-operator [GLOBAL FLAGS] nodepool get providers-secrets [--kube /path/to/kube.config --clouds /path/to/clouds.yaml]
@@ -471,7 +479,7 @@ These subcommands can be used to interact with the Zuul component of a deploymen
 The `create auth-token` subcommand can be used to create a custom authentication token that can be used with the [zuul-client CLI utility](https://zuul-ci.org/docs/zuul-client/).
 
 ```sh
-go run ./main.go [GLOBAL FLAGS] zuul create auth-token [FLAGS]
+sf-operator [GLOBAL FLAGS] zuul create auth-token [FLAGS]
 ```
 
 Flags:
@@ -487,10 +495,11 @@ Flags:
 
 The `create client-config` generates a configuration file that can be used with the [zuul-client CLI utility](https://zuul-ci.org/docs/zuul-client/) against the Software Factory deployment.
 
-> ⚠️ The command provisions authentication tokens that grant admin access to all tenants. It is recommended to review and eventually edit the output of the command before forwarding it to third parties.
+!!! warning
+    The command provisions authentication tokens that grant admin access to all tenants. It is recommended to review and eventually edit the output of the command before forwarding it to third parties.
 
 ```sh
-go run ./main.go [GLOBAL FLAGS] zuul create client-config [FLAGS] > zuul-client.conf
+sf-operator [GLOBAL FLAGS] zuul create client-config [FLAGS] > zuul-client.conf
 ```
 
 Flags:

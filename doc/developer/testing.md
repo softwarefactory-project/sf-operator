@@ -1,9 +1,10 @@
 # Running the test suites locally
 
-Tests run in the [project's CI](https://zuul.microshift.softwarefactory-project.io/zuul/t/sf/buildsets) can also be run locally using the [`sf-operator dev run-tests` CLI subcommand](./../reference/cli/index.md#run-tests).
+Tests run in the [project's CI](https://zuul.microshift.softwarefactory-project.io/zuul/t/sf/buildsets) can also be run locally using the [`sf-operator dev run-tests` CLI subcommand](./../reference/cli/index.md#run-tests). (1)
+{ .annotate }
 
-> This command is a wrapper on top of `ansible-playbook` to run the same Ansible playbook
-than the CI. This includes steps to deploy the operator if needed.
+1. This command is a wrapper on top of `ansible-playbook` to run the same Ansible playbook
+   than the CI. This includes steps to deploy the operator if needed.
 
 The command accepts extra Ansible parameters to be passed to `ansible-playbook` command.
 
@@ -48,10 +49,11 @@ sf-operator dev run-tests upgrade
 
 ### The standalone validation test
 
-The `standalone` tests  (similar to `sf-operator-dev-multinode` in the Zuul CI) performs
+The `standalone` tests (1)  (similar to `sf-operator-dev-multinode` in the Zuul CI) performs
 a standalone deployment and run the validation test suite.
+{ .annotate }
 
-> This is fastest way to run the test suite when iterating on the development of the `sf-operator`.
+1. This is fastest way to run the test suite when iterating on the development of the `sf-operator`.
 
 ```sh
 sf-operator dev run-tests standalone

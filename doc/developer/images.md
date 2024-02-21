@@ -3,9 +3,9 @@
 This document explains how to modify or interact with images and services used by the SF-Operator
 for development purposes.
 
-> These instructions assume you are using a MicroShift deployment for development.
+!!! note
+    These instructions assume you are using a MicroShift deployment for development.
 
-## Table of Contents
 
 1. [Root access inside containers](#root-access-inside-containers)
 1. [Modify an existing image](#modify-an-existing-image)
@@ -14,7 +14,8 @@ for development purposes.
 
 ## Root access inside containers
 
-> THIS STEP SHOULD BE ONLY USED FOR DEVELOPING PURPOSES!!!
+!!! danger
+    These instructions should only be followed for development purposes, and may end up breaking your deployment. Use at your own risks!
 
 1. Edit the target deployment, statefulset or pod directly. For example, with `nodepool-launcher`:
 

@@ -1,6 +1,5 @@
 # Set up TLS on service routes
 
-## Table of Contents
 
 1. [Using a trusted Certificate Authority](#using-a-trusted-certificate-authority)
 1. [Using Let's Encrypt](#using-lets-encrypt)
@@ -21,11 +20,13 @@ The operator watches a `Secret` named `sf-ssl-cert` in the `SoftwareFactory` Cus
 When this `Secret`'s data hold a Certificate, Key and CA Certificate (following a specific scheme) then
 the sf-operator is able to reconfigure all managed `Route`'s TLS to use the TLS material stored in the secret.
 
-> Make sure that the certificate `CN` matches the `fqdn` setting of the `SoftwareFactory` Custom Resource.
+!!! note
+    Make sure that the certificate `CN` matches the `fqdn` setting of the `SoftwareFactory` Custom Resource.
 
 The [sf-operator](./../reference/cli/index.md) CLI can be used to configure these secrets.
 
-> The [`SF configure TLS`](./../reference/cli/index.md#configure-tls) subcommand will validate the SSL certificate/key before updating the `Secret`.
+!!! note
+    The [`SF configure TLS`](./../reference/cli/index.md#configure-tls) subcommand will validate the SSL certificate/key before updating the `Secret`.
 
 ```sh
 sf-operator SF configure TLS --CA /tmp/ssl/localCA.pem \
@@ -56,7 +57,8 @@ Once `Ready`, all managed `Route` will present the new certificate.
 The SF Operator offers an option to request a certificate from `Let's Encrypt` using the `ACME http01`
 challenge. The deployment `FQDN` must be publicly resolvable.
 
-> This overrides the custom X509 certificates that might have been set following the [steps above](#using-a-trusted-certificate-authority).
+!!! note
+    This overrides the custom X509 certificates that might have been set following the [steps above](#using-a-trusted-certificate-authority).
 
 1. test your deployment with Let's Encrypt's staging server:
 

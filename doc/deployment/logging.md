@@ -2,7 +2,6 @@
 
 This document describes different ways to handle log collection and aggregation for the services deployed with the SF-Operator.
 
-## Table of Contents
 
 1. [Using kubectl](#using-kubectl)
 1. [Native Cluster Logging](#native-cluster-logging)
@@ -81,7 +80,8 @@ Loki instance and configure log forwarding to this instance:
 * [Fluent Bit manifest](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/tools/loki/test-fluentbit.yaml)
 * (Optional) [Grafana deployment with preconfigured monitoring and logging datasources](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/tools/loki/test-grafana.yaml)
 
-> These manifests are intended for testing purposes only and shouldn't be used in production.
+!!! danger
+    These manifests are intended for testing purposes only and shouldn't be used in production.
 
 1. Download the files listed above.
 

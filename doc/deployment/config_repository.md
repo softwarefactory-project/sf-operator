@@ -1,6 +1,5 @@
 # Config Repository
 
-## Table of Contents
 
 1. [Concept](#concept)
 1. [Repository content](#repository-content)
@@ -15,7 +14,8 @@
 
 ## Concept
 
-> If you are already familiar with the config repository in Software Factory, you can skip this section and go straight to [setting up the repository](#setting-up-the-repository).
+!!! note
+    If you are already familiar with the config repository in Software Factory, you can skip this section and go straight to [setting up the repository](#setting-up-the-repository).
 
 In Software Factory, Zuul and Nodepool's configurations are stored in a special git repository called the **config repository**. Zuul is also pre-configured to run the following CI pipelines and jobs against changes on this repository, in a reserved tenant (`internal`):
 
@@ -44,7 +44,8 @@ Any other file or folder will be ignored.
 
 As of the current version of the SF-Operator, Gerrit and GitLab are the only supported hosting options for the config repository.
 
-> You can follow the [developer's documentation to deploy a test Gerrit instance](../developer/howtos/index.md#gerrit) if needed.
+!!! note
+    You can follow the [developer's documentation to deploy a test Gerrit instance](../developer/howtos/index.md#gerrit) if needed.
 
 ### Hosting on Gerrit
 
@@ -76,10 +77,11 @@ ssh -p29418 <gerrit_host> gerrit set-members --add zuul@example.com "Service Use
 
 ##### Repository ACLs and Labels
 
-> Access controls and labels management with Gerrit is out of the scope of this documentation. Please refer to
-Gerrit's documentation for further details, for example
-[here](https://gerrit-review.googlesource.com/Documentation/access-control.html) for ACLs
-or [here](https://gerrit-review.googlesource.com/Documentation/config-labels.html) for labels.
+!!! note
+    Access controls and labels management with Gerrit is out of the scope of this documentation. Please refer to
+    Gerrit's documentation for further details, for example
+    [here](https://gerrit-review.googlesource.com/Documentation/access-control.html) for ACLs
+    or [here](https://gerrit-review.googlesource.com/Documentation/config-labels.html) for labels.
 
 The repository must be set with specific ACLs to allow Zuul to interact with it:
 
@@ -121,24 +123,27 @@ For further information check the [Gerrit section](https://zuul-ci.org/docs/zuul
 
 #### Configuring the Zuul connection
 
-In order for Zuul to start listening to Gerrit events, add a `gerritconn` property in your deployed **SoftwareFactory**'s Spec:
-
-> The `username` is the name of the [bot account that was set up in the previous section](#gerrit-bot-account).
+In order for Zuul to start listening to Gerrit events, add a `gerritconn` property in your deployed **SoftwareFactory**'s Spec. Edit the spec with:
 
 ```sh
 kubectl edit sf my-sf
+```
+
+```yaml
 [...]
 spec:
   zuul:
     gerritconns:
       - name: gerrit
-        username: zuul
+        username: zuul # (1)
         hostname: <gerrit_ssh_hostname>
         puburl: "<gerrit_url>"
 [...]
 ```
 
-You can check the [CRD's OpenAPI schema](config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml) for specification details.
+1. The `username` is the name of the [bot account that was set up in the previous section](#gerrit-bot-account).
+
+You can check the [CRD's OpenAPI schema](./crds.md) for specification details.
 
 At that step you can continue the setting by [configuring the location of the config repository](#set-the-config-repository-location).
 
@@ -156,8 +161,9 @@ is sufficient.
 Please refer to the [upstream's Zuul documentation for more information about the GitLab's driver and how to define
 an API Token and WebHook token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#gitlab).
 
-> Note that the WebHook URL to configure on the project or on the project's group setting must
-be `https://<fqdn>/zuul/api/connection/<zuul-connection-name>/payload`
+!!! note
+    The WebHook URL to configure on the project or on the project's group setting must
+    be `https://<fqdn>/zuul/api/connection/<zuul-connection-name>/payload`
 
 The `gate` pipeline defined for the `config` repository workflow relies in the `gateit` label for the pipeline
 trigger rule. Thus, a GitLab label named `gateit` must be defined in the `Settings` the `config` repository.

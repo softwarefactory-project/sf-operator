@@ -2,7 +2,6 @@
 
 This document lists some methods that can be used to debug the various components of SF-Operator.
 
-## Table of Contents
 
 1. [OC Debugging](#oc-debugging)
 1. [go-delve](#go-delve)

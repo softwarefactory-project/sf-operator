@@ -7,7 +7,6 @@ We use Microshift as the target **OpenShift instance** for SF-Operator when depl
 The deployment will be performed via Ansible, by using the
 [ansible-microshift-role](https://github.com/openstack-k8s-operators/ansible-microshift-role).
 
-## Table of Contents
 
 1. [Requirements](#requirements)
 1. [Install MicroShift](#install-microshift)
@@ -68,6 +67,6 @@ sudo dnf install -y ansible-core golang
 ## Install MicroShift
 
 Installing Microshift is straightforward with the [ansible-microshift-role](https://github.com/openstack-k8s-operators/ansible-microshift-role).
-The [sf-operator](./../reference/cli/index.md) CLI also provides the [`dev create microshift` subcommand](./../reference/cli/index.md#create-microshift) that sets up a microshift host from start to finish. Please refer to the documentation of this subcommand to learn how to use it.
+The [sf-operator](./../reference/cli/index.md) CLI provides the [`dev create microshift` subcommand](./../reference/cli/index.md#create-microshift) that sets up a microshift host from start to finish. Please refer to the documentation of this subcommand to learn how to use it.
 
 Once the deployment has ended successfully, you are now ready to deploy and hack SF-Operator, congratulations!

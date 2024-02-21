@@ -1,12 +1,22 @@
+---
+title: About
+---
+
 # Decisions
 
 This directory contains decision records for sf-operator.
 
-For new ADRs, please use [doc/adr/adr-template.md](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/doc/adr/adr-template.md) as a boilerplate.
+For new ADRs, please use the template below as a boilerplate:
+
+??? abstract "ADR template"
+
+    ```markdown title="template.md"
+    --8<-- "doc/reference/adr/adr-template.md"
+    ```
+
 More information on MADR is available at <https://adr.github.io/madr/>.
 General information about architectural decision records is available at <https://adr.github.io/>.
 
-## Table of Contents
 
 1. [Use Markdown for ADRs](./0000-use-markdown-any-decision-records.md)
 1. [Operator Configuration](./0001-operator-config.md)

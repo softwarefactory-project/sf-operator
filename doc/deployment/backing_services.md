@@ -2,7 +2,6 @@
 
 Here you will find information about the backing services used by Zuul and Nodepool.
 
-## Table of Contents
 
 1. [Philosophy](#philosophy)
 1. [MariaDB](#mariadb)

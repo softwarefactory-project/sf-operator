@@ -1,0 +1,126 @@
+site_name: sf-operator documentation
+
+repo_name: softwarefactory-project/sf-operator
+repo_url: https://github.com/softwarefactory-project/sf-operator
+
+docs_dir: ./doc/
+theme:
+  name: material
+  features:
+    - content.code.annotate
+    - content.code.copy
+    - navigation.tabs
+    #- navigation.sections
+    - navigation.expand
+    - navigation.footer
+    - navigation.top
+  palette:
+    - scheme: default
+      primary: teal
+      accent: deep purple
+      toggle:
+        icon: material/brightness-5
+        name: dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: light mode
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path:
+        - "."
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: simple/matrix
+      link: https://matrix.to/#/#softwarefactory-project:matrix.org
+    - icon: fontawesome/brands/docker
+      link: https://quay.io/organization/software-factory
+    - icon: fontawesome/brands/golang
+      link: https://pkg.go.dev/github.com/softwarefactory-project/sf-operator
+    - icon: fontawesome/brands/github
+      link: https://github.com/softwarefactory-project/sf-operator
+
+nav:
+  - Home: README.md
+  - Operator: 
+    - operator/index.md
+    - Getting started: operator/getting_started.md
+    - Uninstall: operator/uninstall.md
+  - Deploy: 
+    - deployment/index.md
+    - Getting started: deployment/getting_started.md
+    - Configuration repository: deployment/config_repository.md
+    - Services reference:
+      - Backing services: deployment/backing_services.md
+      # - Log server
+      - Nodepool: deployment/nodepool.md
+      - Zuul: deployment/zuul.md
+    - TLS:
+      - Setting up certificates: deployment/certificates.md
+      - Adding third-party certificates into the CA trust chain: deployment/corporate-certificates.md
+    - Monitoring: deployment/monitoring.md
+    - Logging: deployment/logging.md
+    - Deleting a deployment: deployment/delete.md
+  - User:
+    - user/index.md
+    - Services configuration:
+      - Nodepool: user/nodepool_config_repository.md
+      - Zuul tenants: user/zuul_config_repository.md
+  - Develop: 
+    - developer/index.md
+    - Contributing: developer/CONTRIBUTING.md
+    - Getting started: developer/getting_started.md
+    - Developing on a MicroShift instance: developer/microshift.md
+    - Testing: developer/testing.md
+    - Releasing: developer/release.md
+    - Hacking images: developer/images.md
+    - Contributing: developer/CONTRIBUTING.md
+    - Howtos:
+      - developer/howtos/index.md
+    - Troubleshooting: developer/troubleshooting.md
+  - Reference: 
+    - reference/index.md
+    - Decision Records (ADR):
+      - reference/adr/index.md
+      - reference/adr/0000-use-markdown-any-decision-records.md
+      - reference/adr/0001-operator-config.md
+      - reference/adr/0002-zuul-system-config.md
+      - reference/adr/0003-config-update.md
+      - reference/adr/0004-zuul-main.md
+      - reference/adr/0005-ops-tooling.md
+      - reference/adr/0006-monitoring.md
+      - reference/adr/0007-edge-cert.md
+      - reference/adr/0008-config-jobs.md
+      - reference/adr/0009-database-agnosticity.md
+      - reference/adr/0010-zuul-operator-usage.md
+      - reference/adr/0011-backup-and-restore.md
+      - reference/adr/0011-nodepool-builder.md
+      - reference/adr/0012-CLI-overhaul.md
+      - reference/adr/0013-more-CLI-features.md
+     # - Template: reference/adr/adr-template.md
+    - Custom Resource Definitions: deployment/crds.md
+    - API:
+      - reference/api/index.md
+    - CLI:
+      - reference/cli/index.md

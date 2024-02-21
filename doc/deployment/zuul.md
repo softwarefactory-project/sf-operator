@@ -1,10 +1,9 @@
-# Zuul
+.# Zuul
 
 Here you will find information about managing the Zuul service when deployed with the SF Operator.
 It does not replace [Zuul's documentation](https://zuul-ci.org/docs/zuul/latest/),
 but addresses specificities and idiosyncrasies induced by deploying Zuul with the SF Operator.
 
-## Table of Contents
 
 1. [Architecture](#architecture)
 1. [Services configuration](#services-configuration)
@@ -26,7 +25,7 @@ Zuul is deployed by SF-Operator as micro-services:
 
 ## Services configuration
 
-Configuring the Zuul micro-services is done through the SoftwareFactory deployment's manifest. Many configuration parameters are exposed by The [SoftwareFactory Custom Resource spec](./../../config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml).
+Configuring the Zuul micro-services is done through the SoftwareFactory deployment's manifest. Many configuration parameters are exposed by The [SoftwareFactory Custom Resource spec](../deployment/crds.md#softwarefactory).
 
 The spec is constantly evolving during alpha development, and should be considered
 unstable but the ultimate source of truth for documentation about its properties.
@@ -45,12 +44,19 @@ a user to perform administrative tasks such as managing autoholds, promoting cha
 
 There are two ways to generate such a token:
 
-* Run the `zuul-admin` CLI on a scheduler pod to [generate a token](#zuul-admin)
-* Run `sf-operator` to streamline the token's generation:
+=== "sf-operator"
 
- ```bash
- sf-operator zuul create auth-token [FLAGS]
- ```
+    ```bash
+    sf-operator zuul create auth-token [FLAGS]
+    ```
+
+    Refer to [the command's documentation](../reference/cli/index.md#create-auth-token) for further details.
+
+=== "kubectl exec"
+
+    ```sh
+    kubectl exec -n sf --stdin --tty zuul-scheduler-0 -- zuul-admin create-auth-token [...]
+    ```
 
 ## Zuul-Client
 

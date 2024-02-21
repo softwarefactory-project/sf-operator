@@ -1,4 +1,4 @@
-name: Build static HTML documentation with Jekyll and GitHub pages
+name: Build static HTML documentation with Material for MkDocs and GitHub pages
 
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -22,17 +22,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Move README and CONTRIBUTING into the documentation
-        run: |
-          cp "${GITHUB_WORKSPACE}/README.md" "${GITHUB_WORKSPACE}/doc/README.md"
-          cp "${GITHUB_WORKSPACE}/CONTRIBUTING.md" "${GITHUB_WORKSPACE}/doc/developer/CONTRIBUTING.md"
       - name: Setup Pages
         uses: actions/configure-pages@v3
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
+      - name: Setup python and install material for mkdocs
+        uses: actions/setup-python@v4
         with:
-          source: ./doc/
-          destination: ./_site
+          python-version: 3.12
+      - run: pip install -r mkdocs-requirements.txt
+      - run: mkdocs build --site-dir ./_site
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
 

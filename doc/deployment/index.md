@@ -1,9 +1,12 @@
+---
+title: About
+---
+
 # Deployment documentation
 
 Welcome to the deployment documentation. You can find here what you need to know when it comes to deploying
 and managing a Software Factory Custom Resource through SF-Operator.
 
-## Table of Contents
 
 1. [Getting started](./getting_started.md)
 1. [Setting up the config repository](./config_repository.md)

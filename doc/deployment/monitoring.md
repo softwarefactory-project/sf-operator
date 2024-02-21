@@ -2,7 +2,6 @@
 
 Here you will find information about what monitoring is available on services deployed with SF-Operator.
 
-## Table of Contents
 
 1. [Concepts](#concepts)
 1. [Accessing the metrics](#accessing-the-metrics)
@@ -12,27 +11,37 @@ Here you will find information about what monitoring is available on services de
 ## Concepts
 
 SF-Operator use the [prometheus-operator](https://prometheus-operator.dev/) to expose and collect service metrics.
-SF-Operator will automatically create [PodMonitors](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#podmonitor) for the following services:
+SF-Operator will automatically create a [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#podmonitor) for the following services:
 
+* Git Server
 * Log Server
+* MariaDB
 * [Nodepool](./nodepool.md)
+* ZooKeeper
 * [Zuul](./zuul.md)
+
+Below is a table of available metrics (1) per service.
+{ .annotate }
+
+1. Metrics exposed by [Node Exporter](https://prometheus.io/docs/guides/node-exporter/) can be used to monitor disk usage.
 
 | Service | Statsd metrics | Prometheus metrics |
 |---------|--------|-------|
-| Log Server | ❌ | ✅ |
+| Git Server | ❌ | ✅ (node exporter only)|
+| Log Server | ❌ | ✅ (node exporter only)|
+| MariaDB | ❌ | ✅ (node exporter only)|
 | Nodepool | ✅ | ✅ |
+| ZooKeeper | ❌ | ✅ (node exporter only)|
 | Zuul | ✅ | ✅ |
+ 
 
-The `PodMonitors` are set with the label key `sf-monitoring` (and a value equal to the monitored service name); that key can be used for filtering metrics.
+The `PodMonitor` is set with the label key `sf-monitoring` (and a value equal to the monitored service name); that key can be used for filtering metrics.
 
 You can list the PodMonitors this way:
 
 ```sh
 kubectl get podmonitors
 ```
-
-The `Log server` service runs the [Node Exporter](https://prometheus.io/docs/guides/node-exporter/) process as a sidecar container as well, in order to expose disk space-related metrics.
 
 For services that expose statsd metrics, a sidecar container running [Statsd Exporter](https://github.com/prometheus/statsd_exporter)
 is added to the service pod, so that these metrics can be consumed by a Prometheus instance.
@@ -43,12 +52,9 @@ If [enabled in your cluster](https://docs.openshift.com/container-platform/4.13/
 be collected by the cluster-wide Prometheus instance. Check with your cluster admin about getting access to your metrics.
 
 If this feature isn't enabled in your cluster, you will need to deploy your own Prometheus instance to collect the metrics on your own.
-To do so, you can either:
+To do so, follow the [prometheus-operator's documentation](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/getting-started.md#deploying-prometheus).
 
-* Follow the [CLI documentation](./../cli/index.md#prometheus) to deploy a standalone Prometheus instance
-* Follow the [prometheus-operator's documentation](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/getting-started.md#deploying-prometheus) to deploy it on your own
-
-In the latter case, you will need to set the proper `PodMonitorSelector` in the Prometheus instance's manifest:
+You will then need to set the proper `PodMonitorSelector` in the Prometheus instance's manifest:
 
 ```yaml
   # assuming Prometheus is deployed in the same namespace as SF
@@ -63,8 +69,12 @@ In the latter case, you will need to set the proper `PodMonitorSelector` in the 
 
 ### Statsd Exporter mappings
 
-Statsd Exporter sidecars are preconfigured to map every statsd metric issued by Zuul and Nodepool into prometheus-compatible metrics.
-You can find the mappings definitions [here (Nodepool)](./../../controllers/static/nodepool/statsd_mapping.yaml) and [here (Zuul)](./../../controllers/static/zuul/statsd_mapping.yaml).
+Statsd Exporter sidecars are preconfigured to map every statsd metric issued by Zuul (1) and Nodepool (2) into prometheus-compatible metrics.
+{ .annotate }
+
+1. Zuul's [statsd_mapping.yaml](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/controllers/static/zuul/statsd_mapping.yaml)
+2. Nodepool's [statsd_mapping.yaml](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/controllers/static/nodepool/statsd_mapping.yaml)
+
 
 ### Forwarding
 
@@ -74,11 +84,11 @@ It is possible to use the `relayAddress` property in a SoftwareFactory CRD to de
 
 SF-Operator defines some metrics-related alert rules for the deployed services.
 
-> The alert rules are defined for Prometheus. Handling these alerts (typically sending out notifications) requires another service called [AlertManager](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/alerting.md). How to manage AlertManager is out of scope for this documentation.
-You may need to [configure](https://docs.openshift.com/container-platform/4.13/monitoring/managing-alerts.html#sending-notifications-to-external-systems_managing-alerts) or
-[install](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/alerting.md) an
-AlertManager instance on your cluster,
-or configure Prometheus to forward alerts to an external AlertManager instance.
+!!! note
+    The alert rules are defined for Prometheus. Handling these alerts (typically sending out notifications) requires another service called [AlertManager](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/alerting.md). How to manage AlertManager is out of scope for this documentation.
+    You may need to [configure](https://docs.openshift.com/container-platform/4.13/monitoring/managing-alerts.html#sending-notifications-to-external-systems_managing-alerts) or
+    [install](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/alerting.md) an
+    AlertManager instance on your cluster, or configure Prometheus to forward alerts to an external AlertManager instance.
 
 The following alerting rules are created automatically at deployment time:
 
