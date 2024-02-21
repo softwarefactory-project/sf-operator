@@ -20,7 +20,9 @@
           size: "{{ volume_size }}Gi"
 
 - name: Ensure volume expansion to {{ volume_size }}Gi
-  command: |
-    kubectl get pvc logserver-logserver-0 --output custom-columns=CAPACITY:.status.capacity.storage --no-headers
+  ansible.builtin.shell: >
+    kubectl get pvc logserver-logserver-0
+    --output custom-columns=CAPACITY:.status.capacity.storage
+    --no-headers | sed 's/[^0-9]\+//'
   register: logserver_capacity
-  failed_when: logserver_capacity.stdout != '{{ volume_size }}Gi'
+  failed_when: logserver_capacity.stdout | int != volume_size | int

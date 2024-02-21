@@ -1,11 +1,15 @@
 ---
+- name: Set operator_version_expression fact
+  ansible.builtin.set_fact:
+    operator_version_expression: "sf-operator.{{ upgrade_version }}"
+
 - name: Wait for sf-operator version
   ansible.builtin.command: >
     kubectl -n operators get deployment.apps/sf-operator-controller-manager
     -o jsonpath="{.metadata.labels['olm\.owner']}"
   register: operator_owner
   until:
-    - operator_owner.stdout == "sf-operator.{{ upgrade_version }}"
+    - operator_owner.stdout == operator_version_expression
   retries: "{{ retries }}"
   delay: "{{ delay }}"
 
