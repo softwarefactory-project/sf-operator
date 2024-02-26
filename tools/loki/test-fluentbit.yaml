@@ -20,7 +20,7 @@ data:
         name    loki
         match   *
         host    loki-http
-        labels  namespace=$namespace, podIP=$podip, nodeName=$nodename, application=$component, podName=$podname, labels_run=$labels_run, labels_app=sf
+        labels  namespace=$namespace, podIP=$podip, nodeName=$nodename, application=$component, podName=$podname, labels_run=$labels_run, labels_app=sf, container=$container
 kind: ConfigMap
 metadata:
   creationTimestamp: null

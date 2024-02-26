@@ -68,6 +68,7 @@ The log JSON payload that is sent to your Fluent Bit collector is enriched with 
 | podname | the name of the pod where the service is running |
 | log    | the actual log line collected |
 | component | the name of the component running the microservice; typically "zuul" or "nodepool" |
+| container | the name of the container emitting the logs |
 
 You can use these keys to define labels in your Fluent Bit pipeline.
 

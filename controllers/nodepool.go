@@ -119,7 +119,8 @@ func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string
 			MountPath: "/fluent-bit/etc/",
 		},
 	}
-	sidecar := logging.CreateFluentBitSideCarContainer("diskimage-builder", nodepoolFluentBitLabels, volumeMounts)
+	builderFluentBitLabels := append(nodepoolFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: BuilderIdent})
+	sidecar := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts)
 	annotations["dib-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["dib-fluent-bit-parser"] = utils.Checksum([]byte(fbForwarderConfig["parsers.conf"]))
 	annotations["dib-fluent-bit-image"] = base.FluentBitImage
@@ -754,7 +755,8 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	}
 	container.Env = r.getNodepoolConfigEnvs()
 
-	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-launcher", r.cr.Spec.FluentBitLogForwarding, nodepoolFluentBitLabels, annotations)
+	launcherFluentBitLabels := append(nodepoolFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: LauncherIdent})
+	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-launcher", r.cr.Spec.FluentBitLogForwarding, launcherFluentBitLabels, annotations)
 	container.Env = append(container.Env, extraLoggingEnvVars...)
 
 	nl.Spec.Template.Spec.Volumes = volumes

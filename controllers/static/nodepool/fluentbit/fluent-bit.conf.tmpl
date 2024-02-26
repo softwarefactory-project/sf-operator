@@ -15,11 +15,12 @@
     name    modify
     match   *
     add     namespace ${K8S_NAMESPACE}
-    add     nodeName ${K8S_NODENAME}
-    add     podName ${K8S_PODNAME}
+    add     nodename ${K8S_NODENAME}
+    add     podname ${K8S_PODNAME}
     add     ip ${K8S_PODIP}
     add     labels_run dib
     add     component nodepool
+    add     container nodepool-builder
 {{- range .ExtraKeys }}
     add     {{ .Key }} ${K8S_{{ .Value -}}}
 {{- end }}
