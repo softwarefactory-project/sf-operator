@@ -1,5 +1,5 @@
 ---
 - name: Run the CLI dev create demo-env
-  command: "go run ./main.go {{ cli_global_flags }} dev create demo-env --repos-path {{ demo_repos_path }}"
+  ansible.builtin.command: "go run ./main.go {{ cli_global_flags }} dev create demo-env --repos-path {{ demo_repos_path }}"
   args:
     chdir: "{{ zuul.project.src_dir }}"

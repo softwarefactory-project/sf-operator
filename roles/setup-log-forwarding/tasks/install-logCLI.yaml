@@ -20,5 +20,5 @@
         mode: "0755"
 
     - name: move logCLI to ~/bin/
-      command: mv /tmp/logcli-linux-amd64 ~/bin/logcli
+      ansible.builtin.command: mv /tmp/logcli-linux-amd64 ~/bin/logcli
   when: not logcli_stat.stat.exists

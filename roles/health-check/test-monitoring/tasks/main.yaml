@@ -70,7 +70,7 @@
   register: statsd_mappings
 
 - name: Ensure statsd mapping config has custom mappings from clouds.yaml
-  fail:
+  ansible.builtin.fail:
     msg: "statsd mapping configuration has no reference to clouds config"
   when: ("nodepool.openstack.nimbus" not in statsd_mappings.stdout) or
     ("nodepool.openstack.cumulus" not in statsd_mappings.stdout) or

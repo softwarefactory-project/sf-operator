@@ -5,7 +5,7 @@
     state: absent
 
 - name: Start port forwarding to git server
-  shell: |
+  ansible.builtin.shell: |
     kubectl port-forward service/git-server 9418 -n sf
   async: 60
   poll: 0

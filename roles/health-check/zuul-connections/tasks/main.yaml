@@ -1,6 +1,6 @@
 ---
 - name: Setting Dummy Connections
-  set_fact:
+  ansible.builtin.set_fact:
     dummy_gerritconn:
       - name: dummy-gerrit-conn
         hostname: dummy-gerrit.local
@@ -75,7 +75,7 @@
         api_token: "{{ 'ghp_51abcFzcvf3GxOJpPFUKxsT6JIL3Nnbf39E' | b64encode }}"
 
 - name: Get current Zuul gerrit connections
-  command: |
+  ansible.builtin.command: |
     {% if mode == 'olm' %}
     kubectl get sf my-sf -o jsonpath='{.spec.zuul.gerritconns}'
     {% else %}

@@ -3,12 +3,12 @@
     - name: Setup dstat
       block:
         - name: Install dstat package
-          package:
+          ansible.builtin.package:
             name: dstat
             state: present
           become: true
 
-        - include_role:
+        - ansible.builtin.include_role:
             name: "{{ item }}"
           loop:
             - ensure-dstat-graph

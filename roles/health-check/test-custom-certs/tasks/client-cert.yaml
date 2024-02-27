@@ -1,10 +1,10 @@
 ---
 - name: Gen privkey - client
-  openssl_privatekey:
+  community.crypto.openssl_privatekey:
     path: "{{ ssl_path }}/ssl.key"
 
 - name: Generate Openssl CSR - client
-  openssl_csr:
+  community.crypto.openssl_csr:
     path: "{{ ssl_path }}/ssl.csr"
     privatekey_path: "{{ ssl_path }}/ssl.key"
     common_name: "{{ common_name }}"

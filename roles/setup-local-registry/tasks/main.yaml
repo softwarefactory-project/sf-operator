@@ -1,5 +1,5 @@
 - name: Is registry container exists
-  command: podman container exists registry
+  ansible.builtin.command: podman container exists registry
   register: is_registry_container_exists
   failed_when: is_registry_container_exists.rc >= 2
 
@@ -7,23 +7,23 @@
   when: is_registry_container_exists.rc == 0
   block:
     - name: Stop registry
-      command: podman stop registry
+      ansible.builtin.command: podman stop registry
 
     - name: Delete registry contrainer
-      command: podman rm registry
+      ansible.builtin.command: podman rm registry
 
 - name: Does registry volume exist
-  command: podman volume exists registry
+  ansible.builtin.command: podman volume exists registry
   register: is_registry_volume_exists
   failed_when: is_registry_volume_exists.rc >= 2
 
 - name: Clean registry volume
   when: is_registry_volume_exists.rc == 0
-  command: podman volume rm registry
+  ansible.builtin.command: podman volume rm registry
 
 # quay.io/software-factory/registry:2 is a copy of https://hub.docker.com/_/registry
 - name: Fetch the podman registry container image
-  command: podman pull quay.io/software-factory/registry:2
+  ansible.builtin.command: podman pull quay.io/software-factory/registry:2
   register: podman_fetch
   retries: 12
   delay: 10
@@ -31,12 +31,12 @@
     - podman_fetch.rc == 0
 
 - name: Start the podman registry container
-  command: |
+  ansible.builtin.command: |
     podman container run -dt -p 5000:5000 --name registry \
     --volume registry:/var/lib/registry:Z quay.io/software-factory/registry:2
 
 - name: Wait for the registry to be up
-  command: podman image search localhost:5000/ --tls-verify=false
+  ansible.builtin.command: podman image search localhost:5000/ --tls-verify=false
   register: is_registry_running
   until: is_registry_running.rc == 0
   delay: 1

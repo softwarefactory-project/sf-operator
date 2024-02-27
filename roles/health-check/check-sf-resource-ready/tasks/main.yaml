@@ -19,7 +19,7 @@
     # by k8s right after any object change
     # https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
     - name: Ensure 1 sec delay to let time for k8s to update the metadata.generation field
-      command: sleep 1
+      ansible.builtin.command: sleep 1
 
     - name: Get current resource generation
       ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.metadata.generation}'

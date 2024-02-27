@@ -1,6 +1,6 @@
 - name: Install busybox from quay.io to avoid docker.io rate limit
   delegate_to: "{{ os_host }}"
-  command: "{{ busybox_setup }}"
+  ansible.builtin.command: "{{ busybox_setup }}"
   loop:
     - podman pull quay.io/software-factory/busybox
     - podman image tag quay.io/software-factory/busybox:latest docker.io/library/busybox:1.36.0

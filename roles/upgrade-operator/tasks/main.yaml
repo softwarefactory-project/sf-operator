@@ -44,7 +44,7 @@
 
 - name: Upgrade the operator via the OLM bundle
   delegate_to: "{{ os_host }}"
-  command: |
+  ansible.builtin.command: |
     bin/operator-sdk --verbose run
     bundle-upgrade
     --skip-tls

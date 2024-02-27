@@ -22,7 +22,7 @@
         - os_host != 'controller'
 
     - name: Check if kubeconfig exists
-      stat:
+      ansible.builtin.stat:
         path: ~/.kube/config
       register: _kubeconfig
       become: false
