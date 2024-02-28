@@ -79,6 +79,16 @@ spec:
                       Base URL would be `https://github.com/<username>/`
                     pattern: ^https?:\/\/.+$
                     type: string
+                  k8s-api-url:
+                    description: Public URL of the k8s cluster API. This is useful
+                      when running zuul executors outside of the cluster. This is
+                      mainly used for config-update secret generation
+                    type: string
+                  logserver-host:
+                    description: Public HOST of the default logserver. This is useful
+                      when running zuul executors outside of the cluster. This is
+                      mainly used for config-update secret generation
+                    type: string
                   name:
                     description: The name of the `config` repository. This value is
                       appended to `base-url` to clone the repository
@@ -356,6 +366,28 @@ spec:
                         - WARN
                         - DEBUG
                         type: string
+                      standalone:
+                        description: When set the Control plane is not deployed. The
+                          standalone executor must be able to connect to the control
+                          plane
+                        properties:
+                          controlPlanePublicGSHostname:
+                            description: This is the public hostname or IP where control
+                              plane's GitServer can be reached
+                            type: string
+                          controlPlanePublicZKHostname:
+                            description: This is the public hostname or IP where control
+                              plane's Zookeeper can be reached
+                            type: string
+                          publicHostname:
+                            description: This is the public host or IP address reachable
+                              from zuul-web
+                            type: string
+                        required:
+                        - controlPlanePublicGSHostname
+                        - controlPlanePublicZKHostname
+                        - publicHostname
+                        type: object
                       storage:
                         description: Storage-related settings
                         properties:

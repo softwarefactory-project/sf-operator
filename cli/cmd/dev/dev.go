@@ -144,6 +144,9 @@ func devRunTests(kmd *cobra.Command, args []string) {
 	if len(extraVars) == 0 {
 		extraVars = cliCtx.Dev.Tests.ExtraVars
 	}
+	if extraVars == nil {
+		extraVars = make(map[string]string)
+	}
 	if sfOperatorRepositoryPath == "" {
 		ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration")
 		os.Exit(1)
@@ -172,10 +175,6 @@ func devRunTests(kmd *cobra.Command, args []string) {
 		if reposPath == "" {
 			ctrl.Log.Info("Demo repos path unset; repos will be cloned into ./deploy")
 			reposPath = "deploy"
-		}
-		// overwrite demo_repos_path ansible variable
-		if extraVars == nil {
-			extraVars = make(map[string]string)
 		}
 		extraVars["demo_repos_path"] = reposPath
 		createDemoEnv(env, restConfig, fqdn, reposPath, sfOperatorRepositoryPath, false)

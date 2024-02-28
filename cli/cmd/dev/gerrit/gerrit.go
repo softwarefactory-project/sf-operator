@@ -184,7 +184,7 @@ func gerritSshdService(ns string) apiv1.Service {
 					Port:     gerritSSHDPort,
 				},
 			},
-			Type: apiv1.ServiceTypeNodePort,
+			Type: apiv1.ServiceTypeLoadBalancer,
 			Selector: map[string]string{
 				"app": "sf",
 				"run": gerritIdent,

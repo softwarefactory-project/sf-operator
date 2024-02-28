@@ -1,0 +1,111 @@
+---
+- name: "Deactivate the Zuul executor in the control plan"
+  ansible.builtin.include_role:
+    name: run-operator-standalone
+  vars:
+    cr_path: playbooks/files/sf-no-ze.yaml
+
+- name: Expose a Zookeeper Service as a LoadBalancer (reachable on microshift.dev)
+  kubernetes.core.k8s:
+    state: present
+    namespace: sf
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: zookeeper-lb
+      spec:
+        ports:
+          - name: zookeeper-2281
+            port: 2281
+            protocol: TCP
+            targetPort: 2281
+        selector:
+          statefulset.kubernetes.io/pod-name: zookeeper-0
+        type: LoadBalancer
+
+- name: Expose a Git-Server Service as a LoadBalancer (reachable on microshift.dev)
+  kubernetes.core.k8s:
+    state: present
+    namespace: sf
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: git-server-ro-lb
+      spec:
+        ports:
+          - name: git-server-port-9418
+            port: 9418
+            protocol: TCP
+            targetPort: 9418
+        selector:
+          statefulset.kubernetes.io/pod-name: git-server-0
+        type: LoadBalancer
+
+- name: Expose a logserver sshd Service as a LoadBalancer (reachable on microshift.dev)
+  kubernetes.core.k8s:
+    state: present
+    namespace: sf
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: logserver-lb
+      spec:
+        ports:
+          - name: logserver-2222
+            port: 2222
+            protocol: TCP
+            targetPort: 2222
+        selector:
+          statefulset.kubernetes.io/pod-name: logserver-0
+        type: LoadBalancer
+
+- name: "Sync expected secrets resources from the control plan ns to ext-ze ns"
+  ansible.builtin.shell: |
+    kubectl get secrets {{ item }} -o json | jq --arg name {{ item }} '. + {metadata: {name: $name}}' | kubectl apply -n ext-ze -f -
+  loop:
+    - ca-cert
+    - zookeeper-client-tls
+    - zuul-ssh-key
+    - zuul-keystore-password
+
+- name: "Deploy the external Zuul executor"
+  ansible.builtin.include_role:
+    name: run-operator-standalone
+  vars:
+    cr_path: playbooks/files/ext-ze.yaml
+    context: ext-ze
+
+- name: Expose a Zuul Executor Finger service as a LoadBalancer (reachable on microshift.dev)
+  kubernetes.core.k8s:
+    state: present
+    namespace: ext-ze
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: zuul-executor-headless-hp
+      spec:
+        ports:
+          - name: zuul-executor-7900
+            port: 7900
+            protocol: TCP
+            targetPort: 7900
+        selector:
+          app: sf
+          run: zuul-executor
+        type: LoadBalancer
+
+- name: "Run the 'config-update-zuul' test case"
+  ansible.builtin.include_role:
+    name: health-check/config-update-zuul
+
+- name: "Remove the External Zuul executor"
+  ansible.builtin.shell: |
+    kubectl -n ext-ze delete sts zuul-executor
+
+- name: "Activate the Zuul executor in the control plan"
+  ansible.builtin.include_role:
+    name: run-operator-standalone

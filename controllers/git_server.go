@@ -22,7 +22,9 @@ import (
 )
 
 const GitServerIdent = "git-server"
+const GitServerIdentRW = "git-server-rw"
 const gsGitPort = 9418
+const gsGitPortRW = 9419
 const gsGitPortName = "git-server-port"
 const gsGitMountPath = "/git"
 const gsPiMountPath = "/entry"
@@ -269,7 +271,8 @@ func (r *SFController) DeployGitServer() bool {
 	annotations := map[string]string{
 		"system-config": utils.Checksum([]byte(preInitScript)),
 		"image":         base.GitServerImage,
-		"serial":        "1",
+		"fqdn":          r.cr.Spec.FQDN,
+		"serial":        "2",
 	}
 
 	if r.isConfigRepoSet() {
@@ -277,17 +280,37 @@ func (r *SFController) DeployGitServer() bool {
 		annotations["config-zuul-connection-name"] = r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName
 	}
 
+	logserverHost := "logserver"
+	if r.cr.Spec.ConfigRepositoryLocation.LogserverHost != "" {
+		logserverHost = r.cr.Spec.ConfigRepositoryLocation.LogserverHost
+		annotations["logserver_host"] = logserverHost
+	}
+
 	// Create the statefulset
 	sts := r.mkStatefulSet(GitServerIdent, base.GitServerImage, r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), apiv1.ReadWriteOnce)
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
-	GSVolumeMounts := []apiv1.VolumeMount{
+	GSVolumeMountsRO := []apiv1.VolumeMount{
+		{
+			Name:      GitServerIdent,
+			MountPath: gsGitMountPath,
+			ReadOnly:  true,
+		},
+	}
+	sts.Spec.Template.Spec.Containers[0].VolumeMounts = GSVolumeMountsRO
+	sts.Spec.Template.Spec.Containers[0].Command = []string{"git", "daemon", "--base-path=/git", "--export-all"}
+
+	// Add a second container to serve the git-server with RW access (should not be exposed)
+	containerRW := base.MkContainer("git-daemon-rw", base.GitServerImage)
+	containerRW.Command = []string{"git", "daemon", "--base-path=/git",
+		"--enable=receive-pack", "--export-all", "--port=" + strconv.Itoa(gsGitPortRW)}
+	containerRW.VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      GitServerIdent,
 			MountPath: gsGitMountPath,
 		},
 	}
-	sts.Spec.Template.Spec.Containers[0].VolumeMounts = GSVolumeMounts
 
+	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, containerRW)
 	sts.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkVolumeCM(GitServerIdent+"-pi", GitServerIdent+"-pi-config-map"),
 	}
@@ -301,7 +324,7 @@ func (r *SFController) DeployGitServer() bool {
 	initContainer.Command = []string{"/bin/bash", "/entry/pre-init.sh"}
 	initContainer.Env = []apiv1.EnvVar{
 		base.MkEnvVar("FQDN", r.cr.Spec.FQDN),
-		base.MkEnvVar("LOGSERVER_SSHD_SERVICE_PORT", strconv.Itoa(sshdPort)),
+		base.MkEnvVar("ZUUL_LOGSERVER_HOST", logserverHost),
 	}
 	initContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
@@ -326,7 +349,7 @@ func (r *SFController) DeployGitServer() bool {
 	// Note: The probe is causing error message to be logged by the service
 	// dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GS_GIT_PORT)
 
-	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(GitServerIdent, GSVolumeMounts)
+	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(GitServerIdent, GSVolumeMountsRO)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
 
 	current, changed := r.ensureStatefulset(sts)
@@ -337,6 +360,8 @@ func (r *SFController) DeployGitServer() bool {
 	// Create services exposed
 	svc := base.MkServicePod(GitServerIdent, r.ns, GitServerIdent+"-0", []int32{gsGitPort}, gsGitPortName)
 	r.EnsureService(&svc)
+	svcRW := base.MkServicePod(GitServerIdentRW, r.ns, GitServerIdent+"-0", []int32{gsGitPortRW}, gsGitPortName)
+	r.EnsureService(&svcRW)
 
 	ready := r.IsStatefulSetReady(current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, GitServerIdent, ready)

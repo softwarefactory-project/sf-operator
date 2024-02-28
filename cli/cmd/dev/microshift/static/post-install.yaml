@@ -6,22 +6,20 @@
         - operators
         - sf
         - nodepool
-    - name: Ensure kubectl context is correct
-      ansible.builtin.command: kubectl config set-context microshift --namespace=sf
-    - name: Set sf namespace labels
-      ansible.builtin.command: kubectl label --overwrite ns sf {{ item }}
-      loop:
-        - "pod-security.kubernetes.io/enforce=privileged"
-        - "pod-security.kubernetes.io/enforce-version=v1.24"
-    - name: Set privileges on sf namespace
-      ansible.builtin.command: oc adm policy add-scc-to-user privileged -z default
+        - ext-ze
     - name: Set service accounts privileges
       ansible.builtin.command: oc adm policy add-scc-to-user privileged system:serviceaccount:{{ item.namespace }}:{{ item.serviceaccount }}
       loop:
         - namespace: operators
           serviceaccount: default
+        - namespace: sf
+          serviceaccount: default
+        - namespace: ext-ze
+          serviceaccount: default
         - namespace: operators
           serviceaccount: prometheus-operator
+    - name: Set default kubectl context to sf namespace
+      ansible.builtin.command: kubectl config set-context microshift --namespace=sf
     # TODO we do this so that this playbook doesn't rely on a local copy of the repo. There may be a better way to do that.
     - name: Ensure certmanager operator is installed
       block:
@@ -36,7 +34,7 @@
             - '"condition met" in ready_cm.stdout'
             - ready_cm.rc == 0
           retries: 60
-          delay: 5 
+          delay: 5
     - name: Ensure prometheus operator is installed
       block:
         - name: Apply prometheus-operator subscription
@@ -50,4 +48,4 @@
             - '"condition met" in ready_po.stdout'
             - ready_po.rc == 0
           retries: 60
-          delay: 5 
+          delay: 5

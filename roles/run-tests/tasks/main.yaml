@@ -40,6 +40,8 @@
       when: "{{ mode == 'olm' }}"
     - name: zuul-client-api
     - name: zuul-components
+    - name: test-external-ze
+      when: "{{ mode == 'standalone' }}"
     - name: test-log-forwarding
     - name: backup
   loop_control:
