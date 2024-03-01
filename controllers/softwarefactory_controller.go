@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"time"
 
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -436,8 +437,9 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 }
 
-func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns string, sf sfv1.SoftwareFactory) {
+func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns string, sf sfv1.SoftwareFactory) error {
 	d, _ := time.ParseDuration("5s")
+	maxAttempt := 60
 	log := log.FromContext(ctx)
 
 	// Create a fake resource that simulate the Resource Owner.
@@ -456,21 +458,26 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 		// Create the fake controller configMap
 		if err := r.Create(ctx, &controllerCM); err != nil {
 			log.Error(err, "Unable to create configMap", "name", controllerCMName)
-			return
+			return err
 		}
 	}
 
 	sfCtrl := r.mkSFController(ctx, ns, &controllerCM, sf, true)
+	attempt := 0
 
 	for {
 		status := sfCtrl.Step()
-		if status.Ready {
-			break
+		attempt += 1
+		if attempt == maxAttempt {
+			return errors.New("unable to reconcile after max attempts")
 		}
-		log.Info("Waiting 5s for the next reconcile call ...")
+		if status.Ready {
+			log.Info("Standalone reconcile done.")
+			return nil
+		}
+		log.Info("[attempt #" + strconv.Itoa(attempt) + "] Waiting 5s for the next reconcile call ...")
 		time.Sleep(d)
 	}
-	log.Info("Standalone reconcile done.")
 }
 
 // SetupWithManager sets up the controller with the Manager.

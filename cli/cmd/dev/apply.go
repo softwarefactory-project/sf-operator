@@ -45,7 +45,11 @@ func applyStandalone(ns string, sfResource string, kubeContext string) {
 			"CR", sf,
 			"CR name", sf.ObjectMeta.Name,
 			"Namespace", ns)
-		controllers.Standalone(sf, ns, kubeContext)
+		err = controllers.Standalone(sf, ns, kubeContext)
+		if err != nil {
+			ctrl.Log.Error(err, "Could not reconcile resource")
+			os.Exit(1)
+		}
 		os.Exit(0)
 	}
 }

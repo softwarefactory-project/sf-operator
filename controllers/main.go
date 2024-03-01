@@ -146,7 +146,7 @@ func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection 
 	}
 }
 
-func Standalone(sf sfv1.SoftwareFactory, ns string, kubeContext string) {
+func Standalone(sf sfv1.SoftwareFactory, ns string, kubeContext string) error {
 
 	config := GetConfigContextOrDie(kubeContext)
 	cl, err := client.New(config, client.Options{
@@ -165,5 +165,5 @@ func Standalone(sf sfv1.SoftwareFactory, ns string, kubeContext string) {
 		RESTConfig: config,
 		CancelFunc: cancelFunc,
 	}
-	sfr.StandaloneReconcile(ctx, ns, sf)
+	return sfr.StandaloneReconcile(ctx, ns, sf)
 }

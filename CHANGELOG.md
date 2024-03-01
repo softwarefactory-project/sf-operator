@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - "Debug" toggle for fluent bit sidecars
 - A support for running zuul-executor component external to the cluster.
+- The standalone deployment mode exits 1 when the reconcile is not possible after 300 seconds
 
 ### Changed
 
