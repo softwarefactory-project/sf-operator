@@ -43,5 +43,6 @@
       when: "{{ test_monitoring == 'true' }}"
     - name: zuul-components
     - name: test-log-forwarding
+    - name: backup
   loop_control:
     loop_var: role

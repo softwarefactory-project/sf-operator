@@ -1,0 +1,10 @@
+---
+- name: Count BEGIN RSA PRIVATE KEY fromz Zuul backup
+  ansible.builtin.shell: |
+    tr '\\n' '\n'  < /tmp/backup/zuul/zuul.keys | grep "BEGIN RSA PRIVATE KEY" | wc -l
+  register: _zuul_file_rsa_count
+
+- name: Ensure each Zuul project has own private key
+  ansible.builtin.assert:
+    that:
+      - _zuul_file_rsa_count.stdout | int > 0

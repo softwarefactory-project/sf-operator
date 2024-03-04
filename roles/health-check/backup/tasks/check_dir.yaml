@@ -1,0 +1,10 @@
+---
+- name: "Check if backup directory is not empty - {{ backup_dir }}/{{ backup_subdir }}"
+  ansible.builtin.find:
+    paths: "{{ backup_dir }}/{{ backup_subdir }}"
+  register: _backup_files
+
+- name: "Ensure, that the backup sub directory is not empty - {{ backup_dir }}/{{ backup_subdir }}"
+  when: _backup_files.matched == 0
+  ansible.builtin.fail:
+    msg: "The directory is empty {{ backup_dir }}/{{ backup_subdir }}. Something is wrong with backup tool!"
