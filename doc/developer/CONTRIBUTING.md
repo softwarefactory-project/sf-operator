@@ -3,8 +3,6 @@
 We welcome all contributions to the project!
 
 General guidelines about contributing to the SF-Operator can be found in this document.
-For further details about the code base, testing and hacking the project, please see
-the [Developer documentation](https://softwarefactory-project.github.io/sf-operator/developer/).
 
 ## Project repositories
 
@@ -23,6 +21,14 @@ The MicroShift deployment Ansible role is hosted on [GitHub](https://github.com/
 
 Any large contribution aiming to modify or implement a functionality must be first validated by the community with
 an *[Architectural Decision Record](https://adr.github.io/) (ADR)*.
+
+For new ADRs, please use the template below as a boilerplate:
+
+??? abstract "ADR template"
+
+    ```markdown title="template.md"
+    --8<-- "doc/reference/adr/adr-template.md"
+    ```
 
 ## Review Checklist
 

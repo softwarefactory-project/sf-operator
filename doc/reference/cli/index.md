@@ -1,6 +1,6 @@
 # CLI
 
-The `sf-operator` executable can be used to perform various actions related to the management of Software Factory
+We provide a command to perform various actions related to the management of Software Factory
 deployments, beyond what can be defined in a custom resource manifest.
 
 
@@ -9,29 +9,29 @@ deployments, beyond what can be defined in a custom resource manifest.
 1. [Configuration File](#configuration-file)
 1. [Subcommands](#subcommands)
   1. [Dev](#dev)
-    1. [cloneAsAdmin](#cloneasadmin)
-    1. [create demo-env](#create-demo-env)
-    1. [create gerrit](#create-gerrit)
-    1. [create microshift](#create-microshift)
-    1. [create standalone-sf](#create-standalone-sf)
-    1. [run-tests](#run-tests)
-    1. [wipe gerrit](#wipe-gerrit)
+    - [cloneAsAdmin](#cloneasadmin)
+    - [create demo-env](#create-demo-env)
+    - [create gerrit](#create-gerrit)
+    - [create microshift](#create-microshift)
+    - [create standalone-sf](#create-standalone-sf)
+    - [run-tests](#run-tests)
+    - [wipe gerrit](#wipe-gerrit)
   1. [Init](#init)
   1. [Nodepool](#nodepool)
-    1. [configure providers-secrets](#configure-providers-secrets)
-    1. [create openshiftpods-namespace](#create-openshiftpods-namespace)
-    1. [get builder-ssh-key](#get-builder-ssh-key)
-    1. [get providers-secrets](#get-providers-secrets)
+    - [configure providers-secrets](#configure-providers-secrets)
+    - [create openshiftpods-namespace](#create-openshiftpods-namespace)
+    - [get builder-ssh-key](#get-builder-ssh-key)
+    - [get providers-secrets](#get-providers-secrets)
   1. [Operator](#operator)
   1. [SF](#sf)
-    1. [backup](#backup)
-    1. [bootstrap-tenant](#bootstrap-tenant)
-    1. [configure TLS](#configure-tls)
-    1. [restore](#restore)
-    1. [wipe](#wipe)
+    - [backup](#backup)
+    - [bootstrap-tenant](#bootstrap-tenant)
+    - [configure TLS](#configure-tls)
+    - [restore](#restore)
+    - [wipe](#wipe)
   1. [Zuul](#zuul)
-    1. [create auth-token](#create-auth-token)
-    1. [create client-config](#create-client-config)
+    - [create auth-token](#create-auth-token)
+    - [create client-config](#create-client-config)
 
 ## Installing the CLI
 
