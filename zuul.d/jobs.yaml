@@ -39,7 +39,6 @@
         - 199.204.44.24
         - 199.204.47.54
       inject_dev_ssh_keys: true
-      test_monitoring: "false"
 
 - job:
     name: sf-operator-multinode

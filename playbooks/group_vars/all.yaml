@@ -12,13 +12,11 @@ validate_certs: false
 zuul_endpoint: "{{ fqdn }}/zuul"
 logserver_endpoint: "{{ fqdn }}/logs"
 nodepool_endpoint: "{{ fqdn }}/nodepool"
-prometheus_host: "prometheus.{{ fqdn }}"
 gerrit_host: "gerrit.{{ fqdn }}"
 
 hosts:
   - "{{ fqdn }}"
   - "{{ gerrit_host }}"
-  - "{{ prometheus_host }}"
 
 logserver_copy_content_dest: "/tmp/logserver-content"
 
