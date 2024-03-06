@@ -31,7 +31,7 @@ The current project status is: **Alpha - NOT PRODUCTION READY**
 
 ## Capability Levels
 
-* Level 1 - Basic Install - **8/10**
+* Level 1 - Basic Install - **10/10**
     - Zuul Scheduler: ✅
     - Zuul Executor: ✅
     - Zuul Web: ✅
@@ -62,8 +62,8 @@ The current project status is: **Alpha - NOT PRODUCTION READY**
 
 ## Getting Started
 
-* [Installing the Operator ](https://softwarefactory-project.github.io/sf-operator/operator/getting_started.html)
-* [Deploying Zuul and dependencies with SF-Operator](https://softwarefactory-project.github.io/sf-operator/deployment/getting_started.html)
+* [Installing the Operator ](https://softwarefactory-project.github.io/sf-operator/operator/getting_started/)
+* [Deploying Zuul and dependencies with SF-Operator](https://softwarefactory-project.github.io/sf-operator/deployment/getting_started)
 
 ## Documentation
 
