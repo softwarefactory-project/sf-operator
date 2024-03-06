@@ -1,7 +1,7 @@
 [SERVICE]
     http_server On
     http_port   2020
-    log_level   debug
+    log_level   {{ .LogLevel }}
     parsers_file    parsers.conf
 [INPUT]
     name                tail
