@@ -118,9 +118,11 @@ nav:
       - reference/adr/0011-nodepool-builder.md
       - reference/adr/0012-CLI-overhaul.md
       - reference/adr/0013-more-CLI-features.md
+      - reference/adr/0014-external-zuul-executor.md
      # - Template: reference/adr/adr-template.md
     - Custom Resource Definitions: deployment/crds.md
     - API:
       - reference/api/index.md
     - CLI:
       - reference/cli/index.md
+    - CHANGELOG: reference/CHANGELOG.md
