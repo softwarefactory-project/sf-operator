@@ -80,7 +80,7 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 	}
 	msOpenshiftPullSecret := cliCtx.Dev.Microshift.OpenshiftPullSecret
 	if msOpenshiftPullSecret == "" {
-		ctrl.Log.Error(errMissingArg, "A valid OpenShift pull secret must be set in `microshift` section of the configuration")
+		ctrl.Log.Error(errMissingArg, "A valid OpenShift pull secret must be set in `microshift` section of the configuration file")
 		os.Exit(1)
 	}
 	msDiskFileSize := cliCtx.Dev.Microshift.DiskFileSize
@@ -95,7 +95,7 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 	}
 	msSFOperatorRepositoryPath := cliCtx.Dev.SFOperatorRepositoryPath
 	if msSFOperatorRepositoryPath == "" {
-		ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration")
+		ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration file")
 		os.Exit(1)
 	}
 

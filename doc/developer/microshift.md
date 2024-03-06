@@ -66,7 +66,13 @@ sudo dnf install -y ansible-core golang
 
 ## Install MicroShift
 
+You have to generate and adapt the configuration file to deploy microshift
+
+```sh
+sf-operator init config > myconfig.yaml
+```
+
 Installing Microshift is straightforward with the [ansible-microshift-role](https://github.com/openstack-k8s-operators/ansible-microshift-role).
-The [sf-operator](./../reference/cli/index.md) CLI provides the [`dev create microshift` subcommand](./../reference/cli/index.md#create-microshift) that sets up a microshift host from start to finish. Please refer to the documentation of this subcommand to learn how to use it.
+The [sf-operator](./../reference/cli/index.md) CLI provides the [`dev create microshift --config myconfig.yaml` subcommand](./../reference/cli/index.md#create-microshift) that sets up a microshift host from start to finish. Please refer to the documentation of this subcommand to learn how to use it.
 
 Once the deployment has ended successfully, you are now ready to deploy and hack SF-Operator, congratulations!
