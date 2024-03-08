@@ -93,7 +93,7 @@ setenv:
 
 .PHONY: build
 build: setenv generate fmt vet sc build-api-doc ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -o bin/sf-operator main.go
 
 .PHONY: build-api-doc
 build-api-doc: # Build the API documentation.
