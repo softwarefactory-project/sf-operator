@@ -11,6 +11,18 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 ### Security
 
+## [v0.0.26] - 2024-03-08
+
+### Added
+
+- CLI: Add the `SF backup` subcommand. This subcommand dumps a Software Factory's most important data for safekeeping.
+
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
 ## [alpha] - not released
 
 - Initial alpha version. Please consult the commit log for detailed information.
