@@ -59,16 +59,19 @@
     done
   ignore_errors: true
 
-- name: Create Pods Logs directory
-  ansible.builtin.file:
-    path: "{{ dest_dir }}/pod"
-    state: directory
-    mode: "0755"
+- name: Collect pod logs in namespace
+  when: namespace != "sf"
+  block:
+  - name: Create Pods Logs directory
+    ansible.builtin.file:
+      path: "{{ dest_dir }}/pod"
+      state: directory
+      mode: "0755"
 
-- name: Collect namespace pods logs
-  ansible.builtin.shell: |
-    for pod in $(kubectl {{ namespace_opt }} get pods -o name); do
-      for container in $(kubectl {{ namespace_opt }} get $pod -o jsonpath='{.spec.containers[*].name}'); do
-        kubectl {{ namespace_opt }} logs {{ logs_arguments }} $pod -c $container > {{ dest_dir }}/${pod}-${container}-logs.txt
+  - name: Collect namespace pods logs
+    ansible.builtin.shell: |
+      for pod in $(kubectl {{ namespace_opt }} get pods -o name); do
+        for container in $(kubectl {{ namespace_opt }} get $pod -o jsonpath='{.spec.containers[*].name}'); do
+          kubectl {{ namespace_opt }} logs {{ logs_arguments }} $pod -c $container > {{ dest_dir }}/${pod}-${container}-logs.txt
+        done
       done
-    done

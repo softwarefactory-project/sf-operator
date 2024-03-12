@@ -44,13 +44,18 @@ type ZuulDBOpts struct {
 func createLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
 
 	fbForwarderConfig := make(map[string]string)
+	var fbLogLevel = "info"
+	if r.cr.Spec.FluentBitLogForwarding.Debug != nil && *r.cr.Spec.FluentBitLogForwarding.Debug {
+		fbLogLevel = "debug"
+	}
 	fbForwarderConfig["fluent-bit.conf"], _ = utils.ParseString(
 		mariadbFluentBitForwarderConfig,
 		struct {
 			ExtraKeys              []logging.FluentBitLabel
 			FluentBitHTTPInputHost string
 			FluentBitHTTPInputPort string
-		}{[]logging.FluentBitLabel{}, r.cr.Spec.FluentBitLogForwarding.HTTPInputHost, strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort))})
+			LogLevel               string
+		}{[]logging.FluentBitLabel{}, r.cr.Spec.FluentBitLogForwarding.HTTPInputHost, strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort)), fbLogLevel})
 	r.EnsureConfigMap("fluentbit-mariadb-cfg", fbForwarderConfig)
 
 	volume := base.MkVolumeCM("mariadb-log-forwarder-config",
@@ -66,9 +71,13 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 			MountPath: "/fluent-bit/etc/",
 		},
 	}
-	sidecar := logging.CreateFluentBitSideCarContainer(MariaDBIdent, []logging.FluentBitLabel{}, volumeMounts)
+	var fluentbitDebug = false
+	if r.cr.Spec.FluentBitLogForwarding.Debug != nil {
+		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
+	}
+	sidecar := logging.CreateFluentBitSideCarContainer(MariaDBIdent, []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug)
 	annotations["mariadb-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
-	annotations["mariadb-fluent-bit-image"] = base.FluentBitImage
+	annotations["mariadb-fluent-bit-image"] = sidecar.Image
 	return volume, sidecar
 }
 

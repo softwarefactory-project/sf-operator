@@ -48,7 +48,10 @@ const ZookeeperIdent = "zookeeper"
 const zkPIMountPath = "/config-scripts"
 
 func createZKLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
-
+	var fbLogLevel = "info"
+	if r.cr.Spec.FluentBitLogForwarding.Debug != nil && *r.cr.Spec.FluentBitLogForwarding.Debug {
+		fbLogLevel = "debug"
+	}
 	fbForwarderConfig := make(map[string]string)
 	fbForwarderConfig["fluent-bit.conf"], _ = utils.ParseString(
 		zkFluentBitForwarderConfig,
@@ -56,7 +59,8 @@ func createZKLogForwarderSidecar(r *SFController, annotations map[string]string)
 			ExtraKeys              []logging.FluentBitLabel
 			FluentBitHTTPInputHost string
 			FluentBitHTTPInputPort string
-		}{[]logging.FluentBitLabel{}, r.cr.Spec.FluentBitLogForwarding.HTTPInputHost, strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort))})
+			LogLevel               string
+		}{[]logging.FluentBitLabel{}, r.cr.Spec.FluentBitLogForwarding.HTTPInputHost, strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort)), fbLogLevel})
 	r.EnsureConfigMap("fluentbit-zk-cfg", fbForwarderConfig)
 
 	volume := base.MkVolumeCM("zk-log-forwarder-config",
@@ -72,8 +76,13 @@ func createZKLogForwarderSidecar(r *SFController, annotations map[string]string)
 			MountPath: "/fluent-bit/etc/",
 		},
 	}
-	sidecar := logging.CreateFluentBitSideCarContainer("zookeeper", []logging.FluentBitLabel{}, volumeMounts)
+	var fluentbitDebug = false
+	if r.cr.Spec.FluentBitLogForwarding.Debug != nil {
+		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
+	}
+	sidecar := logging.CreateFluentBitSideCarContainer("zookeeper", []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug)
 	annotations["zk-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
+	annotations["zk-fluent-bit-image"] = sidecar.Image
 	return volume, sidecar
 }
 

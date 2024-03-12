@@ -94,6 +94,10 @@ var nodepoolFluentBitLabels = []logging.FluentBitLabel{
 }
 
 func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
+	var fbLogLevel = "info"
+	if r.cr.Spec.FluentBitLogForwarding.Debug != nil && *r.cr.Spec.FluentBitLogForwarding.Debug {
+		fbLogLevel = "debug"
+	}
 	fbForwarderConfig := make(map[string]string)
 	fbForwarderConfig["fluent-bit.conf"], _ = utils.ParseString(
 		fluentBitForwarderConfig,
@@ -101,7 +105,8 @@ func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string
 			ExtraKeys              []logging.FluentBitLabel
 			FluentBitHTTPInputHost string
 			FluentBitHTTPInputPort string
-		}{[]logging.FluentBitLabel{}, r.cr.Spec.FluentBitLogForwarding.HTTPInputHost, strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort))})
+			LogLevel               string
+		}{[]logging.FluentBitLabel{}, r.cr.Spec.FluentBitLogForwarding.HTTPInputHost, strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort)), fbLogLevel})
 	fbForwarderConfig["parsers.conf"] = fluentBitForwarderParsersConfig
 	r.EnsureConfigMap("fluentbit-dib-cfg", fbForwarderConfig)
 
@@ -119,11 +124,15 @@ func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string
 			MountPath: "/fluent-bit/etc/",
 		},
 	}
+	var fluentbitDebug = false
+	if r.cr.Spec.FluentBitLogForwarding.Debug != nil {
+		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
+	}
 	builderFluentBitLabels := append(nodepoolFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: BuilderIdent})
-	sidecar := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts)
+	sidecar := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts, fluentbitDebug)
 	annotations["dib-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["dib-fluent-bit-parser"] = utils.Checksum([]byte(fbForwarderConfig["parsers.conf"]))
-	annotations["dib-fluent-bit-image"] = base.FluentBitImage
+	annotations["dib-fluent-bit-image"] = sidecar.Image
 	return volume, sidecar
 
 }

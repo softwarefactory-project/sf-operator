@@ -39,7 +39,8 @@ metadata:
   name: test-fluentbit
 spec:
   containers:
-  - image: cr.fluentbit.io/fluent/fluent-bit:2.1.10-debug
+  # append "-debug" to image name to run in debug mode, in case you run into CrashLoopBackOff errors.
+  - image: cr.fluentbit.io/fluent/fluent-bit:2.1.10
     name: test-fluentbit
     resources: {}
     securityContext:

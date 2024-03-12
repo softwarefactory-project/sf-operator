@@ -54,8 +54,12 @@ func SetupLogForwarding(serviceName string, forwarderSpec *v1.FluentBitForwarder
 	}
 }
 
-func CreateFluentBitSideCarContainer(serviceName string, extraLabels []FluentBitLabel, volumeMounts []apiv1.VolumeMount) apiv1.Container {
-	container := base.MkContainer("fluentbit", base.FluentBitImage)
+func CreateFluentBitSideCarContainer(serviceName string, extraLabels []FluentBitLabel, volumeMounts []apiv1.VolumeMount, debug bool) apiv1.Container {
+	var img = base.FluentBitImage
+	if debug {
+		img += "-debug"
+	}
+	container := base.MkContainer("fluentbit", img)
 	container.Env = CreateForwarderEnvVars(serviceName, extraLabels)
 	ports := []apiv1.ContainerPort{
 		{

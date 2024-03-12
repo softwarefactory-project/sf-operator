@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- "Debug" toggle for fluent bit sidecars
+
 ### Changed
 ### Deprecated
 ### Removed

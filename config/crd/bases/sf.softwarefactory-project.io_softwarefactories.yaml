@@ -51,6 +51,12 @@ spec:
               FluentBitLogForwarding:
                 description: Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http)
                 properties:
+                  debug:
+                    default: false
+                    description: Run fluent bit sidecars in debug mode. This will
+                      output forwarded payloads and additional info in the sidecar's
+                      logs. Defaults to false.
+                    type: boolean
                   httpInputHost:
                     description: The Host for the Fluent Bit HTTP Input to forward
                       logs to.
