@@ -2,3 +2,5 @@
 retries: 60
 delay: 10
 reconciledBy: ""
+namespace: sf
+cr_name: my-sf

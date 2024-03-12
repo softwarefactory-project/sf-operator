@@ -6,7 +6,7 @@ Tests run in the [project's CI](https://zuul.microshift.softwarefactory-project.
 1. This command is a wrapper on top of `ansible-playbook` to run the same Ansible playbook
    than the CI. This includes steps to deploy the operator if needed.
 
-The command requires a configuration file that can be intiated with `go run ./main.go init config`.
+The command requires a configuration file that can be intialized with `go run ./main.go init config`.
 The path to the configuration file must be specified via the `--config` parameter. A valid file
 for running CI jobs locally is available in `playbooks/files/sf-operator-cli.yaml`.
 
