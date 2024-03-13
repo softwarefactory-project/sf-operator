@@ -22,15 +22,18 @@ We recommend using a dedicated namespace to deploy your Software Factory. Furthe
     Currently, the namespace must allow `privileged` containers to run. Indeed the `zuul-executor` container requires
     extra privileges because of [bubblewrap](https://github.com/containers/bubblewrap).
 
-In this example we will create a dedicated namespace called **sf**. Then the next three commands below configure privileged access on this namespace; modify the commands as needed if using a different namespace.
+!!! note
+    The `zuul-executor` deployment can be disabled via the `CRD`. Doing so the privileged SCC is not required. The `zuul-executor` component can be
+    deployed externally to the control plane where privileged SCC is allowed.
+    See the section [External executor](./external-executor.md).
+
+In this example we will create a dedicated namespace called **sf**. Then the next command below configure privileged access on this namespace; modify the command as needed if using a different namespace.
 
 !!! note
     Note that these commands might need to be run by a user with enough privileges to create and modify namespaces and policies.
 
 ```sh
 kubectl create namespace sf
-kubectl label --overwrite ns sf pod-security.kubernetes.io/enforce=privileged
-kubectl label --overwrite ns sf pod-security.kubernetes.io/enforce-version=v1.24
 oc adm policy add-scc-to-user privileged system:serviceaccount:sf:default
 ```
 
