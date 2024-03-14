@@ -17,11 +17,8 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-//go:embed static/zookeeper/ok.sh
-var zookeeperOk string
-
-//go:embed static/zookeeper/ready.sh
-var zookeeperReady string
+//go:embed static/zookeeper/probe.sh
+var zookeeperProbe string
 
 //go:embed static/zookeeper/run.sh
 var zookeeperRun string
@@ -32,17 +29,8 @@ var zkFluentBitForwarderConfig string
 //go:embed static/zookeeper/logback.xml
 var zkLogbackConfig string
 
-const zkPortName = "zk"
-const zkPort = 2181
-
 const zkSSLPortName = "zkssl"
 const zkSSLPort = 2281
-
-const zkElectionPortName = "zkelection"
-const zkElectionPort = 3888
-
-const zkServerPortName = "zkserver"
-const zkServerPort = 2888
 
 const ZookeeperIdent = "zookeeper"
 const zkPIMountPath = "/config-scripts"
@@ -103,13 +91,12 @@ func (r *SFController) DeployZookeeper() bool {
 	}
 
 	cmData := make(map[string]string)
-	cmData["ok.sh"] = zookeeperOk
-	cmData["ready.sh"] = zookeeperReady
+	cmData["probe.sh"] = zookeeperProbe
 	cmData["run.sh"] = zookeeperRun
 	cmData["logback.xml"] = zkLogbackConfig
 	r.EnsureConfigMap(ZookeeperIdent+"-pi", cmData)
 
-	configChecksumable := zookeeperOk + "\n" + zookeeperReady + "\n" + zookeeperRun + "\n" + zkLogbackConfig
+	configChecksumable := zookeeperProbe + "\n" + zookeeperRun + "\n" + zkLogbackConfig
 
 	annotations := map[string]string{
 		"configuration": utils.Checksum([]byte(configChecksumable)),
@@ -153,9 +140,6 @@ func (r *SFController) DeployZookeeper() bool {
 	srv := base.MkServicePod(ZookeeperIdent, r.ns, ZookeeperIdent+"-0", []int32{zkSSLPort}, ZookeeperIdent)
 	r.EnsureService(&srv)
 
-	srvZK := base.MkHeadlessServicePod(ZookeeperIdent, r.ns, ZookeeperIdent+"-0", []int32{zkSSLPort, zkElectionPort, zkServerPort}, ZookeeperIdent)
-	r.EnsureService(&srvZK)
-
 	storageConfig := r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage)
 	logStorageConfig := base.StorageConfig{
 		Size:             utils.Qty1Gi(),
@@ -179,13 +163,10 @@ func (r *SFController) DeployZookeeper() bool {
 		base.MkVolumeSecret("zookeeper-server-tls"),
 		base.MkEmptyDirVolume(ZookeeperIdent + "-conf"),
 	}
-	zk.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessCMDProbe([]string{"/bin/bash", "/config-scripts/ready.sh"})
-	zk.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessCMDProbe([]string{"/bin/bash", "/config-scripts/ok.sh"})
+	zk.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessCMDProbe([]string{"/bin/bash", "/config-scripts/probe.sh"})
+	zk.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLivenessCMDProbe([]string{"/bin/bash", "/config-scripts/probe.sh"})
 	zk.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		base.MkContainerPort(zkPort, zkPortName),
 		base.MkContainerPort(zkSSLPort, zkSSLPortName),
-		base.MkContainerPort(zkElectionPort, zkElectionPortName),
-		base.MkContainerPort(zkServerPort, zkServerPortName),
 	}
 
 	if r.cr.Spec.FluentBitLogForwarding != nil {
