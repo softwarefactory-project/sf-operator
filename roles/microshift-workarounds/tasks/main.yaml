@@ -1,5 +1,0 @@
----
-- name: Setup prometheus-operator service ServiceAccount with proper privileges for the CI context
-  ansible.builtin.command: make setup-prometheus-operator-serviceaccount OPERATOR_NAMESPACE=operators
-  args:
-    chdir: "{{ zuul.project.src_dir |default(src_dir) }}"
