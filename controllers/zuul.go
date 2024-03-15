@@ -33,9 +33,10 @@ const (
 	zuulExecutorPortName = "finger"
 	zuulExecutorPort     = 7900
 
-	zuulPrometheusPort     = 9090
-	ZuulPrometheusPortName = "zuul-metrics"
-	ZuulSchedulerIdent     = "zuul-scheduler"
+	zuulPrometheusPort       = 9090
+	ZuulPrometheusPortName   = "zuul-metrics"
+	ZuulSchedulerIdent       = "zuul-scheduler"
+	ZuulKeystorePasswordName = "zuul-keystore-password"
 )
 
 var (
@@ -226,6 +227,19 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) [
 func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []apiv1.Volume {
 	var mod int32 = 256 // decimal for 0400 octal
 
+	// create extra config config map
+	r.EnsureConfigMap("zuul-extra", map[string]string{
+		"ssh_config": sshConfig,
+	})
+
+	// create statsd exporter config map
+	r.EnsureConfigMap("zuul-statsd", map[string]string{
+		monitoring.StatsdExporterConfigFile: zuulStatsdMappingConfig,
+	})
+
+	// Install the logging settings config map resource
+	r.ensureZuulLoggingConfigMap()
+
 	volumes := []apiv1.Volume{
 		base.MkVolumeSecret("ca-cert"),
 		base.MkVolumeSecret("zuul-config"),
@@ -303,7 +317,7 @@ func (r *SFController) getTenantsEnvs() []apiv1.EnvVar {
 	}
 }
 
-func (r *SFController) setZuulLoggingfile() {
+func (r *SFController) ensureZuulLoggingConfigMap() {
 	loggingData := make(map[string]string)
 
 	zuulExecutorLogLevel := sfv1.InfoLogLevel
@@ -520,6 +534,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
+	// TODO Add the zk-port-forward-kube-config secret resource version in the annotation if enabled
 
 	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), apiv1.ReadWriteOnce)
 	ze.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-executor", corporateCMExists)
@@ -689,17 +704,6 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	return isDeploymentReady
 }
 
-func (r *SFController) EnsureZuulComponentsFrontServices() {
-	servicePorts := []int32{zuulWEBPort}
-	srv := base.MkService("zuul-web", r.ns, "zuul-web", servicePorts, "zuul-web")
-	r.GetOrCreate(&srv)
-
-	headlessPorts := []int32{zuulExecutorPort}
-	srvZE := base.MkHeadlessService("zuul-executor", r.ns, "zuul-executor", headlessPorts, "zuul-executor")
-	r.GetOrCreate(&srvZE)
-
-}
-
 func (r *SFController) IsExecutorEnabled() bool {
 	if r.cr.Spec.Zuul.Executor.Enabled != nil && !*r.cr.Spec.Zuul.Executor.Enabled {
 		return false
@@ -708,10 +712,47 @@ func (r *SFController) IsExecutorEnabled() bool {
 	}
 }
 
-func (r *SFController) EnsureZuulComponents(cfg *ini.File) bool {
+func (r *SFController) EnsureZuulExecutorService() {
+	headlessPorts := []int32{zuulExecutorPort}
+	srvZE := base.MkHeadlessService("zuul-executor", r.ns, "zuul-executor", headlessPorts, "zuul-executor")
+	r.GetOrCreate(&srvZE)
+}
 
+func (r *SFController) EnsureZuulComponentsFrontServices() {
+	servicePorts := []int32{zuulWEBPort}
+	srv := base.MkService("zuul-web", r.ns, "zuul-web", servicePorts, "zuul-web")
+	r.GetOrCreate(&srv)
+
+	if r.IsExecutorEnabled() {
+		r.EnsureZuulExecutorService()
+	}
+}
+
+func (r *SFController) EnsureZuulComponents() bool {
+
+	// Ensure executor removed if disabled
+	if r.cr.Spec.Zuul.Executor.Enabled != nil && !*r.cr.Spec.Zuul.Executor.Enabled {
+		zuulExecutor := appsv1.StatefulSet{}
+		if r.GetM("zuul-executor", &zuulExecutor) {
+			r.log.Info("zuul-executor is disabled but running. Deleting the executor ...")
+			r.DeleteR(&zuulExecutor)
+		}
+	}
+
+	// Setup zuul.conf Secret
+	cfg := r.EnsureZuulConfigSecret(false, false)
+	if cfg == nil {
+		return false
+	}
+
+	r.ensureZuulPromRule()
+
+	// Install Services resources
+	r.EnsureZuulComponentsFrontServices()
+
+	// Init the zuul services status index
 	zuulServices := map[string]bool{}
-	r.setZuulLoggingfile()
+
 	zuulServices["scheduler"] = r.EnsureZuulScheduler(cfg)
 	if r.IsExecutorEnabled() {
 		zuulServices["executor"] = r.EnsureZuulExecutor(cfg)
@@ -832,13 +873,144 @@ func (r *SFController) ensureZuulPromRule() bool {
 	return true
 }
 
-func (r *SFController) EnsureZuulConfigSecret(cfg *ini.File) {
+func (r *SFController) IsExternalExecutorEnabled() bool {
+	return r.cr.Spec.Zuul.Executor.Standalone != nil
+}
+
+// EnsureZuulConfigSecret build and install the zuul.conf Secret resource
+// If the resource cannot be built then the returned value is nil
+func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSettings bool) *ini.File {
+
+	// Update base config to add connections
+	cfgINI := LoadConfigINI(zuulDotconf)
+	for _, conn := range r.cr.Spec.Zuul.GerritConns {
+		r.AddGerritConnection(cfgINI, conn)
+	}
+
+	for _, conn := range r.cr.Spec.Zuul.GitHubConns {
+		r.AddGitHubConnection(cfgINI, conn)
+	}
+
+	for _, conn := range r.cr.Spec.Zuul.GitLabConns {
+		r.AddGitLabConnection(cfgINI, conn)
+	}
+
+	for _, conn := range r.cr.Spec.Zuul.PagureConns {
+		r.AddPagureConnection(cfgINI, conn)
+	}
+
+	for _, conn := range r.cr.Spec.Zuul.GitConns {
+		AddGitConnection(cfgINI, conn.Name, conn.Baseurl, conn.PollDelay)
+	}
+
+	for _, conn := range r.cr.Spec.Zuul.ElasticSearchConns {
+		r.AddElasticSearchConnection(cfgINI, conn)
+	}
+
+	gitServerURL := "git://git-server/"
+	if r.IsExternalExecutorEnabled() {
+		gitServerURL = "git://" + r.cr.Spec.Zuul.Executor.Standalone.ControlPlanePublicGSHostname + "/"
+	}
+	// Add default connections
+	r.AddDefaultConnections(cfgINI, gitServerURL)
+
+	// Add Web Client for zuul-client
+	AddWebClientSection(cfgINI)
+
+	// Add OIDC authenticators
+	for _, authenticator := range r.cr.Spec.Zuul.OIDCAuthenticators {
+		r.AddOIDCAuthenticator(cfgINI, authenticator)
+	}
+	var defaultAuthSection *string
+	if len(r.cr.Spec.Zuul.OIDCAuthenticators) == 1 {
+		defaultAuthSection = &r.cr.Spec.Zuul.OIDCAuthenticators[0].Name
+	} else if r.cr.Spec.Zuul.DefaultAuthenticator != "" {
+		defaultAuthSection = &r.cr.Spec.Zuul.DefaultAuthenticator
+	}
+	if defaultAuthSection != nil {
+		cfgINI.Section("auth "+*defaultAuthSection).NewKey("default", "true")
+	}
+
+	// Enable prometheus metrics
+	for _, srv := range []string{"web", "executor", "scheduler", "merger"} {
+		cfgINI.Section(srv).NewKey("prometheus_port", strconv.Itoa(zuulPrometheusPort))
+	}
+	// Set Zuul web public URL
+	cfgINI.Section("web").NewKey("root", "https://"+r.cr.Spec.FQDN+"/zuul/")
+
+	// Set Zuul Merger Configurations
+	if r.cr.Spec.Zuul.Merger.GitUserName != "" {
+		cfgINI.Section("merger").NewKey("git_user_name", r.cr.Spec.Zuul.Merger.GitUserName)
+	}
+	if r.cr.Spec.Zuul.Merger.GitUserEmail != "" {
+		cfgINI.Section("merger").NewKey("git_user_email", r.cr.Spec.Zuul.Merger.GitUserEmail)
+	}
+	if r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedLimit >= 0 {
+		cfgINI.Section("merger").NewKey("git_http_low_speed_limit", fmt.Sprint(r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedLimit))
+	}
+	if r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedTime >= 0 {
+		cfgINI.Section("merger").NewKey("git_http_low_speed_time", fmt.Sprint(r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedTime))
+	}
+	if r.cr.Spec.Zuul.Merger.GitTimeout > 0 {
+		cfgINI.Section("merger").NewKey("git_timeout", fmt.Sprint(r.cr.Spec.Zuul.Merger.GitTimeout))
+	}
+
+	if !skipDBSettings {
+		// Set Database DB URI
+		dbSettings := apiv1.Secret{}
+		if !r.GetM(zuulDBConfigSecret, &dbSettings) {
+			r.log.Info("Waiting for db connection secret")
+			return nil
+		}
+		cfgINI.Section("database").NewKey("dburi", fmt.Sprintf(
+			"mysql+pymysql://%s:%s@%s/%s", dbSettings.Data["username"], dbSettings.Data["password"], dbSettings.Data["host"], dbSettings.Data["database"]))
+	}
+
+	// Set Zookeeper hosts
+	zkHost := "zookeeper." + r.ns + ":2281"
+	if r.IsExternalExecutorEnabled() {
+		zkHost = r.cr.Spec.Zuul.Executor.Standalone.ControlPlanePublicZKHostname + ":2281"
+	}
+	cfgINI.Section("zookeeper").NewKey("hosts", zkHost)
+
+	// Set executor public hostname (live job console support)
+	// Zuul web needs to access that host on default finger port to stream live logs to user-agents
+	if r.IsExternalExecutorEnabled() {
+		if r.cr.Spec.Zuul.Executor.Standalone.PublicHostName != "" {
+			cfgINI.Section("executor").NewKey("hostname", r.cr.Spec.Zuul.Executor.Standalone.PublicHostName)
+		}
+	}
+
+	// Set Keystore secret
+	keystorePass, err := r.getSecretData(ZuulKeystorePasswordName)
+	if err != nil {
+		r.log.Info("Waiting for " + ZuulKeystorePasswordName + " secret")
+		return nil
+	}
+	cfgINI.Section("keystore").NewKey("password", string(keystorePass))
+
+	if !skipAuthSettings {
+		// Set CLI auth
+		cliAuthSecret, err := r.getSecretData("zuul-auth-secret")
+		if err != nil {
+			r.log.Info("Waiting for zuul-auth-secret secret")
+			return nil
+		}
+		cfgINI.Section("auth zuul_client").NewKey("secret", string(cliAuthSecret))
+		cfgINI.Section("auth zuul_client").NewKey("realm", "zuul."+r.cr.Spec.FQDN)
+	}
+
+	// Configure statsd common config
+	cfgINI.Section("statsd").NewKey("port", strconv.Itoa(int(monitoring.StatsdExporterPortListen)))
+
 	r.EnsureSecret(&apiv1.Secret{
 		Data: map[string][]byte{
-			"zuul.conf": []byte(DumpConfigINI(cfg)),
+			"zuul.conf": []byte(DumpConfigINI(cfgINI)),
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "zuul-config", Namespace: r.ns},
 	})
+
+	return cfgINI
 }
 
 func (r *SFController) readSecretContent(name string) string {
@@ -1056,15 +1228,12 @@ func AddWebClientSection(cfg *ini.File) {
 	cfg.Section(section).NewKey("url", "http://zuul-web:"+strconv.FormatInt(zuulWEBPort, 10))
 }
 
-func (r *SFController) AddDefaultConnections(cfg *ini.File) {
+func (r *SFController) AddDefaultConnections(cfg *ini.File, gitServerURL string) {
 	// Internal git-server for system config
-	AddGitConnection(cfg, "git-server", "git://git-server/", 0)
+	AddGitConnection(cfg, "git-server", gitServerURL, 0)
 
 	// Git connection to opendev.org
 	AddGitConnection(cfg, "opendev.org", "https://opendev.org/", 0)
-
-	// Add Web Client for zuul-client
-	AddWebClientSection(cfg)
 }
 
 func LoadConfigINI(zuulConf string) *ini.File {
@@ -1083,126 +1252,12 @@ func DumpConfigINI(cfg *ini.File) string {
 
 func (r *SFController) DeployZuulSecrets() {
 	r.EnsureSSHKeySecret("zuul-ssh-key")
-	r.EnsureSecretUUID("zuul-keystore-password")
+	r.EnsureSecretUUID(ZuulKeystorePasswordName)
 	r.EnsureSecretUUID("zuul-auth-secret")
 }
 
 func (r *SFController) DeployZuul() bool {
-	dbSettings := apiv1.Secret{}
-	if !r.GetM(zuulDBConfigSecret, &dbSettings) {
-		r.log.Info("Waiting for db connection secret")
-		return false
-	}
-
-	// create statsd exporter config map
-	r.EnsureConfigMap("zuul-statsd", map[string]string{
-		monitoring.StatsdExporterConfigFile: zuulStatsdMappingConfig,
-	})
-
-	// create extra config config map
-	r.EnsureConfigMap("zuul-extra", map[string]string{
-		"ssh_config": sshConfig,
-	})
-
-	// Update base config to add connections
-	cfgINI := LoadConfigINI(zuulDotconf)
-	for _, conn := range r.cr.Spec.Zuul.GerritConns {
-		r.AddGerritConnection(cfgINI, conn)
-	}
-
-	for _, conn := range r.cr.Spec.Zuul.GitHubConns {
-		r.AddGitHubConnection(cfgINI, conn)
-	}
-
-	for _, conn := range r.cr.Spec.Zuul.GitLabConns {
-		r.AddGitLabConnection(cfgINI, conn)
-	}
-
-	for _, conn := range r.cr.Spec.Zuul.PagureConns {
-		r.AddPagureConnection(cfgINI, conn)
-	}
-
-	for _, conn := range r.cr.Spec.Zuul.GitConns {
-		AddGitConnection(cfgINI, conn.Name, conn.Baseurl, conn.PollDelay)
-	}
-
-	for _, conn := range r.cr.Spec.Zuul.ElasticSearchConns {
-		r.AddElasticSearchConnection(cfgINI, conn)
-	}
-
-	// Add default connections
-	r.AddDefaultConnections(cfgINI)
-
-	// Add OIDC authenticators
-	for _, authenticator := range r.cr.Spec.Zuul.OIDCAuthenticators {
-		r.AddOIDCAuthenticator(cfgINI, authenticator)
-	}
-	var defaultAuthSection *string
-	if len(r.cr.Spec.Zuul.OIDCAuthenticators) == 1 {
-		defaultAuthSection = &r.cr.Spec.Zuul.OIDCAuthenticators[0].Name
-	} else if r.cr.Spec.Zuul.DefaultAuthenticator != "" {
-		defaultAuthSection = &r.cr.Spec.Zuul.DefaultAuthenticator
-	}
-	if defaultAuthSection != nil {
-		cfgINI.Section("auth "+*defaultAuthSection).NewKey("default", "true")
-	}
-
-	// Enable prometheus metrics
-	for _, srv := range []string{"web", "executor", "scheduler", "merger"} {
-		cfgINI.Section(srv).NewKey("prometheus_port", strconv.Itoa(zuulPrometheusPort))
-	}
-	// Set Zuul web public URL
-	cfgINI.Section("web").NewKey("root", "https://"+r.cr.Spec.FQDN+"/zuul/")
-
-	// Set Zuul Merger Configurations
-	if r.cr.Spec.Zuul.Merger.GitUserName != "" {
-		cfgINI.Section("merger").NewKey("git_user_name", r.cr.Spec.Zuul.Merger.GitUserName)
-	}
-	if r.cr.Spec.Zuul.Merger.GitUserEmail != "" {
-		cfgINI.Section("merger").NewKey("git_user_email", r.cr.Spec.Zuul.Merger.GitUserEmail)
-	}
-	if r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedLimit >= 0 {
-		cfgINI.Section("merger").NewKey("git_http_low_speed_limit", fmt.Sprint(r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedLimit))
-	}
-	if r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedTime >= 0 {
-		cfgINI.Section("merger").NewKey("git_http_low_speed_time", fmt.Sprint(r.cr.Spec.Zuul.Merger.GitHTTPLowSpeedTime))
-	}
-	if r.cr.Spec.Zuul.Merger.GitTimeout > 0 {
-		cfgINI.Section("merger").NewKey("git_timeout", fmt.Sprint(r.cr.Spec.Zuul.Merger.GitTimeout))
-	}
-
-	// Set Database DB URI
-	cfgINI.Section("database").NewKey("dburi", fmt.Sprintf(
-		"mysql+pymysql://%s:%s@%s/%s", dbSettings.Data["username"], dbSettings.Data["password"], dbSettings.Data["host"], dbSettings.Data["database"]))
-
-	// Set Zookeeper hosts
-	cfgINI.Section("zookeeper").NewKey("hosts", "zookeeper."+r.ns+":2281")
-
-	// Set Keystore secret
-	keystorePass, err := r.getSecretData("zuul-keystore-password")
-	if err != nil {
-		r.log.Info("Waiting for zuul-keystore-password secret")
-		return false
-	}
-	cfgINI.Section("keystore").NewKey("password", string(keystorePass))
-
-	// Set CLI auth
-	cliAuthSecret, err := r.getSecretData("zuul-auth-secret")
-	if err != nil {
-		r.log.Info("Waiting for zuul-auth-secret secret")
-		return false
-	}
-	cfgINI.Section("auth zuul_client").NewKey("secret", string(cliAuthSecret))
-	cfgINI.Section("auth zuul_client").NewKey("realm", "zuul."+r.cr.Spec.FQDN)
-	// Configure statsd common config
-	cfgINI.Section("statsd").NewKey("port", strconv.Itoa(int(monitoring.StatsdExporterPortListen)))
-
-	r.EnsureZuulConfigSecret(cfgINI)
-	r.EnsureZuulComponentsFrontServices()
-
-	r.ensureZuulPromRule()
-
-	return r.EnsureZuulComponents(cfgINI) && r.setupZuulIngress()
+	return r.EnsureZuulComponents() && r.setupZuulIngress()
 }
 
 func (r *SFController) runZuulInternalTenantReconfigure() bool {

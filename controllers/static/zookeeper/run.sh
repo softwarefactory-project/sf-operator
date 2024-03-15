@@ -67,6 +67,7 @@ maxSessionTimeout=$ZK_MAX_SESSION_TIMEOUT
 autopurge.snapRetainCount=$ZK_SNAP_RETAIN_COUNT
 autopurge.purgeInterval=$ZK_PURGE_INTERVAL
 4lw.commands.whitelist=*
+zookeeper.tcpKeepAlive=true
 EOF
 
 # Client TLS configuration

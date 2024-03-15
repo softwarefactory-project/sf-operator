@@ -1,2 +1,3 @@
 glue: true
 cr_path: playbooks/files/sf.yaml
+context: ci

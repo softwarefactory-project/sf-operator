@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - "Debug" toggle for fluent bit sidecars
+- A support for running zuul-executor component external to the cluster.
 
 ### Changed
 

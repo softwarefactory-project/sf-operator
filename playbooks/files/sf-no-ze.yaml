@@ -8,6 +8,8 @@ spec:
     base-url: "http://gerrit-httpd/"
     name: config
     zuul-connection-name: gerrit
+    k8s-api-url: "https://microshift.dev:6443"
+    logserver-host: microshift.dev
   zuul:
     gerritconns:
       - name: gerrit
@@ -16,7 +18,7 @@ spec:
         puburl: "https://gerrit.sfop.me"
         verifyssl: false
     executor:
-      logLevel: DEBUG
+      enabled: false
   logserver:
     loopDelay: 3600
     retentionDays: 30

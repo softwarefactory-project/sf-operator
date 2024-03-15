@@ -33,6 +33,7 @@ import (
 
 	apiroutev1 "github.com/openshift/api/route/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 )
@@ -171,7 +172,7 @@ func (r *SFController) cleanup() {
 	}
 }
 
-func (r *SFController) validate() error {
+func (r *SFController) validateZuulConnectionsSecrets() error {
 	// Validate github secrets
 	for _, connection := range r.cr.Spec.Zuul.GitHubConns {
 		secret, err := r.GetSecret(connection.Secrets)
@@ -195,25 +196,46 @@ func (r *SFController) validate() error {
 	return nil
 }
 
-func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
+func (r *SFController) deployStandaloneExectorStep(services map[string]bool) map[string]bool {
+	services["Zuul"] = false
 
-	r.cleanup()
+	// Notes - required resources
+	// Secret: ca-cert, zookeeper-client-tls, zuul-ssh-key, zuul-keystore-password
+	// Zuul' connections secrets
 
-	if err := r.validate(); err != nil {
-		r.log.V(1).Error(err, "Validation failed")
-		// TODO: add error as a new status conditions
-		status := r.cr.Status.DeepCopy()
-		status.Ready = false
-		return *status
+	// Validate the Secrets are available
+	for _, sn := range []string{
+		ZuulKeystorePasswordName, cert.LocalCACertSecretName,
+		"zuul-ssh-key", "zookeeper-client-tls"} {
+		_, err := r.GetSecret(sn)
+		if err != nil {
+			r.log.Info("Unable to find the Secret named " + sn)
+			return services
+		}
 	}
 
+	// Setup zuul.conf Secret
+	cfg := r.EnsureZuulConfigSecret(true, true)
+	if cfg == nil {
+		return services
+	}
+
+	// Install the Service Resource
+	r.EnsureZuulExecutorService()
+
+	// Run the StatefullSet deployment
+	services["Zuul"] = r.EnsureZuulExecutor(cfg)
+
+	return services
+}
+
+func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 	DURuleGroups := []monitoringv1.RuleGroup{
 		sfmonitoring.MkDiskUsageRuleGroup(r.ns, "sf"),
 	}
 	monitoredPorts := []string{}
 	selectorRunList := []string{}
 
-	services := map[string]bool{}
 	services["Zuul"] = false
 
 	// Setup a Self-Signed certificate issuer
@@ -305,6 +327,29 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	// TODO? we could add this to the readiness computation.
 	r.EnsureSFPodMonitor(monitoredPorts, podMonitorSelector)
 	r.EnsureDiskUsagePromRule(DURuleGroups)
+
+	return services
+}
+
+func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
+
+	r.cleanup()
+
+	if err := r.validateZuulConnectionsSecrets(); err != nil {
+		r.log.V(1).Error(err, "Validation of Zuul connections secrets failed")
+		// TODO: add error as a new status conditions
+		status := r.cr.Status.DeepCopy()
+		status.Ready = false
+		return *status
+	}
+
+	services := map[string]bool{}
+
+	if r.cr.Spec.Zuul.Executor.Standalone != nil {
+		services = r.deployStandaloneExectorStep(services)
+	} else {
+		services = r.deploySFStep(services)
+	}
 
 	r.log.V(1).Info(messageInfo(r, services))
 

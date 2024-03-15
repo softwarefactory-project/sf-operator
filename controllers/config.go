@@ -116,6 +116,18 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 		base.MkSecretEnvVar("ZUUL_LOGSERVER_PRIVATE_KEY", "zuul-ssh-key", "priv"),
 	}
 
+	if r.cr.Spec.ConfigRepositoryLocation.ClusterAPIURL != "" {
+		extraCmdVars = append(extraCmdVars, []apiv1.EnvVar{
+			base.MkEnvVar("KUBERNETES_PUBLIC_API_URL", r.cr.Spec.ConfigRepositoryLocation.ClusterAPIURL),
+		}...)
+	}
+
+	if r.cr.Spec.ConfigRepositoryLocation.LogserverHost != "" {
+		extraCmdVars = append(extraCmdVars, []apiv1.EnvVar{
+			base.MkEnvVar("ZUUL_LOGSERVER_HOST", r.cr.Spec.ConfigRepositoryLocation.LogserverHost),
+		}...)
+	}
+
 	if !found {
 		r.log.V(1).Info("Creating base secret job")
 		r.CreateR(r.RunCommand(jobName, []string{"config-create-zuul-secrets"}, extraCmdVars))
@@ -153,13 +165,21 @@ func (r *SFController) InstallTooling() {
 }
 
 func (r *SFController) SetupConfigJob() bool {
+
+	// This ensure we trigger the base secret creation job when the setting change
+	extraSettingsChecksum := "ns"
+	if r.cr.Spec.ConfigRepositoryLocation.ClusterAPIURL != "" || r.cr.Spec.ConfigRepositoryLocation.LogserverHost != "" {
+		extraSettingsChecksum = utils.Checksum([]byte(
+			r.cr.Spec.ConfigRepositoryLocation.ClusterAPIURL + r.cr.Spec.ConfigRepositoryLocation.LogserverHost))[0:5]
+	}
+
 	var (
 		// We use the CM to store versions that can trigger internal tenant secrets update
 		// or zuul internal tenant reconfigure
 		cmName                       = "zs-internal-tenant-reconfigure"
 		zsInternalTenantReconfigure  apiv1.ConfigMap
 		configHash                   = utils.Checksum([]byte(r.MkPreInitScript()))
-		internalTenantSecretsVersion = "1"
+		internalTenantSecretsVersion = "1" + "-" + extraSettingsChecksum
 		needReconfigureTenant        = false
 		needCMUpdate                 = false
 	)

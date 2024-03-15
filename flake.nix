@@ -2,11 +2,9 @@
   description = "SF Operator Project";
   nixConfig.bash-prompt = "[nix(sf-operator)] ";
   inputs.nixpkgs.url = "github:nixos/nixpkgs/23.05";
-  inputs.nixpkgs-latest.url = "github:nixos/nixpkgs/nixpkgs-unstable";
 
-  outputs = { self, nixpkgs, nixpkgs-latest }:
+  outputs = { self, nixpkgs }:
     let pkgs = nixpkgs.legacyPackages.x86_64-linux.pkgs;
-        pkgsLatest = nixpkgs-latest.legacyPackages.x86_64-linux.pkgs;
     in {
       devShells.x86_64-linux.default = pkgs.mkShell {
         name = "SF-Operator dev shell";
@@ -31,7 +29,6 @@
           pkgs.python310Packages.kubernetes
           # 3.0.10 in nixpkgs
           pkgs.openssl
-          pkgsLatest.python311Packages.mkdocs-material
         ];
         shellHook = ''
           echo "Welcome in $name"

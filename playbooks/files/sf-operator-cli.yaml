@@ -1,0 +1,9 @@
+contexts:
+  ci:
+    namespace: sf
+    fqdn: sfop.me
+    development:
+      sf-operator-repository-path: ./
+  ext-ze:
+    namespace: ext-ze
+default-context: ci

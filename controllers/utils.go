@@ -375,8 +375,8 @@ func (r *SFUtilContext) EnsureLocalCA() {
 	CAIssuer := cert.MkCAIssuer("ca-issuer", r.ns)
 	duration, _ := time.ParseDuration("87600h") // 10y
 	commonName := "cacert"
-	rootCACertificate := cert.MkBaseCertificate("ca-cert", r.ns, "selfsigned-issuer", []string{"caroot"},
-		"ca-cert", true, duration, nil, &commonName, nil)
+	rootCACertificate := cert.MkBaseCertificate(cert.LocalCACertSecretName, r.ns, "selfsigned-issuer", []string{"caroot"},
+		cert.LocalCACertSecretName, true, duration, nil, &commonName, nil)
 	r.GetOrCreate(&selfSignedIssuer)
 	r.GetOrCreate(&CAIssuer)
 	r.GetOrCreate(&rootCACertificate)

@@ -62,6 +62,12 @@ type ConfigRepositoryLocationSpec struct {
 	// Name of the Zuul connection through which Zuul can handle git events on the config repository
 	// +kubebuilder:validation:MinLength:=1
 	ZuulConnectionName string `json:"zuul-connection-name"`
+	// Public URL of the k8s cluster API. This is useful when running zuul executors outside
+	// of the cluster. This is mainly used for config-update secret generation
+	ClusterAPIURL string `json:"k8s-api-url,omitempty"`
+	// Public HOST of the default logserver. This is useful when running zuul executors outside
+	// of the cluster. This is mainly used for config-update secret generation
+	LogserverHost string `json:"logserver-host,omitempty"`
 }
 
 // Describes a Zuul connection using the [gitlab driver](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#gitlab).
@@ -223,6 +229,15 @@ type ZuulOIDCAuthenticatorSpec struct {
 	LoadUserInfo bool `json:"loadUserInfo,omitempty"`
 }
 
+type StandaloneZuulExecutorSpec struct {
+	// This is the public hostname or IP where control plane's Zookeeper can be reached
+	ControlPlanePublicZKHostname string `json:"controlPlanePublicZKHostname"`
+	// This is the public hostname or IP where control plane's GitServer can be reached
+	ControlPlanePublicGSHostname string `json:"controlPlanePublicGSHostname"`
+	// This is the public host or IP address reachable from zuul-web
+	PublicHostName string `json:"publicHostname"`
+}
+
 // Spec for the pool of executor microservices
 type ZuulExecutorSpec struct {
 	// Storage-related settings
@@ -239,6 +254,9 @@ type ZuulExecutorSpec struct {
 	// +optional
 	// If set to false, the zuul-executor deployment won't be applied
 	Enabled *bool `json:"enabled,omitempty"`
+	// When set the Control plane is not deployed.
+	// The standalone executor must be able to connect to the control plane
+	Standalone *StandaloneZuulExecutorSpec `json:"standalone,omitempty"`
 }
 
 type ZuulWebSpec struct {

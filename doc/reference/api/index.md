@@ -50,6 +50,8 @@ _Appears in:_
 | `base-url` _string_ | Base URL to use to perform git-related actions on the config repository. For example, if hosted on GitHub, the Base URL would be `https://github.com/<username>/` | -|
 | `name` _string_ | The name of the `config` repository. This value is appended to `base-url` to clone the repository | -|
 | `zuul-connection-name` _string_ | Name of the Zuul connection through which Zuul can handle git events on the config repository | -|
+| `k8s-api-url` _string_ | Public URL of the k8s cluster API. This is useful when running zuul executors outside of the cluster. This is mainly used for config-update secret generation | -|
+| `logserver-host` _string_ | Public HOST of the default logserver. This is useful when running zuul executors outside of the cluster. This is mainly used for config-update secret generation | -|
 
 
 #### ElasticSearchConnection
@@ -448,6 +450,22 @@ _Appears in:_
 
 
 
+#### StandaloneZuulExecutorSpec
+
+
+
+
+
+_Appears in:_
+- [ZuulExecutorSpec](#zuulexecutorspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `controlPlanePublicZKHostname` _string_ | This is the public hostname or IP where control plane's Zookeeper can be reached | -|
+| `controlPlanePublicGSHostname` _string_ | This is the public hostname or IP where control plane's GitServer can be reached | -|
+| `publicHostname` _string_ | This is the public host or IP address reachable from zuul-web | -|
+
+
 #### StorageSpec
 
 
@@ -498,6 +516,7 @@ _Appears in:_
 | `storage` _[StorageSpec](#storagespec)_ | Storage-related settings | -|
 | `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-executor service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
 | `enabled` _boolean_ | If set to false, the zuul-executor deployment won't be applied | {true}|
+| `standalone` _[StandaloneZuulExecutorSpec](#standalonezuulexecutorspec)_ | When set the Control plane is not deployed. The standalone executor must be able to connect to the control plane | -|
 
 
 #### ZuulMergerSpec

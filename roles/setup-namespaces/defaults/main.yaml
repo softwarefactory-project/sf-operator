@@ -1,6 +1,0 @@
----
-bundlenamespace: operators
-namespace: sf
-context: microshift
-k8s_version: 1.24
-create_test_bundle_ns: true

@@ -13,6 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	LocalCACertSecretName = "ca-cert"
+)
+
 func MkBaseCertificate(name string, ns string, issuerName string,
 	dnsNames []string, secretName string, isCA bool, duration time.Duration,
 	usages []certv1.KeyUsage, commonName *string,
@@ -117,7 +121,7 @@ func MkCAIssuer(name string, ns string) certv1.Issuer {
 		Spec: certv1.IssuerSpec{
 			IssuerConfig: certv1.IssuerConfig{
 				CA: &certv1.CAIssuer{
-					SecretName: "ca-cert",
+					SecretName: LocalCACertSecretName,
 				},
 			},
 		},

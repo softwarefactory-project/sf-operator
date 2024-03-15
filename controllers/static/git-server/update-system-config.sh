@@ -71,9 +71,7 @@ cat << EOF > playbooks/base/post.yaml
        fileserver: "{{ site_sflogs }}"
     -  role: generate-zuul-manifest
 
-- hosts: logserver
-  vars:
-    ansible_port: 2222
+- hosts: ${ZUUL_LOGSERVER_HOST}
   gather_facts: false
   tasks:
     - block:
