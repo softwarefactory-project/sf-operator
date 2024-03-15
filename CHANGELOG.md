@@ -9,6 +9,10 @@ All notable changes to this project will be documented in this file.
 - "Debug" toggle for fluent bit sidecars
 
 ### Changed
+
+- zookeeper - update liveness and readyness probes to only check SSL access and remove superfluous Service resource called
+  zookeeper-headless.
+
 ### Deprecated
 ### Removed
 ### Fixed

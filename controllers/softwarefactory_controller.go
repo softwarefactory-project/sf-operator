@@ -164,6 +164,11 @@ func (r *SFController) cleanup() {
 			Name:      r.cr.Spec.FQDN + "-zuul-red",
 		},
 	})
+	// Remove unneeded extra Service resource for Zookeeper
+	currentZKHeadlessSVC := corev1.Service{}
+	if r.GetM("zookeeper-headless", &currentZKHeadlessSVC) {
+		r.DeleteR(&currentZKHeadlessSVC)
+	}
 }
 
 func (r *SFController) validate() error {
