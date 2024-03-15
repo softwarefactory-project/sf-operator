@@ -81,10 +81,6 @@ doc-serve: mkdocs
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
-.PHONY: dev-deployment
-dev-deployment:
-	bash tools/dev-deploy.sh
-
 ##@ Build
 
 .PHONY: setenv
