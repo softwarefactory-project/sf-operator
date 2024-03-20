@@ -3,7 +3,7 @@
   when: mode == 'olm'
   block:
     - name: Wait for the custom resources to be reconciledBy {{ reconciledBy }}
-      ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.status}'
+      ansible.builtin.command: kubectl -n {{ namespace }} get sf {{ cr_name }} -o=jsonpath='{.status}'
       register: sf_ready
       until:
         - sf_ready.stdout != ""
@@ -22,14 +22,14 @@
       ansible.builtin.command: sleep 1
 
     - name: Get current resource generation
-      ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.metadata.generation}'
+      ansible.builtin.command: kubectl -n {{ namespace }} get sf {{ cr_name }} -o=jsonpath='{.metadata.generation}'
       register: cr_generation
       until: cr_generation.stdout != ""
       retries: "{{ retries }}"
       delay: "{{ delay }}"
 
     - name: Wait for the custom resources to be ready
-      ansible.builtin.command: kubectl get sf my-sf -o=jsonpath='{.status}'
+      ansible.builtin.command: kubectl -n {{ namespace }} get sf {{ cr_name }} -o=jsonpath='{.status}'
       register: sf_ready
       until:
         - sf_ready.stdout != ""

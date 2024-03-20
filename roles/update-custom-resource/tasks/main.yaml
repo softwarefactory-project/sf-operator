@@ -2,7 +2,7 @@
 - name: "Update CRD"
   when: mode == 'olm'
   block:
-    - name: "Update SoftwareFactory resource {{ cr_name }}"
+    - name: "Update SoftwareFactory resource (using k8s module)"
       kubernetes.core.k8s:
         kubeconfig: "{{ kubeconfig }}"
         definition:
@@ -10,7 +10,7 @@
           namespace: "{{ cr_namespace }}"
           metadata:
             name: "{{ cr_name }}"
-            namespace: sf
+            namespace: "{{ cr_namespace }}"
           spec: "{{ cr_spec }}"
 
     - ansible.builtin.include_role:

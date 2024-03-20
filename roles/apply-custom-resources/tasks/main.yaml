@@ -1,6 +1,6 @@
 ---
 - name: Apply the custom resources
-  ansible.builtin.command: kubectl apply -f playbooks/files/sf.yaml
+  ansible.builtin.command: kubectl -n {{ namespace }} apply -f {{ cr_path }}
   args:
     chdir: "{{ zuul.project.src_dir }}"
 

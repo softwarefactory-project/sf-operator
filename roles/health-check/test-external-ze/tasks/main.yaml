@@ -1,9 +1,27 @@
 ---
+### Pre cleaning to ensure that no zuul-executor exists in the adjacent namespace
+
+- name: "Ensure no External Zuul executor running"
+  ansible.builtin.shell: |
+    kubectl -n ext-ze delete SoftwareFactory my-ext-ze || true
+    kubectl -n ext-ze delete sts zuul-executor || true
+
+### Set control plane to deactivate the default zuul-executor and expose required services
+
 - name: "Deactivate the Zuul executor in the control plan"
   ansible.builtin.include_role:
-    name: run-operator-standalone
+    name: update-custom-resource
   vars:
-    cr_path: playbooks/files/sf-no-ze.yaml
+    cr_spec:
+      config-location:
+        base-url: "http://gerrit-httpd/"
+        name: config
+        zuul-connection-name: gerrit
+        k8s-api-url: "https://microshift.dev:6443"
+        logserver-host: microshift.dev
+      zuul:
+        executor:
+          enabled: false
 
 - name: Expose a Zookeeper Service as a LoadBalancer (reachable on microshift.dev)
   kubernetes.core.k8s:
@@ -62,6 +80,8 @@
           statefulset.kubernetes.io/pod-name: logserver-0
         type: LoadBalancer
 
+### Deploy the external zuul-executor in the adjacent namespace
+
 - name: "Sync expected secrets resources from the control plan ns to ext-ze ns"
   ansible.builtin.shell: |
     kubectl get secrets {{ item }} -o json | jq --arg name {{ item }} '. + {metadata: {name: $name}}' | kubectl apply -n ext-ze -f -
@@ -72,11 +92,23 @@
     - zuul-keystore-password
 
 - name: "Deploy the external Zuul executor"
+  when: mode == 'standalone'
   ansible.builtin.include_role:
     name: run-operator-standalone
   vars:
     cr_path: playbooks/files/ext-ze.yaml
     context: ext-ze
+    log_file: sf-operator_ext-ze.log
+    current_cr_path: /tmp/current_cr_ext-ze.yaml
+
+- name: "Deploy the external Zuul executor"
+  when: mode == 'olm'
+  ansible.builtin.include_role:
+    name: apply-custom-resources
+  vars:
+    cr_path: playbooks/files/ext-ze.yaml
+    namespace: ext-ze
+    cr_name: my-ext-ze
 
 - name: Expose a Zuul Executor Finger service as a LoadBalancer (reachable on microshift.dev)
   kubernetes.core.k8s:
@@ -98,14 +130,30 @@
           run: zuul-executor
         type: LoadBalancer
 
+### Real proof that external executor is running as expected
+
 - name: "Run the 'config-update-zuul' test case"
   ansible.builtin.include_role:
     name: health-check/config-update-zuul
 
-- name: "Remove the External Zuul executor"
-  ansible.builtin.shell: |
-    kubectl -n ext-ze delete sts zuul-executor
+### Post actions
 
-- name: "Activate the Zuul executor in the control plan"
+- name: "Ensure no External Zuul executor running"
+  ansible.builtin.shell: |
+    kubectl -n ext-ze delete SoftwareFactory my-ext-ze || true
+    kubectl -n ext-ze delete sts zuul-executor || true
+
+- name: "Restore the Zuul executor in the control plan (by using the default CR)"
   ansible.builtin.include_role:
-    name: run-operator-standalone
+    name: update-custom-resource
+  vars:
+    cr_spec:
+      config-location:
+        base-url: "http://gerrit-httpd/"
+        name: config
+        zuul-connection-name: gerrit
+        k8s-api-url: ""
+        logserver-host: ""
+      zuul:
+        executor:
+          enabled: true

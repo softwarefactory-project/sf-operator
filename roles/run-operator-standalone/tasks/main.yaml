@@ -9,7 +9,7 @@
 # Empty the sf-operator.log output before the run
 - name: Ensure ~/zuul-output/logs
   ansible.builtin.file:
-    path: ~/zuul-output/logs/sf-operator.log
+    path: ~/zuul-output/logs/{{ log_file }}
     state: absent
   when:
     - glue
@@ -17,12 +17,12 @@
 - name: Run the operator in standalone mode
   ansible.builtin.shell: |
     set -o pipefail
-    go run ./main.go {{ cli_global_flags }} --context {{ context }} dev create standalone-sf --cr {{ cr_path }} 2>&1 | tee -a ~/zuul-output/logs/sf-operator.log
+    go run ./main.go {{ cli_global_flags }} --context {{ context }} dev create standalone-sf --cr {{ cr_path }} 2>&1 | tee -a ~/zuul-output/logs/{{ log_file }}
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
 - name: Copy current spec
-  ansible.builtin.shell: "cp {{ cr_path }} /tmp/current_cr.yaml"
+  ansible.builtin.shell: "cp {{ cr_path }} {{ current_cr_path }}"
   args:
     chdir: "{{ zuul.project.src_dir }}"
   when:
