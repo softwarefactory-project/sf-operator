@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 
 - zookeeper - update liveness and readyness probes to only check SSL access and remove superfluous Service resource called
   zookeeper-headless.
+- nodepool - update version to 10.0.0
+- zuul - update version to 10.0.0
 
 ### Deprecated
 ### Removed
