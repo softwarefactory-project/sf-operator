@@ -1,4 +1,4 @@
-.# Zuul
+# Zuul
 
 Here you will find information about managing the Zuul service when deployed with the SF Operator.
 It does not replace [Zuul's documentation](https://zuul-ci.org/docs/zuul/latest/),
