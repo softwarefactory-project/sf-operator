@@ -188,19 +188,11 @@ func createMySQLBackup(ns string, backupDir string, kubeClientSet *kubernetes.Cl
 }
 
 func backupCmd(kmd *cobra.Command, args []string) {
-	backupSecrets, _ := kmd.Flags().GetBool("secrets")
-	backupZuul, _ := kmd.Flags().GetBool("zuul")
-	backupDB, _ := kmd.Flags().GetBool("db")
-	backupAll, _ := kmd.Flags().GetBool("all")
 	backupDir, _ := kmd.Flags().GetString("backup_dir")
 
 	if backupDir == "" {
 		ctrl.Log.Error(errors.New("no backup dir set"), "You need to set --backup_dir parameter!")
 		os.Exit(1)
-	}
-
-	if backupSecrets || backupZuul || backupDB {
-		backupAll = false
 	}
 
 	// prepare to make backup
@@ -214,31 +206,21 @@ func backupCmd(kmd *cobra.Command, args []string) {
 	ctrl.Log.Info("Starting backup process for services in namespace: " + ns)
 
 	// create secret backup
-	if backupSecrets || backupAll {
-		createSecretBackup(ns, backupDir, kubeClientSet)
-	}
+	createSecretBackup(ns, backupDir, kubeClientSet)
 
 	// create zuul backup
-	if backupZuul || backupAll {
-		createZuulKeypairBackup(ns, backupDir, kubeClientSet, kubeContext)
-	}
+	createZuulKeypairBackup(ns, backupDir, kubeClientSet, kubeContext)
 
 	// create DB backup
-	if backupDB || backupAll {
-		createMySQLBackup(ns, backupDir, kubeClientSet, kubeContext)
-	}
+	createMySQLBackup(ns, backupDir, kubeClientSet, kubeContext)
 
 }
 
 func MkBackupCmd() *cobra.Command {
 
 	var (
-		backupDir     string
-		backupSecrets bool
-		backupZuul    bool
-		backupDB      bool
-		backupAll     bool
-		backupCmd     = &cobra.Command{
+		backupDir string
+		backupCmd = &cobra.Command{
 			Use:   "backup",
 			Short: "Create a backup of a deployment",
 			Long:  `This command will do a backup of important resources`,
@@ -247,9 +229,5 @@ func MkBackupCmd() *cobra.Command {
 	)
 
 	backupCmd.Flags().StringVar(&backupDir, "backup_dir", "", "The path to the backup directory")
-	backupCmd.Flags().BoolVar(&backupSecrets, "secrets", false, "Enable backup for secrets")
-	backupCmd.Flags().BoolVar(&backupZuul, "zuul", false, "Enable backup for Zuul private keys")
-	backupCmd.Flags().BoolVar(&backupDB, "db", false, "Enable backup for DB's")
-	backupCmd.Flags().BoolVar(&backupAll, "all", true, "Make backup of all important content")
 	return backupCmd
 }

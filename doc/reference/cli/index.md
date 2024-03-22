@@ -424,11 +424,7 @@ Flags:
 
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
-| --all | bool | Make backup of all important content | yes | true |
 | --backup_dir | string | The path to the backup directory | no | - |
-| --db | bool | Enable backup for DB's | yes | false |
-| --secrets | bool | Enable backup for secrets | yes | false |
-| --zuul | bool | Enable backup for Zuul private key | yes | false |
 
 #### bootstrap-tenant
 
