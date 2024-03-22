@@ -169,6 +169,7 @@ CONTROLLER_TOOLS_VERSION ?= v0.13.0
 OPERATOR_SDK_VERSION ?= 1.32.0
 STATICCHECK_VERSION ?= 2023.1.6
 MKDOCS_VERSION ?= 1.5.3
+SETUP_ENVTEST_VERSION ?= v0.0.0-20240320141353-395cfc7486e6
 
 .PHONY: mkdocs
 mkdocs: $(MKDOCS) ## Install material for mkdocs locally if necessary
@@ -189,7 +190,7 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 .PHONY: operator-sdk
 operator-sdk: $(OPERATOR_SDK)
