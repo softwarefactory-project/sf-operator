@@ -141,7 +141,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 }
 
 func (r *SFController) RunCommand(name string, args []string, extraVars []apiv1.EnvVar) *batchv1.Job {
-	jobContainer := base.MkContainer("sf-operator", base.BusyboxImage)
+	jobContainer := base.MkContainer("sf-operator", base.BusyboxImage())
 	jobContainer.Command = append([]string{"python3", "/sf_operator/main.py"}, args...)
 	jobContainer.Env = append([]apiv1.EnvVar{
 		base.MkEnvVar("PYTHONPATH", "/"),

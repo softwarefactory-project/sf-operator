@@ -208,7 +208,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	// Create the statefulset
-	sts := r.mkStatefulSet(logserverIdent, base.HTTPDImage,
+	sts := r.mkStatefulSet(logserverIdent, base.HTTPDImage(),
 		BaseGetStorageConfOrDefault(r.cr.Spec.Settings.Storage, r.cr.Spec.StorageClassName), apiv1.ReadWriteOnce)
 
 	// Setup the main container
@@ -250,7 +250,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	}
 
 	// Setup the sidecar container for sshd
-	sshdContainer := base.MkContainer(sshdPortName, base.SSHDImage)
+	sshdContainer := base.MkContainer(sshdPortName, base.SSHDImage())
 	sshdContainer.Command = []string{"bash", "/conf/run.sh"}
 	sshdContainer.LivenessProbe = base.MkReadinessTCPProbe(sshdPort)
 	sshdContainer.StartupProbe = base.MkReadinessTCPProbe(sshdPort)
@@ -289,7 +289,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		loopDelay = 3600
 	}
 
-	purgelogsContainer := base.MkContainer(purgelogIdent, base.PurgeLogsImage)
+	purgelogsContainer := base.MkContainer(purgelogIdent, base.PurgelogsImage())
 	purgelogsContainer.Command = []string{
 		"/usr/local/bin/purgelogs",
 		"--retention-days",
@@ -325,9 +325,9 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		"httpd-conf": utils.Checksum([]byte(logserverConf)),
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Settings.RetentionDays) +
 			" loopDelay:" + strconv.Itoa(r.cr.Spec.Settings.LoopDelay),
-		"httpd-image":     base.HTTPDImage,
-		"purgelogs-image": base.PurgeLogsImage,
-		"sshd-image":      base.SSHDImage,
+		"httpd-image":     base.HTTPDImage(),
+		"purgelogs-image": base.PurgelogsImage(),
+		"sshd-image":      base.SSHDImage(),
 	}
 
 	current, stsUpdated := r.ensureStatefulset(sts)

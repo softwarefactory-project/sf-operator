@@ -84,7 +84,7 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
 	c := "CREATE DATABASE IF NOT EXISTS " + dbname + " CHARACTER SET utf8 COLLATE utf8_general_ci; "
 	g := "GRANT ALL PRIVILEGES ON " + dbname + ".* TO '" + username + "'@'%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
-	container := base.MkContainer("mariadb-client", base.MariabDBImage)
+	container := base.MkContainer("mariadb-client", base.MariaDBImage())
 	container.Command = []string{"sh", "-c", `
 	echo 'Running: mysql --host=" ` + MariaDBIdent + `" --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
 	ATTEMPT=0
@@ -171,7 +171,7 @@ func (r *SFController) DBPostInit(configSecret apiv1.Secret) apiv1.Secret {
 func (r *SFController) DeployMariadb() bool {
 	r.EnsureSecretUUID(MariadbAdminPass)
 
-	sts := r.mkStatefulSet(MariaDBIdent, base.MariabDBImage, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce)
+	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce)
 
 	sts.Spec.VolumeClaimTemplates = append(
 		sts.Spec.VolumeClaimTemplates,

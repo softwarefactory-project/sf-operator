@@ -4,37 +4,105 @@
 
 package base
 
+import (
+	_ "embed"
+
+	"gopkg.in/yaml.v2"
+)
+
+//go:embed static/images.yaml
+var imagesYAML string
+
+type ContainerImages struct {
+	Images []Image `yaml:"images"`
+}
+
 type Image struct {
-	Path    string
-	Version string
+	Name      string `yaml:"name"`
+	Container string `yaml:"container"`
+	Version   string `yaml:"version"`
+	Source    string `yaml:"source,omitempty"`
 }
 
-func ImageToString(i Image) string {
-	return i.Path + ":" + i.Version
+func getImage(name string) string {
+	var images ContainerImages
+	if err := yaml.UnmarshalStrict([]byte(imagesYAML), &images); err != nil {
+		panic(err)
+	}
+	for _, image := range images.Images {
+		if image.Name == name {
+			return image.Container + ":" + image.Version
+
+		}
+	}
+	panic("Unknown container image: " + name)
 }
 
-const (
-	nodepoolImageVersion = "10.0.0-1"
-	zuulImageVersion     = "10.0.0-1"
-)
+func ZuulExecutorImage() string {
+	return getImage("zuul-executor")
+}
 
-var (
-	BusyboxImage          = ImageToString(Image{Path: "quay.io/software-factory/sf-op-busybox", Version: "1.5-3"})
-	GerritImage           = ImageToString(Image{Path: "quay.io/software-factory/gerrit", Version: "3.6.4-8"})
-	GitServerImage        = ImageToString(Image{Path: "quay.io/software-factory/git-deamon", Version: "2.39.3-1"})
-	SSHDImage             = ImageToString(Image{Path: "quay.io/software-factory/sshd", Version: "0.1-3"})
-	PurgeLogsImage        = ImageToString(Image{Path: "quay.io/software-factory/purgelogs", Version: "0.2.3-3"})
-	NodepoolLauncherImage = ImageToString(Image{Path: "quay.io/software-factory/nodepool-launcher", Version: nodepoolImageVersion})
-	NodepoolBuilderImage  = ImageToString(Image{Path: "quay.io/software-factory/nodepool-builder", Version: nodepoolImageVersion})
-	MariabDBImage         = ImageToString(Image{Path: "quay.io/software-factory/mariadb", Version: "10.5.16-4"})
-	ZookeeperImage        = ImageToString(Image{Path: "quay.io/software-factory/zookeeper", Version: "3.8.3-1"})
-	// https://catalog.redhat.com/software/containers/ubi8/httpd-24/6065b844aee24f523c207943?q=httpd&architecture=amd64&image=651f274c8ce9242f7bb3e011
-	HTTPDImage          = ImageToString(Image{Path: "registry.access.redhat.com/ubi8/httpd-24", Version: "1-284.1696531168"})
-	NodeExporterImage   = ImageToString(Image{Path: "quay.io/prometheus/node-exporter", Version: "v1.6.1"})
-	StatsdExporterImage = ImageToString(Image{Path: "quay.io/prometheus/statsd-exporter", Version: "v0.24.0"})
-	FluentBitImage      = ImageToString(Image{Path: "cr.fluentbit.io/fluent/fluent-bit", Version: "2.1.10"})
-)
+func ZuulMergerImage() string {
+	return getImage("zuul-merger")
+}
 
-func ZuulImage(service string) string {
-	return ImageToString(Image{Path: "quay.io/software-factory/" + service, Version: zuulImageVersion})
+func ZuulSchedulerImage() string {
+	return getImage("zuul-scheduler")
+}
+
+func ZuulWebImage() string {
+	return getImage("zuul-web")
+}
+
+func NodepoolBuilderImage() string {
+	return getImage("nodepool-builder")
+}
+
+func NodepoolLauncherImage() string {
+	return getImage("nodepool-launcher")
+}
+
+func BusyboxImage() string {
+	return getImage("busybox")
+}
+
+func GitServerImage() string {
+	return getImage("git-server")
+}
+
+func SSHDImage() string {
+	return getImage("sshd")
+}
+
+func PurgelogsImage() string {
+	return getImage("purgelogs")
+}
+
+func MariaDBImage() string {
+	return getImage("mariadb")
+}
+
+func ZookeeperImage() string {
+	return getImage("zookeeper")
+}
+
+func HTTPDImage() string {
+	return getImage("httpd")
+}
+
+func NodeExporterImage() string {
+	return getImage("node-exporter")
+}
+
+func StatsdExporterImage() string {
+	return getImage("statsd-exporter")
+}
+
+func FluentBitImage(debug bool) string {
+	if debug {
+		return getImage("fluentbit-debug")
+
+	} else {
+		return getImage("fluentbit")
+	}
 }

@@ -131,6 +131,21 @@ func mkZuulConnectionsSecretsMount(r *SFController) []apiv1.VolumeMount {
 	return zuulConnectionMounts
 }
 
+func getZuulImage(service string) string {
+	switch srv := service; srv {
+	case "zuul-scheduler":
+		return base.ZuulSchedulerImage()
+	case "zuul-executor":
+		return base.ZuulExecutorImage()
+	case "zuul-merger":
+		return base.ZuulMergerImage()
+	case "zuul-web":
+		return base.ZuulWebImage()
+	default:
+		panic("unsupported zuul service")
+	}
+}
+
 func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) []apiv1.Container {
 	volumeMounts := []apiv1.VolumeMount{
 		{
@@ -200,7 +215,7 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) [
 
 	container := apiv1.Container{
 		Name:  service,
-		Image: base.ZuulImage(service),
+		Image: getZuulImage(service),
 		Command: []string{"/usr/local/bin/dumb-init", "--", "bash", "-c",
 			// Trigger the update of the CA Trust chain
 			UpdateCATrustCommand + " && " +
@@ -410,7 +425,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":                 base.ZuulImage("zuul-scheduler"),
+		"zuul-image":                 getZuulImage("zuul-scheduler"),
 		"statsd_mapping":             utils.Checksum([]byte(zuulStatsdMappingConfig)),
 		"serial":                     "8",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
@@ -448,7 +463,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 
 	zuulContainers = append(zuulContainers, statsdSidecar, nodeExporterSidecar)
 
-	initContainer := base.MkContainer("init-scheduler-config", base.ZuulImage("zuul-scheduler"))
+	initContainer := base.MkContainer("init-scheduler-config", getZuulImage("zuul-scheduler"))
 	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
 	initContainer.Env = append(r.getTenantsEnvs(),
 		base.MkEnvVar("HOME", "/var/lib/zuul"), base.MkEnvVar("INIT_CONTAINER", "1"))
@@ -528,7 +543,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":                 base.ZuulImage("zuul-executor"),
+		"zuul-image":                 getZuulImage("zuul-executor"),
 		"serial":                     "6",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
@@ -601,7 +616,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":                 base.ZuulImage(service),
+		"zuul-image":                 getZuulImage(service),
 		"serial":                     "4",
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
@@ -657,7 +672,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            base.ZuulImage("zuul-web"),
+		"zuul-image":            getZuulImage("zuul-web"),
 		"serial":                "6",
 		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),

@@ -56,6 +56,7 @@ const gerritSSHDPort = 29418
 const gerritSSHDPortName = "gerrit-sshd"
 const gerritSiteMountPath = "/gerrit"
 const gerritIdent = "gerrit"
+const gerritImage = "quay.io/software-factory/gerrit:3.6.4-8"
 
 //go:embed static/entrypoint.sh
 var entrypoint string
@@ -249,7 +250,7 @@ func configureGerritContainer(sts *appsv1.StatefulSet, volumeMounts []apiv1.Volu
 }
 
 func addManageSFContainer(sts *appsv1.StatefulSet, fqdn string) {
-	container := base.MkContainer(managesfResourcesIdent, base.BusyboxImage)
+	container := base.MkContainer(managesfResourcesIdent, base.BusyboxImage())
 	container.Command = []string{"sh", "-c", managesfEntrypoint}
 	container.Env = []apiv1.EnvVar{
 		base.MkEnvVar("HOME", "/tmp"),
@@ -286,7 +287,7 @@ func createPostInitContainer(jobName string, fqdn string) apiv1.Container {
 		base.MkSecretEnvVar("ZUUL_HTTP_PASSWORD", "zuul-gerrit-api-key", "zuul-gerrit-api-key"),
 	}
 
-	container := base.MkContainer(fmt.Sprintf("%s-container", jobName), base.BusyboxImage)
+	container := base.MkContainer(fmt.Sprintf("%s-container", jobName), base.BusyboxImage())
 	container.Command = []string{"sh", "-c", postInitScript}
 	container.Env = env
 	container.VolumeMounts = []apiv1.VolumeMount{
@@ -303,7 +304,7 @@ func createPostInitContainer(jobName string, fqdn string) apiv1.Container {
 }
 
 func createInitContainers(volumeMounts []apiv1.VolumeMount, fqdn string) []apiv1.Container {
-	container := base.MkContainer("gerrit-init", base.GerritImage)
+	container := base.MkContainer("gerrit-init", gerritImage)
 	container.Command = []string{"sh", "-c", gerritInitScript}
 	container.Env = []apiv1.EnvVar{
 		base.MkSecretEnvVar("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
@@ -340,7 +341,7 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie() {
 	name := gerritIdent
 	b, _ := g.getStatefulSetOrDie(name)
 	if !b {
-		container := base.MkContainer(name, base.GerritImage)
+		container := base.MkContainer(name, gerritImage)
 		storageConfig := controllers.BaseGetStorageConfOrDefault(v1.StorageSpec{}, "")
 		pvc := base.MkPVC(name, g.env.Ns, storageConfig, apiv1.ReadWriteOnce)
 		sts := base.MkStatefulset(

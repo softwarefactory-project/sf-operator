@@ -100,7 +100,7 @@ func (r *SFController) DeployZookeeper() bool {
 
 	annotations := map[string]string{
 		"configuration": utils.Checksum([]byte(configChecksumable)),
-		"image":         base.ZookeeperImage,
+		"image":         base.ZookeeperImage(),
 		"serial":        "3",
 	}
 
@@ -146,7 +146,7 @@ func (r *SFController) DeployZookeeper() bool {
 		StorageClassName: storageConfig.StorageClassName,
 	}
 	zk := r.mkHeadlessSatefulSet(
-		ZookeeperIdent, base.ZookeeperImage, storageConfig, apiv1.ReadWriteOnce)
+		ZookeeperIdent, base.ZookeeperImage(), storageConfig, apiv1.ReadWriteOnce)
 	// We overwrite the VolumeClaimTemplates set by MkHeadlessStatefulSet to keep the previous volume name
 	// Previously the default PVC created by MkHeadlessStatefulSet was not used by Zookeeper (not mounted). So to avoid having two Volumes
 	// and to ensure data persistence during the upgrade we keep the previous naming 'ZookeeperIdent + "-data"' and we discard the one
