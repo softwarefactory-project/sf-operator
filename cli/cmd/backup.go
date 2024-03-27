@@ -158,13 +158,6 @@ func createMySQLBackup(ns string, backupDir string, kubeClientSet *kubernetes.Cl
 	// create MariaDB dir
 	mariaDBBackupDir := backupDir + "/mariadb/"
 	cliutils.CreateDirectory(mariaDBBackupDir, 0755)
-	mariadbPass := cliutils.GetSecretValue(ns, kubeClientSet, controllers.MariadbAdminPass)
-
-	if mariadbPass == nil {
-		ctrl.Log.Error(errors.New("MariaDB password is missing"),
-			"Can not continue. Password in the MariaDB secret is empty!")
-		os.Exit(1)
-	}
 
 	pod := cliutils.GetPodByName(dbBackupPod, ns, kubeClientSet)
 
@@ -172,8 +165,6 @@ func createMySQLBackup(ns string, backupDir string, kubeClientSet *kubernetes.Cl
 	// "The user specified as a definer ('mariadb.sys'@'localhost') does not exist" when using LOCK TABLES
 	backupZuulCMD := []string{
 		"mysqldump",
-		"-uroot",
-		"-p" + *mariadbPass,
 		"--databases",
 		"zuul",
 		"--single-transaction",

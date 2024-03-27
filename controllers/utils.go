@@ -236,7 +236,7 @@ func (r *SFUtilContext) ensureSecretFromFunc(name string, getData func() string)
 	return secret
 }
 
-// EnsureSecretUUID ensures a Secret caontaining an UUID
+// EnsureSecretUUID ensures a Secret containing an UUID
 // This function does not support update
 func (r *SFUtilContext) EnsureSecretUUID(name string) apiv1.Secret {
 	return r.ensureSecretFromFunc(name, utils.NewUUIDString)

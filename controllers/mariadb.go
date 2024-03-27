@@ -32,6 +32,9 @@ const (
 //go:embed static/mariadb/fluentbit/fluent-bit.conf.tmpl
 var mariadbFluentBitForwarderConfig string
 
+//go:embed static/mariadb/my.cnf.tmpl
+var mariadbMyCNF string
+
 type ZuulDBOpts struct {
 	Username string
 	Password string
@@ -169,7 +172,23 @@ func (r *SFController) DBPostInit(configSecret apiv1.Secret) apiv1.Secret {
 }
 
 func (r *SFController) DeployMariadb() bool {
-	r.EnsureSecretUUID(MariadbAdminPass)
+	adminPassSecret := r.EnsureSecretUUID(MariadbAdminPass)
+
+	myCNF, _ := utils.ParseString(mariadbMyCNF,
+		struct {
+			MYSQLRootPassword string
+		}{MYSQLRootPassword: string(adminPassSecret.Data["mariadb-root-password"])})
+
+	configSecret := apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "mariadb-config-secrets",
+			Namespace: r.ns,
+		},
+		Data: map[string][]byte{
+			"my.cnf": []byte(myCNF),
+		},
+	}
+	r.EnsureSecret(&configSecret)
 
 	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce)
 
@@ -194,6 +213,12 @@ func (r *SFController) DeployMariadb() bool {
 			Name:      "mariadb-run",
 			MountPath: "/run/mariadb",
 		},
+		{
+			Name:      "mariadb-config-secrets",
+			SubPath:   "my.cnf",
+			MountPath: "/var/lib/mysql/.my.cnf",
+			ReadOnly:  true,
+		},
 	}, volumeMountsStatsExporter...)
 	sts.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 		base.MkEnvVar("HOME", "/var/lib/mysql"),
@@ -207,10 +232,11 @@ func (r *SFController) DeployMariadb() bool {
 	sts.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessTCPProbe(mariadbPort)
 	sts.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkEmptyDirVolume("mariadb-run"),
+		base.MkVolumeSecret("mariadb-config-secrets", "mariadb-config-secrets"),
 	}
 
 	annotations := map[string]string{
-		"serial": "3",
+		"serial": "4",
 	}
 	if r.cr.Spec.FluentBitLogForwarding != nil {
 		fbVolume, fbSidecar := createLogForwarderSidecar(r, annotations)
