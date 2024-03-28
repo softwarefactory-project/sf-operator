@@ -9,8 +9,6 @@
 Package v1 contains API Schema definitions for the sf v1 API group
 
 ### Resource Types
-- [LogServer](#logserver)
-- [LogServerList](#logserverlist)
 - [SoftwareFactory](#softwarefactory)
 - [SoftwareFactoryList](#softwarefactorylist)
 
@@ -25,7 +23,6 @@ Package v1 contains API Schema definitions for the sf v1 API group
 BaseStatus struct which defines the observed state for a Controller Do not use this directy, it must be derived from.
 
 _Appears in:_
-- [LogServerStatus](#logserverstatus)
 - [SoftwareFactoryStatus](#softwarefactorystatus)
 
 | Field | Description | Default Value |
@@ -199,7 +196,6 @@ _Appears in:_
 
 
 _Appears in:_
-- [LogServerSpec](#logserverspec)
 - [SoftwareFactorySpec](#softwarefactoryspec)
 
 | Field | Description | Default Value |
@@ -223,39 +219,6 @@ _Appears in:_
 
 
 
-#### LogServer
-
-
-
-LogServer is the Schema for the LogServers API
-
-_Appears in:_
-- [LogServerList](#logserverlist)
-
-| Field | Description | Default Value |
-| --- | --- | --- |
-| `apiVersion` _string_ | `sf.softwarefactory-project.io/v1` | - |
-| `kind` _string_ | `LogServer` | - |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. | -|
-| `spec` _[LogServerSpec](#logserverspec)_ |  | -|
-
-
-#### LogServerList
-
-
-
-LogServerList contains a list of LogServer
-
-
-
-| Field | Description | Default Value |
-| --- | --- | --- |
-| `apiVersion` _string_ | `sf.softwarefactory-project.io/v1` | - |
-| `kind` _string_ | `LogServerList` | - |
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. | -|
-| `items` _[LogServer](#logserver) array_ |  | -|
-
-
 #### LogServerSpec
 
 
@@ -263,25 +226,6 @@ LogServerList contains a list of LogServer
 LogServerSpec defines the desired state of LogServer
 
 _Appears in:_
-- [LogServer](#logserver)
-
-| Field | Description | Default Value |
-| --- | --- | --- |
-| `fqdn` _string_ | The fully qualified domain name to use with the log server. Logs will be served at https://`FQDN`/logs/ | -|
-| `LetsEncrypt` _[LetsEncryptSpec](#letsencryptspec)_ | LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS | -|
-| `storageClassName` _string_ | Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case. | -|
-| `authorizedSSHKey` _string_ | The SSH public key, encoded as base64, to use to authorize file transfers on the log server | -|
-| `settings` _[LogServerSpecSettings](#logserverspecsettings)_ | General runtime settings for the log server | -|
-
-
-#### LogServerSpecSettings
-
-
-
-
-
-_Appears in:_
-- [LogServerSpec](#logserverspec)
 - [SoftwareFactorySpec](#softwarefactoryspec)
 
 | Field | Description | Default Value |
@@ -289,8 +233,6 @@ _Appears in:_
 | `retentionDays` _integer_ | Logs retention time in days. Logs older than this setting in days will be purged by a pruning cronjob. Defaults to 60 days | {60}|
 | `loopDelay` _integer_ | The frequency, in seconds, at which the log pruning cronjob is running. Defaults to 3600s, i.e. logs are checked for pruning every hour | {3600}|
 | `storage` _[StorageSpec](#storagespec)_ | Storage-related settings | -|
-
-
 
 
 #### MariaDBSpec
@@ -443,7 +385,7 @@ _Appears in:_
 | `zuul` _[ZuulSpec](#zuulspec)_ | Zuul service spec | -|
 | `nodepool` _[NodepoolSpec](#nodepoolspec)_ | Nodepool services spec | -|
 | `zookeeper` _[ZookeeperSpec](#zookeeperspec)_ | Zookeeper service spec | -|
-| `logserver` _[LogServerSpecSettings](#logserverspecsettings)_ | Logserver service spec | {map[loopDelay:3600 retentionDays:60]}|
+| `logserver` _[LogServerSpec](#logserverspec)_ | Logserver service spec | {map[loopDelay:3600 retentionDays:60]}|
 | `mariadb` _[MariaDBSpec](#mariadbspec)_ | MariaDB service spec | -|
 | `gitserver` _[GitServerSpec](#gitserverspec)_ | Git server spec | -|
 
@@ -474,7 +416,7 @@ _Appears in:_
 
 _Appears in:_
 - [GitServerSpec](#gitserverspec)
-- [LogServerSpecSettings](#logserverspecsettings)
+- [LogServerSpec](#logserverspec)
 - [MariaDBSpec](#mariadbspec)
 - [NodepoolBuilderSpec](#nodepoolbuilderspec)
 - [ZookeeperSpec](#zookeeperspec)

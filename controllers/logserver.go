@@ -6,35 +6,23 @@
 package controllers
 
 import (
-	"context"
 	_ "embed"
+	"encoding/base64"
 	"strconv"
-	"time"
 
-	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
-
-//+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=logservers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=logservers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=logservers/finalizers,verbs=update
-//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
 
 const logserverIdent = "logserver"
 const httpdPort = 8080
@@ -62,12 +50,7 @@ type LogServerReconciler struct {
 	RESTConfig *rest.Config
 }
 
-type LogServerController struct {
-	SFUtilContext
-	cr sfv1.LogServer
-}
-
-func (r *LogServerController) ensureLogserverPodMonitor() bool {
+func (r *SFController) ensureLogserverPodMonitor() bool {
 	selector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			"app": "sf",
@@ -97,7 +80,7 @@ func (r *LogServerController) ensureLogserverPodMonitor() bool {
 	return true
 }
 
-func (r *LogServerController) ensureLogserverPromRule() bool {
+func (r *SFController) ensureLogserverPromRule() bool {
 	lsDiskRuleGroup := sfmonitoring.MkDiskUsageRuleGroup(r.ns, logserverIdent)
 	// We keep the logserver's PromRule management here for standalone logservers
 	desiredLsPromRule := sfmonitoring.MkPrometheusRuleCR(logserverIdent+"-default.rules", r.ns)
@@ -133,44 +116,7 @@ func (r *LogServerController) ensureLogserverPromRule() bool {
 	return true
 }
 
-// cleanup ensures removal of legacy resources
-func (r *LogServerController) cleanup() {
-	// Delete apiv1.Service httpdPortName-httpdPort
-	r.DeleteR(&apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.ns,
-			Name:      httpdPortName,
-		},
-	})
-
-	// Delete apiv1.Service sshdPortName-sshdPort
-	r.DeleteR(&apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.ns,
-			Name:      sshdPortName,
-		},
-	})
-
-	// Delete apiv1.service logserverIdent-NodeExporterPortNameSuffix
-	r.DeleteR(&apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.ns,
-			Name:      logserverIdent + sfmonitoring.NodeExporterPortNameSuffix,
-		},
-	})
-
-	// Remove the Deployment -> We switch to StatefulSet
-	r.DeleteR(&v1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.ns,
-			Name:      logserverIdent,
-		},
-	})
-}
-
-func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
-
-	r.cleanup()
+func (r *SFController) DeployLogserver() bool {
 
 	r.EnsureSSHKeySecret(logserverIdent + "-keys")
 
@@ -209,7 +155,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	// Create the statefulset
 	sts := r.mkStatefulSet(logserverIdent, base.HTTPDImage(),
-		BaseGetStorageConfOrDefault(r.cr.Spec.Settings.Storage, r.cr.Spec.StorageClassName), apiv1.ReadWriteOnce)
+		BaseGetStorageConfOrDefault(r.cr.Spec.Logserver.Storage, r.cr.Spec.StorageClassName), apiv1.ReadWriteOnce)
 
 	// Setup the main container
 	sts.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
@@ -255,8 +201,14 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	sshdContainer.LivenessProbe = base.MkReadinessTCPProbe(sshdPort)
 	sshdContainer.StartupProbe = base.MkReadinessTCPProbe(sshdPort)
 
+	pubKey, err := r.GetSecretDataFromKey("zuul-ssh-key", "pub")
+	if err != nil {
+		return false
+	}
+	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
+
 	sshdContainer.Env = []apiv1.EnvVar{
-		base.MkEnvVar("AUTHORIZED_KEY", r.cr.Spec.AuthorizedSSHKey),
+		base.MkEnvVar("AUTHORIZED_KEY", pubKeyB64),
 	}
 	sshdContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
@@ -279,12 +231,12 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, sshdContainer)
 
-	retentionDays := r.cr.Spec.Settings.RetentionDays
+	retentionDays := r.cr.Spec.Logserver.RetentionDays
 	if retentionDays == 0 {
 		retentionDays = 60
 	}
 
-	loopDelay := r.cr.Spec.Settings.LoopDelay
+	loopDelay := r.cr.Spec.Logserver.LoopDelay
 	if loopDelay == 0 {
 		loopDelay = 3600
 	}
@@ -323,8 +275,8 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 		"fqdn":       r.cr.Spec.FQDN,
 		"serial":     "5",
 		"httpd-conf": utils.Checksum([]byte(logserverConf)),
-		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Settings.RetentionDays) +
-			" loopDelay:" + strconv.Itoa(r.cr.Spec.Settings.LoopDelay),
+		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Logserver.RetentionDays) +
+			" loopDelay:" + strconv.Itoa(r.cr.Spec.Logserver.LoopDelay),
 		"httpd-image":     base.HTTPDImage(),
 		"purgelogs-image": base.PurgelogsImage(),
 		"sshd-image":      base.SSHDImage(),
@@ -332,7 +284,7 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 
 	current, stsUpdated := r.ensureStatefulset(sts)
 
-	pvcReadiness := r.reconcileExpandPVC(logserverIdent+"-"+logserverIdent+"-0", r.cr.Spec.Settings.Storage)
+	pvcReadiness := r.reconcileExpandPVC(logserverIdent+"-"+logserverIdent+"-0", r.cr.Spec.Logserver.Storage)
 
 	routeReady := r.ensureHTTPSRoute(
 		r.cr.Name+"-logserver", r.cr.Spec.FQDN,
@@ -350,75 +302,5 @@ func (r *LogServerController) DeployLogserver() sfv1.LogServerStatus {
 	isReady := r.IsStatefulSetReady(current) && !stsUpdated && pvcReadiness && routeReady && iconsRouteReady
 	conds.UpdateConditions(&r.cr.Status.Conditions, logserverIdent, isReady)
 
-	return sfv1.LogServerStatus{
-		Ready:              isReady,
-		ObservedGeneration: r.cr.Generation,
-		ReconciledBy:       conds.GetOperatorConditionName(),
-	}
-}
-
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
-func (r *LogServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
-
-	log.V(1).Info("Logserver CR - Entering reconcile loop")
-
-	var cr sfv1.LogServer
-
-	if err := r.Client.Get(ctx, req.NamespacedName, &cr); err != nil && errors.IsNotFound(err) {
-		log.Error(err, "unable to fetch LogServer resource")
-		// we'll ignore not-found errors, since they can't be fixed by an immediate
-		// requeue (we'll need to wait for a new notification), and we can get them
-		// on deleted requests.
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
-	var utils = &SFUtilContext{
-		Client:     r.Client,
-		Scheme:     r.Scheme,
-		RESTClient: r.RESTClient,
-		RESTConfig: r.RESTConfig,
-		ns:         req.NamespacedName.Namespace,
-		log:        log,
-		ctx:        ctx,
-		owner:      &cr,
-		standalone: false,
-	}
-
-	var controller = LogServerController{
-		SFUtilContext: *utils,
-		cr:            cr,
-	}
-
-	// Setup LetsEncrypt Issuer if needed
-	if cr.Spec.LetsEncrypt != nil {
-		controller.ensureLetsEncryptIssuer(*cr.Spec.LetsEncrypt)
-	}
-
-	cr.Status = controller.DeployLogserver()
-
-	if err := r.Client.Status().Update(ctx, &cr); err != nil {
-		log.Error(err, "unable to update LogServer status")
-		return ctrl.Result{}, err
-	}
-	if !cr.Status.Ready {
-		log.V(1).Info("Logserver CR - Reconcile running...")
-		delay, _ := time.ParseDuration("20s")
-		return ctrl.Result{RequeueAfter: delay}, nil
-	} else {
-		log.V(1).Info("Logserver CR - Reconcile completed!")
-		return ctrl.Result{}, nil
-	}
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *LogServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&sfv1.LogServer{}).
-		Owns(&certv1.Certificate{}).
-		Complete(r)
+	return isReady
 }

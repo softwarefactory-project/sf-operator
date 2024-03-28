@@ -7,7 +7,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"sort"
@@ -98,35 +97,6 @@ func isOperatorReady(services map[string]bool) bool {
 		}
 	}
 	return true
-}
-
-func (r *SFController) DeployLogserverResource() bool {
-	pubKey, err := r.GetSecretDataFromKey("zuul-ssh-key", "pub")
-	if err != nil {
-		return false
-	}
-	storageclassname := r.cr.Spec.Logserver.Storage.ClassName
-	if storageclassname == "" {
-		storageclassname = r.cr.Spec.StorageClassName
-	}
-	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
-	cr := sfv1.LogServer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: logserverIdent,
-		},
-		Spec: sfv1.LogServerSpec{
-			FQDN:             r.cr.Spec.FQDN,
-			LetsEncrypt:      r.cr.Spec.LetsEncrypt,
-			StorageClassName: storageclassname,
-			AuthorizedSSHKey: pubKeyB64,
-			Settings:         r.cr.Spec.Logserver,
-		},
-	}
-	var logserverController = LogServerController{
-		SFUtilContext: r.SFUtilContext,
-		cr:            cr,
-	}
-	return logserverController.DeployLogserver().Ready
 }
 
 // cleanup ensures removal of legacy resources
@@ -273,7 +243,7 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 		services["Zuul"] = r.DeployZuul()
 	}
 
-	services["Logserver"] = r.DeployLogserverResource()
+	services["Logserver"] = r.DeployLogserver()
 
 	if services["Zookeeper"] {
 		nodepool := r.DeployNodepool()

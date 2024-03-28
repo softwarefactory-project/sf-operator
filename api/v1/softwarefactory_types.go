@@ -485,6 +485,20 @@ type SecretRef struct {
 	SecretKeyRef *Secret `json:"secretKeyRef"`
 }
 
+// LogServerSpec defines the desired state of LogServer
+type LogServerSpec struct {
+	// Logs retention time in days. Logs older than this setting in days will be purged by a pruning cronjob. Defaults to 60 days
+	// +kubebuilder:default:=60
+	// +kubebuilder:validation:Minimum:=1
+	RetentionDays int `json:"retentionDays,omitempty"`
+	// The frequency, in seconds, at which the log pruning cronjob is running. Defaults to 3600s, i.e. logs are checked for pruning every hour
+	// +kubebuilder:default:=3600
+	// +kubebuilder:validation:Minimum:=1
+	LoopDelay int `json:"loopDelay,omitempty"`
+	// Storage-related settings
+	Storage StorageSpec `json:"storage,omitempty"`
+}
+
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
@@ -518,7 +532,7 @@ type SoftwareFactorySpec struct {
 	// Logserver service spec
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={"loopDelay": 3600, retentionDays: 60}
-	Logserver LogServerSpecSettings `json:"logserver,omitempty"`
+	Logserver LogServerSpec `json:"logserver,omitempty"`
 
 	// MariaDB service spec
 	MariaDB MariaDBSpec `json:"mariadb,omitempty"`

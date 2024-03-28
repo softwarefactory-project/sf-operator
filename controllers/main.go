@@ -113,21 +113,10 @@ func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection 
 		Completed:  false,
 	}
 
-	lgr := &LogServerReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		RESTClient: restClient,
-		RESTConfig: config,
-	}
-
 	//+kubebuilder:scaffold:builder
 
 	if err = sfr.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SoftwareFactory")
-		os.Exit(1)
-	}
-	if err = lgr.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LogServer")
 		os.Exit(1)
 	}
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

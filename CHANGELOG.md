@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 ### Changed
 ### Deprecated
 ### Removed
+
+- The LogsServer CRD and controller. As there is no identified need for a proper CRD and Controller.
+
 ### Fixed
 ### Security
 

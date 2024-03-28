@@ -55,45 +55,6 @@ Make your changes, commit them, then push them with `git push`.
 
 To test your modifications, you can simply create a trivial change on the **config** repository, as described [here](#how-to-open-a-review-on-the-test-gerrit).
 
-## How to hack on the LogServer Custom Resource
-
-The operator handles the `LogServer` Custom Resource. This resource is used to setup the logs server
-part of a `SoftwareFactory` deployment.
-
-Here is an usage example of this resource:
-
-```shell
-# Create a dedicated namespace
-kubectl create ns logserver
-# Start the operator for the dedicated namespace
-sf-operator --namespace logserver operator
-```
-
-```shell
-# Load your public ssh key in base64
-PUB_KEY=`cat ~/.ssh/id_ecdsa.pub | base64 -w0`
-# Create the resource manifest
-sed "s/authorizedSSHKey.*/authorizedSSHKey: $PUB_KEY/" config/samples/sf_v1_logserver.yaml > /tmp/my-logserver.yaml
-sed "s/fqdn.*/fqdn: test.local/" -i /tmp/my-logserver.yaml
-# Apply the custom resource
-kubectl apply -f /tmp/my-logserver.yaml
-```
-
-To access the web frontend of the service you need to ensure that `logserver.test.local` resolves to your
-microshift cluster inbound, then `firefox https://logserver.test.local`.
-
-To send data to the logserver, first enable the port-forward:
-
-```shell
-kubectl -n logserver port-forward service/logserver 22220:2222
-```
-
-Then use rsync:
-
-```shell
-rsync -av -e "ssh -p22220" src-directory zuul@127.0.0.1:rsync/
-```
-
 ## How to configure secrets used by Zuul
 
 This python package provides helper code to perform service runtime configuration.

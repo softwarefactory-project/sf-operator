@@ -7,7 +7,6 @@ unstable but the ultimate source of truth for documentation about their properti
 
 
 1. [SoftwareFactory](#crds)
-1. [LogServer]()
 
 ## SoftwareFactory
 
@@ -15,12 +14,4 @@ This custom resource describes a Software Factory instance.
 
 ```yaml
 --8<-- "config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml"
-```
-
-## LogServer
-
-This custom resource describes a standalone Log Server (SSH/rsync endpoint + HTTP server).
-
-```yaml
---8<-- "config/crd/bases/sf.softwarefactory-project.io_logservers.yaml"
 ```
