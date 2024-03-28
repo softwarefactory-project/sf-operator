@@ -141,6 +141,41 @@ func (r *SFController) cleanup() {
 	if r.GetM("zookeeper-headless", &currentZKHeadlessSVC) {
 		r.DeleteR(&currentZKHeadlessSVC)
 	}
+	// remove a legacy Route definition for logserver
+	r.DeleteR(&apiroutev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.ns,
+			Name:      r.cr.Name + "-logserver",
+		},
+	})
+	// remove a legacy Route definition for icons path
+	r.DeleteR(&apiroutev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.ns,
+			Name:      r.cr.Name + "-icons",
+		},
+	})
+	// remove a legacy Route definition for nodepool-builder
+	r.DeleteR(&apiroutev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.ns,
+			Name:      r.cr.Name + "-nodepool-builder",
+		},
+	})
+	// remove a legacy Route definition for nodepool-launcher
+	r.DeleteR(&apiroutev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.ns,
+			Name:      r.cr.Name + "-nodepool-launcher",
+		},
+	})
+	// remove a legacy Route definition for zuul
+	r.DeleteR(&apiroutev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.ns,
+			Name:      r.cr.Name + "-zuul",
+		},
+	})
 }
 
 func (r *SFController) validateZuulConnectionsSecrets() error {
@@ -282,6 +317,8 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 			conds.RefreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
 		}
 	}
+
+	services["Gateway"] = r.DeployHTTPDGateway()
 
 	podMonitorSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{

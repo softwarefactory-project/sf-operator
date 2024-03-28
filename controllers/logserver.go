@@ -286,20 +286,12 @@ func (r *SFController) DeployLogserver() bool {
 
 	pvcReadiness := r.reconcileExpandPVC(logserverIdent+"-"+logserverIdent+"-0", r.cr.Spec.Logserver.Storage)
 
-	routeReady := r.ensureHTTPSRoute(
-		r.cr.Name+"-logserver", r.cr.Spec.FQDN,
-		logserverIdent, "/logs/", httpdPort, map[string]string{}, r.cr.Spec.LetsEncrypt)
-	// The icons Route is for the mod_autoindex that build icon links such as <fqdn>/icons/back.gif
-	iconsRouteReady := r.ensureHTTPSRoute(
-		r.cr.Name+"-icons", r.cr.Spec.FQDN,
-		logserverIdent, "/icons/", httpdPort, map[string]string{}, r.cr.Spec.LetsEncrypt)
-
 	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
 	// TODO(mhu) we may want to include monitoring objects' status in readiness computation
 	r.ensureLogserverPodMonitor()
 	r.ensureLogserverPromRule()
 
-	isReady := r.IsStatefulSetReady(current) && !stsUpdated && pvcReadiness && routeReady && iconsRouteReady
+	isReady := r.IsStatefulSetReady(current) && !stsUpdated && pvcReadiness
 	conds.UpdateConditions(&r.cr.Status.Conditions, logserverIdent, isReady)
 
 	return isReady

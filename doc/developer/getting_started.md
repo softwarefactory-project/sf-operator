@@ -90,11 +90,11 @@ To iterate on the development of the `sf-operator` you can either start the oper
 === "manager mode"
 
     First, apply the `SoftwareFactory`'s `CR`:
-    
+
     ```sh
     kubectl apply -f playbooks/files/sf.yaml
     ```
-    
+
     then run the operator with the following command:
 
     ```sh
@@ -129,9 +129,9 @@ You can verify that the services are properly exposed with Firefox (you may have
 
 ```sh
 firefox https://<FQDN>/zuul
-firefox https://<FQDN>/logs/
+firefox https://<FQDN>/logs
 firefox https://<FQDN>/nodepool/api/image-list
-firefox https://<FQDN>/nodepool/builds/
+firefox https://<FQDN>/nodepool/builds
 firefox https://gerrit.<FQDN>
 ```
 

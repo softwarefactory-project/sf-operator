@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Zookeeper version bumped to 3.8.4
+- The Operator handles only one Route resource as a 'gateway' pod dispatches incoming connections.
 
 ### Deprecated
 ### Removed

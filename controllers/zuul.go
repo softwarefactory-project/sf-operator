@@ -1272,7 +1272,7 @@ func (r *SFController) DeployZuulSecrets() {
 }
 
 func (r *SFController) DeployZuul() bool {
-	return r.EnsureZuulComponents() && r.setupZuulIngress()
+	return r.EnsureZuulComponents()
 }
 
 func (r *SFController) runZuulInternalTenantReconfigure() bool {
@@ -1281,13 +1281,4 @@ func (r *SFController) runZuulInternalTenantReconfigure() bool {
 		"zuul-scheduler",
 		[]string{"zuul-scheduler", "tenant-reconfigure", "internal"})
 	return err == nil
-}
-
-func (r *SFController) setupZuulIngress() bool {
-	route1Ready := r.ensureHTTPSRoute(r.cr.Name+"-zuul", r.cr.Spec.FQDN, "zuul-web", "/zuul", zuulWEBPort,
-		map[string]string{
-			"haproxy.router.openshift.io/rewrite-target": "/",
-		}, r.cr.Spec.LetsEncrypt)
-
-	return route1Ready
 }
