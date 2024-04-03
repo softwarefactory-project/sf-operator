@@ -166,6 +166,10 @@ func (r *SFController) InstallTooling() {
 
 func (r *SFController) SetupConfigJob() bool {
 
+	// Get the resource version of the keystore password
+	zkp := apiv1.Secret{}
+	r.GetM("zuul-keystore-password", &zkp)
+
 	// This ensure we trigger the base secret creation job when the setting change
 	extraSettingsChecksum := "ns"
 	if r.cr.Spec.ConfigRepositoryLocation.ClusterAPIURL != "" || r.cr.Spec.ConfigRepositoryLocation.LogserverHost != "" {
@@ -179,7 +183,7 @@ func (r *SFController) SetupConfigJob() bool {
 		cmName                       = "zs-internal-tenant-reconfigure"
 		zsInternalTenantReconfigure  apiv1.ConfigMap
 		configHash                   = utils.Checksum([]byte(r.MkPreInitScript()))
-		internalTenantSecretsVersion = "1" + "-" + extraSettingsChecksum
+		internalTenantSecretsVersion = "1" + "-" + zkp.ResourceVersion + "-" + extraSettingsChecksum
 		needReconfigureTenant        = false
 		needCMUpdate                 = false
 	)

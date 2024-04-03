@@ -4,11 +4,11 @@ We provide a command to perform various actions related to the management of Sof
 deployments, beyond what can be defined in a custom resource manifest.
 
 
-1. [Installing the CLI](#installing-the-cli)
-1. [Global Flags](#global-flags)
-1. [Configuration File](#configuration-file)
-1. [Subcommands](#subcommands)
-  1. [Dev](#dev)
+- [Installing the CLI](#installing-the-cli)
+- [Global Flags](#global-flags)
+- [Configuration File](#configuration-file)
+- [Subcommands](#subcommands)
+  - [Dev](#dev)
     - [cloneAsAdmin](#cloneasadmin)
     - [create demo-env](#create-demo-env)
     - [create gerrit](#create-gerrit)
@@ -17,20 +17,20 @@ deployments, beyond what can be defined in a custom resource manifest.
     - [run-tests](#run-tests)
     - [wipe gerrit](#wipe-gerrit)
     - [getImagesSecurityIssues](#getimagessecurityissues)
-  1. [Init](#init)
-  1. [Nodepool](#nodepool)
+  - [Init](#init)
+  - [Nodepool](#nodepool)
     - [configure providers-secrets](#configure-providers-secrets)
     - [create openshiftpods-namespace](#create-openshiftpods-namespace)
     - [get builder-ssh-key](#get-builder-ssh-key)
     - [get providers-secrets](#get-providers-secrets)
-  1. [Operator](#operator)
-  1. [SF](#sf)
-    1. [backup](#backup)
-    1. [bootstrap-tenant](#bootstrap-tenant)
-    1. [configure TLS](#configure-tls)
-    1. [restore](#restore)
-    1. [wipe](#wipe)
-  1. [Zuul](#zuul)
+  - [Operator](#operator)
+  - [SF](#sf)
+    - [backup](#backup)
+    - [bootstrap-tenant](#bootstrap-tenant)
+    - [configure TLS](#configure-tls)
+    - [restore](#restore)
+    - [wipe](#wipe)
+  - [Zuul](#zuul)
     - [create auth-token](#create-auth-token)
     - [create client-config](#create-client-config)
 
@@ -418,14 +418,9 @@ The following subcommands can be used to manage a Software Factory deployment an
 
 #### backup
 
-The `backup` subcommand lets you dump a Software Factory's most important files for safekeeping,
-most important files, such as:
+The `backup` subcommand lets you dump a Software Factory's most important files for safekeeping.
 
-- MariaDB Zuul database copy
-- secrets backup
-- Zuul project private keys
-
-To create a backup located in `/tmp/backup` directory of all important objects, run the following command:
+To create a backup located in `/tmp/backup` directory, run the following command:
 
 ```sh
 sf-operator SF backup --namespace sf --backup_dir /tmp/backup
@@ -436,6 +431,14 @@ Flags:
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 | --backup_dir | string | The path to the backup directory | no | - |
+
+The backup is composed of:
+
+- some relevant `Secrets` located in the deployment's namespace
+- the Zuul's SQL database
+- the Zuul's project's keys as exported by [zuul-admin export-keys](https://zuul-ci.org/docs/zuul/latest/client.html#export-keys)
+
+The backup directory content could be compressed and stored safely in a backup system.
 
 #### bootstrap-tenant
 
@@ -480,13 +483,7 @@ Flags:
 !!! warning
     The command requires to to have `kubectl` binary installed in the system
 
-The `restore` subcommand lets you restore:
-
-- Secrets
-- MariaDB Zuul database
-- Zuul project private keys
-
-that has been done by the `backup` command.
+The `restore` subcommand lets you restore a backup created with the `backup` command.
 
 For example:
 
@@ -499,6 +496,7 @@ Available flags:
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 | --backup_dir | string | The path to the backup directory to restore | yes | - |
+
 
 #### wipe
 

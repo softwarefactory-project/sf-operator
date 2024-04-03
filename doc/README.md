@@ -45,10 +45,10 @@ The current project status is: **Alpha - NOT PRODUCTION READY**
 * Level 2 - Seamless upgrades - **2/2**
     - Operator: ✅
     - Operands: ✅
-* Level 3 - Full Lifecycle - **1/5**
+* Level 3 - Full Lifecycle - **3/5**
     - SF 3.8.x migration ❌
-    - Backup: ❌
-    - Restore: ❌
+    - Backup: ✅
+    - Restore: ✅
     - Rolling deployments: ❌
     - Reconfiguration: ✅
 * Level 4 - Deep Insights - **1/3**

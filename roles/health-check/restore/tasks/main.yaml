@@ -1,9 +1,0 @@
----
-- name: Pre check restore
-  ansible.builtin.include_tasks: pre.yaml
-
-- name: Change content
-  ansible.builtin.include_tasks: change.yaml
-
-- name: Post check restore - verify
-  ansible.builtin.include_tasks: post.yaml

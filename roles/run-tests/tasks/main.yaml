@@ -42,7 +42,6 @@
     - name: zuul-components
     - name: test-external-ze
     - name: test-log-forwarding
-    - name: backup
-    - name: restore
+    - name: test-backup-restore
   loop_control:
     loop_var: role

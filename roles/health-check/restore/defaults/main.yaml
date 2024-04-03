@@ -1,6 +1,0 @@
----
-namespace: sf
-backup_dir: "{{ ansible_user_dir }}/backup"
-restore_dir: "{{ ansible_user_dir }}/restore"
-restore_secret_name: zuul-keystore-password
-restore_zuul_path: "{{ backup_dir }}/zuul/zuul.keys"

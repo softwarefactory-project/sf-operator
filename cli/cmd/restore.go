@@ -32,7 +32,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -162,6 +164,33 @@ func restoreZuul(ns string, backupDir string, kubeClientSet *kubernetes.Clientse
 
 }
 
+func clearComponents(ns string, kubeContext string) {
+	ctrl.Log.Info("Removing components requiring a complete restart ...")
+
+	env := cliutils.ENV{
+		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
+		Ctx: context.TODO(),
+		Ns:  ns,
+	}
+
+	for _, stsName := range []string{"zuul-scheduler", "zuul-executor", "zuul-merger", "nodepool-builder", "zookeeper"} {
+		cliutils.DeleteOrDie(&env, &appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      stsName,
+				Namespace: env.Ns,
+			},
+		})
+	}
+	for _, depName := range []string{"zuul-web", "nodepool-launcher"} {
+		cliutils.DeleteOrDie(&env, &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      depName,
+				Namespace: env.Ns,
+			},
+		})
+	}
+}
+
 func restoreCmd(kmd *cobra.Command, args []string) {
 
 	// NOTE: Solution for restoring DB and Zuul require kubectl binary to be installed and configured .kube/config
@@ -191,6 +220,7 @@ func restoreCmd(kmd *cobra.Command, args []string) {
 	restoreZuul(ns, backupDir, kubeClientSet, kubeContext)
 	restoreSecret(ns, backupDir, kubeContext)
 	restoreDB(ns, backupDir, kubeClientSet, kubeContext)
+	clearComponents(ns, kubeContext)
 
 }
 

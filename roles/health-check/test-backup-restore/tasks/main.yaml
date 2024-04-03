@@ -1,0 +1,107 @@
+---
+# This test case assumes that test role 'config-update-zuul' run once previouly in the functional tests case
+# This test case validate the backup / restore process
+
+# 1. We backup to current deployment
+- name: Backup the Software Factory deployment
+  ansible.builtin.command: |
+    go run main.go {{ cli_global_flags }} SF backup --backup_dir {{ backup_dir }}
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+# 2. We gather the last Zuul buildset info
+- name: Fetch the last build ID reported by Zuul web
+  ansible.builtin.uri:
+    url: "https://{{ zuul_endpoint }}/api/tenant/internal/buildsets?skip=0&limit=1"
+    method: GET
+    return_content: true
+    body_format: json
+    validate_certs: "{{ validate_certs }}"
+  register: last_buildset
+  until:
+    - "'json' in last_buildset"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+
+# 3. We wipe the Software Factory deployment to simulate a disaster
+- name: Wipe Software Factory deployment
+  ansible.builtin.command: |
+    go run main.go {{ cli_global_flags }} SF wipe --rm-data
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+# 4. We spawn a new minimal Software Factory
+- name: Make a new minimal Software Factory deployment (standalone)
+  ansible.builtin.include_role:
+    name: run-operator-standalone
+  vars:
+    glue: false
+    cr_path: playbooks/files/sf-minimal.yaml
+  when: "{{ mode == 'standalone' }}"
+- name: Make a new minimal Software Factory deployment (olm)
+  ansible.builtin.include_role:
+    name: apply-custom-resources
+  vars:
+    cr_path: playbooks/files/sf-minimal.yaml
+  when: "{{ mode == 'olm' }}"
+
+# 4 bis. For the paranoid - Check the builds list reported by Zuul is empty
+- name: Check the builds list reported by Zuul is empty (after wipe and before restoring data)
+  ansible.builtin.uri:
+    url: "https://{{ zuul_endpoint }}/api/tenant/internal/buildsets?skip=0&limit=1"
+    method: GET
+    return_content: true
+    body_format: json
+    validate_certs: "{{ validate_certs }}"
+  register: _last_buildset
+  until:
+    - "'json' in last_buildset"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+- name: Ensure no result in Zuul SQL buildsets
+  ansible.builtin.assert:
+    that:
+      - _last_buildset.json | length == 0
+
+# 5. We restore the backup
+- name: Restore backup of the Software Factory previous deployment
+  ansible.builtin.command: |
+    go run main.go {{ cli_global_flags }} SF restore --backup_dir {{ backup_dir }}
+  args:
+    chdir: "{{ zuul.project.src_dir }}"
+
+# 6. We re-enable the config location and other settings
+- name: Apply the Software Factory deployment (standalone)
+  ansible.builtin.include_role:
+    name: run-operator-standalone
+  vars:
+    glue: false
+  when: "{{ mode == 'standalone' }}"
+
+- name: Apply the Software Factory deployment (olm)
+  ansible.builtin.include_role:
+    name: apply-custom-resources
+  when: "{{ mode == 'olm' }}"
+
+# 7. We ensure we recovered the Zuul SQL Database content
+- name: Fetch the last build ID reported by Zuul web (after restore)
+  ansible.builtin.uri:
+    url: "https://{{ zuul_endpoint }}/api/tenant/internal/buildsets?skip=0&limit=1"
+    method: GET
+    return_content: true
+    body_format: json
+    validate_certs: "{{ validate_certs }}"
+  register: _last_buildset
+  until:
+    - "'json' in last_buildset"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+- name: Ensure Zuul SQL DB well restored by checking last build ID
+  ansible.builtin.assert:
+    that:
+      - _last_buildset.json[0].uuid == last_buildset.json[0].uuid
+
+# 8. We run a zuul job workflow to ensure no failure
+- name: Run a Zuul job workflow in order to validate the restored system
+  ansible.builtin.include_role:
+    name: health-check/config-update-zuul
