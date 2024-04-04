@@ -29,7 +29,7 @@ import (
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"k8s.io/client-go/kubernetes"
+	apiv1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -64,29 +64,15 @@ var SecretsToBackup = []string{
 	"zuul-auth-secret",
 }
 
-func prepareBackup(kmd *cobra.Command, backupDir string) (string, *kubernetes.Clientset, string) {
-
-	cliCtx, err := cliutils.GetCLIContext(kmd)
-	if err != nil {
-		ctrl.Log.Error(err, "Error initializing CLI:")
-		os.Exit(1)
-	}
-
-	cliutils.CreateDirectory(backupDir, 0755)
-
-	kubeContext := cliCtx.KubeContext
-	_, kubeClientSet := cliutils.GetClientset(kubeContext)
-	return cliCtx.Namespace, kubeClientSet, kubeContext
-}
-
-func createSecretBackup(ns string, backupDir string, kubeClientSet *kubernetes.Clientset) {
+func createSecretBackup(backupDir string, env cliutils.ENV) {
 	ctrl.Log.Info("Creating secrets backup...")
 
 	secretsDir := backupDir + "/" + SecretsBackupPath
 	cliutils.CreateDirectory(secretsDir, 0755)
 
-	for _, sec := range SecretsToBackup {
-		secret := cliutils.GetSecretByName(sec, ns, kubeClientSet)
+	for _, secName := range SecretsToBackup {
+		secret := apiv1.Secret{}
+		cliutils.GetMOrDie(&env, secName, &secret)
 
 		// convert secret content to string (was bytes)
 		strMap := cliutils.ConvertMapOfBytesToMapOfStrings(secret.Data)
@@ -115,12 +101,12 @@ func createSecretBackup(ns string, backupDir string, kubeClientSet *kubernetes.C
 	ctrl.Log.Info("Finished doing secret backup!")
 }
 
-func createZuulKeypairBackup(ns string, backupDir string, kubeClientSet *kubernetes.Clientset,
-	kubeContext string) {
+func createZuulKeypairBackup(backupDir string, kubeContext string, env cliutils.ENV) {
 
 	ctrl.Log.Info("Doing Zuul keys backup...")
 
-	pod := cliutils.GetPodByName(zuulBackupPod, ns, kubeClientSet)
+	pod := apiv1.Pod{}
+	cliutils.GetMOrDie(&env, zuulBackupPod, &pod)
 
 	// https://zuul-ci.org/docs/zuul/latest/client.html
 	zuulBackupPath := backupDir + "/" + ZuulBackupPath
@@ -141,22 +127,21 @@ func createZuulKeypairBackup(ns string, backupDir string, kubeClientSet *kuberne
 	}
 
 	// Execute command for backup
-	cliutils.RunRemoteCmd(kubeContext, ns, pod.Name, controllers.ZuulSchedulerIdent, backupZuulCMD)
+	cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.ZuulSchedulerIdent, backupZuulCMD)
 
 	// Take output of the backup
-	commandBuffer := cliutils.RunRemoteCmd(kubeContext, ns, pod.Name, controllers.ZuulSchedulerIdent, backupZuulPrintCMD)
+	commandBuffer := cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.ZuulSchedulerIdent, backupZuulPrintCMD)
 
 	// write stdout to file
 	cliutils.WriteContentToFile(zuulBackupPath, commandBuffer.Bytes(), 0640)
 
 	// Remove key file from the pod
-	cliutils.RunRemoteCmd(kubeContext, ns, pod.Name, controllers.ZuulSchedulerIdent, backupZuulRemoveCMD)
+	cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.ZuulSchedulerIdent, backupZuulRemoveCMD)
 
 	ctrl.Log.Info("Finished doing Zuul private keys backup!")
 }
 
-func createMySQLBackup(ns string, backupDir string, kubeClientSet *kubernetes.Clientset,
-	kubeContext string) {
+func createMySQLBackup(backupDir string, kubeContext string, env cliutils.ENV) {
 	ctrl.Log.Info("Doing DB backup...")
 
 	// create MariaDB dir
@@ -165,7 +150,8 @@ func createMySQLBackup(ns string, backupDir string, kubeClientSet *kubernetes.Cl
 
 	cliutils.CreateDirectory(mariaDBBackupDir, 0755)
 
-	pod := cliutils.GetPodByName(dbBackupPod, ns, kubeClientSet)
+	pod := apiv1.Pod{}
+	cliutils.GetMOrDie(&env, dbBackupPod, &pod)
 
 	// NOTE: We use option: --single-transaction to avoid error:
 	// "The user specified as a definer ('mariadb.sys'@'localhost') does not exist" when using LOCK TABLES
@@ -177,7 +163,7 @@ func createMySQLBackup(ns string, backupDir string, kubeClientSet *kubernetes.Cl
 	}
 
 	// just create Zuul DB backup
-	commandBuffer := cliutils.RunRemoteCmd(kubeContext, ns, pod.Name, controllers.MariaDBIdent, backupZuulCMD)
+	commandBuffer := cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.MariaDBIdent, backupZuulCMD)
 
 	// write stdout to file
 	cliutils.WriteContentToFile(mariadbBackupPath, commandBuffer.Bytes(), 0640)
@@ -192,24 +178,25 @@ func backupCmd(kmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// prepare to make backup
-	ns, kubeClientSet, kubeContext := prepareBackup(kmd, backupDir)
+	cliutils.CreateDirectory(backupDir, 0755)
 
-	if ns == "" {
+	kubeContext, env := cliutils.GetCLIENV(kmd)
+
+	if env.Ns == "" {
 		ctrl.Log.Error(errors.New("no namespace set"), "You need to specify the namespace!")
 		os.Exit(1)
 	}
 
-	ctrl.Log.Info("Starting backup process for services in namespace: " + ns)
+	ctrl.Log.Info("Starting backup process for services in namespace: " + env.Ns)
 
 	// create secret backup
-	createSecretBackup(ns, backupDir, kubeClientSet)
+	createSecretBackup(backupDir, env)
 
 	// create zuul backup
-	createZuulKeypairBackup(ns, backupDir, kubeClientSet, kubeContext)
+	createZuulKeypairBackup(backupDir, kubeContext, env)
 
 	// create DB backup
-	createMySQLBackup(ns, backupDir, kubeClientSet, kubeContext)
+	createMySQLBackup(backupDir, kubeContext, env)
 
 }
 

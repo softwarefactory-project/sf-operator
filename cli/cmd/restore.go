@@ -21,7 +21,6 @@ package cmd
 */
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -33,39 +32,19 @@ import (
 	"github.com/spf13/cobra"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func prepareRestore(kmd *cobra.Command) (string, *kubernetes.Clientset, string) {
-
-	cliCtx, err := cliutils.GetCLIContext(kmd)
-	if err != nil {
-		ctrl.Log.Error(err, "Error initializing CLI:")
-		os.Exit(1)
-	}
-
-	kubeContext := cliCtx.KubeContext
-	_, kubeClientSet := cliutils.GetClientset(kubeContext)
-	return cliCtx.Namespace, kubeClientSet, kubeContext
-}
-
-func restoreSecret(ns string, backupDir string, kubeContext string) {
+func restoreSecret(backupDir string, env cliutils.ENV) {
 	ctrl.Log.Info("Restoring secrets...")
-
-	env := cliutils.ENV{
-		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-		Ctx: context.TODO(),
-		Ns:  ns,
-	}
 
 	for _, sec := range SecretsToBackup {
 		pathToSecret := backupDir + "/" + SecretsBackupPath + "/" + sec + ".yaml"
 		secretContent := cliutils.ReadYAMLToMapOrDie(pathToSecret)
 
-		var secret corev1.Secret
+		secret := apiv1.Secret{}
 		if cliutils.GetMOrDie(&env, sec, &secret) {
 			secretMap := secretContent["data"].(map[string]interface{})
 			for key, value := range secretMap {
@@ -88,16 +67,17 @@ func restoreSecret(ns string, backupDir string, kubeContext string) {
 
 }
 
-func restoreDB(ns string, backupDir string, kubeClientSet *kubernetes.Clientset, kubeContext string) {
+func restoreDB(backupDir string, kubeContext string, env cliutils.ENV) {
 	ctrl.Log.Info("Restoring DB...")
-	pod := cliutils.GetPodByName(dbBackupPod, ns, kubeClientSet)
+	pod := apiv1.Pod{}
+	cliutils.GetMOrDie(&env, dbBackupPod, &pod)
 
 	kubectlPath := cliutils.GetKubectlPath()
 	dropDBCMD := []string{
 		"mysql",
 		"-e DROP DATABASE zuul;",
 	}
-	cliutils.RunRemoteCmd(kubeContext, ns, pod.Name, controllers.MariaDBIdent, dropDBCMD)
+	cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.MariaDBIdent, dropDBCMD)
 
 	mariadbBackupPath := backupDir + "/" + DBBackupPath
 
@@ -106,32 +86,22 @@ func restoreDB(ns string, backupDir string, kubeClientSet *kubernetes.Clientset,
 	// but in that case, we need to do it via system kubernetes client.
 	executeCommand := fmt.Sprintf(
 		"cat %s | %s -n %s exec -it %s -c %s -- sh -c \"mysql -h0\"",
-		mariadbBackupPath, kubectlPath, ns, pod.Name, controllers.MariaDBIdent,
+		mariadbBackupPath, kubectlPath, env.Ns, pod.Name, controllers.MariaDBIdent,
 	)
 
-	cliutils.ExecuteKubectlClient(ns, pod.Name, controllers.MariaDBIdent, executeCommand)
+	cliutils.ExecuteKubectlClient(env.Ns, pod.Name, controllers.MariaDBIdent, executeCommand)
 
 	ctrl.Log.Info("Finished restoring DB from backup!")
 }
-func restoreZuul(ns string, backupDir string, kubeClientSet *kubernetes.Clientset, kubeContext string) {
+func restoreZuul(backupDir string, kubeContext string, env cliutils.ENV) {
 	ctrl.Log.Info("Restoring Zuul...")
-	pod := cliutils.GetPodByName(zuulBackupPod, ns, kubeClientSet)
+	pod := apiv1.Pod{}
+	cliutils.GetMOrDie(&env, zuulBackupPod, &pod)
 
 	// ensure that pod does not have any restore file
-	restoreZuulRemoveCMD := []string{
-		"rm",
-		"-rf",
-		"/tmp/zuul-import",
-	}
-	cliutils.RunRemoteCmd(kubeContext, ns, pod.Name, controllers.ZuulSchedulerIdent, restoreZuulRemoveCMD)
-
-	// create empty directory for future restore
-	restoreZuulCreateDirCMD := []string{
-		"mkdir",
-		"-p",
-		"/tmp/zuul-import",
-	}
-	cliutils.RunRemoteCmd(kubeContext, ns, pod.Name, controllers.ZuulSchedulerIdent, restoreZuulCreateDirCMD)
+	cleanCMD := []string{
+		"bash", "-c", "rm -rf /tmp/zuul-import && mkdir -p /tmp/zuul-import"}
+	cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.ZuulSchedulerIdent, cleanCMD)
 
 	// copy the Zuul private keys backup to pod
 	// tar cf - -C /tmp/backup/zuul zuul.keys | /usr/bin/kubectl exec -i -n sf zuul-scheduler-0 -c zuul-scheduler -- tar xf -  -C /tmp
@@ -140,38 +110,26 @@ func restoreZuul(ns string, backupDir string, kubeClientSet *kubernetes.Clientse
 	baseFile := filepath.Base(ZuulBackupPath)
 	executeCommand := fmt.Sprintf(
 		"tar cf - -C %s %s | %s exec -i -n %s %s -c %s -- tar xf - -C /tmp/zuul-import",
-		basePath, baseFile, kubectlPath, ns, pod.Name, controllers.ZuulSchedulerIdent,
+		basePath, baseFile, kubectlPath, env.Ns, pod.Name, controllers.ZuulSchedulerIdent,
 	)
 	ctrl.Log.Info("Executing " + executeCommand)
 
-	cliutils.ExecuteKubectlClient(ns, pod.Name, controllers.ZuulSchedulerIdent, executeCommand)
+	cliutils.ExecuteKubectlClient(env.Ns, pod.Name, controllers.ZuulSchedulerIdent, executeCommand)
 
 	// https://zuul-ci.org/docs/zuul/latest/client.html
-	restoreZuulCMD := []string{
-		"zuul-admin",
-		"import-keys",
-		"--force",
-		"/tmp/zuul-import/" + baseFile,
-	}
+	restoreCMD := []string{
+		"bash", "-c", "zuul-admin import-keys --force /tmp/zuul-import/" + baseFile + " && " +
+			"rm -rf /tmp/zuul-import"}
 
 	// Execute command for restore
-	cliutils.RunRemoteCmd(kubeContext, ns, pod.Name, controllers.ZuulSchedulerIdent, restoreZuulCMD)
-
-	// remove after all
-	cliutils.RunRemoteCmd(kubeContext, ns, pod.Name, controllers.ZuulSchedulerIdent, restoreZuulRemoveCMD)
+	cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.ZuulSchedulerIdent, restoreCMD)
 
 	ctrl.Log.Info("Finished doing Zuul private keys restore!")
 
 }
 
-func clearComponents(ns string, kubeContext string) {
-	ctrl.Log.Info("Removing components requiring a complete restart ...")
-
-	env := cliutils.ENV{
-		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-		Ctx: context.TODO(),
-		Ns:  ns,
-	}
+func clearComponents(env cliutils.ENV) {
+	ctrl.Log.Info("Removing components requirering a complete restart ...")
 
 	for _, stsName := range []string{"zuul-scheduler", "zuul-executor", "zuul-merger", "nodepool-builder", "zookeeper"} {
 		cliutils.DeleteOrDie(&env, &appsv1.StatefulSet{
@@ -209,18 +167,17 @@ func restoreCmd(kmd *cobra.Command, args []string) {
 
 	}
 
-	// prepare to make restore
-	ns, kubeClientSet, kubeContext := prepareRestore(kmd)
+	kubeContext, env := cliutils.GetCLIENV(kmd)
 
-	if ns == "" {
+	if env.Ns == "" {
 		ctrl.Log.Info("You did not specify the namespace!")
 		os.Exit(1)
 	}
 
-	restoreZuul(ns, backupDir, kubeClientSet, kubeContext)
-	restoreSecret(ns, backupDir, kubeContext)
-	restoreDB(ns, backupDir, kubeClientSet, kubeContext)
-	clearComponents(ns, kubeContext)
+	restoreZuul(backupDir, kubeContext, env)
+	restoreSecret(backupDir, env)
+	restoreDB(backupDir, kubeContext, env)
+	clearComponents(env)
 
 }
 

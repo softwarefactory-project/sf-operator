@@ -22,12 +22,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/fs"
 	"os"
 	"os/exec"
 	"reflect"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -51,7 +52,6 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -194,6 +194,25 @@ func CreateKubernetesClientOrDie(contextName string) client.Client {
 		os.Exit(1)
 	}
 	return cli
+}
+
+func GetCLIENV(kmd *cobra.Command) (string, ENV) {
+
+	cliCtx, err := GetCLIContext(kmd)
+	if err != nil {
+		ctrl.Log.Error(err, "Error initializing CLI:")
+		os.Exit(1)
+	}
+
+	kubeContext := cliCtx.KubeContext
+
+	env := ENV{
+		Cli: CreateKubernetesClientOrDie(kubeContext),
+		Ctx: context.TODO(),
+		Ns:  cliCtx.Namespace,
+	}
+
+	return kubeContext, env
 }
 
 func GetM(env *ENV, name string, obj client.Object) (bool, error) {
@@ -418,24 +437,6 @@ func RunRemoteCmd(kubeContext string, namespace string, podName string, containe
 		os.Exit(1)
 	}
 	return buffer
-}
-
-func GetPodByName(podName string, ns string, kubeClientSet *kubernetes.Clientset) *apiv1.Pod {
-	pod, err := kubeClientSet.CoreV1().Pods(ns).Get(context.TODO(), podName, metav1.GetOptions{})
-	if err != nil {
-		ctrl.Log.Error(err, "Can not get pod "+podName)
-		os.Exit(1)
-	}
-	return pod
-}
-
-func GetSecretByName(secretName string, ns string, kubeClientSet *kubernetes.Clientset) *apiv1.Secret {
-	secret, err := kubeClientSet.CoreV1().Secrets(ns).Get(context.TODO(), secretName, metav1.GetOptions{})
-	if err != nil {
-		ctrl.Log.Error(err, "Can not get pod "+secretName)
-		os.Exit(1)
-	}
-	return secret
 }
 
 func ReadYAMLToMapOrDie(filePath string) map[string]interface{} {
