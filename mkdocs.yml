@@ -66,7 +66,6 @@ nav:
   - Operator:
       - operator/index.md
       - Getting started: operator/getting_started.md
-      - Uninstall: operator/uninstall.md
   - Deploy:
       - deployment/index.md
       - Getting started: deployment/getting_started.md
@@ -82,7 +81,6 @@ nav:
           - Adding third-party certificates into the CA trust chain: deployment/corporate-certificates.md
       - Monitoring: deployment/monitoring.md
       - Logging: deployment/logging.md
-      - Deleting a deployment: deployment/delete.md
   - User:
       - user/index.md
       - Services configuration:

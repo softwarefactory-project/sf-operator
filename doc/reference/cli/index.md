@@ -14,23 +14,23 @@ deployments, beyond what can be defined in a custom resource manifest.
     - [create gerrit](#create-gerrit)
     - [create microshift](#create-microshift)
     - [create standalone-sf](#create-standalone-sf)
+    - [getImagesSecurityIssues](#getimagessecurityissues)
     - [run-tests](#run-tests)
     - [wipe gerrit](#wipe-gerrit)
-    - [getImagesSecurityIssues](#getimagessecurityissues)
+    - [wipe sf](#wipe-sf)
   - [Init](#init)
   - [Nodepool](#nodepool)
     - [configure providers-secrets](#configure-providers-secrets)
     - [create openshiftpods-namespace](#create-openshiftpods-namespace)
     - [get builder-ssh-key](#get-builder-ssh-key)
     - [get providers-secrets](#get-providers-secrets)
-  - [Operator](#operator)
-  - [SF](#sf)
-    - [backup](#backup)
-    - [bootstrap-tenant](#bootstrap-tenant)
-    - [configure TLS](#configure-tls)
-    - [restore](#restore)
-    - [wipe](#wipe)
-  - [Zuul](#zuul)
+  1. [Operator](#operator)
+  1. [SF](#sf)
+    1. [backup](#backup)
+    1. [bootstrap-tenant](#bootstrap-tenant)
+    1. [configure TLS](#configure-tls)
+    1. [restore](#restore)
+  1. [Zuul](#zuul)
     - [create auth-token](#create-auth-token)
     - [create client-config](#create-client-config)
 
@@ -281,6 +281,22 @@ rebuild container images to benefit last security fixes from the base OS.
 sf-operator dev getImagesSecurityIssues
 ```
 
+#### wipe sf
+
+Delete a deployed Software Factory and optionally delete the data (PVC) and the
+sf-operator deployment.
+
+```sh
+sf-operator [GLOBAL FLAGS] dev wipe sf [FLAGS]
+```
+
+Flags:
+
+| Argument | Type | Description | Optional | Default |
+|----------|------|-------|----|----|
+| --rm-data | boolean | Delete also persistent data | yes | False |
+| --rm-operator | boolean | [sf] Delete also the operator installation | yes | False |
+
 ### Init
 
 The `init` subcommand can be used to initialize a CLI configuration file, or a sample manifest for deploying Software Factory.
@@ -496,26 +512,6 @@ Available flags:
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 | --backup_dir | string | The path to the backup directory to restore | yes | - |
-
-
-#### wipe
-
-The `wipe` subcommand can be used to remove all Software Factory instances in the provided namespace,
-their persistent volumes, and even remove the SF operator completely.
-
-The default behavior is to stop and remove all containers related to a Software Factory deployment, and
-keep the existing persistent volumes.
-
-```sh
-sf-operator [GLOBAL FLAGS] SF wipe [FLAGS]
-```
-
-Flags:
-
-| Argument | Type | Description | Optional | Default |
-|----------|------|-------|----|----|
-| --rm-data | boolean | Also delete all persistent volumes after removing the instances | yes | False |
-| --all | boolean | Remove all data like with the `--rm-data` flag, and remove the operator from the cluster | yes | False |
 
 ### Zuul
 

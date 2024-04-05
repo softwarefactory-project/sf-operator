@@ -16,8 +16,9 @@
           pkgs.ansible
           pkgs.jq
           pkgs.k9s
-          pkgs.python310Packages.websocket-client
-          pkgs.python310Packages.kubernetes
+          pkgs.bashInteractive
+          pkgs.python311Packages.websocket-client
+          pkgs.python311Packages.kubernetes
           pkgs.openssl
         ];
         shellHook = ''

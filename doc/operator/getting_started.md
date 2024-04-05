@@ -3,7 +3,7 @@
 
 1. [Prerequisites](#prerequisites)
 2. [Installing the Operator](#installing-the-operator)
-4. [Troubleshooting](#troubleshooting)
+4. [Deinstallation the Operator](#deinstalling-the-operator)
 5. [Next steps](#next-steps)
 
 ## Prerequisites
@@ -80,7 +80,6 @@ You can also confirm that the operator's Custom Resource Definitions (CRD) were 
 
 ```sh
 kubectl get crd -o custom-columns=NAME:.metadata.name | grep softwarefactory-project.io
-logservers.sf.softwarefactory-project.io
 softwarefactories.sf.softwarefactory-project.io
 ```
 
@@ -91,9 +90,9 @@ Note that the SF-Operator OLM package depends on the following operators:
 
 Congratulations, the SF Operator is now running on your cluster!
 
-## Troubleshooting
+## Deinstalling the operator
 
-TBD
+For further details on how to remove an operator, see [OLM's upstream documentation](https://olm.operatorframework.io/docs/tasks/uninstall-operator/).
 
 ## Next steps
 

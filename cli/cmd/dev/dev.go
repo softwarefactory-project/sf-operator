@@ -27,19 +27,25 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/operator-framework/api/pkg/operators/v1alpha1"
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/cli/cmd/dev/gerrit"
 	ms "github.com/softwarefactory-project/sf-operator/cli/cmd/dev/microshift"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
 
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var devCreateAllowedArgs = []string{"gerrit", "microshift", "standalone-sf", "demo-env"}
-var devWipeAllowedArgs = []string{"gerrit"}
+var devWipeAllowedArgs = []string{"gerrit", "sf"}
 var devRunTestsAllowedArgs = []string{"olm", "standalone", "upgrade"}
 
 var microshiftUser = "cloud-user"
@@ -261,19 +267,153 @@ func devCreate(kmd *cobra.Command, args []string) {
 	}
 }
 
+func getOperatorSelector() labels.Selector {
+	selector := labels.NewSelector()
+	req, err := labels.NewRequirement(
+		"operators.coreos.com/sf-operator.operators",
+		selection.Exists,
+		[]string{})
+	if err != nil {
+		ctrl.Log.Error(err, "could not set label selector to clean subscriptions")
+		os.Exit(1)
+	}
+	return selector.Add(*req)
+}
+
+func cleanSubscription(env *cliutils.ENV) {
+	selector := getOperatorSelector()
+
+	subscriptionListOpts := []client.ListOption{
+		client.InNamespace("operators"),
+		client.MatchingLabelsSelector{
+			Selector: selector,
+		},
+	}
+
+	subsList := v1alpha1.SubscriptionList{}
+	if err := env.Cli.List(env.Ctx, &subsList, subscriptionListOpts...); err != nil {
+		ctrl.Log.Error(err, "error listing subscriptions")
+		os.Exit(1)
+	}
+	if len(subsList.Items) > 0 {
+		subscriptionDeleteOpts := []client.DeleteAllOfOption{
+			client.InNamespace("operators"),
+			client.MatchingLabelsSelector{
+				Selector: selector,
+			},
+		}
+		sub := v1alpha1.Subscription{}
+		cliutils.DeleteAllOfOrDie(env, &sub, subscriptionDeleteOpts...)
+	}
+}
+
+func cleanCatalogSource(env *cliutils.ENV) {
+	cs := v1alpha1.CatalogSource{}
+	cs.SetName("sf-operator-catalog")
+	cs.SetNamespace("operators")
+	if !cliutils.DeleteOrDie(env, &cs) {
+		ctrl.Log.Info("CatalogSource \"sf-operator-catalog\" not found")
+	}
+}
+
+func cleanClusterServiceVersion(env *cliutils.ENV) {
+	selector := getOperatorSelector()
+
+	subscriptionListOpts := []client.ListOption{
+		client.InNamespace("operators"),
+		client.MatchingLabelsSelector{
+			Selector: selector,
+		},
+	}
+
+	csvsList := v1alpha1.ClusterServiceVersionList{}
+	if err := env.Cli.List(env.Ctx, &csvsList, subscriptionListOpts...); err != nil {
+		ctrl.Log.Error(err, "error listing cluster service versions")
+		os.Exit(1)
+	}
+	if len(csvsList.Items) > 0 {
+		csvDeleteOpts := []client.DeleteAllOfOption{
+			client.InNamespace("operators"),
+			client.MatchingLabelsSelector{
+				Selector: selector,
+			},
+		}
+		csv := v1alpha1.ClusterServiceVersion{}
+		cliutils.DeleteAllOfOrDie(env, &csv, csvDeleteOpts...)
+	}
+}
+
+func cleanSFInstance(env *cliutils.ENV, ns string) {
+	var sf sfv1.SoftwareFactory
+	sfDeleteOpts := []client.DeleteAllOfOption{
+		client.InNamespace(ns),
+	}
+	if err := env.Cli.DeleteAllOf(env.Ctx, &sf, sfDeleteOpts...); err != nil {
+		ctrl.Log.Info("SoftwareFactory resource not found")
+	}
+	var cm apiv1.ConfigMap
+	cm.SetName("sf-standalone-owner")
+	cm.SetNamespace(ns)
+	if !cliutils.DeleteOrDie(env, &cm) {
+		ctrl.Log.Info("standalone mode configmap not found")
+	}
+}
+
+func cleanPVCs(env *cliutils.ENV, ns string) {
+	selector := labels.NewSelector()
+	appReq, err := labels.NewRequirement(
+		"app",
+		selection.In,
+		[]string{"sf"})
+	if err != nil {
+		ctrl.Log.Error(err, "could not set app label requirement to clean PVCs")
+		os.Exit(1)
+	}
+	runReq, err := labels.NewRequirement(
+		"run",
+		selection.NotIn,
+		[]string{"gerrit"})
+	if err != nil {
+		ctrl.Log.Error(err, "could not set run label requirement to clean PVCs")
+		os.Exit(1)
+	}
+	selector = selector.Add([]labels.Requirement{*appReq, *runReq}...)
+	pvcDeleteOpts := []client.DeleteAllOfOption{
+		client.InNamespace(ns),
+		client.MatchingLabelsSelector{
+			Selector: selector,
+		},
+	}
+	var pvc apiv1.PersistentVolumeClaim
+	cliutils.DeleteAllOfOrDie(env, &pvc, pvcDeleteOpts...)
+}
+
 func devWipe(kmd *cobra.Command, args []string) {
-	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, devCreateAllowedArgs)
+	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, devWipeAllowedArgs)
 	target := args[0]
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
+	rmData, _ := kmd.Flags().GetBool("rm-data")
+	rmOp, _ := kmd.Flags().GetBool("rm-operator")
+	env := cliutils.ENV{
+		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
+		Ctx: context.TODO(),
+		Ns:  ns,
+	}
 	if target == "gerrit" {
-		rmData, _ := kmd.Flags().GetBool("rm-data")
-		env := cliutils.ENV{
-			Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-			Ctx: context.TODO(),
-			Ns:  ns,
-		}
 		gerrit.WipeGerrit(&env, rmData)
+	} else if target == "sf" {
+		cleanSFInstance(&env, ns)
+		if rmData {
+			ctrl.Log.Info("Removing dangling persistent volume claims if any...")
+			cleanPVCs(&env, ns)
+		}
+		if rmOp {
+			ctrl.Log.Info("Removing SF Operator if present...")
+			cleanSubscription(&env)
+			cleanCatalogSource(&env)
+			cleanClusterServiceVersion(&env)
+		}
 	} else {
 		ctrl.Log.Error(errors.New("unsupported target"), "Invalid argument '"+target+"'")
 	}
@@ -377,6 +517,7 @@ func MkDevCmd() *cobra.Command {
 
 	var (
 		deleteData              bool
+		deleteOperator          bool
 		verifyCloneSSL          bool
 		msSkipDeploy            bool
 		msSkipLocalSetup        bool
@@ -424,7 +565,8 @@ func MkDevCmd() *cobra.Command {
 		}
 	)
 	// args
-	wipeCmd.Flags().BoolVar(&deleteData, "rm-data", false, "Delete also persistent data. This will result in data loss, like review history.")
+	wipeCmd.Flags().BoolVar(&deleteData, "rm-data", false, "Delete also persistent data")
+	wipeCmd.Flags().BoolVar(&deleteOperator, "rm-operator", false, "[sf] Delete also the operator installation")
 
 	cloneAsAdminCmd.Flags().BoolVar(&verifyCloneSSL, "verify", false, "Verify SSL endpoint")
 

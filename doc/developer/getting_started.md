@@ -18,7 +18,7 @@ You will need to install the following tools on your dev machine:
 - kubectl
 - git
 - git-review
-- golang # >= 1.19
+- golang >= 1.21
 - make
 - ansible-core
 - jq
@@ -51,7 +51,7 @@ kubectl config set-context microshift --namespace=sf
 [Create a sf-operator configuration file](../reference/cli/index.md#config) to your liking:
 
 ```sh
-sf-operator init config --dev > /path/to/sfcli.yaml
+go run ./main.go init config --dev > /path/to/sfcli.yaml
 ```
 
 Then edit it as necessary, for example by setting up a custom FQDN. Below is an example you can copy and edit.
@@ -65,7 +65,7 @@ Then edit it as necessary, for example by setting up a custom FQDN. Below is an 
 Then run the `sf-operator` command:
 
 ```sh
-sf-operator --config /path/to/sfcli.yaml dev create demo-env
+go run ./main.go --config /path/to/sfcli.yaml dev create demo-env
 ```
 
 [This command](./../reference/cli/index.md#create-demo-env) performs the following tasks:
@@ -98,7 +98,7 @@ To iterate on the development of the `sf-operator` you can either start the oper
     then run the operator with the following command:
 
     ```sh
-    sf-operator --namespace sf operator
+    go run ./main.go --namespace sf operator
     ```
 
     !!! note
@@ -114,7 +114,7 @@ To iterate on the development of the `sf-operator` you can either start the oper
     Run the operator with the following command:
 
     ```sh
-    sf-operator --namespace sf dev create standalone-sf --cr playbooks/files/sf.yaml
+    go run ./main.go --namespace sf dev create standalone-sf --cr playbooks/files/sf.yaml
     ```
 
     !!! note
@@ -140,7 +140,7 @@ firefox https://gerrit.<FQDN>
 Wipe your deployment by running:
 
 ```sh
-sf-operator SF wipe --all
+go run ./main.go --namespace sf dev wipe sf --rm-data
 ```
 
 ## Next actions
