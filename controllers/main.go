@@ -14,8 +14,10 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	apiroutev1 "github.com/openshift/api/route/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -78,11 +80,19 @@ func GetConfigContextOrDie(contextName string) *rest.Config {
 }
 
 func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection bool, oneShot bool) {
+	newCache := func(config *rest.Config, opts cache.Options) (cache.Cache, error) { return cache.New(config, opts) }
+	if ns != "" {
+		newCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+			opts.DefaultNamespaces = map[string]cache.Config{ns: {}}
+			return cache.New(config, opts)
+		}
+	}
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Namespace:              ns,
-		Scheme:                 controllerScheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		NewCache: newCache,
+		Scheme:   controllerScheme,
+		Metrics: metrics.Options{
+			BindAddress: metricsAddr,
+		},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "01752ab0.softwarefactory-project.io",
