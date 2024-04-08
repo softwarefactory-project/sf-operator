@@ -668,7 +668,7 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 	case 1:
 		r.log.V(1).Info("Volume expansion required for  " + pvcName +
 			". current size: " + currentQTY.String() + " -> new size: " + newQTY.String())
-		newResources := apiv1.ResourceRequirements{
+		newResources := apiv1.VolumeResourceRequirements{
 			Requests: apiv1.ResourceList{
 				"storage": newQTY,
 			},

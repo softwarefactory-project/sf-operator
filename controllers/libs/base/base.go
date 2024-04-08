@@ -15,12 +15,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // DefaultPodSecurityContext is the PodSecurityContext used by sf-operator Pods
 var DefaultPodSecurityContext = apiv1.PodSecurityContext{
-	RunAsNonRoot: pointer.Bool(true),
+	RunAsNonRoot: ptr.To(true),
 	SeccompProfile: &apiv1.SeccompProfile{
 		Type: "RuntimeDefault",
 	},
@@ -29,8 +29,8 @@ var DefaultPodSecurityContext = apiv1.PodSecurityContext{
 // MkSecurityContext produces a SecurityContext
 func MkSecurityContext(privileged bool) *apiv1.SecurityContext {
 	return &apiv1.SecurityContext{
-		Privileged:               pointer.Bool(privileged),
-		AllowPrivilegeEscalation: pointer.Bool(privileged),
+		Privileged:               ptr.To(privileged),
+		AllowPrivilegeEscalation: ptr.To(privileged),
 		Capabilities: &apiv1.Capabilities{
 			Drop: []apiv1.Capability{
 				"ALL",
@@ -177,7 +177,7 @@ func MkPVC(name string, ns string, storageParams StorageConfig, accessMode apiv1
 		Spec: apiv1.PersistentVolumeClaimSpec{
 			StorageClassName: &storageParams.StorageClassName,
 			AccessModes:      []apiv1.PersistentVolumeAccessMode{accessMode},
-			Resources: apiv1.ResourceRequirements{
+			Resources: apiv1.VolumeResourceRequirements{
 				Requests: apiv1.ResourceList{
 					"storage": qty,
 				},
@@ -293,7 +293,7 @@ func MkHTTPSRoute(
 			To: apiroutev1.RouteTargetReference{
 				Kind:   "Service",
 				Name:   serviceName,
-				Weight: pointer.Int32(100),
+				Weight: ptr.To[int32](100),
 			},
 			Port: &apiroutev1.RoutePort{
 				TargetPort: intstr.FromInt(port),

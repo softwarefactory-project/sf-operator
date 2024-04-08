@@ -16,7 +16,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
@@ -81,7 +81,7 @@ func enableZuulLocalSource(template *apiv1.PodTemplateSpec, zuulSourceHostPath s
 		},
 	})
 	template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(true)
-	template.Spec.SecurityContext.RunAsNonRoot = pointer.Bool(false)
+	template.Spec.SecurityContext.RunAsNonRoot = ptr.To(false)
 	template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts,
 		apiv1.VolumeMount{
 			Name:      "host-mount",
@@ -570,7 +570,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	// NOTE(dpawlik): Zuul Executor needs to privileged pod, due error in the console log:
 	// "bwrap: Can't bind mount /oldroot/etc/resolv.conf on /newroot/etc/resolv.conf: Permission denied""
 	ze.Spec.Template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(true)
-	ze.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = pointer.Int64(1000)
+	ze.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To[int64](1000)
 
 	nodeExporterSidecar := monitoring.MkNodeExporterSideCarContainer(
 		"zuul-executor",
@@ -585,7 +585,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	// the same security context; or maybe it is because a volume is shared between the two?
 	// Anyhow, the simplest fix is to elevate privileges on the node exporter sidecar.
 	ze.Spec.Template.Spec.Containers[1].SecurityContext = base.MkSecurityContext(true)
-	ze.Spec.Template.Spec.Containers[1].SecurityContext.RunAsUser = pointer.Int64(1000)
+	ze.Spec.Template.Spec.Containers[1].SecurityContext.RunAsUser = ptr.To[int64](1000)
 
 	// Mount a local directory in place of the Zuul source from the container image
 	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
