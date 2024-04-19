@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+- Zookeeper version bumped to 3.8.4
+
 ### Deprecated
 ### Removed
 
@@ -13,6 +16,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 ### Security
+
+- UBI9/Zookeeper image rebuid to address reported security issues
 
 ## [v0.0.27] - 2024-03-27
 
