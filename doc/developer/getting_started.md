@@ -96,30 +96,30 @@ To iterate on the development of the `sf-operator` you can either start the oper
     ```
     
     then run the operator with the following command:
-    
+
     ```sh
     sf-operator --namespace sf operator
     ```
 
     !!! note
         The command does not return and wait for events to run the reconcile.
-    
+
     You can kill and restart this process every time you modify the code base
     to see your changes applied to the deployed resources.
-    
+
     Any change on the applied `SofwareFactory`'s `CR` will re-trigger the reconcile.
 
 === "standalone mode"
 
     Run the operator with the following command:
-     
+
     ```sh
-    sf-operator --namespace sf apply --cr playbooks/files/sf.yaml
+    sf-operator --namespace sf dev create standalone-sf --cr playbooks/files/sf.yaml
     ```
-     
+
     !!! note
         The command returns when the expected state is applied.
-     
+
     Each change to the `CR`, passed as parameter, will require a new run of the command to `reconcile` the change.
 
 
