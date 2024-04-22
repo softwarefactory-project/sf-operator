@@ -98,7 +98,7 @@ Then you can run the operator by providing the environment variable `ZUUL_LOCAL_
 For instance (using the standalone mode):
 
 ```
-ZUUL_LOCAL_SOURCE=/home/cloud-user/git/zuul/zuul sf-operator --namespace sf apply --cr playbooks/files/sf.yaml
+ZUUL_LOCAL_SOURCE=/home/cloud-user/git/zuul/zuul sf-operator --namespace sf dev create standalone-sf --cr playbooks/files/sf.yaml
 ```
 
 After any code change, you can restart the Zuul pods, for instance the zuul-scheduler pod:
@@ -131,3 +131,4 @@ tar -xf /tmp/zuul-web.tar usr/local/lib/python3.11/site-packages/zuul/web/static
 mv usr/local/lib/python3.11/site-packages/zuul/web/static static
 rm -Rf usr
 ```
+
