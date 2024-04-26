@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- Dev CLI - Add command "go run ./main.go dev getImagesSecurityIssue" to ease getting a small report of HIGH
+- Dev CLI - Add command "go run ./main.go dev getImagesSecurityIssues" to ease getting a small report of HIGH
   and CRITICAL Security issues reported by quay.io on container images used by the sf-operator.
 
 ### Changed

@@ -274,7 +274,7 @@ Flags:
 #### getImagesSecurityIssues
 
 To get a report of Security Issues reported by quay.io for container images used by the
-sf-operator run: `dev getImageSecurityIssue`. This command helps to decide if we need to
+sf-operator run: `dev getImagesSecurityIssues`. This command helps to decide if we need to
 rebuild container images to benefit last security fixes from the base OS.
 
 ```sh
