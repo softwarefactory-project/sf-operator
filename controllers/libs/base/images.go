@@ -24,11 +24,16 @@ type Image struct {
 	Source    string `yaml:"source,omitempty"`
 }
 
-func getImage(name string) string {
+func loadImages() ContainerImages {
 	var images ContainerImages
 	if err := yaml.UnmarshalStrict([]byte(imagesYAML), &images); err != nil {
 		panic(err)
 	}
+	return images
+}
+
+func getImage(name string) string {
+	images := loadImages()
 	for _, image := range images.Images {
 		if image.Name == name {
 			return image.Container + ":" + image.Version
@@ -36,6 +41,17 @@ func getImage(name string) string {
 		}
 	}
 	panic("Unknown container image: " + name)
+}
+
+func GetSelfManagedImages() []Image {
+	ret := []Image{}
+	images := loadImages()
+	for _, image := range images.Images {
+		if image.Source != "" {
+			ret = append(ret, image)
+		}
+	}
+	return ret
 }
 
 func ZuulExecutorImage() string {

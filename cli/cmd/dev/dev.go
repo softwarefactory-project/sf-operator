@@ -19,7 +19,10 @@ package dev
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,6 +31,7 @@ import (
 	ms "github.com/softwarefactory-project/sf-operator/cli/cmd/dev/microshift"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"k8s.io/client-go/rest"
 
 	"github.com/spf13/cobra"
@@ -293,6 +297,79 @@ func devCloneAsAdmin(kmd *cobra.Command, args []string) {
 	gerrit.CloneAsAdmin(&env, fqdn, repoName, dest, verify)
 }
 
+func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
+
+	const quaySFBaseURL = "https://quay.io/api/v1/repository/software-factory/"
+
+	type Vuln struct {
+		Severity string
+		Link     string
+		Name     string
+	}
+
+	type Feature struct {
+		Name            string
+		Vulnerabilities []Vuln
+	}
+
+	type Layer struct {
+		Features []Feature
+	}
+
+	type Data struct {
+		Layer Layer
+	}
+
+	type Scan struct {
+		Status string
+		Data   Data
+	}
+
+	type Tag struct {
+		ManifestDigest string `json:"manifest_digest"`
+	}
+
+	type Image struct {
+		Name string
+		Tags map[string]Tag
+	}
+
+	getImageDigest := func(image base.Image) string {
+
+		url := quaySFBaseURL + image.Name
+		resp, _ := http.Get(url)
+		target := Image{}
+		json.NewDecoder(resp.Body).Decode(&target)
+
+		return target.Tags[image.Version].ManifestDigest
+
+	}
+
+	getImageReport := func(image base.Image) {
+
+		digest := getImageDigest(image)
+		manifest := image.Name + "/manifest/" + digest
+		url := quaySFBaseURL + manifest + "/security"
+		resp, _ := http.Get(url)
+		target := Scan{}
+		json.NewDecoder(resp.Body).Decode(&target)
+
+		println("\nScan result for: " + image.Name)
+		for _, feature := range target.Data.Layer.Features {
+			for _, vuln := range feature.Vulnerabilities {
+				if vuln.Severity == "High" || vuln.Severity == "Critical" {
+					fmt.Printf("- %s [%s] %s\n", feature.Name, vuln.Severity, vuln.Name)
+				}
+			}
+		}
+	}
+
+	for _, image := range base.GetSelfManagedImages() {
+		getImageReport(image)
+	}
+
+}
+
 func MkDevCmd() *cobra.Command {
 
 	var (
@@ -337,6 +414,11 @@ func MkDevCmd() *cobra.Command {
 			ValidArgs: devRunTestsAllowedArgs,
 			Run:       devRunTests,
 		}
+		getImagesSecurityIssuesCmd = &cobra.Command{
+			Use:  "getImagesSecurityIssues",
+			Long: "Return the list of security issues reported by Quay.io (only High and Critical)",
+			Run:  getImagesSecurityIssues,
+		}
 	)
 	// args
 	wipeCmd.Flags().BoolVar(&deleteData, "rm-data", false, "Delete also persistent data. This will result in data loss, like review history.")
@@ -362,5 +444,8 @@ func MkDevCmd() *cobra.Command {
 	devCmd.AddCommand(wipeCmd)
 	devCmd.AddCommand(cloneAsAdminCmd)
 	devCmd.AddCommand(runTestsCmd)
+
+	devCmd.AddCommand(getImagesSecurityIssuesCmd)
+
 	return devCmd
 }

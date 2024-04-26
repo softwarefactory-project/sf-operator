@@ -16,6 +16,7 @@ deployments, beyond what can be defined in a custom resource manifest.
     - [create standalone-sf](#create-standalone-sf)
     - [run-tests](#run-tests)
     - [wipe gerrit](#wipe-gerrit)
+    - [getImagesSecurityIssues](#getimagessecurityissues)
   1. [Init](#init)
   1. [Nodepool](#nodepool)
     - [configure providers-secrets](#configure-providers-secrets)
@@ -269,6 +270,16 @@ Flags:
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 | --rm-data | boolean | Also delete persistent data (repositories, reviews) | yes | False |
+
+#### getImagesSecurityIssues
+
+To get a report of Security Issues reported by quay.io for container images used by the
+sf-operator run: `dev getImageSecurityIssue`. This command helps to decide if we need to
+rebuild container images to benefit last security fixes from the base OS.
+
+```sh
+sf-operator dev getImagesSecurityIssues
+```
 
 ### Init
 
