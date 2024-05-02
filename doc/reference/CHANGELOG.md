@@ -5,12 +5,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
- - CLI - add the 'debug' flag to set the LogLevel to DEBUG
- - Log Forwarding - add preset label "labels_app" by default, its value is "sf"
+- CLI - add the 'debug' flag to set the LogLevel to DEBUG
+- Log Forwarding - add preset label "labels_app" by default, its value is "sf"
+- doc - how to set the Route for a deployment of Sofware Factory services
 
 ### Changed
 ### Deprecated
 ### Removed
+
+- Route resource and TLS related handling and CLI facilities has been removed 
+
 ### Fixed
 
 - zuul-merger: CRD logLevel parameter not handled correctly

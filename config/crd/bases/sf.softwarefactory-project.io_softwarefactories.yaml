@@ -137,23 +137,6 @@ spec:
                     - size
                     type: object
                 type: object
-              letsEncrypt:
-                description: LetsEncrypt settings for enabling using LetsEncrypt for
-                  Routes/TLS
-                properties:
-                  server:
-                    description: |-
-                      Specify the Lets encrypt server.
-                      Valid values are:
-                      "staging",
-                      "prod"
-                    enum:
-                    - prod
-                    - staging
-                    type: string
-                required:
-                - server
-                type: object
               logserver:
                 default:
                   loopDelay: 3600

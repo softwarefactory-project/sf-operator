@@ -546,9 +546,6 @@ type SoftwareFactorySpec struct {
 	// at https://`service`.`FQDN`
 	FQDN string `json:"fqdn"`
 
-	// LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS
-	LetsEncrypt *LetsEncryptSpec `json:"letsEncrypt,omitempty"`
-
 	// Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http)
 	FluentBitLogForwarding *FluentBitForwarderSpec `json:"FluentBitLogForwarding,omitempty"`
 

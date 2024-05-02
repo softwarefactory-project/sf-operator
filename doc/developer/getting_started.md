@@ -72,6 +72,7 @@ go run ./main.go --config /path/to/sfcli.yaml dev create demo-env
 - ensure the deployment of a test Gerrit instance
 - ensure the checkout of the `config`, `demo-tenant-config` and `demo-project` git repositories in the directory of your choosing (defaults to `deploy`)
 - ensure the configuration of a test openshiftpods provider for nodepool
+- ensure a Route called "sf-gateway" to target the "gateway" Service
 
 The context is now ready to run the sf-operator using the `manager` or the `standalone` modes.
 

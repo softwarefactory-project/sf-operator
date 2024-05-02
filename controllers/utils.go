@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -39,7 +38,6 @@ import (
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
-	apiroutev1 "github.com/openshift/api/route/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
@@ -279,93 +277,6 @@ func (r *SFUtilContext) EnsureService(service *apiv1.Service) {
 	}
 }
 
-// ensureRoute ensures the Route exist
-// The Route is updated if needed
-// The function returns false when the resource is just created/updated
-func (r *SFUtilContext) ensureRoute(route apiroutev1.Route, name string) bool {
-	current := apiroutev1.Route{}
-	found := r.GetM(name, &current)
-	if !found {
-		utils.LogI("Creating route, name: " + name)
-		r.CreateR(&route)
-		return false
-	} else {
-		// Route already exist - check if we need to update the Route
-		needUpdate := false
-
-		// First check the route annotations
-		if (len(route.Annotations) == 0 && len(current.Annotations) != 0) || (len(route.Annotations) != 0 && len(current.Annotations) == 0) {
-			current.Annotations = route.Annotations
-			needUpdate = true
-		}
-		if len(route.Annotations) != 0 && len(current.Annotations) != 0 {
-			if !utils.MapEquals(&route.Annotations, &current.Annotations) {
-				current.Annotations = route.Annotations
-				needUpdate = true
-			}
-		}
-
-		// Use the String repr of the RouteSpec to compare for Spec changes
-		// This comparaison mechanics may fail in case of some Route Spec default values
-		// not specified in the wanted version.
-		if route.Spec.String() != current.Spec.String() {
-			current.Spec = route.Spec
-			needUpdate = true
-		}
-
-		if needUpdate {
-			utils.LogI("Updating route, name: " + name)
-			r.UpdateR(&current)
-			return false
-		}
-	}
-	return true
-}
-
-// ensureHTTPSRoute ensures a HTTPS enabled Route exist
-// The Route is updated if needed
-// The function returns false when the controller reconcile loop must be re-triggered because
-// the route setting changed.
-func (r *SFUtilContext) ensureHTTPSRoute(
-	name string, host string, serviceName string, path string,
-	port int, annotations map[string]string, le *sfv1.LetsEncryptSpec) bool {
-
-	tlsDataReady := true
-	var sslCA, sslCrt, sslKey []byte
-
-	if le == nil {
-		// Letsencrypt config has not been set so we check the `customSSLSecretName` Secret
-		// for any custom TLS data to setup the Route
-		sslCA, sslCrt, sslKey = r.extractStaticTLSFromSecret()
-	} else {
-		// Letsencrypt config has been set so we ensure we set a Certificate via the
-		// cert-manager Issuer and then we'll setup the Route based on the Certificate's Secret
-		tlsDataReady, sslCA, sslCrt, sslKey = r.extractTLSFromLECertificateSecret(host, *le)
-	}
-
-	if !tlsDataReady {
-		return false
-	}
-
-	var route apiroutev1.Route
-
-	// Checking if there is any content and setting the Route with TLS data from the Secret
-	if len(sslCrt) > 0 && len(sslKey) > 0 {
-		utils.LogI(fmt.Sprintf("SSL certificate for Route detected, host: %s, route name: %s", host, name))
-		tls := apiroutev1.TLSConfig{
-			InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
-			Termination:                   apiroutev1.TLSTerminationEdge,
-			Certificate:                   string(sslCrt),
-			Key:                           string(sslKey),
-			CACertificate:                 string(sslCA),
-		}
-		route = base.MkHTTPSRoute(name, r.ns, host, serviceName, path, port, annotations, &tls)
-	} else {
-		route = base.MkHTTPSRoute(name, r.ns, host, serviceName, path, port, annotations, nil)
-	}
-	return r.ensureRoute(route, name)
-}
-
 // EnsureLocalCA ensures cert-manager resources exists to enable of local CA Issuer
 // This function does not support update
 func (r *SFUtilContext) EnsureLocalCA() {
@@ -379,32 +290,6 @@ func (r *SFUtilContext) EnsureLocalCA() {
 	r.GetOrCreate(&selfSignedIssuer)
 	r.GetOrCreate(&CAIssuer)
 	r.GetOrCreate(&rootCACertificate)
-}
-
-// --- Functions and Structs below are helper for handle cert-manager / Let's Encrypt ---
-
-// getLetsEncryptServer returns a tuple with the production or statging URL based on sfv1.LetsEncryptSpec
-// and the a proposed name for the Issuer.
-func getLetsEncryptServer(le sfv1.LetsEncryptSpec) (string, string) {
-	var serverURL string
-	name := ""
-	switch server := le.Server; server {
-	case sfv1.LEServerProd:
-		serverURL = "https://acme-v02.api.letsencrypt.org/directory"
-		name = "cm-le-issuer-production"
-	case sfv1.LEServerStaging:
-		serverURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
-		name = "cm-le-issuer-staging"
-	}
-	return serverURL, name
-}
-
-// This function ensures the cert-manager / Let's Encrypt issuer is created
-// Thus function does not support update
-func (r *SFUtilContext) ensureLetsEncryptIssuer(le sfv1.LetsEncryptSpec) bool {
-	server, name := getLetsEncryptServer(le)
-	issuer := cert.MkLetsEncryptIssuer(name, r.ns, server)
-	return r.GetOrCreate(&issuer)
 }
 
 //----------------------------------------------------------------------------
@@ -488,67 +373,6 @@ func (r *SFUtilContext) DebugStatefulSet(name string) {
 	dep.Spec.Template.Spec.Containers[0].Command = []string{"sleep", "infinity"}
 	r.UpdateR(&dep)
 	utils.LogI("Debugging service, name: " + name)
-}
-
-// extractStaticTLSFromSecret gets secret keys from sf-ssl-cert secret
-// Returns CA, key and crt keys.
-func (r *SFUtilContext) extractStaticTLSFromSecret() ([]byte, []byte, []byte) {
-	var customSSLSecret apiv1.Secret
-
-	if !r.GetM(CustomSSLSecretName, &customSSLSecret) {
-		return nil, nil, nil
-	} else {
-		// Fetching secret expected TLS Keys content
-		return customSSLSecret.Data["CA"], customSSLSecret.Data["crt"], customSSLSecret.Data["key"]
-	}
-}
-
-// extractTLSFromLECertificateSecret gets LetsEncrypt Certificate
-func (r *SFUtilContext) extractTLSFromLECertificateSecret(host string, le sfv1.LetsEncryptSpec) (bool, []byte, []byte, []byte) {
-	_, issuerName := getLetsEncryptServer(le)
-	const sfLECertName = "sf-le-certificate"
-	dnsNames := []string{host}
-	certificate := cert.MkCertificate(sfLECertName, r.ns, issuerName, dnsNames, sfLECertName+"-tls", nil)
-
-	current := certv1.Certificate{}
-
-	found := r.GetM(sfLECertName, &current)
-	if !found {
-		utils.LogI("Creating Cert-Manager LetsEncrypt Certificate, name: " + sfLECertName)
-		r.CreateR(&certificate)
-		return false, nil, nil, nil
-	} else {
-		if current.Spec.IssuerRef.Name != certificate.Spec.IssuerRef.Name ||
-			!reflect.DeepEqual(current.Spec.DNSNames, certificate.Spec.DNSNames) {
-			// We need to update the Certficate
-			utils.LogI("Updating Cert-Manager LetsEncrypt Certificate, name: " + sfLECertName)
-			current.Spec = *certificate.Spec.DeepCopy()
-			r.UpdateR(&current)
-			return false, nil, nil, nil
-		}
-		// The certificate is found and have the required Spec, so let's check
-		// the Ready status
-		ready := cert.IsCertificateReady(&current)
-
-		if ready {
-			utils.LogI("Cert-Manager LetsEncrypt Certificate is Ready: name: " + sfLECertName)
-			var leSSLSecret apiv1.Secret
-			if r.GetM(current.Spec.SecretName, &leSSLSecret) {
-				// Extract the TLS material
-				return true, nil, leSSLSecret.Data["tls.crt"], leSSLSecret.Data["tls.key"]
-				// Nothing more to do the rest of the function will setup the Route's TLS
-			} else {
-				// We are not able to find the Certificate's secret
-				utils.LogI(fmt.Sprintf("Cert-Manager LetsEncrypt Certificate is Ready but waiting for the Secret, name: %s, secret: %s",
-					sfLECertName, current.Spec.SecretName))
-				return false, nil, nil, nil
-			}
-		} else {
-			// Return false to force a new Reconcile as the certificate is not Ready yet
-			utils.LogI("Cert-Manager LetsEncrypt Certificate is not Ready yet, name: " + sfLECertName)
-			return false, nil, nil, nil
-		}
-	}
 }
 
 // GetConfigMap Get ConfigMap by name

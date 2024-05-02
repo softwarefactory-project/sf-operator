@@ -64,13 +64,5 @@ func (r *SFController) DeployHTTPDGateway() bool {
 		r.CreateR(&current)
 	}
 
-	isDeploymentReady := r.IsDeploymentReady(&current)
-
-	routeReady := r.ensureHTTPSRoute(
-		ident, r.cr.Spec.FQDN,
-		ident, "/", port, map[string]string{}, r.cr.Spec.LetsEncrypt)
-
-	isReady := isDeploymentReady && routeReady
-
-	return isReady
+	return r.IsDeploymentReady(&current)
 }

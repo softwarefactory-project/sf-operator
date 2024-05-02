@@ -1,9 +1,0 @@
----
-org_name: SoftwareFactory
-organizational_unit_name: Test
-country_name: PL
-state_or_province_name: Dolnoslaskie
-locality_name: Wroclaw
-fqdn: sfop.me
-ca_common_name: "{{ fqdn }}"
-common_name: "{{ ca_common_name }}"

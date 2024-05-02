@@ -118,11 +118,6 @@ func initializeSFManifest(withAuth bool, withBuilder bool, full bool, connection
 
 		manifest.Spec.GitServer.Storage.Size = oneGi
 
-		leSpec := sfv1.LetsEncryptSpec{
-			Server: sfv1.LEServerStaging,
-		}
-		manifest.Spec.LetsEncrypt = &leSpec
-
 		manifest.Spec.MariaDB.DBStorage.Size = oneGi
 		manifest.Spec.MariaDB.LogStorage.Size = oneGi
 

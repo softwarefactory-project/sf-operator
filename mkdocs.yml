@@ -77,7 +77,6 @@ nav:
           - Zuul: deployment/zuul.md
           - Zuul External Executor: deployment/external-executor.md
       - TLS:
-          - Setting up certificates: deployment/certificates.md
           - Adding third-party certificates into the CA trust chain: deployment/corporate-certificates.md
       - Monitoring: deployment/monitoring.md
       - Logging: deployment/logging.md

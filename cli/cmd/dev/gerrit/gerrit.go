@@ -382,7 +382,7 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie() {
 func (g *GerritCMDContext) ensureGerritIngressesOrDie() {
 	name := "gerrit"
 	route := base.MkHTTPSRoute(name, g.env.Ns, name+"."+g.fqdn,
-		gerritHTTPDPortName, "/", gerritHTTPDPort, map[string]string{}, nil)
+		gerritHTTPDPortName, "/", gerritHTTPDPort)
 	g.ensureRouteOrDie(route)
 }
 

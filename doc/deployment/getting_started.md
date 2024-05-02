@@ -62,8 +62,31 @@ NAME    READY
 my-sf   true
 ```
 
-The `sf-operator` handles the `Route`s installation. Here is the lists of available
-endpoints:
+The `sf-operator` does not handle the `Route/Ingress`s installation.
+
+The following resource can be applied in the namespace to setup a `Route` and redirects
+traffic to the gateway service.
+
+```yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: gateway
+  namespace: sf
+spec:
+  host: sfop.me
+  path: /
+  port:
+    targetPort: 8080
+  to:
+    Kind: Service
+    name: gateway
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+```
+
+On the "Route/Ingress" resource is up, here is the lists of available endpoints:
 
 - https://sfop.me/zuul
 - https://sfop.me/logs

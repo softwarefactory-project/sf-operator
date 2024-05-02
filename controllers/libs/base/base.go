@@ -329,20 +329,15 @@ func MkHeadlessServicePod(name string, ns string, podName string, ports []int32,
 
 // MkHTTPSRoute produces a Route on top of a Service
 func MkHTTPSRoute(
-	name string, ns string, host string, serviceName string, path string,
-	port int, annotations map[string]string, customTLS *apiroutev1.TLSConfig) apiroutev1.Route {
+	name string, ns string, host string, serviceName string, path string, port int) apiroutev1.Route {
 	tls := apiroutev1.TLSConfig{
 		InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
 		Termination:                   apiroutev1.TLSTerminationEdge,
 	}
-	if customTLS != nil {
-		tls = *customTLS
-	}
 	return apiroutev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   ns,
-			Annotations: annotations,
+			Name:      name,
+			Namespace: ns,
 		},
 		Spec: apiroutev1.RouteSpec{
 			TLS:  &tls,

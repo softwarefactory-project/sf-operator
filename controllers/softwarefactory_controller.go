@@ -102,79 +102,31 @@ func isOperatorReady(services map[string]bool) bool {
 
 // cleanup ensures removal of legacy resources
 func (r *SFController) cleanup() {
-	r.DeleteR(&corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.ns,
-			Name:      BuildLogsHttpdPortName,
-		},
-	})
-
-	// clean up old podmonitors if they exist. Remove after next release
-	currentZKpm := monitoringv1.PodMonitor{}
-	if r.GetM(ZookeeperIdent+"-monitor", &currentZKpm) {
-		r.DeleteR(&currentZKpm)
-	}
-	currentDBpm := monitoringv1.PodMonitor{}
-	if r.GetM(MariaDBIdent+"-monitor", &currentDBpm) {
-		r.DeleteR(&currentDBpm)
-	}
-	currentGSpm := monitoringv1.PodMonitor{}
-	if r.GetM(GitServerIdent+"-monitor", &currentGSpm) {
-		r.DeleteR(&currentGSpm)
-	}
-	currentZPM := monitoringv1.PodMonitor{}
-	if r.GetM("zuul-monitor", &currentZPM) {
-		r.DeleteR(&currentZPM)
-	}
-	currentNPM := monitoringv1.PodMonitor{}
-	if r.GetM("nodepool-monitor", &currentNPM) {
-		r.DeleteR(&currentNPM)
-	}
-	// remove a legacy Route definition for Zuul
+	// remove a legacy Route definition for gateway
 	r.DeleteR(&apiroutev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.ns,
-			Name:      r.cr.Spec.FQDN + "-zuul-red",
+			Name:      "gateway",
 		},
 	})
-	// Remove unneeded extra Service resource for Zookeeper
-	currentZKHeadlessSVC := corev1.Service{}
-	if r.GetM("zookeeper-headless", &currentZKHeadlessSVC) {
-		r.DeleteR(&currentZKHeadlessSVC)
-	}
-	// remove a legacy Route definition for logserver
-	r.DeleteR(&apiroutev1.Route{
+	// remove managed certificate resource
+	r.DeleteR(&certv1.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sf-le-certificate",
 			Namespace: r.ns,
-			Name:      r.cr.Name + "-logserver",
 		},
 	})
-	// remove a legacy Route definition for icons path
-	r.DeleteR(&apiroutev1.Route{
+	// remove managed cert-manager issuers
+	r.DeleteR(&certv1.Issuer{
 		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm-le-issuer-production",
 			Namespace: r.ns,
-			Name:      r.cr.Name + "-icons",
 		},
 	})
-	// remove a legacy Route definition for nodepool-builder
-	r.DeleteR(&apiroutev1.Route{
+	r.DeleteR(&certv1.Issuer{
 		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm-le-issuer-staging",
 			Namespace: r.ns,
-			Name:      r.cr.Name + "-nodepool-builder",
-		},
-	})
-	// remove a legacy Route definition for nodepool-launcher
-	r.DeleteR(&apiroutev1.Route{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.ns,
-			Name:      r.cr.Name + "-nodepool-launcher",
-		},
-	})
-	// remove a legacy Route definition for zuul
-	r.DeleteR(&apiroutev1.Route{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.ns,
-			Name:      r.cr.Name + "-zuul",
 		},
 	})
 }
@@ -247,11 +199,6 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 
 	// Setup a Self-Signed certificate issuer
 	r.EnsureLocalCA()
-
-	// Setup LetsEncrypt Issuer if needed
-	if r.cr.Spec.LetsEncrypt != nil {
-		r.ensureLetsEncryptIssuer(*r.cr.Spec.LetsEncrypt)
-	}
 
 	// Ensure SF Admin ssh key pair
 	r.DeployZuulSecrets()

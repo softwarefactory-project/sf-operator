@@ -39,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
 
+	apiroutev1 "github.com/openshift/api/route/v1"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,8 +55,16 @@ var defaultHost = "microshift.dev"
 
 var errMissingArg = errors.New("missing argument")
 
-func createDemoEnv(env cliutils.ENV, restConfig *rest.Config, fqdn string, reposPath, sfOperatorRepoPath string, keepDemoTenantDefinition bool) {
+func ensureGatewayRoute(env *cliutils.ENV, fqdn string) {
+	route := base.MkHTTPSRoute("sf-gateway", env.Ns, fqdn, "gateway", "/", 8080)
+	exists, _ := cliutils.GetM(env, "gateway", &apiroutev1.Route{})
+	if !exists {
+		cliutils.CreateROrDie(env, &route)
+	}
+}
 
+func createDemoEnv(env cliutils.ENV, restConfig *rest.Config, fqdn string, reposPath, sfOperatorRepoPath string, keepDemoTenantDefinition bool) {
+	ensureGatewayRoute(&env, fqdn)
 	gerrit.EnsureGerrit(&env, fqdn)
 	ctrl.Log.Info("Making sure Gerrit is up and ready...")
 	gerrit.EnsureGerritAccess(fqdn)

@@ -36,8 +36,6 @@
     - name: test-volumestats-sidecar
     - name: expand-volume
     - name: validate-purgelogs
-    - name: test-custom-certs
-    - name: test-cert-manager-letsencrypt
       when: "{{ mode == 'olm' }}"
     - name: zuul-client-api
     - name: zuul-components

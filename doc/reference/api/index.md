@@ -189,18 +189,6 @@ _Appears in:_
 
 
 
-#### LetsEncryptSpec
-
-
-
-
-
-_Appears in:_
-- [SoftwareFactorySpec](#softwarefactoryspec)
-
-| Field | Description | Default Value |
-| --- | --- | --- |
-| `server` _[LEServer](#leserver)_ | Specify the Lets encrypt server. Valid values are: "staging", "prod" | -|
 
 
 #### LimitsSpec
@@ -403,7 +391,6 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `fqdn` _string_ | The fully qualified domain name to use with the deployment. Relevant services will be served at https://`service`.`FQDN` | -|
-| `letsEncrypt` _[LetsEncryptSpec](#letsencryptspec)_ | LetsEncrypt settings for enabling using LetsEncrypt for Routes/TLS | -|
 | `FluentBitLogForwarding` _[FluentBitForwarderSpec](#fluentbitforwarderspec)_ | Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http) | -|
 | `storageClassName` _string_ | Default storage class to use by Persistent Volume Claims | {topolvm-provisioner}|
 | `config-location` _[ConfigRepositoryLocationSpec](#configrepositorylocationspec)_ | Config repository spec | -|
