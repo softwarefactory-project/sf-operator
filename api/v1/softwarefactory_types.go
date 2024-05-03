@@ -257,6 +257,10 @@ type ZuulExecutorSpec struct {
 	// When set the Control plane is not deployed.
 	// The standalone executor must be able to connect to the control plane
 	Standalone *StandaloneZuulExecutorSpec `json:"standalone,omitempty"`
+	// Memory/CPU Limit
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	Limits *LimitsSpec `json:"limits"`
 }
 
 type ZuulWebSpec struct {
@@ -268,6 +272,10 @@ type ZuulWebSpec struct {
 	// Changing this value will restart the service.
 	// +optional
 	LogLevel LogLevel `json:"logLevel,omitempty"`
+	// Memory/CPU Limit
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	Limits *LimitsSpec `json:"limits"`
 }
 
 // Spec for the scheduler microservice
@@ -284,6 +292,10 @@ type ZuulSchedulerSpec struct {
 	// Changing this value will restart the service.
 	// +optional
 	LogLevel LogLevel `json:"logLevel,omitempty"`
+	// Memory/CPU Limit
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	Limits *LimitsSpec `json:"limits"`
 }
 
 // Zuul Merger Configuration, see [Zuul's documentation](https://zuul-ci.org/docs/zuul/latest/configuration.html#merger)
@@ -313,6 +325,10 @@ type ZuulMergerSpec struct {
 	// Changing this value will restart the service.
 	// +optional
 	LogLevel LogLevel `json:"logLevel,omitempty"`
+	// Memory/CPU Limit
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	Limits *LimitsSpec `json:"limits"`
 }
 
 // TODO: make sure to update the GetConnectionsName when adding new connection type.
@@ -435,6 +451,10 @@ type NodepoolLauncherSpec struct {
 	// Changing this value will restart the service.
 	// +optional
 	LogLevel LogLevel `json:"logLevel,omitempty"`
+	// Memory/CPU Limit
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	Limits *LimitsSpec `json:"limits"`
 }
 
 type NodepoolBuilderSpec struct {
@@ -446,6 +466,10 @@ type NodepoolBuilderSpec struct {
 	// "WARN",
 	// "DEBUG".
 	LogLevel LogLevel `json:"logLevel,omitempty"`
+	// Memory/CPU Limit
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	Limits *LimitsSpec `json:"limits"`
 }
 
 type NodepoolSpec struct {
@@ -459,6 +483,17 @@ type NodepoolSpec struct {
 
 type ZookeeperSpec struct {
 	Storage StorageSpec `json:"storage"`
+	// Memory/CPU Limit
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	Limits *LimitsSpec `json:"limits"`
+}
+
+type LimitsSpec struct {
+	// +kubebuilder:default:="2Gi"
+	Memory resource.Quantity `json:"memory"`
+	// +kubebuilder:default:="2000m"
+	CPU resource.Quantity `json:"cpu"`
 }
 
 type MariaDBSpec struct {
@@ -466,6 +501,10 @@ type MariaDBSpec struct {
 	DBStorage StorageSpec `json:"dbStorage"`
 	// Storage parameters related to the database's logging
 	LogStorage StorageSpec `json:"logStorage"`
+	// Memory/CPU Limit
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	Limits *LimitsSpec `json:"limits"`
 }
 
 type GitServerSpec struct {

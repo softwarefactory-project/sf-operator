@@ -88,6 +88,7 @@ func (r *SFController) CreateDBInitContainer(username string, password string, d
 	c := "CREATE DATABASE IF NOT EXISTS " + dbname + " CHARACTER SET utf8 COLLATE utf8_general_ci; "
 	g := "GRANT ALL PRIVILEGES ON " + dbname + ".* TO '" + username + "'@'%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
 	container := base.MkContainer("mariadb-client", base.MariaDBImage())
+	base.SetContainerLimitsLowProfile(&container)
 	container.Command = []string{"sh", "-c", `
 	echo 'Running: mysql --host=" ` + MariaDBIdent + `" --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
 	ATTEMPT=0
@@ -192,6 +193,9 @@ func (r *SFController) DeployMariadb() bool {
 
 	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce)
 
+	base.SetContainerLimitsHighProfile(&sts.Spec.Template.Spec.Containers[0])
+	limitstr := base.UpdateContainerLimit(r.cr.Spec.MariaDB.Limits, &sts.Spec.Template.Spec.Containers[0])
+
 	sts.Spec.VolumeClaimTemplates = append(
 		sts.Spec.VolumeClaimTemplates,
 		// TODO redirect logs to stdout so we don't need a volume
@@ -236,7 +240,8 @@ func (r *SFController) DeployMariadb() bool {
 	}
 
 	annotations := map[string]string{
-		"serial": "4",
+		"serial": "5",
+		"limits": limitstr,
 	}
 	if r.cr.Spec.FluentBitLogForwarding != nil {
 		fbVolume, fbSidecar := createLogForwarderSidecar(r, annotations)

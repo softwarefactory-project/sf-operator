@@ -273,7 +273,7 @@ func (r *SFController) DeployLogserver() bool {
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
 	sts.Spec.Template.ObjectMeta.Annotations = map[string]string{
 		"fqdn":       r.cr.Spec.FQDN,
-		"serial":     "5",
+		"serial":     "6",
 		"httpd-conf": utils.Checksum([]byte(logserverConf)),
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Logserver.RetentionDays) +
 			" loopDelay:" + strconv.Itoa(r.cr.Spec.Logserver.LoopDelay),

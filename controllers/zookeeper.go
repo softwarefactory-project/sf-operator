@@ -101,7 +101,7 @@ func (r *SFController) DeployZookeeper() bool {
 	annotations := map[string]string{
 		"configuration": utils.Checksum([]byte(configChecksumable)),
 		"image":         base.ZookeeperImage(),
-		"serial":        "3",
+		"serial":        "4",
 	}
 
 	volumeMountsStatsExporter := []apiv1.VolumeMount{
@@ -168,6 +168,8 @@ func (r *SFController) DeployZookeeper() bool {
 	zk.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(zkSSLPort, zkSSLPortName),
 	}
+	base.SetContainerLimitsHighProfile(&zk.Spec.Template.Spec.Containers[0])
+	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zookeeper.Limits, &zk.Spec.Template.Spec.Containers[0])
 
 	if r.cr.Spec.FluentBitLogForwarding != nil {
 		fbVolume, fbSidecar := createZKLogForwarderSidecar(r, annotations)

@@ -17,11 +17,46 @@ but addresses specificities and idiosyncrasies induced by deploying Zuul with th
 
 Zuul is deployed by SF-Operator as micro-services:
 
-| Service | Kubernetes resource type | Scalable Y/N |
+| Component | Kubernetes resource type | Scalable Y/N |
 |---------|--------------------------|-------------|
 | zuul-scheduler | statefulset | N |
 | zuul-executor | statefulset | Y |
+| zuul-merger | statefulset | Y |
 | zuul-web | deployment | N |
+
+
+### Zuul-scheduler Pod
+
+| Container | Type | R.Request (Mem/CPU) | R.Limit (Mem/CPU) | R.Limit Upgrade (Y/N) |
+|---------|--------------------------|-------------|-----| --- |
+| zuul-scheduler | normal | 128Mi/0.1CPU | 2Gi/2CPU | Y |
+| zuul-scheduler-nodeexporter | normal | 32Mi/0.01CPU | 64Mi/0.1CPU | N |
+| zuul-statsd | normal | 32Mi/0.01CPU | 64Mi/0.1CPU | N |
+| init-scheduler-config | init | 32Mi/0.01CPU | 64Mi/0.1CPU | N |
+
+### Zuul-executor Pod
+
+| Container | Type | R.Request (Mem/CPU) | R.Limit (Mem/CPU) | R.Limit Upgrade (Y/N) |
+|---------|--------------------------|-------------|-----| --- |
+| zuul-executor | privileged | 128Mi/0.1CPU | 2Gi/2CPU | Y |
+| zuul-executor-nodeexporter | normal | 32Mi/0.01CPU | 64Mi/0.1CPU | N |
+
+### Zuul-merger Pod
+
+| Container | Type | R.Request (Mem/CPU) | R.Limit (Mem/CPU) | R.Limit Upgrade (Y/N) |
+|---------|--------------------------|-------------|-----| --- |
+| zuul-merger | normal | 128Mi/0.1CPU | 2Gi/2CPU | Y |
+| zuul-merger-nodeexporter | normal | 32Mi/0.01CPU | 64Mi/0.1CPU | N |
+
+### Zuul-web Pod
+
+| Container | Type | R.Request (Mem/CPU) | R.Limit (Mem/CPU) | R.Limit Upgrade (Y/N) |
+|---------|--------------------------|-------------|-----| --- |
+| zuul-web | normal | 128Mi/0.1CPU | 2Gi/2CPU | Y |
+
+## Resource limits
+
+For each component the main container's resource limits can be changed via the `SoftwareFactory` Custom Resource.
 
 ## Services configuration
 
