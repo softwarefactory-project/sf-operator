@@ -3,7 +3,14 @@
 All notable changes to this project will be documented in this file.
 
 ## [in development]
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
 
+## [v0.0.28] - 2024-05-03
 ### Added
 
 - CLI: restore command and documentation.
@@ -15,12 +22,10 @@ All notable changes to this project will be documented in this file.
 - Zookeeper version bumped to 3.8.4
 - The Operator handles only one Route resource as a 'gateway' pod dispatches incoming connections.
 
-### Deprecated
 ### Removed
 
 - The LogsServer CRD and controller. As there is no identified need for a proper CRD and Controller.
 
-### Fixed
 ### Security
 
 - UBI9/Zookeeper image rebuid to address reported security issues
