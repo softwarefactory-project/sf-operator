@@ -53,6 +53,7 @@
     --namespace operators
     --security-context-config restricted
     --use-http
+    --timeout 5m0s
   args:
     chdir: "{{ src_dir }}"
 
