@@ -37,6 +37,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -242,6 +243,8 @@ func configureGerritContainer(sts *appsv1.StatefulSet, volumeMounts []apiv1.Volu
 	sts.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 		base.MkEnvVar("HOME", "/gerrit"),
 		base.MkEnvVar("FQDN", fqdn),
+		base.MkEnvVar("JVM_XMS", "128m"),
+		base.MkEnvVar("JVM_XMX", "512m"),
 		base.MkSecretEnvVar("GERRIT_ADMIN_SSH", "admin-ssh-key", "priv"),
 	}
 	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessCMDProbe([]string{"bash", "/gerrit/ready.sh"})
@@ -309,8 +312,16 @@ func createInitContainers(volumeMounts []apiv1.VolumeMount, fqdn string) []apiv1
 	container.Env = []apiv1.EnvVar{
 		base.MkSecretEnvVar("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
 		base.MkEnvVar("FQDN", fqdn),
+		base.MkEnvVar("JVM_XMS", "128m"),
+		base.MkEnvVar("JVM_XMX", "512m"),
 	}
 	container.VolumeMounts = volumeMounts
+	base.SetContainerLimits(
+		&container,
+		resource.MustParse("256Mi"),
+		resource.MustParse("512Mi"),
+		resource.MustParse("100m"),
+		resource.MustParse("1000m"))
 	return []apiv1.Container{
 		container,
 	}
@@ -342,6 +353,12 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie() {
 	b, _ := g.getStatefulSetOrDie(name)
 	if !b {
 		container := base.MkContainer(name, gerritImage)
+		base.SetContainerLimits(
+			&container,
+			resource.MustParse("256Mi"),
+			resource.MustParse("512Mi"),
+			resource.MustParse("100m"),
+			resource.MustParse("1000m"))
 		storageConfig := controllers.BaseGetStorageConfOrDefault(v1.StorageSpec{}, "")
 		pvc := base.MkPVC(name, g.env.Ns, storageConfig, apiv1.ReadWriteOnce)
 		sts := base.MkStatefulset(

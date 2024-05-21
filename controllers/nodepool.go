@@ -532,7 +532,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"statsd_mapping":             utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		"image":                      base.NodepoolBuilderImage(),
 		"nodepool-providers-secrets": getSecretsVersion(providersSecrets, providerSecretsExists),
-		"serial":                     "14",
+		"serial":                     "15",
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
@@ -541,6 +541,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	}
 
 	initContainer := base.MkContainer("nodepool-builder-init", base.NodepoolBuilderImage())
+	base.SetContainerLimitsLowProfile(&initContainer)
 
 	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
 	initContainer.Env = append(r.getNodepoolConfigEnvs(),
@@ -582,6 +583,10 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	}
 	nb.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 	nb.Spec.Template.Spec.Containers[0].Env = r.getNodepoolConfigEnvs()
+
+	base.SetContainerLimitsHighProfile(&nb.Spec.Template.Spec.Containers[0])
+	limitstr := base.UpdateContainerLimit(r.cr.Spec.Nodepool.Builder.Limits, &nb.Spec.Template.Spec.Containers[0])
+	annotations["limits"] = limitstr
 
 	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-builder", r.cr.Spec.FluentBitLogForwarding, nodepoolFluentBitLabels, annotations)
 	nb.Spec.Template.Spec.Containers[0].Env = append(nb.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
@@ -709,7 +714,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		"nodepool.yaml":         utils.Checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml": utils.Checksum([]byte(loggingConfig)),
 		"statsd_mapping":        utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
-		"serial":                "8",
+		"serial":                "10",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"image":                      base.NodepoolLauncherImage(),
 		"nodepool-providers-secrets": getSecretsVersion(providersSecrets, providerSecretsExists),
@@ -721,6 +726,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	}
 
 	initContainer := base.MkContainer("nodepool-launcher-init", base.NodepoolLauncherImage())
+	base.SetContainerLimitsLowProfile(&initContainer)
 
 	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
 	initContainer.Env = r.getNodepoolConfigEnvs()
@@ -760,6 +766,9 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		"/usr/local/bin/nodepool-launcher -f -l /etc/nodepool-logging/logging.yaml",
 	}
 	container.Env = r.getNodepoolConfigEnvs()
+	base.SetContainerLimitsHighProfile(&container)
+	limitstr := base.UpdateContainerLimit(r.cr.Spec.Nodepool.Launcher.Limits, &container)
+	annotations["limits"] = limitstr
 
 	launcherFluentBitLabels := append(nodepoolFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: LauncherIdent})
 	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-launcher", r.cr.Spec.FluentBitLogForwarding, launcherFluentBitLabels, annotations)

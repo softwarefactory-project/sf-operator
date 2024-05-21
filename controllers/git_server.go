@@ -14,7 +14,6 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
-	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/zuulcf"
 	"gopkg.in/yaml.v3"
@@ -272,7 +271,7 @@ func (r *SFController) DeployGitServer() bool {
 		"system-config": utils.Checksum([]byte(preInitScript)),
 		"image":         base.GitServerImage(),
 		"fqdn":          r.cr.Spec.FQDN,
-		"serial":        "2",
+		"serial":        "3",
 	}
 
 	if r.isConfigRepoSet() {
@@ -298,9 +297,13 @@ func (r *SFController) DeployGitServer() bool {
 	}
 	sts.Spec.Template.Spec.Containers[0].VolumeMounts = GSVolumeMountsRO
 	sts.Spec.Template.Spec.Containers[0].Command = []string{"git", "daemon", "--base-path=/git", "--export-all"}
+	var probeCmd = []string{"git", "ls-remote", "git://localhost:" + strconv.Itoa(gsGitPort) + "/system-config"}
+	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessCMDProbe(probeCmd)
+	sts.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupCMDProbe(probeCmd)
+	base.SetContainerLimitsLowProfile(&sts.Spec.Template.Spec.Containers[0])
 
 	// Add a second container to serve the git-server with RW access (should not be exposed)
-	containerRW := base.MkContainer("git-daemon-rw", base.GitServerImage())
+	containerRW := base.MkContainer(GitServerIdentRW, base.GitServerImage())
 	containerRW.Command = []string{"git", "daemon", "--base-path=/git",
 		"--enable=receive-pack", "--export-all", "--port=" + strconv.Itoa(gsGitPortRW)}
 	containerRW.VolumeMounts = []apiv1.VolumeMount{
@@ -309,6 +312,11 @@ func (r *SFController) DeployGitServer() bool {
 			MountPath: gsGitMountPath,
 		},
 	}
+
+	var probeCmdCRW = []string{"git", "ls-remote", "git://localhost:" + strconv.Itoa(gsGitPortRW) + "/system-config"}
+	containerRW.ReadinessProbe = base.MkReadinessCMDProbe(probeCmdCRW)
+	containerRW.StartupProbe = base.MkStartupCMDProbe(probeCmdCRW)
+	base.SetContainerLimitsLowProfile(&containerRW)
 
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, containerRW)
 	sts.Spec.Template.Spec.Volumes = []apiv1.Volume{
@@ -344,13 +352,6 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	sts.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
-
-	// Create readiness probes
-	// Note: The probe is causing error message to be logged by the service
-	// dep.Spec.Template.Spec.Containers[0].ReadinessProbe = create_readiness_tcp_probe(GS_GIT_PORT)
-
-	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(GitServerIdent, GSVolumeMountsRO)
-	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
 
 	current, changed := r.ensureStatefulset(sts)
 	if changed {

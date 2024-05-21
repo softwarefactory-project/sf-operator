@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	apiroutev1 "github.com/openshift/api/route/v1"
+	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -42,14 +43,70 @@ func MkSecurityContext(privileged bool) *apiv1.SecurityContext {
 	}
 }
 
+// SetContainerLimits sets the Resource limit according to
+// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+func SetContainerLimits(container *apiv1.Container, memRequest resource.Quantity, memLimit resource.Quantity, cpuRequest resource.Quantity, cpuLimit resource.Quantity) {
+	var (
+		defaultResources = apiv1.ResourceRequirements{
+			Requests: map[apiv1.ResourceName]resource.Quantity{
+				apiv1.ResourceMemory: memRequest,
+				apiv1.ResourceCPU:    cpuRequest,
+			},
+			Limits: map[apiv1.ResourceName]resource.Quantity{
+				apiv1.ResourceMemory: memLimit,
+				apiv1.ResourceCPU:    cpuLimit,
+			},
+		}
+	)
+	container.Resources = defaultResources
+}
+
 // MkContainer produces a Container with the default settings
 func MkContainer(name string, image string) apiv1.Container {
-	return apiv1.Container{
+	var container = apiv1.Container{
 		Name:            name,
 		Image:           image,
 		ImagePullPolicy: "IfNotPresent",
 		SecurityContext: MkSecurityContext(false),
 	}
+	setContainerLimitsDefaultProfile(&container)
+	return container
+}
+
+func setContainerLimitsDefaultProfile(container *apiv1.Container) {
+	SetContainerLimits(
+		container,
+		resource.MustParse("128Mi"),
+		resource.MustParse("256Mi"),
+		resource.MustParse("100m"),
+		resource.MustParse("500m"))
+}
+
+func SetContainerLimitsLowProfile(container *apiv1.Container) {
+	SetContainerLimits(
+		container,
+		resource.MustParse("32Mi"),
+		resource.MustParse("64Mi"),
+		resource.MustParse("10m"),
+		resource.MustParse("100m"))
+}
+
+func SetContainerLimitsHighProfile(container *apiv1.Container) {
+	SetContainerLimits(
+		container,
+		resource.MustParse("128Mi"),
+		resource.MustParse("2Gi"),
+		resource.MustParse("100m"),
+		resource.MustParse("2000m"))
+}
+
+func UpdateContainerLimit(limits *v1.LimitsSpec, container *apiv1.Container) string {
+	if limits != nil {
+		container.Resources.Limits[apiv1.ResourceCPU] = limits.CPU
+		container.Resources.Limits[apiv1.ResourceMemory] = limits.Memory
+		return limits.CPU.String() + "-" + limits.Memory.String()
+	}
+	return ""
 }
 
 // MkContainerPort produces a TCP ContainerPort

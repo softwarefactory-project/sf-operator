@@ -56,6 +56,7 @@ func MkNodeExporterSideCarContainer(serviceName string, volumeMounts []apiv1.Vol
 		base.MkContainerPort(NodeExporterPort, GetTruncatedPortName(serviceName, NodeExporterPortNameSuffix)),
 	}
 	container.VolumeMounts = volumeMounts
+	base.SetContainerLimitsLowProfile(&container)
 	return container
 }
 
@@ -160,7 +161,6 @@ func MkStatsdExporterSideCarContainer(serviceName string, configVolumeName strin
 	var seExposePortName = GetStatsdExporterPort(serviceName)
 	var configFile = StatsdExporterConfigFile
 	var configPath = "/tmp/" + configFile
-	// var configVolumeName = serviceName + "-statsd-conf"
 
 	volumeMounts := []apiv1.VolumeMount{
 		{
@@ -186,7 +186,7 @@ func MkStatsdExporterSideCarContainer(serviceName string, configVolumeName strin
 	sidecar.Args = args
 	sidecar.VolumeMounts = volumeMounts
 	sidecar.Ports = ports
-
+	base.SetContainerLimitsLowProfile(&sidecar)
 	return sidecar
 }
 

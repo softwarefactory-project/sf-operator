@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [in development]
 ### Added
+
+- Default containers resources (requests and limits)
+- A Limits Spec in the CRD for Zookeeper, MariaDB, Nodepool and Zuul components
+
 ### Changed
 ### Deprecated
 ### Removed

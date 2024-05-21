@@ -146,7 +146,7 @@ func getZuulImage(service string) string {
 	}
 }
 
-func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) []apiv1.Container {
+func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) apiv1.Container {
 	volumeMounts := []apiv1.VolumeMount{
 		{
 			Name:      "zuul-config",
@@ -229,6 +229,8 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) [
 		VolumeMounts: volumeMounts,
 	}
 
+	base.SetContainerLimitsHighProfile(&container)
+
 	if service == "zuul-scheduler" {
 		// For the scheduler we do not run the update-ca-trust because the initContainer
 		// already handles that task.
@@ -236,7 +238,7 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) [
 			"/usr/local/bin/zuul-scheduler -f -d"}
 	}
 
-	return []apiv1.Container{container}
+	return container
 }
 
 func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []apiv1.Volume {
@@ -427,7 +429,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 getZuulImage("zuul-scheduler"),
 		"statsd_mapping":             utils.Checksum([]byte(zuulStatsdMappingConfig)),
-		"serial":                     "8",
+		"serial":                     "9",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
 		"zuul-extra":                 utils.Checksum([]byte(sshConfig)),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
@@ -445,11 +447,12 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		relayAddress = &r.cr.Spec.Zuul.Scheduler.StatsdTarget
 	}
 
-	zuulContainers := r.mkZuulContainer(ZuulSchedulerIdent, corporateCMExists)
+	zuulContainer := r.mkZuulContainer(ZuulSchedulerIdent, corporateCMExists)
+	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Scheduler.Limits, &zuulContainer)
 
 	zsFluentBitLabels := append(zuulFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: "zuul-scheduler"})
 	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-scheduler", r.cr.Spec.FluentBitLogForwarding, zsFluentBitLabels, annotations)
-	zuulContainers[0].Env = append(zuulContainers[0].Env, extraLoggingEnvVars...)
+	zuulContainer.Env = append(zuulContainer.Env, extraLoggingEnvVars...)
 
 	statsdSidecar := monitoring.MkStatsdExporterSideCarContainer("zuul", "statsd-config", relayAddress)
 	nodeExporterSidecar := monitoring.MkNodeExporterSideCarContainer(
@@ -461,7 +464,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 			},
 		})
 
-	zuulContainers = append(zuulContainers, statsdSidecar, nodeExporterSidecar)
+	zuulContainers := append([]apiv1.Container{}, zuulContainer, statsdSidecar, nodeExporterSidecar)
 
 	initContainer := base.MkContainer("init-scheduler-config", getZuulImage("zuul-scheduler"))
 	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
@@ -495,6 +498,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	if corporateCMExists {
 		initContainer.VolumeMounts = AppendCorporateCACertsVolumeMount(initContainer.VolumeMounts, "zuul-scheduler-corporate-ca-certs")
 	}
+	base.SetContainerLimitsLowProfile(&initContainer)
 
 	schedulerToolingData := make(map[string]string)
 	schedulerToolingData["init-container.sh"] = zuulSchedulerInitContainerScript
@@ -544,7 +548,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 getZuulImage("zuul-executor"),
-		"serial":                     "6",
+		"serial":                     "7",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
@@ -552,7 +556,9 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	// TODO Add the zk-port-forward-kube-config secret resource version in the annotation if enabled
 
 	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), apiv1.ReadWriteOnce)
-	ze.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-executor", corporateCMExists)
+	zuulContainer := r.mkZuulContainer("zuul-executor", corporateCMExists)
+	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Executor.Limits, &zuulContainer)
+	ze.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
 	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor", r, corporateCMExists)
 
 	zeFluentBitLabels := append(zuulFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: "zuul-executor"})
@@ -617,13 +623,15 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 getZuulImage(service),
-		"serial":                     "4",
+		"serial":                     "5",
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
 	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), apiv1.ReadWriteOnce)
-	zm.Spec.Template.Spec.Containers = r.mkZuulContainer(service, corporateCMExists)
+	zuulContainer := r.mkZuulContainer(service, corporateCMExists)
+	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Merger.Limits, &zuulContainer)
+	zm.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
 	zm.Spec.Template.Spec.Volumes = mkZuulVolumes(service, r, corporateCMExists)
 
 	zmFluentBitLabels := append(zuulFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: "zuul-merger"})
@@ -679,7 +687,9 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	}
 
 	zw := base.MkDeployment("zuul-web", r.ns, "")
-	zw.Spec.Template.Spec.Containers = r.mkZuulContainer("zuul-web", false)
+	zuulContainer := r.mkZuulContainer("zuul-web", false)
+	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Web.Limits, &zuulContainer)
+	zw.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
 	zw.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-web", r, false)
 
 	zwFluentBitLabels := append(zuulFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: "zuul-web"})
