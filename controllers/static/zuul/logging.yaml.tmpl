@@ -30,14 +30,6 @@ loggers:
 {{ end }}
     level: {{ .LogLevel }}
     propagate: 0
-  sqlalchemy.engine:
-    handlers:
-      - console
-{{- if .ForwardLogs }}
-      - logforward
-{{ end }}
-    level: {{ .LogLevel }}
-    propagate: 0
   connection:
     handlers:
       - console
@@ -49,7 +41,7 @@ loggers:
   zuul:
     handlers:
       - console
- {{- if .ForwardLogs }}
+{{- if .ForwardLogs }}
       - logforward
 {{ end }}
     level: {{ .LogLevel }}

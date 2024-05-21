@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 - A Limits Spec in the CRD for Zookeeper, MariaDB, Nodepool and Zuul components
 
 ### Changed
+
+- zuul: remove sqlalchemy logging handler as too verbose in INFO level
+
 ### Deprecated
 ### Removed
 ### Fixed
