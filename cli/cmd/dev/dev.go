@@ -44,6 +44,7 @@ var devRunTestsAllowedArgs = []string{"olm", "standalone", "upgrade"}
 
 var microshiftUser = "cloud-user"
 var defaultDiskSpace = "20G"
+var defaultHost = "microshift.dev"
 
 var errMissingArg = errors.New("missing argument")
 
@@ -73,8 +74,8 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 
 	msHost := cliCtx.Dev.Microshift.Host
 	if msHost == "" {
-		ctrl.Log.Error(errMissingArg, "Host must be set in `microshift` section of the configuration")
-		os.Exit(1)
+		msHost = defaultHost
+		ctrl.Log.Info("Host not set, defaulting to " + defaultHost)
 	}
 	msUser := cliCtx.Dev.Microshift.User
 	if msUser == "" {
@@ -84,14 +85,15 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 	}
 	msOpenshiftPullSecret := cliCtx.Dev.Microshift.OpenshiftPullSecret
 	if msOpenshiftPullSecret == "" {
-		ctrl.Log.Error(errMissingArg, "A valid OpenShift pull secret must be set in `microshift` section of the configuration file")
-		os.Exit(1)
+		msOpenshiftPullSecret = "not-a-valid-pull-secret"
+		ctrl.Log.Info("A valid OpenShift pull secret must be set in `microshift` section of the configuration file")
 	}
 	msDiskFileSize := cliCtx.Dev.Microshift.DiskFileSize
 	if msDiskFileSize == "" {
 		msDiskFileSize = defaultDiskSpace
 		ctrl.Log.Info("disk-file-size not set, defaulting to " + defaultDiskSpace)
 	}
+	msEtcdOnRamdisk := cliCtx.Dev.Microshift.ETCDOnRAMDisk
 	msAnsibleMicroshiftRolePath := cliCtx.Dev.AnsibleMicroshiftRolePath
 	if msAnsibleMicroshiftRolePath == "" {
 		msAnsibleMicroshiftRolePath = rootDir + "/ansible-microshift-role"
@@ -104,7 +106,8 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 	}
 
 	options := ms.MkAnsiblePlaybookOptions(msHost, msUser, msOpenshiftPullSecret, rootDir)
-	varsFile := ms.MkTemporaryVarsFile(cliCtx.FQDN, msDiskFileSize, msAnsibleMicroshiftRolePath, rootDir)
+	varsFile := ms.MkTemporaryVarsFile(
+		cliCtx.FQDN, msDiskFileSize, msAnsibleMicroshiftRolePath, rootDir, msEtcdOnRamdisk)
 	options.ExtraVarsFile = []string{"@" + varsFile}
 	// Ensure ansible-microshift-role is available
 	ms.MkMicroshiftRoleSetupPlaybook(rootDir)

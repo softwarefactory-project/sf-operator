@@ -48,6 +48,7 @@ type GroupVarsData struct {
 	FQDN               string
 	DiskFileSize       string
 	MicroshiftRolePath string
+	ETCDOnRAMDisk      bool
 }
 
 type PlayBook struct {
@@ -114,11 +115,13 @@ func MkAnsiblePlaybookOptions(host string, user string, pullSecret string, rootD
 	}
 }
 
-func MkTemporaryVarsFile(fqdn string, diskFileSize string, microshiftRolePath string, rootDir string) string {
+func MkTemporaryVarsFile(
+	fqdn string, diskFileSize string, microshiftRolePath string, rootDir string, etcdOnRamdisk bool) string {
 	varsData := GroupVarsData{
 		fqdn,
 		diskFileSize,
 		microshiftRolePath,
+		etcdOnRamdisk,
 	}
 	filePath := rootDir + "/all.yaml"
 	template, err := cutils.ParseString(groupvars, varsData)

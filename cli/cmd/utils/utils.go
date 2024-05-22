@@ -71,6 +71,7 @@ type SoftwareFactoryConfigContext struct {
 			User                string `json:"user" mapstructure:"user"`
 			OpenshiftPullSecret string `json:"openshift-pull-secret" mapstructure:"openshift-pull-secret"`
 			DiskFileSize        string `json:"disk-file-size" mapstructure:"disk-file-size"`
+			ETCDOnRAMDisk       bool   `json:"etcd-on-ramdisk" mapstructure:"etcd-on-ramdisk"`
 		} `json:"microshift" mapstructure:"microshift"`
 		Tests struct {
 			DemoReposPath string            `json:"demo-repos-path" mapstructure:"demo-repos-path"`

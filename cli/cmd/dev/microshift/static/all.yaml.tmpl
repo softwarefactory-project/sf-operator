@@ -4,6 +4,7 @@ microshift_fqdn: microshift.dev
 sf_fqdn: {{ .FQDN }}
 disk_file_sparsed: true
 disk_file_size: {{ .DiskFileSize }}
+etcd_on_ramdisk: {{ .ETCDOnRAMDisk }}
 setup_olm: true
 microshift_additional_addresses:
   - {{ "\"{{ microshift_fqdn }}\"" }}
