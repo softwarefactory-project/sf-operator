@@ -32,7 +32,7 @@
 
 - name: Start the podman registry container
   ansible.builtin.command: |
-    podman container run -dt -p 5000:5000 --name registry \
+    podman container run -dt --network host --name registry \
     --volume registry:/var/lib/registry:Z quay.io/software-factory/registry:2
 
 - name: Wait for the registry to be up
