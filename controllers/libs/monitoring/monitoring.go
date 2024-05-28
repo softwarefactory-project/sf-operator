@@ -19,6 +19,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+	"golang.org/x/exp/maps"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -268,7 +269,10 @@ func MkStatsdMappingsFromCloudsYaml(extraMappings []StatsdMetricMapping, cloudsY
 	}
 	if cloudConfigs, ok := cloudsYaml["clouds"]; ok {
 		cCs := cloudConfigs.(map[string]interface{})
-		for cloudName, cloudConfig := range cCs {
+		cloudNames := maps.Keys(cCs)
+		sort.Strings(cloudNames)
+		for _, cloudName := range cloudNames {
+			cloudConfig := cCs[cloudName]
 			cC := cloudConfig.(map[string]interface{})
 			if metricsConf, ok := cC["metrics"]; ok {
 				mC := metricsConf.(map[string]interface{})
