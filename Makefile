@@ -162,6 +162,7 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 MKDOCS ?= $(LOCALBIN)/mkdocs/bin/mkdocs
+ZC ?= $(LOCALBIN)/zc/bin/zuul-client
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.3.0
@@ -170,11 +171,17 @@ OPERATOR_SDK_VERSION ?= 1.34.2
 STATICCHECK_VERSION ?= 2023.1.7
 MKDOCS_VERSION ?= 1.5.3
 SETUP_ENVTEST_VERSION ?= v0.0.0-20240320141353-395cfc7486e6
+ZUUL_CLIENT_VERSION ?= 10.0.0
 
 .PHONY: mkdocs
 mkdocs: $(MKDOCS) ## Install material for mkdocs locally if necessary
 $(MKDOCS): $(LOCALBIN)
 	( test -f $(LOCALBIN)/mkdocs/bin/mkdocs && [[ "$(shell $(LOCALBIN)/mkdocs/bin/mkdocs -V)" =~ "$(MKDOCS_VERSION)" ]] ) || ( python -m venv $(LOCALBIN)/mkdocs && $(LOCALBIN)/mkdocs/bin/pip install --upgrade -r mkdocs-requirements.txt )
+
+.PHONY: zuul-client
+zuul-client: $(ZC) ## Install zuul-client locally if necessary
+$(ZC): $(LOCALBIN)
+	( test -f $(LOCALBIN)/zc/bin/zuul-client && [[ "$(shell $(LOCALBIN)/zc/bin/zuul-client --version)" =~ "$(ZUUL_CLIENT_VERSION)" ]] ) || ( python -m venv $(LOCALBIN)/zc && $(LOCALBIN)/zc/bin/pip install zuul-client )
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/${KUSTOMIZE_VERSION}/hack/install_kustomize.sh"
 .PHONY: kustomize

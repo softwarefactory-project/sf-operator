@@ -1,3 +1,11 @@
+- name: Ensure zuul-client installation
+  community.general.make:
+    target: "zuul-client"
+    chdir: "{{ zuul.project.src_dir }}"
+
+- set_fact:
+    zuul_client: "{{ zuul.project.src_dir }}/bin/zc/bin/zuul-client"
+
 - name: Create a zuul-client configuration file
   ansible.builtin.shell: >
     go run ./main.go --config playbooks/files/sf-operator-cli.yaml zuul create client-config --insecure
@@ -12,13 +20,11 @@
 
 - name: Create a autohold request with zuul-client and the generated config
   ansible.builtin.command: |
-    zuul-client -c /tmp/zuul-client.conf --use-config internal autohold --project config --job config-update --reason CI_TEST
-  args:
-    chdir: "{{ zuul.project.src_dir }}"
+    {{ zuul_client }} -c /tmp/zuul-client.conf --use-config internal autohold --project config --job config-update --reason CI_TEST
 
 - name: Ensure autohold was set properly
   ansible.builtin.command: |
-    zuul-client -c /tmp/zuul-client.conf --use-config internal autohold-list
+    {{ zuul_client }} -c /tmp/zuul-client.conf --use-config internal autohold-list
   register: _ah_list
   failed_when: '"CI_TEST" not in _ah_list.stdout'
 
@@ -26,4 +32,4 @@
   ansible.builtin.shell: >
     echo "{{ _ah_list.stdout }}" |
     grep -oE "0000[0-9]+" |
-    xargs zuul-client -c /tmp/zuul-client.conf --use-config internal autohold-delete
+    xargs {{ zuul_client }} -c /tmp/zuul-client.conf --use-config internal autohold-delete

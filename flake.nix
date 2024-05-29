@@ -23,6 +23,7 @@
         ];
         shellHook = ''
           echo "Welcome in $name"
+          export LC_ALL=C.UTF-8
           export GOPATH=$(go env GOPATH)
           export GOBIN=$(go env GOPATH)/bin
         '';

@@ -78,4 +78,3 @@
           - kubernetes
           - oauthlib>=3.2.2
           - websocket-client
-          - zuul-client
