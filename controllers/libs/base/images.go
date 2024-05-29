@@ -6,7 +6,9 @@ package base
 
 import (
 	_ "embed"
+	"sort"
 
+	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v2"
 )
 
@@ -44,12 +46,18 @@ func getImage(name string) string {
 }
 
 func GetSelfManagedImages() []Image {
+	imagesByName := make(map[string]Image)
 	ret := []Image{}
 	images := loadImages()
 	for _, image := range images.Images {
 		if image.Source != "" {
-			ret = append(ret, image)
+			imagesByName[image.Name] = image
 		}
+	}
+	imageNames := maps.Keys(imagesByName)
+	sort.Strings(imageNames)
+	for _, imageName := range imageNames {
+		ret = append(ret, imagesByName[imageName])
 	}
 	return ret
 }

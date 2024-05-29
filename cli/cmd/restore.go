@@ -25,11 +25,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/maps"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -47,11 +49,13 @@ func restoreSecret(backupDir string, env cliutils.ENV) {
 		secret := apiv1.Secret{}
 		if cliutils.GetMOrDie(&env, sec, &secret) {
 			secretMap := secretContent["data"].(map[string]interface{})
-			for key, value := range secretMap {
-				stringValue, ok := value.(string)
+			secretMapKeys := maps.Keys(secretMap)
+			sort.Strings(secretMapKeys)
+			for _, key := range secretMapKeys {
+				stringValue, ok := secretMap[key].(string)
 				if !ok {
 					ctrl.Log.Error(errors.New("can not convert secret data value to string"),
-						"Can not restore secret"+sec)
+						"Can not restore secret "+sec)
 					os.Exit(1)
 				}
 				secret.Data[key] = []byte(stringValue)
