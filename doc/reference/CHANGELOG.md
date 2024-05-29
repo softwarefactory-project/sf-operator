@@ -10,7 +10,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- zuul: remove sqlalchemy logging handler as too verbose in INFO level
+- Zuul: remove sqlalchemy logging handler as too verbose in INFO level
+- Zuul: version bumped to 10.1.0
 
 ### Deprecated
 ### Removed

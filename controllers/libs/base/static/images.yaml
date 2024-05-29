@@ -4,20 +4,20 @@
 images:
     - name: zuul-scheduler
       container: quay.io/software-factory/zuul-scheduler
-      version: 10.0.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=6dea4a90864e62e4c7c9e1b85397b6545b421e39
+      version: 10.1.0-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=aa8f8d87b9018b3d600babb7621efb86751e0bc0
     - name: zuul-executor
       container: quay.io/software-factory/zuul-executor
-      version: 10.0.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=6dea4a90864e62e4c7c9e1b85397b6545b421e39
+      version: 10.1.0-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=aa8f8d87b9018b3d600babb7621efb86751e0bc0
     - name: zuul-merger
       container: quay.io/software-factory/zuul-merger
-      version: 10.0.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=6dea4a90864e62e4c7c9e1b85397b6545b421e39
+      version: 10.1.0-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=aa8f8d87b9018b3d600babb7621efb86751e0bc0
     - name: zuul-web
       container: quay.io/software-factory/zuul-web
-      version: 10.0.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=6dea4a90864e62e4c7c9e1b85397b6545b421e39
+      version: 10.1.0-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=aa8f8d87b9018b3d600babb7621efb86751e0bc0
     - name: nodepool-launcher
       container: quay.io/software-factory/nodepool-launcher
       version: 10.0.0-1
