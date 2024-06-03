@@ -105,10 +105,16 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 		msAnsibleMicroshiftRolePath = rootDir + "/ansible-microshift-role"
 		ctrl.Log.Info("No path to ansible-microshift-role provided, the role will be cloned into " + msAnsibleMicroshiftRolePath)
 	}
+	defaultSFOperatorRepositoryPath, _ := os.Getwd()
 	msSFOperatorRepositoryPath := cliCtx.Dev.SFOperatorRepositoryPath
 	if msSFOperatorRepositoryPath == "" {
-		ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration file")
-		os.Exit(1)
+		if defaultSFOperatorRepositoryPath != "" {
+			msSFOperatorRepositoryPath = defaultSFOperatorRepositoryPath
+			ctrl.Log.Info("Using current working directory for sf-operator-repository-path: " + msSFOperatorRepositoryPath)
+		} else {
+			ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration file")
+			os.Exit(1)
+		}
 	}
 
 	options := ms.MkAnsiblePlaybookOptions(msHost, msUser, msOpenshiftPullSecret, rootDir)

@@ -2,11 +2,9 @@
 
 This document provides instructions on how to deploy a [MicroShift](https://github.com/openshift/microshift) instance on a CentOS 9 Stream host, from your development computer.
 
-We use Microshift as the target **OpenShift instance** for SF-Operator when deploying, developing locally, or testing in our [CI](https://softwarefactory-project.io/zuul/t/local/buildsets?project=software-factory%2Fsf-operator&skip=0).
+We use Microshift as the target **OpenShift instance** for SF-Operator when deploying, developing locally, or testing in our [CI](https://microshift.softwarefactory-project.io/zuul/t/sf/builds?project=software-factory%2Fsf-operator&skip=0).
 
-The deployment will be performed via Ansible, by using the
-[ansible-microshift-role](https://github.com/openstack-k8s-operators/ansible-microshift-role).
-
+The deployment will be performed via sf-operator CLI.
 
 1. [Requirements](#requirements)
 1. [Install MicroShift](#install-microshift)
@@ -69,10 +67,31 @@ sudo dnf install -y ansible-core golang
 You have to generate and adapt the configuration file to deploy microshift
 
 ```sh
-sf-operator init config > myconfig.yaml
+go run ./main.go init config --dev > myconfig.yaml
 ```
 
-Installing Microshift is straightforward with the [ansible-microshift-role](https://github.com/openstack-k8s-operators/ansible-microshift-role).
-The [sf-operator](./../reference/cli/index.md) CLI provides the [`dev create microshift --config myconfig.yaml` subcommand](./../reference/cli/index.md#create-microshift) that sets up a microshift host from start to finish. Please refer to the documentation of this subcommand to learn how to use it.
+Then edit `myconfig.yaml` as follow:
+
+```yaml
+contexts:
+  my-context:
+    development:
+      microshift:
+        disk-file-size: "30G"
+        etcd-on-ramdisk: true
+        host: "microshift.dev"
+        openshift-pull-secret: '<paste-pull-secret-here>'
+        user: "cloud-user"
+      sf-operator-repository-path: "~/git/softwarefactory-project.io/software-factory/sf-operator"
+default-context: my-context
+```
+
+Refer to the [`dev create microshift --config myconfig.yaml` subcommand](./../reference/cli/index.md#create-microshift) for more information about the command.
+
+Finally run the sf-operator CLI as follow:
+
+```sh
+go run ./main.go --config ./myconfig.yaml dev create microshift --skip-local-setup
+```
 
 Once the deployment has ended successfully, you are now ready to deploy and hack SF-Operator, congratulations!

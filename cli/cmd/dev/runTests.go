@@ -110,7 +110,6 @@ func ApplyCRDs(config *rest.Config, sfOperatorRepoPath string) {
 	crdInstallOptions := envtest.CRDInstallOptions{
 		Paths: []string{
 			filepath.Join(sfOperatorRepoPath, "config/crd/bases/sf.softwarefactory-project.io_softwarefactories.yaml"),
-			filepath.Join(sfOperatorRepoPath, "config/crd/bases/sf.softwarefactory-project.io_logservers.yaml"),
 		},
 	}
 	_, err := envtest.InstallCRDs(config, crdInstallOptions)
