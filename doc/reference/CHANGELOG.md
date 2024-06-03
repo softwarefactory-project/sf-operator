@@ -1,8 +1,16 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-
 ## [in development]
+
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [v0.0.29] - 2024-06-03
 ### Added
 
 - Default containers resources (requests and limits)
@@ -12,11 +20,6 @@ All notable changes to this project will be documented in this file.
 
 - Zuul: remove sqlalchemy logging handler as too verbose in INFO level
 - Zuul: version bumped to 10.1.0
-
-### Deprecated
-### Removed
-### Fixed
-### Security
 
 ## [v0.0.28] - 2024-05-03
 ### Added
