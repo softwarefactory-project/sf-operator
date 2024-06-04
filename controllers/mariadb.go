@@ -232,8 +232,8 @@ func (r *SFController) DeployMariadb() bool {
 		base.MkContainerPort(mariadbPort, mariaDBPortName),
 	}
 
-	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessTCPProbe(mariadbPort)
-	sts.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessTCPProbe(mariadbPort)
+	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessCMDProbe([]string{"mysql", "-h", "127.0.0.1", "-e", "SELECT 1"})
+	sts.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLivenessCMDProbe([]string{"mysqladmin", "ping"})
 	sts.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkEmptyDirVolume("mariadb-run"),
 		base.MkVolumeSecret("mariadb-config-secrets", "mariadb-config-secrets"),
