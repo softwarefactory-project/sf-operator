@@ -28,6 +28,7 @@ import (
 	"reflect"
 	"strings"
 
+	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v3"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -45,6 +46,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	monitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
@@ -119,7 +121,42 @@ func getContextFromFile(command *cobra.Command) (ctxName string, cliContext Soft
 	return ctxName, cliContext, errors.New("context not found")
 }
 
+// SetLogger enables the DEBUG LogLevel in the Logger when the debug flag is set
+func SetLogger(command *cobra.Command) {
+	debug, _ := command.Flags().GetBool("debug")
+	logLevel := zapcore.InfoLevel
+	if debug {
+		logLevel = zapcore.DebugLevel
+	}
+
+	opts := zap.Options{
+		Development: true,
+		Level:       logLevel,
+		DestWriter:  os.Stderr,
+	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+}
+
+// logI logs a message with the INFO log Level
+func logI(msg string) {
+	ctrl.Log.Info(msg)
+}
+
+// logI logs a message with the DEBUG log Level
+func logD(msg string) {
+	ctrl.Log.V(1).Info(msg)
+}
+
+// logI logs a message with the Error log Level
+func logE(err error, msg string) {
+	ctrl.Log.Error(err, msg)
+}
+
 func GetCLIContext(command *cobra.Command) (SoftwareFactoryConfigContext, error) {
+
+	// This is usually called for every CLI command so here let's set the Logger settings
+	SetLogger(command)
+
 	var cliContext SoftwareFactoryConfigContext
 	var ctxName string
 	var err error
@@ -127,9 +164,10 @@ func GetCLIContext(command *cobra.Command) (SoftwareFactoryConfigContext, error)
 	if configPath != "" {
 		ctxName, cliContext, err = getContextFromFile(command)
 		if err != nil {
-			ctrl.Log.Error(err, "Could not load config file")
+			logE(err, "Could not load config file")
+			os.Exit(1)
 		} else {
-			ctrl.Log.V(5).Info("Using configuration context " + ctxName)
+			logD("Using configuration context " + ctxName)
 		}
 	}
 	// Override with defaults
@@ -148,6 +186,16 @@ func GetCLIContext(command *cobra.Command) (SoftwareFactoryConfigContext, error)
 	}
 	if cliContext.FQDN == "" {
 		cliContext.FQDN = fqdn
+	}
+	if cliContext.Dev.SFOperatorRepositoryPath == "" {
+		defaultSFOperatorRepositoryPath, getwdErr := os.Getwd()
+		if getwdErr != nil {
+			logE(getwdErr,
+				"sf-operator-repository-path is not set in `dev` section of the configuration file and unable to determine the current working directory")
+			os.Exit(1)
+		}
+		cliContext.Dev.SFOperatorRepositoryPath = defaultSFOperatorRepositoryPath
+		logD("Using current working directory for sf-operator-repository-path: " + cliContext.Dev.SFOperatorRepositoryPath)
 	}
 	return cliContext, nil
 }
@@ -332,8 +380,8 @@ func RunCmdWithEnvOrDie(environ []string, cmd string, args ...string) string {
 	kmd.Env = append(os.Environ(), environ...)
 	out, err := kmd.CombinedOutput()
 	if err != nil {
-		ctrl.Log.Error(err, "Could not run command '"+cmd+"'")
-		ctrl.Log.Info("Captured output:\n" + string(out))
+		logE(err, "Could not run command '"+cmd+"'")
+		logI("Captured output:\n" + string(out))
 		os.Exit(1)
 	}
 	return string(out)

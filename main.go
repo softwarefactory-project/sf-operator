@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -58,11 +57,6 @@ func operatorCmd(kmd *cobra.Command, args []string) {
 }
 
 func main() {
-	opts := zap.Options{
-		Development: true,
-		DestWriter:  os.Stderr,
-	}
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	var (
 		metricsAddr          string
@@ -93,6 +87,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&fqdn, "fqdn", "d", "", "The FQDN of the deployment (if no manifest is provided).")
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "C", "", "Path to the CLI configuration file.")
 	rootCmd.PersistentFlags().StringVarP(&cliContext, "context", "c", "", "Context to use in the configuration file. Defaults to the \"default-context\" value in the config file if set, or the first available context in the config file.")
+	rootCmd.PersistentFlags().Bool("debug", false, "Enable DEBUG logs")
 
 	// Flags for the operator command
 	operatorCmd.Flags().StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")

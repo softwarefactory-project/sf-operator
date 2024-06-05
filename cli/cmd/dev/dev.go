@@ -105,18 +105,6 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 		msAnsibleMicroshiftRolePath = rootDir + "/ansible-microshift-role"
 		ctrl.Log.Info("No path to ansible-microshift-role provided, the role will be cloned into " + msAnsibleMicroshiftRolePath)
 	}
-	defaultSFOperatorRepositoryPath, _ := os.Getwd()
-	msSFOperatorRepositoryPath := cliCtx.Dev.SFOperatorRepositoryPath
-	if msSFOperatorRepositoryPath == "" {
-		if defaultSFOperatorRepositoryPath != "" {
-			msSFOperatorRepositoryPath = defaultSFOperatorRepositoryPath
-			ctrl.Log.Info("Using current working directory for sf-operator-repository-path: " + msSFOperatorRepositoryPath)
-		} else {
-			ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration file")
-			os.Exit(1)
-		}
-	}
-
 	options := ms.MkAnsiblePlaybookOptions(msHost, msUser, msOpenshiftPullSecret, rootDir)
 	varsFile := ms.MkTemporaryVarsFile(
 		cliCtx.FQDN, msDiskFileSize, msAnsibleMicroshiftRolePath, rootDir, msEtcdOnRamdisk)
@@ -124,27 +112,27 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 	// Ensure ansible-microshift-role is available
 	ms.MkMicroshiftRoleSetupPlaybook(rootDir)
 	if !dryRun {
-		ms.RunMicroshiftRoleSetup(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
+		ms.RunMicroshiftRoleSetup(rootDir, cliCtx.Dev.SFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
 	}
 	// Ensure tooling and prerequisites are installed
 	if !skipLocalSetup {
 		ms.MkLocalSetupPlaybook(rootDir)
 		if !dryRun {
-			ms.RunLocalSetup(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
+			ms.RunLocalSetup(rootDir, cliCtx.Dev.SFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
 		}
 	}
 	// Deploy MicroShift
 	if !skipDeploy {
 		ms.MkDeployMicroshiftPlaybook(rootDir)
 		if !dryRun {
-			ms.RunDeploy(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
+			ms.RunDeploy(rootDir, cliCtx.Dev.SFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
 		}
 	}
 	// Configure cluster for development and testing
 	if !skipPostInstall {
 		ms.MkPostInstallPlaybook(rootDir)
 		if !dryRun {
-			ms.RunPostInstall(rootDir, msSFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
+			ms.RunPostInstall(rootDir, cliCtx.Dev.SFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
 		}
 	}
 	if !dryRun {
@@ -157,7 +145,6 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 func devRunTests(kmd *cobra.Command, args []string) {
 	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, runTestsAllowedArgs)
 	target := args[0]
-	sfOperatorRepositoryPath := cliCtx.Dev.SFOperatorRepositoryPath
 	vars, _ := kmd.Flags().GetStringSlice("extra-var")
 	extraVars := cliutils.VarListToMap(vars)
 	if len(extraVars) == 0 {
@@ -165,10 +152,6 @@ func devRunTests(kmd *cobra.Command, args []string) {
 	}
 	if extraVars == nil {
 		extraVars = make(map[string]string)
-	}
-	if sfOperatorRepositoryPath == "" {
-		ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration")
-		os.Exit(1)
 	}
 	var verbosity string
 	verbose, _ := kmd.Flags().GetBool("v")
@@ -196,7 +179,7 @@ func devRunTests(kmd *cobra.Command, args []string) {
 			reposPath = "deploy"
 		}
 		extraVars["demo_repos_path"] = reposPath
-		createDemoEnv(env, restConfig, fqdn, reposPath, sfOperatorRepositoryPath, false)
+		createDemoEnv(env, restConfig, fqdn, reposPath, cliCtx.Dev.SFOperatorRepositoryPath, false)
 	}
 	// use config file and context for CLI calls in the tests
 	var cliGlobalFlags string
@@ -212,11 +195,11 @@ func devRunTests(kmd *cobra.Command, args []string) {
 	}
 	extraVars["cli_global_flags"] = cliGlobalFlags
 	if target == "olm" {
-		runTestOLM(extraVars, sfOperatorRepositoryPath, verbosity)
+		runTestOLM(extraVars, cliCtx.Dev.SFOperatorRepositoryPath, verbosity)
 	} else if target == "standalone" {
-		runTestStandalone(extraVars, sfOperatorRepositoryPath, verbosity)
+		runTestStandalone(extraVars, cliCtx.Dev.SFOperatorRepositoryPath, verbosity)
 	} else if target == "upgrade" {
-		runTestUpgrade(extraVars, sfOperatorRepositoryPath, verbosity)
+		runTestUpgrade(extraVars, cliCtx.Dev.SFOperatorRepositoryPath, verbosity)
 	}
 }
 
@@ -260,13 +243,8 @@ func devCreate(kmd *cobra.Command, args []string) {
 			ctrl.Log.Info("Demo repos path unset; repos will be cloned into ./deploy")
 			reposPath = "deploy"
 		}
-		sfOperatorRepositoryPath := cliCtx.Dev.SFOperatorRepositoryPath
-		if sfOperatorRepositoryPath == "" {
-			ctrl.Log.Error(errMissingArg, "The path to the sf-operator repository must be set in `dev` section of the configuration")
-			os.Exit(1)
-		}
 		keepDemoTenantDefinition, _ := kmd.Flags().GetBool("keep-demo-tenant")
-		createDemoEnv(env, restConfig, fqdn, reposPath, sfOperatorRepositoryPath, keepDemoTenantDefinition)
+		createDemoEnv(env, restConfig, fqdn, reposPath, cliCtx.Dev.SFOperatorRepositoryPath, keepDemoTenantDefinition)
 
 	} else {
 		ctrl.Log.Error(errors.New("unsupported target"), "Invalid argument '"+target+"'")
