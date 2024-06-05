@@ -16,7 +16,7 @@ CATALOG_IMG ?= $(CATALOG_REPO):latest
 # NOTE: MicroShift 4.13 got kubeAPI 1.26.
 # More info: https://docs.openshift.com/container-platform/4.13/release_notes/ocp-4-13-release-notes.html#ocp-4-13-about-this-release
 ENVTEST_K8S_VERSION = 1.26
-CERT_MANAGER_VERSION = v1.12.3
+CERT_MANAGER_VERSION = v1.14.5
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
