@@ -82,7 +82,6 @@ contexts:
         host: "microshift.dev"
         openshift-pull-secret: '<paste-pull-secret-here>'
         user: "cloud-user"
-      sf-operator-repository-path: "~/git/softwarefactory-project.io/software-factory/sf-operator"
 default-context: my-context
 ```
 
