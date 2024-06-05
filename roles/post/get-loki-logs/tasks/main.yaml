@@ -28,7 +28,7 @@
 
 - name: Get aggregated logs prefixed by service
   ansible.builtin.shell: >
-    ~/bin/logcli query --forward --since=6h --parallel-duration 15m --parallel-max-workers 4 --part-path-prefix=/tmp/all-query --merge-parts --no-labels --quiet '{namespace="sf"} | json | {{ line_format_query }}' > {{ _output_dir_realpath.stdout }}/all.log
+    ~/bin/logcli query  --batch 200 --limit 1000 --tail --forward --since=6h --parallel-duration 15m --parallel-max-workers 4 --part-path-prefix=/tmp/all-query --merge-parts --no-labels --quiet '{namespace="sf"} | json | {{ line_format_query }}' > {{ _output_dir_realpath.stdout }}/all.log
 
 - name: Change owner and group for the log dir
   ansible.builtin.command: chown -R {{ ansible_user }}:{{ ansible_user }} {{ _output_dir_realpath.stdout }}

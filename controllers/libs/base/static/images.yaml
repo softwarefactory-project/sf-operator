@@ -44,8 +44,8 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/purgelogs.container?id=6dea4a90864e62e4c7c9e1b85397b6545b421e39
     - name: mariadb
       container: quay.io/software-factory/mariadb
-      version: 10.5.16-4
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/mariadb.container?id=6dea4a90864e62e4c7c9e1b85397b6545b421e39
+      version: 10.6-ubi9-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/mariadb.container?id=475c0603059886c4fcfa172a81899bb1ca517d1c
     - name: busybox
       container: quay.io/software-factory/sf-op-busybox
       version: 1.5-3

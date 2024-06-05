@@ -85,14 +85,14 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 }
 
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
-	c := "CREATE DATABASE IF NOT EXISTS " + dbname + " CHARACTER SET utf8 COLLATE utf8_general_ci; "
-	g := "GRANT ALL PRIVILEGES ON " + dbname + ".* TO '" + username + "'@'%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+	c := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8 COLLATE utf8_general_ci;", dbname)
+	g := fmt.Sprintf("GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;", dbname, username)
 	container := base.MkContainer("mariadb-client", base.MariaDBImage())
 	base.SetContainerLimitsLowProfile(&container)
 	container.Command = []string{"sh", "-c", `
-	echo 'Running: mysql --host=" ` + MariaDBIdent + `" --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"'
+	echo 'Running: mysql --host="` + MariaDBIdent + `" --user=root --password="$MARIADB_ROOT_PASSWORD" -e "` + c + g + `"'
 	ATTEMPT=0
-	while ! mysql --host=mariadb --user=root --password="$MYSQL_ROOT_PASSWORD" -e "` + c + g + `"; do
+	while ! mysql --host=mariadb --user=root --password="$MARIADB_ROOT_PASSWORD" -e "` + c + g + `"; do
 		ATTEMPT=$[ $ATTEMPT + 1 ]
 		if test $ATTEMPT -eq 10; then
 			echo "Failed after $ATTEMPT attempt";
@@ -102,7 +102,7 @@ func (r *SFController) CreateDBInitContainer(username string, password string, d
 	done
 	`}
 	container.Env = []apiv1.EnvVar{
-		base.MkSecretEnvVar("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
+		base.MkSecretEnvVar("MARIADB_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
 		{
 			Name:  "USER_PASSWORD",
 			Value: password,
@@ -180,6 +180,18 @@ func (r *SFController) DeployMariadb() bool {
 			MYSQLRootPassword string
 		}{MYSQLRootPassword: string(adminPassSecret.Data["mariadb-root-password"])})
 
+	initfileSQL := fmt.Sprintf(
+		`CREATE USER IF NOT EXISTS root@localhost IDENTIFIED BY '%s';
+SET PASSWORD FOR root@localhost = PASSWORD('%s');
+GRANT ALL ON *.* TO root@localhost WITH GRANT OPTION;
+CREATE USER IF NOT EXISTS root@'%%' IDENTIFIED BY '%s';
+SET PASSWORD FOR root@'%%' = PASSWORD('%s');
+GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
+		adminPassSecret.Data["mariadb-root-password"],
+		adminPassSecret.Data["mariadb-root-password"],
+		adminPassSecret.Data["mariadb-root-password"],
+		adminPassSecret.Data["mariadb-root-password"])
+
 	configSecret := apiv1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mariadb-config-secrets",
@@ -189,7 +201,17 @@ func (r *SFController) DeployMariadb() bool {
 			"my.cnf": []byte(myCNF),
 		},
 	}
+	initDBSecret := apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "mariadb-initdb-secrets",
+			Namespace: r.ns,
+		},
+		Data: map[string][]byte{
+			"initfile.sql": []byte(initfileSQL),
+		},
+	}
 	r.EnsureSecret(&configSecret)
+	r.EnsureSecret(&initDBSecret)
 
 	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce)
 
@@ -223,10 +245,18 @@ func (r *SFController) DeployMariadb() bool {
 			MountPath: "/var/lib/mysql/.my.cnf",
 			ReadOnly:  true,
 		},
+		{
+			Name:      "mariadb-initdb-secrets",
+			SubPath:   "initfile.sql",
+			MountPath: "/docker-entrypoint-initdb.d/initfile.sql",
+			ReadOnly:  true,
+		},
 	}, volumeMountsStatsExporter...)
 	sts.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 		base.MkEnvVar("HOME", "/var/lib/mysql"),
-		base.MkSecretEnvVar("MYSQL_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
+		base.MkSecretEnvVar("MARIADB_ROOT_PASSWORD", "mariadb-root-password", "mariadb-root-password"),
+		base.MkEnvVar("MARIADB_DISABLE_UPGRADE_BACKUP", "1"),
+		base.MkEnvVar("MARIADB_AUTO_UPGRADE", "1"),
 	}
 	sts.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(mariadbPort, mariaDBPortName),
@@ -237,6 +267,7 @@ func (r *SFController) DeployMariadb() bool {
 	sts.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkEmptyDirVolume("mariadb-run"),
 		base.MkVolumeSecret("mariadb-config-secrets", "mariadb-config-secrets"),
+		base.MkVolumeSecret("mariadb-initdb-secrets", "mariadb-initdb-secrets"),
 	}
 
 	annotations := map[string]string{

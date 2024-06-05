@@ -2,3 +2,11 @@
 user=root
 host=localhost
 password={{ .MYSQLRootPassword }}
+
+[mysqld]
+init-file=/docker-entrypoint-initdb.d/initfile.sql
+innodb_file_per_table=on
+
+[mariadb]
+general_log
+general_log_file=/var/log/mariadb/mariadb.log
