@@ -713,7 +713,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	current := appsv1.Deployment{}
 	if r.GetM("zuul-web", &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("zuul-web configuration changed, rollout zuul-web pods ...")
+			utils.LogI("zuul-web configuration changed, rollout zuul-web pods ...")
 			current.Spec = zw.DeepCopy().Spec
 			r.UpdateR(&current)
 			return false
@@ -759,7 +759,7 @@ func (r *SFController) EnsureZuulComponents() bool {
 	if r.cr.Spec.Zuul.Executor.Enabled != nil && !*r.cr.Spec.Zuul.Executor.Enabled {
 		zuulExecutor := appsv1.StatefulSet{}
 		if r.GetM("zuul-executor", &zuulExecutor) {
-			r.log.Info("zuul-executor is disabled but running. Deleting the executor ...")
+			utils.LogI("zuul-executor is disabled but running. Deleting the executor ...")
 			r.DeleteR(&zuulExecutor)
 		}
 	}
@@ -888,7 +888,7 @@ func (r *SFController) ensureZuulPromRule() bool {
 		return false
 	} else {
 		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("Zuul default Prometheus rules changed, updating...")
+			utils.LogI("Zuul default Prometheus rules changed, updating...")
 			currentPromRule.Spec = desiredZuulPromRule.Spec
 			currentPromRule.ObjectMeta.Annotations = annotations
 			r.UpdateR(&currentPromRule)
@@ -984,7 +984,7 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 		// Set Database DB URI
 		dbSettings := apiv1.Secret{}
 		if !r.GetM(zuulDBConfigSecret, &dbSettings) {
-			r.log.Info("Waiting for db connection secret")
+			utils.LogI("Waiting for db connection secret")
 			return nil
 		}
 		cfgINI.Section("database").NewKey("dburi", fmt.Sprintf(
@@ -1009,7 +1009,7 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 	// Set Keystore secret
 	keystorePass, err := r.getSecretData(ZuulKeystorePasswordName)
 	if err != nil {
-		r.log.Info("Waiting for " + ZuulKeystorePasswordName + " secret")
+		utils.LogI("Waiting for " + ZuulKeystorePasswordName + " secret")
 		return nil
 	}
 	cfgINI.Section("keystore").NewKey("password", string(keystorePass))
@@ -1018,7 +1018,7 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 		// Set CLI auth
 		cliAuthSecret, err := r.getSecretData("zuul-auth-secret")
 		if err != nil {
-			r.log.Info("Waiting for zuul-auth-secret secret")
+			utils.LogI("Waiting for zuul-auth-secret secret")
 			return nil
 		}
 		cfgINI.Section("auth zuul_client").NewKey("secret", string(cliAuthSecret))
@@ -1131,19 +1131,19 @@ func (r *SFController) AddGitHubConnection(cfg *ini.File, conn sfv1.GitHubConnec
 	appKey := "/var/lib/zuul/" + conn.Secrets + "/app_key"
 
 	if appKey == "" || appID == "0" {
-		r.log.V(1).Info("app_key or app_id is not defined", "app_key", appKey, "app_id", appID)
+		utils.LogI(fmt.Sprintf("app_key or app_id is not defined, app_key: %s, app_id: %s", appKey, appID))
 		appKey = ""
 		appID = ""
 	}
 
 	apiToken, err := r.GetSecretDataFromKey(conn.Secrets, "api_token")
 	if err != nil {
-		r.log.V(1).Info(err.Error(), "api_token", conn.Secrets)
+		utils.LogE(err, "Unable to find 'api_token' in Secret: "+conn.Secrets)
 	}
 
 	webhookToken, err := r.GetSecretDataFromKey(conn.Secrets, "webhook_token")
 	if err != nil {
-		r.log.V(1).Info(err.Error(), "webhook_token", conn.Secrets)
+		utils.LogE(err, "Unable to find 'webhook_token' in Secret: "+conn.Secrets)
 	}
 
 	section := "connection " + conn.Name
@@ -1171,10 +1171,10 @@ func (r *SFController) AddGitLabConnection(cfg *ini.File, conn sfv1.GitLabConnec
 	webHookToken, webHookTokenErr := r.GetSecretDataFromKey(conn.Secrets, "webhook_token")
 
 	if apiTokenErr != nil {
-		r.log.Error(apiTokenErr, "Use empty value for api_token on Gitlab connection due to err", "connection name", conn.Name)
+		utils.LogE(apiTokenErr, "Use empty value for api_token on Gitlab connection due to err, connection name: "+conn.Name)
 	}
 	if webHookTokenErr != nil {
-		r.log.Error(webHookTokenErr, "Use empty value for webhook_token on Gitlab connection due to err", "connection name", conn.Name)
+		utils.LogE(webHookTokenErr, "Use empty value for webhook_token on Gitlab connection due to err, connection name: "+conn.Name)
 	}
 
 	section := "connection " + conn.Name

@@ -70,7 +70,7 @@ func (r *SFController) ensureLogserverPodMonitor() bool {
 		return false
 	} else {
 		if !utils.MapEquals(&currentLspm.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("Logserver PodMonitor configuration changed, updating...")
+			utils.LogI("Logserver PodMonitor configuration changed, updating...")
 			currentLspm.Spec = desiredLsPodmonitor.Spec
 			currentLspm.ObjectMeta.Annotations = annotations
 			r.UpdateR(&currentLspm)
@@ -106,7 +106,7 @@ func (r *SFController) ensureLogserverPromRule() bool {
 		return false
 	} else {
 		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("Logserver default Prometheus rules changed, updating...")
+			utils.LogI("Logserver default Prometheus rules changed, updating...")
 			currentPromRule.Spec = desiredLsPromRule.Spec
 			currentPromRule.ObjectMeta.Annotations = annotations
 			r.UpdateR(&currentPromRule)

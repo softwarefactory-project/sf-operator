@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+ - CLI - add the 'debug' flag to set the LogLevel to DEBUG
+
 ### Changed
 ### Deprecated
 ### Removed

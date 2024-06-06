@@ -91,7 +91,7 @@ To iterate on the development of the `sf-operator` you can either start the oper
     First, apply the `SoftwareFactory`'s `CR`:
 
     ```sh
-    kubectl apply -f playbooks/files/sf.yaml
+    kubectl apply -n sf -f playbooks/files/sf.yaml
     ```
 
     then run the operator with the following command:

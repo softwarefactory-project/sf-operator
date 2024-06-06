@@ -36,6 +36,7 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
 
 type SoftwareFactoryReconciler struct {
@@ -215,7 +216,7 @@ func (r *SFController) deployStandaloneExectorStep(services map[string]bool) map
 		"zuul-ssh-key", "zookeeper-client-tls"} {
 		_, err := r.GetSecret(sn)
 		if err != nil {
-			r.log.Info("Unable to find the Secret named " + sn)
+			utils.LogE(err, "Unable to find the Secret named "+sn)
 			return services
 		}
 	}
@@ -344,7 +345,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	r.cleanup()
 
 	if err := r.validateZuulConnectionsSecrets(); err != nil {
-		r.log.V(1).Error(err, "Validation of Zuul connections secrets failed")
+		utils.LogE(err, "Validation of Zuul connections secrets failed")
 		// TODO: add error as a new status conditions
 		status := r.cr.Status.DeepCopy()
 		status.Ready = false
@@ -359,7 +360,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		services = r.deploySFStep(services)
 	}
 
-	r.log.V(1).Info(messageInfo(r, services))
+	utils.LogI(messageInfo(r, services))
 
 	return sfv1.SoftwareFactoryStatus{
 		Ready:              isOperatorReady(services),
@@ -388,7 +389,6 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 			RESTClient: r.RESTClient,
 			RESTConfig: r.RESTConfig,
 			ns:         ns,
-			log:        log.FromContext(ctx),
 			ctx:        ctx,
 			owner:      owner,
 			standalone: standalone,
@@ -461,7 +461,7 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 		ctx, client.ObjectKey{Name: controllerCMName, Namespace: ns}, &controllerCM)
 	if err != nil && k8s_errors.IsNotFound(err) {
 		controllerCM.Data = nil
-		log.Info("Creating ConfigMap", "name", controllerCMName)
+		utils.LogI("Creating ConfigMap, name: " + controllerCMName)
 		// Create the fake controller configMap
 		if err := r.Create(ctx, &controllerCM); err != nil {
 			log.Error(err, "Unable to create configMap", "name", controllerCMName)

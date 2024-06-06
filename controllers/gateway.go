@@ -54,7 +54,7 @@ func (r *SFController) DeployHTTPDGateway() bool {
 	current := appsv1.Deployment{}
 	if r.GetM(ident, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("gateway configuration changed, rollout gateway pods ...")
+			utils.LogI("gateway configuration changed, rollout gateway pods ...")
 			current.Spec = dep.DeepCopy().Spec
 			r.UpdateR(&current)
 			return false

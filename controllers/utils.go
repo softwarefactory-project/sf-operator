@@ -8,6 +8,7 @@ package controllers
 import (
 	"context"
 	_ "embed"
+	e "errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -38,7 +39,6 @@ import (
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
-	"github.com/go-logr/logr"
 	apiroutev1 "github.com/openshift/api/route/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
@@ -59,7 +59,6 @@ type SFUtilContext struct {
 	RESTClient rest.Interface
 	RESTConfig *rest.Config
 	ns         string
-	log        logr.Logger
 	ctx        context.Context
 	owner      client.Object
 	standalone bool
@@ -78,7 +77,7 @@ func (r *SFUtilContext) setOwnerReference(controlled metav1.Object) error {
 		err = controllerutil.SetControllerReference(r.owner, controlled, r.Scheme)
 	}
 	if err != nil {
-		r.log.Error(err, "Unable to set controller reference", "name", controlled.GetName())
+		utils.LogE(err, "Unable to set controller reference, name="+controlled.GetName())
 
 	}
 	return err
@@ -117,9 +116,9 @@ func (r *SFUtilContext) DeleteR(obj client.Object) {
 // UpdateR updates resource with the owner as the ownerReferences.
 func (r *SFUtilContext) UpdateR(obj client.Object) bool {
 	r.setOwnerReference(obj)
-	r.log.V(1).Info("Updating object", "name", obj.GetName())
+	utils.LogI("Updating object name:" + obj.GetName())
 	if err := r.Client.Update(r.ctx, obj); err != nil {
-		r.log.Error(err, "Unable to update the object")
+		utils.LogE(err, "Unable to update the object")
 		return false
 	}
 	return true
@@ -138,7 +137,7 @@ func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
 	name := obj.GetName()
 
 	if !r.GetM(name, obj) {
-		r.log.V(1).Info("Creating object", "name", obj.GetName())
+		utils.LogI("Creating object, name: " + obj.GetName())
 		r.CreateR(obj)
 		return false
 	}
@@ -149,7 +148,7 @@ func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
 // Stdout and Stderr is output on the caller's Stdout
 // The function returns an Error for any issue
 func (r *SFUtilContext) PodExec(pod string, container string, command []string) error {
-	r.log.V(1).Info("Running pod execution", "pod", pod, "command", command)
+	utils.LogI(fmt.Sprintf("Running pod execution pod: %s, command: %s", pod, command))
 	execReq := r.RESTClient.
 		Post().
 		Namespace(r.ns).
@@ -189,7 +188,7 @@ func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string)
 	name := baseName + "-config-map"
 	var cm apiv1.ConfigMap
 	if !r.GetM(name, &cm) {
-		r.log.V(1).Info("Creating config", "name", name)
+		utils.LogI("Creating config map name: " + name)
 		cm = apiv1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns},
 			Data:       data,
@@ -197,7 +196,7 @@ func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string)
 		r.CreateR(&cm)
 	} else {
 		if !reflect.DeepEqual(cm.Data, data) {
-			r.log.V(1).Info("Updating config", "name", name)
+			utils.LogI("Updating configmap, name: " + name)
 			cm.Data = data
 			r.UpdateR(&cm)
 		}
@@ -211,11 +210,11 @@ func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
 	var current apiv1.Secret
 	name := secret.GetName()
 	if !r.GetM(name, &current) {
-		r.log.V(1).Info("Creating secret", "name", name)
+		utils.LogI("Creating secret, name: " + name)
 		r.CreateR(secret)
 	} else {
 		if !reflect.DeepEqual(current.Data, secret.Data) {
-			r.log.V(1).Info("Updating secret", "name", name)
+			utils.LogI("Updating secret, name: " + name)
 			current.Data = secret.Data
 			r.UpdateR(&current)
 		}
@@ -229,7 +228,7 @@ func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
 func (r *SFUtilContext) ensureSecretFromFunc(name string, getData func() string) apiv1.Secret {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
-		r.log.V(1).Info("Creating secret", "name", name)
+		utils.LogI("Creating secret, name: " + name)
 		secret = base.MkSecretFromFunc(name, r.ns, getData)
 		r.CreateR(&secret)
 	}
@@ -248,7 +247,7 @@ func (r *SFUtilContext) EnsureSecretUUID(name string) apiv1.Secret {
 func (r *SFUtilContext) EnsureSSHKeySecret(name string) {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
-		r.log.V(1).Info("Creating ssh key", "name", name)
+		utils.LogI("Creating ssh key, name: " + name)
 		secret := base.MkSSHKeySecret(name, r.ns)
 		r.CreateR(&secret)
 	}
@@ -268,12 +267,12 @@ func (r *SFUtilContext) EnsureService(service *apiv1.Service) {
 	}
 	name := service.GetName()
 	if !r.GetM(name, &current) {
-		r.log.V(1).Info("Creating service", "name", name)
+		utils.LogI("Creating service, name: " + name)
 		r.CreateR(service)
 	} else {
 		if !reflect.DeepEqual(current.Spec.Selector, service.Spec.Selector) ||
 			spsAsString(current.Spec.Ports) != spsAsString(service.Spec.Ports) {
-			r.log.V(1).Info("Updating service", "name", name)
+			utils.LogI("Updating service, name: " + name)
 			current.Spec = *service.Spec.DeepCopy()
 			r.UpdateR(&current)
 		}
@@ -287,7 +286,7 @@ func (r *SFUtilContext) ensureRoute(route apiroutev1.Route, name string) bool {
 	current := apiroutev1.Route{}
 	found := r.GetM(name, &current)
 	if !found {
-		r.log.V(1).Info("Creating route...", "name", name)
+		utils.LogI("Creating route, name: " + name)
 		r.CreateR(&route)
 		return false
 	} else {
@@ -315,7 +314,7 @@ func (r *SFUtilContext) ensureRoute(route apiroutev1.Route, name string) bool {
 		}
 
 		if needUpdate {
-			r.log.V(1).Info("Updating route...", "name", name)
+			utils.LogI("Updating route, name: " + name)
 			r.UpdateR(&current)
 			return false
 		}
@@ -352,7 +351,7 @@ func (r *SFUtilContext) ensureHTTPSRoute(
 
 	// Checking if there is any content and setting the Route with TLS data from the Secret
 	if len(sslCrt) > 0 && len(sslKey) > 0 {
-		r.log.V(1).Info("SSL certificate for Route detected", "host", host, "route name", name)
+		utils.LogI(fmt.Sprintf("SSL certificate for Route detected, host: %s, route name: %s", host, name))
 		tls := apiroutev1.TLSConfig{
 			InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
 			Termination:                   apiroutev1.TLSTerminationEdge,
@@ -443,21 +442,19 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 		}
 		for _, pod := range podList.Items {
 			if pod.Status.Phase != "Running" {
-				r.log.V(1).Info(
-					"Waiting for statefulset state: Running",
-					"name", dep.GetName(),
-					"status", dep.Status)
+				utils.LogI(fmt.Sprintf(
+					"Waiting for statefulset state: Running, name: %s, status: %v", dep.GetName(), dep.Status))
 				return false
 			}
 			containerStatuses := pod.Status.ContainerStatuses
 			for _, containerStatus := range containerStatuses {
 				if !containerStatus.Ready {
-					r.log.V(1).Info(
-						"Waiting for statefulset containers ready",
-						"name", dep.GetName(),
-						"status", dep.Status,
-						"podStatus", pod.Status,
-						"containerStatuses", containerStatuses)
+					utils.LogI(fmt.Sprintf(
+						"Waiting for statefulset containers ready, name: %s, status: %v, podStatus: %v; containerStatuses: %v",
+						dep.GetName(),
+						dep.Status,
+						pod.Status,
+						containerStatuses))
 					return false
 				}
 			}
@@ -474,7 +471,7 @@ func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 	if base.IsDeploymentReady(dep) {
 		return true
 	}
-	r.log.V(1).Info("Waiting for deployment", "name", dep.GetName())
+	utils.LogI("Waiting for deployment, name: " + dep.ObjectMeta.GetName())
 	return false
 }
 
@@ -490,7 +487,7 @@ func (r *SFUtilContext) DebugStatefulSet(name string) {
 	// Set sleep command
 	dep.Spec.Template.Spec.Containers[0].Command = []string{"sleep", "infinity"}
 	r.UpdateR(&dep)
-	r.log.V(1).Info("Debugging service", "name", name)
+	utils.LogI("Debugging service, name: " + name)
 }
 
 // extractStaticTLSFromSecret gets secret keys from sf-ssl-cert secret
@@ -517,14 +514,14 @@ func (r *SFUtilContext) extractTLSFromLECertificateSecret(host string, le sfv1.L
 
 	found := r.GetM(sfLECertName, &current)
 	if !found {
-		r.log.V(1).Info("Creating Cert-Manager LetsEncrypt Certificate ...", "name", sfLECertName)
+		utils.LogI("Creating Cert-Manager LetsEncrypt Certificate, name: " + sfLECertName)
 		r.CreateR(&certificate)
 		return false, nil, nil, nil
 	} else {
 		if current.Spec.IssuerRef.Name != certificate.Spec.IssuerRef.Name ||
 			!reflect.DeepEqual(current.Spec.DNSNames, certificate.Spec.DNSNames) {
 			// We need to update the Certficate
-			r.log.V(1).Info("Updating Cert-Manager LetsEncrypt Certificate ...", "name", sfLECertName)
+			utils.LogI("Updating Cert-Manager LetsEncrypt Certificate, name: " + sfLECertName)
 			current.Spec = *certificate.Spec.DeepCopy()
 			r.UpdateR(&current)
 			return false, nil, nil, nil
@@ -534,7 +531,7 @@ func (r *SFUtilContext) extractTLSFromLECertificateSecret(host string, le sfv1.L
 		ready := cert.IsCertificateReady(&current)
 
 		if ready {
-			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is Ready ...", "name", sfLECertName)
+			utils.LogI("Cert-Manager LetsEncrypt Certificate is Ready: name: " + sfLECertName)
 			var leSSLSecret apiv1.Secret
 			if r.GetM(current.Spec.SecretName, &leSSLSecret) {
 				// Extract the TLS material
@@ -542,13 +539,13 @@ func (r *SFUtilContext) extractTLSFromLECertificateSecret(host string, le sfv1.L
 				// Nothing more to do the rest of the function will setup the Route's TLS
 			} else {
 				// We are not able to find the Certificate's secret
-				r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is Ready but waiting for the Secret ...",
-					"name", sfLECertName, "secret", current.Spec.SecretName)
+				utils.LogI(fmt.Sprintf("Cert-Manager LetsEncrypt Certificate is Ready but waiting for the Secret, name: %s, secret: %s",
+					sfLECertName, current.Spec.SecretName))
 				return false, nil, nil, nil
 			}
 		} else {
 			// Return false to force a new Reconcile as the certificate is not Ready yet
-			r.log.V(1).Info("Cert-Manager LetsEncrypt Certificate is not Ready yet ...", "name", sfLECertName)
+			utils.LogI("Cert-Manager LetsEncrypt Certificate is not Ready yet, name: " + sfLECertName)
 			return false, nil, nil, nil
 		}
 	}
@@ -634,10 +631,10 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 
 	foundPVC := &apiv1.PersistentVolumeClaim{}
 	if !r.GetM(pvcName, foundPVC) {
-		r.log.V(1).Info("PVC " + pvcName + " not found")
+		utils.LogI("PVC " + pvcName + " not found")
 		return false
 	}
-	r.log.V(1).Info("Inspecting volume " + foundPVC.Name)
+	utils.LogD("Inspecting volume " + foundPVC.Name)
 
 	currentQTY := foundPVC.Status.Capacity.Storage()
 	if currentQTY.IsZero() {
@@ -652,21 +649,21 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 		case
 			apiv1.PersistentVolumeClaimResizing,
 			apiv1.PersistentVolumeClaimFileSystemResizePending:
-			r.log.V(1).Info("Volume resizing in progress, not ready")
+			utils.LogI("Volume resizing in progress, not ready")
 			return false
 		}
 	}
 
 	switch newQTY.Cmp(*currentQTY) {
 	case -1:
-		r.log.V(1).Info("Cannot downsize volume " + pvcName + ". Current size: " +
-			currentQTY.String() + ", Expected size: " + newQTY.String())
+		utils.LogE(e.New("volume downsize"), "Cannot downsize volume "+pvcName+". Current size: "+
+			currentQTY.String()+", Expected size: "+newQTY.String())
 		return true
 	case 0:
-		r.log.V(1).Info("Volume " + pvcName + " at expected size, nothing to do")
+		utils.LogD("Volume " + pvcName + " at expected size, nothing to do")
 		return true
 	case 1:
-		r.log.V(1).Info("Volume expansion required for  " + pvcName +
+		utils.LogI("Volume expansion required for  " + pvcName +
 			". current size: " + currentQTY.String() + " -> new size: " + newQTY.String())
 		newResources := apiv1.VolumeResourceRequirements{
 			Requests: apiv1.ResourceList{
@@ -675,14 +672,14 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 		}
 		foundPVC.Spec.Resources = newResources
 		if err := r.Client.Update(r.ctx, foundPVC); err != nil {
-			r.log.V(1).Error(err, "Updating PVC failed for volume  "+pvcName)
+			utils.LogE(err, "Updating PVC failed for volume, name: "+pvcName)
 			return false
 		}
 		// We return false to notify that a volume expansion was just
 		// requested. Technically we could consider the reconcile is
 		// over as most storage classes support hot resizing without
 		// service interruption.
-		r.log.V(1).Info("Expansion started for volume " + pvcName)
+		utils.LogI("Expansion started for volume " + pvcName)
 		return false
 	}
 	return true
@@ -721,7 +718,7 @@ func (r *SFController) EnsureDiskUsagePromRule(ruleGroups []monitoringv1.RuleGro
 		return false
 	} else {
 		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &desiredDUPromRule.ObjectMeta.Annotations) {
-			r.log.V(1).Info("Default disk usage Prometheus rules changed, updating...")
+			utils.LogI("Default disk usage Prometheus rules changed, updating...")
 			currentPromRule.Spec = desiredDUPromRule.Spec
 			currentPromRule.ObjectMeta.Annotations = desiredDUPromRule.ObjectMeta.Annotations
 			r.UpdateR(&currentPromRule)
@@ -751,7 +748,7 @@ func (r *SFController) EnsureSFPodMonitor(ports []string, selector metav1.LabelS
 		return false
 	} else {
 		if !utils.MapEquals(&currentPodMonitor.ObjectMeta.Annotations, &annotations) {
-			r.log.V(1).Info("SF PodMonitor configuration changed, updating...")
+			utils.LogI("SF PodMonitor configuration changed, updating...")
 			currentPodMonitor.Spec = desiredPodMonitor.Spec
 			currentPodMonitor.ObjectMeta.Annotations = annotations
 			r.UpdateR(&currentPodMonitor)
@@ -769,7 +766,7 @@ func (r *SFUtilContext) ensureStatefulset(sts appsv1.StatefulSet) (*appsv1.State
 	name := sts.ObjectMeta.Name
 	if r.GetM(name, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &sts.Spec.Template.ObjectMeta.Annotations) {
-			r.log.V(1).Info(name + " configuration changed, rollout pods ...")
+			utils.LogI(name + " configuration changed, rollout pods ...")
 			current.Spec.Template = *sts.Spec.Template.DeepCopy()
 			r.UpdateR(&current)
 			return &current, true
