@@ -10,6 +10,11 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 ### Security
 
+## [v0.0.31] - 2024-06-06
+### Fixed
+
+- MariaDB: Statefull update to 10.6
+
 ## [v0.0.30] - 2024-06-06
 ### Changed
 

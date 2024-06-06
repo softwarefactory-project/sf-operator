@@ -272,6 +272,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 
 	annotations := map[string]string{
 		"serial": "5",
+		"image":  base.MariaDBImage(),
 		"limits": limitstr,
 	}
 	if r.cr.Spec.FluentBitLogForwarding != nil {
