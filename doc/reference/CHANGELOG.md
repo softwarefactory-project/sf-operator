@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 ### Security
 
+## [v0.0.30] - 2024-06-06
+### Changed
+
+- MariaDB: change liveness and readiness probes
+- MariaDB: version bumped to 10.6
+
 ## [v0.0.29] - 2024-06-03
 ### Added
 
