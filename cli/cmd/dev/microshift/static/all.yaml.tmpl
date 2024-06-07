@@ -6,6 +6,9 @@ disk_file_sparsed: true
 disk_file_size: {{ .DiskFileSize }}
 etcd_on_ramdisk: {{ .ETCDOnRAMDisk }}
 setup_olm: true
+olm_version: v0.24.0
+microshift_version: 4.13
+operator_sdk_version: v1.28.0
 microshift_additional_addresses:
   - {{ "\"{{ microshift_fqdn }}\"" }}
   - {{ "\"{{ sf_fqdn }}\"" }}
