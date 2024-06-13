@@ -53,7 +53,7 @@ There is a simple way to configure Nodepool to use a cloud image with Zuul's SSH
 
 ```yaml
 labels:
--   name: my-cloud-image-label
+-   name: cloud-c9s
     min-ready: 1
 providers:
 - name: default
@@ -62,7 +62,7 @@ providers:
   image-name-format: '{image_name}-{timestamp}'
   boot-timeout: 120 # default 60
   cloud-images:
-    - name: my-cloud-image
+    - name: cloud-centos-9-stream
       username: cloud-user
   pools:
     - name: main
@@ -71,7 +71,7 @@ providers:
         - $public_network_name
       labels:
         - cloud-image: cloud-centos-9-stream
-          name: cloud-centos-9-stream
+          name: cloud-cs9
           flavor-name: $flavor
           userdata: |
             #cloud-config
