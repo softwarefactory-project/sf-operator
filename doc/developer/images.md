@@ -88,17 +88,17 @@ running Zuul pods.
 Follow these steps on your MicroShift instance
 
 ```sh
-mkdir -p /home/centos/git && cd /home/centos/git
+mkdir -p /home/cloud-user/git && cd /home/cloud-user/git
 git clone https://opendev.org/zuul/zuul
 # Clone at the current version provided by sf-operator or use master branch
-git checkout 9.3.0
+cd zuul; git checkout 10.1.0
 ```
 
 Then you can run the operator by providing the environment variable `ZUUL_LOCAL_SOURCE=<full-path-to-zuul-source>`.
-For instance (using the standalone mode):
+For instance (using the standalone mode'):
 
 ```
-ZUUL_LOCAL_SOURCE=/home/cloud-user/git/zuul/zuul sf-operator --namespace sf dev create standalone-sf --cr playbooks/files/sf.yaml
+ZUUL_LOCAL_SOURCE=/home/cloud-user/git/zuul/zuul go run ./main.go --namespace sf dev create standalone-sf --cr playbooks/files/sf.yaml
 ```
 
 After any code change, you can restart the Zuul pods, for instance the zuul-scheduler pod:
@@ -109,6 +109,8 @@ kubectl rollout restart -n sf sts/zuul-executor
 kubectl rollout restart -n sf sts/zuul-merger
 kubectl rollout restart -n sf deploy/zuul-web
 ```
+
+The Zuul web UI won't work, to re-enable it the [following section](#zuul-web).
 
 ### Zuul-web
 
@@ -124,8 +126,8 @@ Either,
 To Fetch the built asset from the zuul-web container image, run the following process from the microshift machine.
 
 ```sh
-cd /home/centos/git/zuul/zuul/web
-podman create --name zuul-web quay.io/software-factory/zuul-web:9.3.0-1
+cd /home/cloud-user/git/zuul/zuul/web
+podman create --name zuul-web quay.io/software-factory/zuul-web:10.1.0-1
 podman export -o /tmp/zuul-web.tar zuul-web
 tar -xf /tmp/zuul-web.tar usr/local/lib/python3.11/site-packages/zuul/web/static
 mv usr/local/lib/python3.11/site-packages/zuul/web/static static

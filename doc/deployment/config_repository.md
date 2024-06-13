@@ -7,9 +7,9 @@
     1. [Gerrit](#hosting-on-gerrit)
         - [Prerequisites](#prerequisites-on-gerrit)
         - [Configuring Gerrit](#configuring-gerrit)
-        - [Configuring the Zuul connection](#configuring-the-zuul-connection)
+        - [Configuring the Zuul connection](#configuring-the-gerrit-zuul-connection)
     1. [GitLab](#hosting-on-gitlab)
-        - [Configuring the Zuul connection](#configuring-the-zuul-connection-1)
+        - [Configuring the Zuul connection](#configuring-the-gitlab-zuul-connection)
 1. [Next Steps](#next-steps)
 
 ## Concept
@@ -121,7 +121,7 @@ Here are the required labels to define in the repository's *Access* settings (*m
 
 For further information check the [Gerrit section](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#gerrit) in Zuul's documentation.
 
-#### Configuring the Zuul connection
+#### Configuring the Gerrit Zuul connection
 
 In order for Zuul to start listening to Gerrit events, add a `gerritconn` property in your deployed **SoftwareFactory**'s Spec. Edit the spec with:
 
@@ -168,7 +168,7 @@ an API Token and WebHook token](https://zuul-ci.org/docs/zuul/latest/drivers/git
 The `gate` pipeline defined for the `config` repository workflow relies in the `gateit` label for the pipeline
 trigger rule. Thus, a GitLab label named `gateit` must be defined in the `Settings` the `config` repository.
 
-#### Configuring the Zuul connection
+#### Configuring the Gitlab Zuul connection
 
 To setup the zuul's connection to the GitLab instance, first you need a `Secret` resource (eg. named `gitlab-com-secret`)
 to store the API and WebHook tokens. The `Secret`'s scheme is a follow:
@@ -198,7 +198,7 @@ spec:
         - name: <zuul-connection-name>
           server: gitlab.com
           baseurl: https://gitlab.com
-          secrets: gitlab-com-secret
+          secrets: gitlab-conn-secret
 [...]
 ```
 
