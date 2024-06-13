@@ -3,3 +3,4 @@
     repo: https://github.com/openstack-k8s-operators/ansible-microshift-role
     dest: "{{ microshift_role_path }}"
     update: yes
+    version: "{{ microshift_role_version }}"

@@ -2,14 +2,16 @@
 microshift_ip: {{ "\"{{ hostvars.microshift.ansible_host }}\"" }}
 microshift_fqdn: microshift.dev
 sf_fqdn: {{ .FQDN }}
+
+# The following variables will be used to check out the ansible-microshift-role role at a pinned version
+microshift_role_path: "{{ .MicroshiftRolePath }}"
+microshift_role_version: 172b6b2161b357ad4d364d5298b5b238732e7204
+
+# The following variables are used when the ansible-microshift-role role is called
 disk_file_sparsed: true
 disk_file_size: {{ .DiskFileSize }}
 etcd_on_ramdisk: {{ .ETCDOnRAMDisk }}
 setup_olm: true
-olm_version: v0.24.0
-microshift_version: 4.13
-operator_sdk_version: v1.28.0
 microshift_additional_addresses:
   - {{ "\"{{ microshift_fqdn }}\"" }}
   - {{ "\"{{ sf_fqdn }}\"" }}
-microshift_role_path: "{{ .MicroshiftRolePath }}"
