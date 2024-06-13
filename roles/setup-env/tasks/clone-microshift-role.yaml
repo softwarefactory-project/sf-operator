@@ -1,6 +1,6 @@
-- name: Clone microshift role
+- name: "Clone ansible-microshift-role with version {{ microshift_role_version | default('master') }}"
   ansible.builtin.git:
     repo: https://github.com/openstack-k8s-operators/ansible-microshift-role
     dest: "{{ microshift_role_path }}"
     update: yes
-    version: "{{ microshift_role_version }}"
+    version: "{{ microshift_role_version | default('master') }}"
