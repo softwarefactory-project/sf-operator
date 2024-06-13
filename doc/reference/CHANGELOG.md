@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 ### Security
 
+- Update of components base container images to addess several base OS security issues
+
 ## [v0.0.31] - 2024-06-06
 ### Fixed
 
