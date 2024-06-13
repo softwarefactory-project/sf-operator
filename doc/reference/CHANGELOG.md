@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 ### Deprecated
 ### Removed
 ### Fixed
+
+- zuul-merger: CRD logLevel parameter not handled correctly
+
 ### Security
 
 - Update of components base container images to addess several base OS security issues
