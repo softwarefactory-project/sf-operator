@@ -37,3 +37,14 @@
     - pv
   tags:
     skip_ansible_lint
+
+- name: Check if some pod was OOMKilled
+  ansible.builtin.shell: |
+    kubectl get events --all-namespaces --sort-by='.lastTimestamp' -A | grep -i oom | tee {{ output_dir }}/oomkilled.log
+  register: _oomkill_status
+  ignore_errors: true
+
+- name: Print warning message when OOMKill occured
+  ansible.builtin.shell: |
+    echo -e "\n\n\n\nOOMKill occured!\n{{ _oomkill_status.stdout }}\n\n\n\n"
+  when: _oomkill_status.stdout | length > 0
