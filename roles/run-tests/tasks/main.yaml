@@ -13,6 +13,7 @@
     - name: utils/manage-hosts
     - name: utils/get-gerrit-admin-user-api-key
     - name: utils/config-repo-reset
+    - name: utils/setup-log-forwarding-stack
   loop_control:
     loop_var: role
 
@@ -21,8 +22,8 @@
     name: "health-check/{{ role.name }}"
   when: role.when | default(true)
   loop:
-    - name: initialize-log-forwarding
     - name: check-service-uri
+    - name: enable-log-forward
     - name: scale-resources
     - name: zuul-connections
     - name: zuul-authenticators
