@@ -12,12 +12,17 @@
   ansible.builtin.include_role:
     name: update-custom-resource
   vars:
+    # NOTE: The ca.crt what is mounted in /run/secrets/kubernetes.io/serviceaccount/ca.crt,
+    # when the automountServiceAccountToken is set to true, is providing the
+    # internal CA certificate to the cluster, which is not valid in MicroShift
+    # 4.14 and newer (which is correct). For the tests purposes, we can do a
+    # workaround which is using the internal API url.
     cr_spec:
       config-location:
         base-url: "http://gerrit-httpd/"
         name: config
         zuul-connection-name: gerrit
-        k8s-api-url: "https://microshift.dev:6443"
+        k8s-api-url: "https://10.43.0.1:443"
         logserver-host: microshift.dev
       zuul:
         executor:

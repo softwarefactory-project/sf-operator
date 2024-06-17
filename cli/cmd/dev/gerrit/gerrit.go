@@ -312,14 +312,14 @@ func createInitContainers(volumeMounts []apiv1.VolumeMount, fqdn string) []apiv1
 	container.Env = []apiv1.EnvVar{
 		base.MkSecretEnvVar("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
 		base.MkEnvVar("FQDN", fqdn),
-		base.MkEnvVar("JVM_XMS", "128m"),
+		base.MkEnvVar("JVM_XMS", "256m"),
 		base.MkEnvVar("JVM_XMX", "512m"),
 	}
 	container.VolumeMounts = volumeMounts
 	base.SetContainerLimits(
 		&container,
-		resource.MustParse("256Mi"),
 		resource.MustParse("512Mi"),
+		resource.MustParse("768Mi"),
 		resource.MustParse("100m"),
 		resource.MustParse("1000m"))
 	return []apiv1.Container{
@@ -355,8 +355,8 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie() {
 		container := base.MkContainer(name, gerritImage)
 		base.SetContainerLimits(
 			&container,
-			resource.MustParse("256Mi"),
 			resource.MustParse("512Mi"),
+			resource.MustParse("768Mi"),
 			resource.MustParse("100m"),
 			resource.MustParse("1000m"))
 		storageConfig := controllers.BaseGetStorageConfOrDefault(v1.StorageSpec{}, "")
