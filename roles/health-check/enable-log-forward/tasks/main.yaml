@@ -1,8 +1,4 @@
 ---
-- name: Set up log forwarding
-  ansible.builtin.include_role:
-    name: setup-log-forwarding
-
 - name: Enable log forwarding
   ansible.builtin.include_role:
     name: "update-custom-resource"

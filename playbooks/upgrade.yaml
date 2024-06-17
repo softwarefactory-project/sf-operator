@@ -5,7 +5,6 @@
     - setup-env
     - sanity-check
     - sfconfig-dev-prepare
-    - setup-log-forwarding
     - role: build-operator-assets
       vars:
         build_bundle: false
