@@ -352,7 +352,7 @@ func (r *SFController) ensureZuulLoggingConfigMap() {
 		zuulWebLogLevel = r.cr.Spec.Zuul.Web.LogLevel
 	}
 	if r.cr.Spec.Zuul.Merger.LogLevel != "" {
-		zuulMergerLogLevel = r.cr.Spec.Zuul.Web.LogLevel
+		zuulMergerLogLevel = r.cr.Spec.Zuul.Merger.LogLevel
 	}
 	var forwardLogs = false
 	var inputBaseURL = ""
@@ -625,6 +625,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"zuul-image":                 getZuulImage(service),
 		"serial":                     "5",
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
+		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-merger"))),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
