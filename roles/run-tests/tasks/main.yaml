@@ -38,6 +38,7 @@
     - name: validate-purgelogs
       when: "{{ mode == 'olm' }}"
     - name: zuul-client-api
+    - name: zuul-client-from-zuul-pod
     - name: zuul-components
     - name: test-external-ze
     - name: test-log-forwarding

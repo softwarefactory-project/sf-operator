@@ -1,0 +1,19 @@
+# Note that thanks to https://review.opendev.org/c/zuul/zuul-client/+/837908 we can
+# run zuul-client from the zuul-scheduler (works from any zuul pods) w/o providing any auth token.
+# We are ensuring this facility is working through that test case
+
+- name: Create a autohold request with zuul-client and the generated config
+  ansible.builtin.command: |
+    kubectl exec -it zuul-scheduler-0 -c zuul-scheduler -- zuul-client autohold --tenant internal --project config --job config-update --reason CI_TEST
+
+- name: Ensure autohold was set properly
+  ansible.builtin.command: |
+    kubectl exec -it zuul-scheduler-0 -c zuul-scheduler -- zuul-client autohold-list --tenant internal
+  register: _ah_list
+  failed_when: '"CI_TEST" not in _ah_list.stdout'
+
+- name: Remove autohold
+  ansible.builtin.shell: >
+    echo "{{ _ah_list.stdout }}" |
+    grep -oE "0000[0-9]+" |
+    xargs kubectl exec -it zuul-scheduler-0 -c zuul-scheduler -- zuul-client autohold-delete --tenant internal
