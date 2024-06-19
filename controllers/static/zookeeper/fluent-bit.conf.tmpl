@@ -18,6 +18,7 @@
     add     podname ${K8S_PODNAME}
     add     ip ${K8S_PODIP}
     add     labels_run zookeeper
+    add     labels_app sf
     add     component zookeeper
     add     container zookeeper
 {{- range .ExtraKeys }}
