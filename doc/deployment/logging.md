@@ -32,13 +32,13 @@ Please refer to your cluster's documentation to find out what existing logging s
 
 ## Log Forwarding to a Fluent Bit collector
 
-Native Cluster Logging solutions **should always** be your first choice for managing the logs of 
+Native Cluster Logging solutions **should always** be your first choice for managing the logs of
 Zuul and Nodepool. This is almost always the best solution in terms of cluster resource usage,
 and the most straightforward to implement as an application deployer.
 
-If **however** no such solution is available, or if the default solution does not suit your 
+If **however** no such solution is available, or if the default solution does not suit your
 needs, the SF-Operator can set up Zuul and Nodepool to forward application logs to a
-[Fluent Bit](https://fluentbit.io/) collector. The collector must be configured to expose an 
+[Fluent Bit](https://fluentbit.io/) collector. The collector must be configured to expose an
 [HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http) that your deployment
 will be able to reach.
 
@@ -62,6 +62,7 @@ The log JSON payload that is sent to your Fluent Bit collector is enriched with 
 | key | description or value |
 |--------|------------------|
 | labels_run    | the "run" label in the pod's metadata; ie the name of the microservice emitting the log line |
+| labels_app    | the "app" label, it is always set to "sf" |
 | podip     | the IP address of the pod |
 | namespace | the namespace where the pod is running |
 | nodename | the node where the pod is running |

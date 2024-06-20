@@ -36,6 +36,7 @@ func CreateForwarderEnvVars(name string, extraLabels []FluentBitLabel) []apiv1.E
 		base.MkEnvVarFromFieldRef("K8S_NAMESPACE", "metadata.namespace"),
 		base.MkEnvVarFromFieldRef("K8S_PODIP", "status.podIP"),
 		base.MkEnvVar("K8S_LABELS_RUN", name),
+		base.MkEnvVar("K8S_LABELS_APP", "sf"),
 	}
 	for i := range extraLabels {
 		var v = base.MkEnvVar("K8S_"+extraLabels[i].Key, extraLabels[i].Value)

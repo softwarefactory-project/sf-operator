@@ -18,6 +18,7 @@
     add     podname ${K8S_PODNAME}
     add     ip ${K8S_PODIP}
     add     labels_run mariadb
+    add     labels_app sf
     add     component mariadb
     add     container mariadb
 {{- range .ExtraKeys }}

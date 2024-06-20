@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
  - CLI - add the 'debug' flag to set the LogLevel to DEBUG
+ - Log Forwarding - add preset label "labels_app" by default, its value is "sf"
 
 ### Changed
 ### Deprecated
