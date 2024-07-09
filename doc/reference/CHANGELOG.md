@@ -1,7 +1,17 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+
 ## [in development]
+
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [v0.0.32] - 2024-07-09
 
 ### Added
 
@@ -9,8 +19,6 @@ All notable changes to this project will be documented in this file.
 - Log Forwarding - add preset label "labels_app" by default, its value is "sf"
 - doc - how to set the Route for a deployment of Sofware Factory services
 
-### Changed
-### Deprecated
 ### Removed
 
 - Route resource and TLS related handling and CLI facilities has been removed 
