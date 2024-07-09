@@ -41,6 +41,8 @@ sf_operator.egg-info
 /tools/microshift/ansible-microshift-role/
 /tools/microshift/microshift-config
 /tools/microshift/my-inventory.yaml
+/sf-operator-catalog
+sf-operator-catalog.Dockerfile
 .vscode
 
 # Ignore backup dir if exists

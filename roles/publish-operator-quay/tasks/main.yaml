@@ -90,11 +90,6 @@
   community.general.make:
     target: "opm-build"
     chdir: "{{ zuul.project.src_dir }}"
-    params:
-      VERSION: "{{ version }}"
-      BUNDLE_IMG: "{{ ci_bundle_img_registry }}:{{ tag_version }}"
-      IMG: "{{ ci_operator_img_registry }}:{{ tag_version }}"
-      CATALOG_IMG: "{{ ci_catalog_img_registry }}:latest"
 
 - name: "Podman Push Operator Catalog Image to {{ registry_address }}"
   ansible.builtin.shell: >

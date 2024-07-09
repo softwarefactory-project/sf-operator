@@ -210,12 +210,12 @@ staticcheck:
 	mkdir -p $(GOBIN)
 	test -L $(GOBIN)/staticcheck || ln -s $(LOCALBIN)/staticcheck $(GOBIN)/staticcheck
 
-# Cataloge
+# Catalog
 CATALOG_DIR=sf-operator-catalog
 CATALOG_FILE=$(CATALOG_DIR)/catalog.yaml
 OPM=$(LOCALBIN)/opm
 CHANNEL=preview
-AVAILTAGS = $(shell skopeo list-tags docker://$(BUNDLE_REPO) | jq -r '.Tags[]' | grep -v latest )
+AVAILTAGS = $(shell skopeo list-tags docker://$(BUNDLE_REPO) | jq -r '.Tags[]' | grep -v latest | sed "s/^v\(.*\)/\1/" | sort -V | sed "s/\(.*\)/v\1/")
 OPERATOR_REGISTRY_VERSION = v1.28.0
 
 .PHONY: install-opm
