@@ -5,14 +5,21 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
-
-- Capability to simply run privileged zuul-client command from any zuul pods without providing an auth token
-
 ### Changed
 ### Deprecated
 ### Removed
 ### Fixed
 ### Security
+
+## [v0.0.33] - 2024-11-09
+
+### Added
+
+- Capability to simply run privileged zuul-client command from any zuul pods without providing an auth token
+
+### Changed
+
+- Zuul version to 11.0.0
 
 ## [v0.0.32] - 2024-07-09
 
