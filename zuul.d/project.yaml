@@ -1,6 +1,7 @@
 - project:
     check:
       jobs:
+        - sf-operator-golang-vulnerability-test
         - sf-operator-olm
         - sf-operator-upgrade
         - sf-operator-standalone

@@ -123,3 +123,20 @@
       nodes:
         - name: controller
           label: cloud-centos-9-small
+
+- job:
+    name: sf-operator-golang-env
+    parent: golang-go
+    vars:
+      go_command: "install golang.org/x/vuln/cmd/govulncheck@latest"
+      go_version: 1.22.2
+    nodeset:
+      nodes:
+        - name: controller
+          label: cloud-centos-9
+
+- job:
+    name: sf-operator-golang-vulnerability-test
+    parent: sf-operator-golang-env
+    voting: false
+    run: playbooks/run-golang-vuln.yaml
