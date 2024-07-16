@@ -136,7 +136,6 @@
           label: cloud-centos-9
 
 - job:
-    name: sf-operator-golang-vulnerability-test
+    name: sf-operator-vuln-check
     parent: sf-operator-golang-env
-    voting: false
     run: playbooks/run-golang-vuln.yaml

@@ -1,13 +1,14 @@
 - project:
     check:
       jobs:
-        - sf-operator-golang-vulnerability-test
+        - sf-operator-vuln-check
         - sf-operator-olm
         - sf-operator-upgrade
         - sf-operator-standalone
         - sf-operator-ansible-lint
     gate:
       jobs:
+        - sf-operator-vuln-check
         - sf-operator-olm
         - sf-operator-upgrade
         - sf-operator-standalone

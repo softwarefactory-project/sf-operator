@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 ### Security
 
+- sf-operator: Golang static code analysis test added
+
 ## [v0.0.33] - 2024-11-09
 
 ### Added
