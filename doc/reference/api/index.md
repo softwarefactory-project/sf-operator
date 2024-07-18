@@ -20,7 +20,8 @@ Package v1 contains API Schema definitions for the sf v1 API group
 
 
 
-BaseStatus struct which defines the observed state for a Controller Do not use this directy, it must be derived from.
+BaseStatus struct which defines the observed state for a Controller
+Do not use this directy, it must be derived from.
 
 _Appears in:_
 - [SoftwareFactoryStatus](#softwarefactorystatus)
@@ -47,15 +48,16 @@ _Appears in:_
 | `base-url` _string_ | Base URL to use to perform git-related actions on the config repository. For example, if hosted on GitHub, the Base URL would be `https://github.com/<username>/` | -|
 | `name` _string_ | The name of the `config` repository. This value is appended to `base-url` to clone the repository | -|
 | `zuul-connection-name` _string_ | Name of the Zuul connection through which Zuul can handle git events on the config repository | -|
-| `k8s-api-url` _string_ | Public URL of the k8s cluster API. This is useful when running zuul executors outside of the cluster. This is mainly used for config-update secret generation | -|
-| `logserver-host` _string_ | Public HOST of the default logserver. This is useful when running zuul executors outside of the cluster. This is mainly used for config-update secret generation | -|
+| `k8s-api-url` _string_ | Public URL of the k8s cluster API. This is useful when running zuul executors outside<br /><br />of the cluster. This is mainly used for config-update secret generation | -|
+| `logserver-host` _string_ | Public HOST of the default logserver. This is useful when running zuul executors outside<br /><br />of the cluster. This is mainly used for config-update secret generation | -|
 
 
 #### ElasticSearchConnection
 
 
 
-Describes a Zuul connection using the [ElasticSearch driver](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#connection-configuration). When an optional parameter is not specified then Zuul's defaults apply
+Describes a Zuul connection using the [ElasticSearch driver](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#connection-configuration).
+When an optional parameter is not specified then Zuul's defaults apply
 
 _Appears in:_
 - [ZuulSpec](#zuulspec)
@@ -88,7 +90,8 @@ _Appears in:_
 
 
 
-Describes a Zuul connection using the [gerrit driver](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#connection-configuration) When an optional parameter is not specified then Zuul's defaults apply
+Describes a Zuul connection using the [gerrit driver](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#connection-configuration)
+When an optional parameter is not specified then Zuul's defaults apply
 
 _Appears in:_
 - [ZuulSpec](#zuulspec)
@@ -111,7 +114,8 @@ _Appears in:_
 
 
 
-Describes a Zuul connection using the [git driver](https://zuul-ci.org/docs/zuul/latest/drivers/git.html#connection-configuration). When an optional parameter is not specified then Zuul's defaults apply
+Describes a Zuul connection using the [git driver](https://zuul-ci.org/docs/zuul/latest/drivers/git.html#connection-configuration).
+When an optional parameter is not specified then Zuul's defaults apply
 
 _Appears in:_
 - [ZuulSpec](#zuulspec)
@@ -136,7 +140,7 @@ _Appears in:_
 | --- | --- | --- |
 | `name` _string_ | How the connection will be named in Zuul's configuration and appear in zuul-web | -|
 | `appID` _integer_ | GitHub [appID](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_id) | -|
-| `secrets` _string_ | Name of the secret which contains the following keys: [app_key](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key) must be defined if appId is defined [api_token(optional)](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token) [webhook_token (optional)](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token) The keys must have the same name as above | -|
+| `secrets` _string_ | Name of the secret which contains the following keys:<br /><br />[app_key](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.app_key) must be defined if appId is defined<br /><br />[api_token(optional)](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.api_token)<br /><br />[webhook_token (optional)](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.webhook_token)<br /><br />The keys must have the same name as above | -|
 | `server` _string_ | the [server](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.server) | -|
 | `canonicalHostname` _string_ | the [canonical_hostname](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.canonical_hostname) parameter | -|
 | `verifySsl` _boolean_ | the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/github.html#attr-%3Cgithub%20connection%3E.verify_ssl) parameter | {true}|
@@ -157,7 +161,7 @@ _Appears in:_
 | `server` _string_ | the [server](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.server) | -|
 | `canonicalHostname` _string_ | the [canonicalHostname](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.canonical_hostname) | -|
 | `baseUrl` _string_ | the (baseUrl)[https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.baseurl) | -|
-| `secrets` _string_ | Name of the secret which containes the following keys: the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token) the [api_token_name](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name) the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.webhook_token) | -|
+| `secrets` _string_ | Name of the secret which containes the following keys:<br /><br />the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token)<br /><br />the [api_token_name](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name)<br /><br />the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.webhook_token) | -|
 | `apiTokenName` _string_ | the [apiTokenName](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name) | -|
 | `cloneUrl` _string_ | the [cloneUrl](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.cloneurl) | -|
 | `keepAlive` _integer_ | the [keepAlive](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.keepalive) | -|
@@ -273,7 +277,7 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `storage` _[StorageSpec](#storagespec)_ | Storage related settings | -|
-| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the nodepool launcher process. Valid values are: "INFO" (default), "WARN", "DEBUG". | INFO|
+| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the nodepool launcher process.<br /><br />Valid values are:<br /><br />"INFO" (default),<br /><br />"WARN",<br /><br />"DEBUG". | INFO|
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
 
 
@@ -288,7 +292,7 @@ _Appears in:_
 
 | Field | Description | Default Value |
 | --- | --- | --- |
-| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the nodepool launcher service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
+| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the nodepool launcher service.<br /><br />Valid values are:<br /><br />"INFO" (default),<br /><br />"WARN",<br /><br />"DEBUG".<br /><br />Changing this value will restart the service. | INFO|
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
 
 
@@ -323,7 +327,7 @@ _Appears in:_
 | `server` _string_ | the [server](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.server) | -|
 | `canonicalHostname` _string_ | the [canonicalHostname](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.canonical_hostname) | -|
 | `baseUrl` _string_ | the (baseUrl)[https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-%3Cpagure%20connection%3E.baseurl) | -|
-| `secrets` _string_ | Name of the secret which containes the following keys: the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.api_token) | -|
+| `secrets` _string_ | Name of the secret which containes the following keys:<br /><br />the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.api_token) | -|
 | `appName` _string_ | the [appName](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.app_name) | -|
 | `cloneUrl` _string_ | the [cloneUrl](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.cloneurl) | -|
 | `sourceWhitelist` _string_ | the [sourceWhitelist](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.source_whitelist) | -|
@@ -340,7 +344,7 @@ _Appears in:_
 
 | Field | Description | Default Value |
 | --- | --- | --- |
-| `name` _string_ | Name of the referent. More info on [kubernetes' documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names). | -|
+| `name` _string_ | Name of the referent.<br /><br />More info on [kubernetes' documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names). | -|
 | `key` _string_ | The key of the secret to select from. Must be a valid secret key. | -|
 
 
@@ -390,7 +394,7 @@ _Appears in:_
 
 | Field | Description | Default Value |
 | --- | --- | --- |
-| `fqdn` _string_ | The fully qualified domain name to use with the deployment. Relevant services will be served at https://`service`.`FQDN` | -|
+| `fqdn` _string_ | The fully qualified domain name to use with the deployment. Relevant services will be served<br /><br />at https://`service`.`FQDN` | -|
 | `FluentBitLogForwarding` _[FluentBitForwarderSpec](#fluentbitforwarderspec)_ | Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http) | -|
 | `storageClassName` _string_ | Default storage class to use by Persistent Volume Claims | {topolvm-provisioner}|
 | `config-location` _[ConfigRepositoryLocationSpec](#configrepositorylocationspec)_ | Config repository spec | -|
@@ -469,9 +473,9 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `storage` _[StorageSpec](#storagespec)_ | Storage-related settings | -|
-| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-executor service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
+| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-executor service.<br /><br />Valid values are:<br /><br />"INFO" (default),<br /><br />"WARN",<br /><br />"DEBUG".<br /><br />Changing this value will restart the service. | INFO|
 | `enabled` _boolean_ | If set to false, the zuul-executor deployment won't be applied | {true}|
-| `standalone` _[StandaloneZuulExecutorSpec](#standalonezuulexecutorspec)_ | When set the Control plane is not deployed. The standalone executor must be able to connect to the control plane | -|
+| `standalone` _[StandaloneZuulExecutorSpec](#standalonezuulexecutorspec)_ | When set the Control plane is not deployed.<br /><br />The standalone executor must be able to connect to the control plane | -|
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
 
 
@@ -492,7 +496,7 @@ _Appears in:_
 | `gitHttpLowSpeedTime` _integer_ | the [git_http_low_speed_time](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_http_low_speed_time) parameter | -|
 | `gitTimeout` _integer_ | the [git_timeout](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_timeout) parameter | -|
 | `storage` _[StorageSpec](#storagespec)_ | Storage-related settings | -|
-| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the nodepool launcher service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
+| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the nodepool launcher service.<br /><br />Valid values are:<br /><br />"INFO" (default),<br /><br />"WARN",<br /><br />"DEBUG".<br /><br />Changing this value will restart the service. | INFO|
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
 
 
@@ -534,7 +538,7 @@ _Appears in:_
 | --- | --- | --- |
 | `storage` _[StorageSpec](#storagespec)_ | Storage-related settings | -|
 | `statsdTarget` _string_ | The address to forward statsd metrics to (optional), in the form "host:port" | -|
-| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-scheduler service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
+| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-scheduler service.<br /><br />Valid values are:<br /><br />"INFO" (default),<br /><br />"WARN",<br /><br />"DEBUG".<br /><br />Changing this value will restart the service. | INFO|
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
 
 
@@ -574,7 +578,7 @@ _Appears in:_
 
 | Field | Description | Default Value |
 | --- | --- | --- |
-| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-web launcher service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
+| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-web launcher service.<br /><br />Valid values are:<br /><br />"INFO" (default),<br /><br />"WARN",<br /><br />"DEBUG".<br /><br />Changing this value will restart the service. | INFO|
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
 
 
