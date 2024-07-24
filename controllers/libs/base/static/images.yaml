@@ -4,52 +4,52 @@
 images:
     - name: zuul-scheduler
       container: quay.io/software-factory/zuul-scheduler
-      version: 11.0.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      version: 11.0.1-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: zuul-executor
       container: quay.io/software-factory/zuul-executor
-      version: 11.0.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      version: 11.0.1-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: zuul-merger
       container: quay.io/software-factory/zuul-merger
-      version: 11.0.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      version: 11.0.1-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: zuul-web
       container: quay.io/software-factory/zuul-web
-      version: 11.0.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      version: 11.0.1-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: nodepool-launcher
       container: quay.io/software-factory/nodepool-launcher
       version: 10.0.0-3
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-launcher.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-launcher.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: nodepool-builder
       container: quay.io/software-factory/nodepool-builder
       version: 10.0.0-3
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-builder.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-builder.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: zookeeper
       container: quay.io/software-factory/zookeeper
       version: 3.8.4-2
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zookeeper.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zookeeper.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: git-server
       container: quay.io/software-factory/git-deamon
       version: 2.39.3-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/git-daemon.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/git-daemon.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: sshd
       container: quay.io/software-factory/sshd
       version: 0.1-4
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sshd.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sshd.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: purgelogs
       container: quay.io/software-factory/purgelogs
       version: 0.2.3-5
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/purgelogs.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/purgelogs.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: mariadb
       container: quay.io/software-factory/mariadb
       version: 11.4-ubi9-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/mariadb.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/mariadb.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: busybox
       container: quay.io/software-factory/sf-op-busybox
       version: 1.5-3
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sf-op-busybox.container?id=2a0dd65d4756c0eafeb2b1129e0d921160d77185
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sf-op-busybox.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: httpd
       container: registry.access.redhat.com/ubi8/httpd-24
       version: 1-284.1696531168

@@ -11,9 +11,17 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 ### Security
 
+## [v0.0.34] - 2024-07-24
+
+### Changed
+
+- Zuul version has been bumped to 11.0.1 (https://zuul-ci.org/docs/zuul/latest/releasenotes.html#relnotes-11-0-1)
+
+### Security
+
 - sf-operator: Golang static code analysis test added
 
-## [v0.0.33] - 2024-11-09
+## [v0.0.33] - 2024-07-11
 
 ### Added
 
