@@ -26,11 +26,10 @@
   retries: 10
   until: "loki_buildinfo.status == 200 and '2.9.2' in loki_buildinfo.content"
 
-# TODO: Remove exclusion of mariadb (this was done because of the mariadb container logs everything at high rate breaking the capability of loki to wrap logs)
 # Remove after the next sf-operator release (it affects only the upgrade job)
 - name: Get aggregated logs prefixed by service
   ansible.builtin.shell: >
-    ~/bin/logcli query --batch 2000 --forward --since=6h --parallel-duration 15m --parallel-max-workers 4 --part-path-prefix=/tmp/all-query --merge-parts --no-labels --quiet '{namespace="sf", container != "mariadb"} | json | {{ line_format_query }}' > {{ _output_dir_realpath.stdout }}/all.log
+    ~/bin/logcli query --batch 2000 --forward --since=6h --parallel-duration 15m --parallel-max-workers 4 --part-path-prefix=/tmp/all-query --merge-parts --no-labels --quiet '{namespace="sf"} | json | {{ line_format_query }}' > {{ _output_dir_realpath.stdout }}/all.log
 
 - name: Change owner and group for the log dir
   ansible.builtin.command: chown -R {{ ansible_user }}:{{ ansible_user }} {{ _output_dir_realpath.stdout }}
