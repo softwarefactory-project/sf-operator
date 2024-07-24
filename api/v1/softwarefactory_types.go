@@ -296,6 +296,14 @@ type ZuulSchedulerSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
 	Limits *LimitsSpec `json:"limits"`
+	// the [DefaultHoldExpiration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scheduler.default_hold_expiration)
+	// +optional
+	// +kubebuilder:validation:Minimum:=0
+	DefaultHoldExpiration *uint32 `json:"DefaultHoldExpiration,omitempty"`
+	// the [MaxHoldExpiration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scheduler.max_hold_expiration)
+	// +optional
+	// +kubebuilder:validation:Minimum:=0
+	MaxHoldExpiration *uint32 `json:"MaxHoldExpiration,omitempty"`
 }
 
 // Zuul Merger Configuration, see [Zuul's documentation](https://zuul-ci.org/docs/zuul/latest/configuration.html#merger)

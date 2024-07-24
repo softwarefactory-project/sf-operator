@@ -540,6 +540,8 @@ _Appears in:_
 | `statsdTarget` _string_ | The address to forward statsd metrics to (optional), in the form "host:port" | -|
 | `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-scheduler service.<br /><br />Valid values are:<br /><br />"INFO" (default),<br /><br />"WARN",<br /><br />"DEBUG".<br /><br />Changing this value will restart the service. | INFO|
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `DefaultHoldExpiration` _integer_ | the [DefaultHoldExpiration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scheduler.default_hold_expiration) | -|
+| `MaxHoldExpiration` _integer_ | the [MaxHoldExpiration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scheduler.max_hold_expiration) | -|
 
 
 #### ZuulSpec

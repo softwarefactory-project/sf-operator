@@ -957,6 +957,14 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 		cfgINI.Section("auth "+*defaultAuthSection).NewKey("default", "true")
 	}
 
+	// Set scheduler settings
+	if r.cr.Spec.Zuul.Scheduler.DefaultHoldExpiration != nil {
+		cfgINI.Section("scheduler").NewKey("default_hold_expiration", strconv.Itoa(int(*r.cr.Spec.Zuul.Scheduler.DefaultHoldExpiration)))
+	}
+	if r.cr.Spec.Zuul.Scheduler.MaxHoldExpiration != nil {
+		cfgINI.Section("scheduler").NewKey("max_hold_expiration", strconv.Itoa(int(*r.cr.Spec.Zuul.Scheduler.MaxHoldExpiration)))
+	}
+
 	// Enable prometheus metrics
 	for _, srv := range []string{"web", "executor", "scheduler", "merger"} {
 		cfgINI.Section(srv).NewKey("prometheus_port", strconv.Itoa(zuulPrometheusPort))

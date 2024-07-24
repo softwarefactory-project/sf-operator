@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- zuul-scheduler: add support for `default_hold_expiration`.
+- zuul-scheduler: add support for `max_hold_expiration`.
+
 ### Changed
 ### Deprecated
 ### Removed

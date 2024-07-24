@@ -918,6 +918,16 @@ spec:
                   scheduler:
                     description: Configuration of the scheduler microservice
                     properties:
+                      DefaultHoldExpiration:
+                        description: the [DefaultHoldExpiration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scheduler.default_hold_expiration)
+                        format: int32
+                        minimum: 0
+                        type: integer
+                      MaxHoldExpiration:
+                        description: the [MaxHoldExpiration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scheduler.max_hold_expiration)
+                        format: int32
+                        minimum: 0
+                        type: integer
                       limits:
                         default:
                           cpu: 2000m
