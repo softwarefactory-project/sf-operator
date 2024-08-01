@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 - zuul-scheduler: add support for `max_hold_expiration`.
 
 ### Changed
+
+- prometheus integration: Bumped version of statsd-exporter and node-exporter
+
 ### Deprecated
 ### Removed
 ### Fixed

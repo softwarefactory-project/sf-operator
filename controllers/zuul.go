@@ -428,6 +428,8 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 getZuulImage("zuul-scheduler"),
+		"statsd-image":               base.StatsdExporterImage(),
+		"node-exporter-image":        base.NodeExporterImage(),
 		"statsd_mapping":             utils.Checksum([]byte(zuulStatsdMappingConfig)),
 		"serial":                     "9",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
