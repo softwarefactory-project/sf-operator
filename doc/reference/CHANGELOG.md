@@ -1,8 +1,16 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-
 ## [in development]
+
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [v0.0.35] - 2024-08-13
 
 ### Added
 
@@ -13,13 +21,9 @@ All notable changes to this project will be documented in this file.
 
 - prometheus integration: Bumped version of statsd-exporter and node-exporter
 
-### Deprecated
-### Removed
 ### Fixed
 
 - Fail to deploy Zuul when multiple connections use the same Secret name (Gerrit and Github)
-
-### Security
 
 ## [v0.0.34] - 2024-07-24
 
