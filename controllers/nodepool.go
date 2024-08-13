@@ -409,7 +409,6 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	builderExtraConfigData["httpd-build-logs-dir.conf"] = httpdBuildLogsDirConfig
 	r.EnsureConfigMap("nodepool-builder-extra-config", builderExtraConfigData)
 
-	var mod int32 = 256 // decimal for 0400 octal
 	// get statsd relay if defined
 	var relayAddress *string
 	if r.cr.Spec.Nodepool.StatsdTarget != "" {
@@ -427,7 +426,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 			VolumeSource: apiv1.VolumeSource{
 				Secret: &apiv1.SecretVolumeSource{
 					SecretName:  "nodepool-builder-ssh-key",
-					DefaultMode: &mod,
+					DefaultMode: &utils.Readmod,
 				},
 			},
 		},
@@ -440,7 +439,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 						Key:  "pub",
 						Path: "pub",
 					}},
-					DefaultMode: &mod,
+					DefaultMode: &utils.Readmod,
 				},
 			},
 		},

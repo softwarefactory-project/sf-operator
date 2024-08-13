@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	"k8s.io/utils/strings/slices"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
@@ -105,32 +106,6 @@ func mkZuulLoggingMount(service string) apiv1.VolumeMount {
 	}
 }
 
-func mkZuulConnectionsSecretsMount(r *SFController) []apiv1.VolumeMount {
-	zuulConnectionMounts := []apiv1.VolumeMount{}
-	for _, connection := range r.cr.Spec.Zuul.GitHubConns {
-		secretName := connection.Secrets
-		if connection.AppID > 0 {
-			zuulConnectionMounts = append(zuulConnectionMounts, apiv1.VolumeMount{
-				Name:      secretName,
-				MountPath: "/var/lib/zuul/" + secretName + "/app_key",
-				SubPath:   "app_key",
-			})
-		}
-	}
-
-	for _, conn := range r.cr.Spec.Zuul.GerritConns {
-		if conn.Sshkey != "" {
-			keyMount := apiv1.VolumeMount{
-				Name:      "zuul-ssh-key-" + conn.Sshkey,
-				MountPath: "/var/lib/zuul-" + conn.Sshkey + "/",
-			}
-			zuulConnectionMounts = append(zuulConnectionMounts, keyMount)
-		}
-	}
-
-	return zuulConnectionMounts
-}
-
 func getZuulImage(service string) string {
 	switch srv := service; srv {
 	case "zuul-scheduler":
@@ -147,6 +122,35 @@ func getZuulImage(service string) string {
 }
 
 func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) apiv1.Container {
+
+	mkZuulConnectionsSecretsMount := func(r *SFController) []apiv1.VolumeMount {
+		added := []string{}
+		zuulConnectionMounts := []apiv1.VolumeMount{}
+		for _, conn := range r.cr.Spec.Zuul.GitHubConns {
+			if conn.AppID > 0 && !slices.Contains(added, conn.Secrets) {
+				zuulConnectionMounts = append(zuulConnectionMounts, apiv1.VolumeMount{
+					Name:      conn.Secrets,
+					MountPath: "/var/lib/zuul/" + conn.Secrets + "/app_key",
+					SubPath:   "app_key",
+				})
+				added = append(added, conn.Secrets)
+			}
+		}
+
+		for _, conn := range r.cr.Spec.Zuul.GerritConns {
+			if conn.Sshkey != "" && !slices.Contains(added, conn.Sshkey) {
+				keyMount := apiv1.VolumeMount{
+					Name:      "zuul-ssh-key-" + conn.Sshkey,
+					MountPath: "/var/lib/zuul-" + conn.Sshkey + "/",
+				}
+				zuulConnectionMounts = append(zuulConnectionMounts, keyMount)
+				added = append(added, conn.Sshkey)
+			}
+		}
+
+		return zuulConnectionMounts
+	}
+
 	volumeMounts := []apiv1.VolumeMount{
 		{
 			Name:      "zuul-config",
@@ -242,7 +246,32 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 }
 
 func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []apiv1.Volume {
-	var mod int32 = 256 // decimal for 0400 octal
+	mkZuulConnectionSecretsVolumes := func(r *SFController) []apiv1.Volume {
+		added := []string{}
+		volumes := []apiv1.Volume{}
+		for _, conn := range r.cr.Spec.Zuul.GitHubConns {
+			if conn.Secrets != "" && !slices.Contains(added, conn.Secrets) {
+				volumes = append(volumes, base.MkVolumeSecret(conn.Secrets))
+				added = append(added, conn.Secrets)
+			}
+		}
+		for _, conn := range r.cr.Spec.Zuul.GerritConns {
+			if conn.Sshkey != "" && !slices.Contains(added, conn.Sshkey) {
+				keyVol := apiv1.Volume{
+					Name: "zuul-ssh-key-" + conn.Sshkey,
+					VolumeSource: apiv1.VolumeSource{
+						Secret: &apiv1.SecretVolumeSource{
+							SecretName:  conn.Sshkey,
+							DefaultMode: &utils.Readmod,
+						},
+					},
+				}
+				volumes = append(volumes, keyVol)
+				added = append(added, conn.Sshkey)
+			}
+		}
+		return volumes
+	}
 
 	// create extra config config map
 	r.EnsureConfigMap("zuul-extra", map[string]string{
@@ -267,7 +296,7 @@ func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []ap
 			VolumeSource: apiv1.VolumeSource{
 				Secret: &apiv1.SecretVolumeSource{
 					SecretName:  "zuul-ssh-key",
-					DefaultMode: &mod,
+					DefaultMode: &utils.Readmod,
 				},
 			},
 		},
@@ -295,22 +324,7 @@ func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []ap
 		volumes = append(volumes, toolingVol)
 	}
 
-	for _, conn := range r.cr.Spec.Zuul.GerritConns {
-		if conn.Sshkey != "" {
-			keyVol := apiv1.Volume{
-				Name: "zuul-ssh-key-" + conn.Sshkey,
-				VolumeSource: apiv1.VolumeSource{
-					Secret: &apiv1.SecretVolumeSource{
-						SecretName:  conn.Sshkey,
-						DefaultMode: &mod,
-					},
-				},
-			}
-			volumes = append(volumes, keyVol)
-		}
-	}
-
-	volumes = append(volumes, mkZuulGitHubSecretsVolumes(r)...)
+	volumes = append(volumes, mkZuulConnectionSecretsVolumes(r)...)
 
 	if corporateCMExists {
 		volumes = append(volumes, base.MkVolumeCM(service+"-corporate-ca-certs", "corporate-ca-certs"))
@@ -403,15 +417,6 @@ func (r *SFController) getZuulLoggingString(service string) string {
 		return ""
 	}
 	return loggingcm.Data[service+"-logging.yaml"]
-}
-
-func mkZuulGitHubSecretsVolumes(r *SFController) []apiv1.Volume {
-	gitConnectionSecretVolumes := []apiv1.Volume{}
-	for _, connection := range r.cr.Spec.Zuul.GitHubConns {
-		secretName := connection.Secrets
-		gitConnectionSecretVolumes = append(gitConnectionSecretVolumes, base.MkVolumeSecret(secretName))
-	}
-	return gitConnectionSecretVolumes
 }
 
 func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {

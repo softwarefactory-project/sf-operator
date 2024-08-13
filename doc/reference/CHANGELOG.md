@@ -16,6 +16,9 @@ All notable changes to this project will be documented in this file.
 ### Deprecated
 ### Removed
 ### Fixed
+
+- Fail to deploy Zuul when multiple connections use the same Secret name (Gerrit and Github)
+
 ### Security
 
 ## [v0.0.34] - 2024-07-24

@@ -6,8 +6,14 @@
         hostname: dummy-gerrit.local
         username: zuul
         sshkey: dummygerritsecret
+      - name: dummy-gerrit-conn-dup
+        hostname: dummy-gerrit.local
+        username: zuul
+        sshkey: dummygerritsecret
     dummy_githubconns:
       - name: dummy-github-conn
+        secrets: githubconnectionsecret
+      - name: dummy-github-conn-dup
         secrets: githubconnectionsecret
     dummy_gitlabconns:
       - name: dummy-gitlab-conn
@@ -109,7 +115,9 @@
       register: this
       until:
         - "'dummy-gerrit-conn' in this.content"
+        - "'dummy-gerrit-conn-dup' in this.content"
         - "'dummy-github-conn' in this.content"
+        - "'dummy-github-conn-dup' in this.content"
         - "'dummy-gitlab-conn' in this.content"
         - "'dummy-git-conn' in this.content"
         - "'dummy-pagure-conn' in this.content"
@@ -150,7 +158,9 @@
       register: this
       until:
         - "'dummy-gerrit-conn' not in this.content"
+        - "'dummy-gerrit-conn-dup' not in this.content"
         - "'dummy-github-conn' not in this.content"
+        - "'dummy-github-conn-dup' not in this.content"
         - "'dummy-gitlab-conn' not in this.content"
         - "'dummy-git-conn' not in this.content"
         - "'dummy-pagure-conn' not in this.content"

@@ -160,7 +160,6 @@ func (r *SFController) DeployLogserver() bool {
 	// Setup the main container
 	sts.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
-	var mod int32 = 256 // decimal for 0400 octal
 	sts.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		{
 			Name: logserverIdent + "-config-vol",
@@ -178,7 +177,7 @@ func (r *SFController) DeployLogserver() bool {
 			VolumeSource: apiv1.VolumeSource{
 				Secret: &apiv1.SecretVolumeSource{
 					SecretName:  logserverIdent + "-keys",
-					DefaultMode: &mod,
+					DefaultMode: &utils.Readmod,
 				},
 			},
 		},

@@ -38,6 +38,7 @@ func Int32Ptr(i int32) *int32 { return &i }
 func BoolPtr(b bool) *bool    { return &b }
 
 var Execmod int32 = 493 // decimal for 0755 octal
+var Readmod int32 = 256 // decimal for 0400 octal
 
 // LogI logs a message with the INFO log Level
 func LogI(msg string) {
