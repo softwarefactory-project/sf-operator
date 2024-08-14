@@ -1,6 +1,12 @@
 ---
 - hosts: "{{ hostname | default('controller') }}"
   tasks:
+    - name: Update rpm packages to last version
+      become: true
+      ansible.builtin.package:
+        name: "*"
+        state: latest
+
     - name: Add golang to PATH
       ansible.builtin.copy:
         dest: /etc/profile.d/golang-path.sh
