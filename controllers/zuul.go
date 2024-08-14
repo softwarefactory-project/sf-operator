@@ -1253,6 +1253,7 @@ func (r *SFController) AddElasticSearchConnection(cfg *ini.File, conn sfv1.Elast
 	section := "connection " + conn.Name
 	cfg.NewSection(section)
 	cfg.Section(section).NewKey("driver", "elasticsearch")
+	cfg.Section(section).NewKey("ca_certs", "/etc/ssl/certs/ca-bundle.crt")
 	cfg.Section(section).NewKey("uri", conn.URI)
 	// Optional fields (set as omitempty in ElasticSearchConnection struct definition)
 	if conn.UseSSL != nil && !*conn.UseSSL {

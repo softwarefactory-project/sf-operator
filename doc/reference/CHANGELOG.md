@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 ### Deprecated
 ### Removed
 ### Fixed
+
+- zuul connections / elasticsearch - ensure ca_certs setting is set by default to system CA bundle
+
 ### Security
 
 ## [v0.0.35] - 2024-08-13
