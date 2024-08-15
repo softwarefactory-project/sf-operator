@@ -13,6 +13,13 @@ All notable changes to this project will be documented in this file.
 
 ### Security
 
+## [v0.0.36] - 2024-08-14
+
+### Added
+
+- zuul: ensure ca_certs setting is set by default to system CA bundle for elasticsearch connections
+- sf-operator-vuln-check: update system packages to last version
+
 ## [v0.0.35] - 2024-08-13
 
 ### Added
@@ -58,7 +65,7 @@ All notable changes to this project will be documented in this file.
 
 ### Removed
 
-- Route resource and TLS related handling and CLI facilities has been removed 
+- Route resource and TLS related handling and CLI facilities has been removed
 
 ### Fixed
 
