@@ -940,6 +940,10 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 		r.AddElasticSearchConnection(cfgINI, conn)
 	}
 
+	for _, conn := range r.cr.Spec.Zuul.SMTPConns {
+		r.AddSMTPConnection(cfgINI, conn)
+	}
+
 	gitServerURL := "git://git-server/"
 	if r.IsExternalExecutorEnabled() {
 		gitServerURL = "git://" + r.cr.Spec.Zuul.Executor.Standalone.ControlPlanePublicGSHostname + "/"
@@ -1261,6 +1265,32 @@ func (r *SFController) AddElasticSearchConnection(cfg *ini.File, conn sfv1.Elast
 	}
 	if conn.VerifyCerts != nil && !*conn.VerifyCerts {
 		cfg.Section(section).NewKey("verify_certs", "false")
+	}
+}
+
+func (r *SFController) AddSMTPConnection(cfg *ini.File, conn sfv1.SMTPConnection) {
+	section := "connection " + conn.Name
+	cfg.NewSection(section)
+	cfg.Section(section).NewKey("driver", "smtp")
+	cfg.Section(section).NewKey("server", conn.Server)
+	// Optional fields (set as omitempty in SMTPConnection struct definition)
+	if conn.Port > 0 {
+		cfg.Section(section).NewKey("port", strconv.Itoa(int(conn.Port)))
+	}
+	if conn.DefaultFrom != "" {
+		cfg.Section(section).NewKey("default_from", conn.DefaultFrom)
+	}
+	if conn.DefaultTo != "" {
+		cfg.Section(section).NewKey("default_to", conn.DefaultTo)
+	}
+	if conn.User != "" {
+		cfg.Section(section).NewKey("user", conn.User)
+	}
+	if conn.Password != "" {
+		cfg.Section(section).NewKey("password", conn.Password)
+	}
+	if conn.TLS != nil && !*conn.TLS {
+		cfg.Section(section).NewKey("use_starttls", "false")
 	}
 }
 

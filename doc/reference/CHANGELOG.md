@@ -4,13 +4,13 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- zuul: support of the SMTP connection
+
 ### Changed
 ### Deprecated
 ### Removed
 ### Fixed
-
-- zuul connections / elasticsearch - ensure ca_certs setting is set by default to system CA bundle
-
 ### Security
 
 ## [v0.0.36] - 2024-08-14

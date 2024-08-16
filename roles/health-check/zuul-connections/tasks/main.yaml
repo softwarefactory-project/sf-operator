@@ -27,6 +27,9 @@
     dummy_pagureconns:
       - name: dummy-pagure-conn
         secrets: pagureconnectionsecret
+    dummy_smtpconns:
+      - name: dummy-smtp-conn
+        server: smtp.domain.com
 
 - name: Create Gerrit Connection Secret
   kubernetes.core.k8s:
@@ -105,6 +108,7 @@
             gitconns: "{{ dummy_gitconns }}"
             elasticsearchconns: "{{ dummy_elasticsearchconns }}"
             pagureconns: "{{ dummy_pagureconns }}"
+            smtpconns: "{{ dummy_smtpconns }}"
 
     - name: Wait for the new Zuul connections to appear in the Zuul API
       ansible.builtin.uri:
@@ -124,11 +128,12 @@
       retries: "{{ zuul_api_retries }}"
       delay: "{{ zuul_api_delay }}"
 
-    # For non SourceInterface connection such as elasticsearch (which does not appear in the Zuul API connections endpoint)
+    # For non SourceInterface connection such as elasticsearch and smtp (which does not appear in the Zuul API connections endpoint)
     # we, at least, check zuul.conf to ensure the connection is defined in the Zuul config
     - name: Ensure the new Zuul connections (non SourceInterface) exist in the scheduler's zuul.conf
       ansible.builtin.shell: |
         kubectl exec zuul-scheduler-0 -- grep "dummy-elasticsearch-conn" /etc/zuul/zuul.conf
+        kubectl exec zuul-scheduler-0 -- grep "dummy-smtp-conn" /etc/zuul/zuul.conf
 
     - name: Ensure the new Zuul dummy gerrit secret exist in the scheduler's zuul.conf
       ansible.builtin.shell: |
@@ -148,6 +153,7 @@
             gitconns: []
             elasticsearchconns: []
             pagureconns: []
+            smtpconns: []
 
     - name: Wait for the dummy Zuul connections to be removed from the API
       ansible.builtin.uri:
@@ -172,6 +178,7 @@
     - name: Ensure the new Zuul connections (non SourceInterface) no longer exist in the scheduler's zuul.conf
       ansible.builtin.shell: |
         kubectl exec zuul-scheduler-0 -- grep "dummy-elasticsearch-conn" /etc/zuul/zuul.conf
+        kubectl exec zuul-scheduler-0 -- grep "dummy-smtp-conn" /etc/zuul/zuul.conf
       register: grep_result
       failed_when: grep_result is success
 

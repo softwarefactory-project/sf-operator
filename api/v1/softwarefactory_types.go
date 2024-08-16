@@ -184,6 +184,28 @@ type GitConnection struct {
 	PollDelay int32 `json:"pollDelay,omitempty"`
 }
 
+// Describes a Zuul connection using the [SMTP driver](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#connection-configuration).
+// When an optional parameter is not specified then Zuul's defaults apply
+type SMTPConnection struct {
+	// How the connection will be named in Zuul's configuration and appear in zuul-web
+	Name string `json:"name"`
+	// [server](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.server)
+	Server string `json:"server"`
+	// [port](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.port)
+	Port uint16 `json:"port,omitempty"`
+	// +kubebuilder:default:="openid profile"
+	// [default_from](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_from)
+	DefaultFrom string `json:"defaultFrom,omitempty"`
+	// [default_to](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_to)
+	DefaultTo string `json:"defaultTo,omitempty"`
+	// [user](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.user)
+	User string `json:"user,omitempty"`
+	// [password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password)
+	Password string `json:"password,omitempty"`
+	// [use_starttls](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.use_starttls)
+	TLS *bool `json:"tls,omitempty"`
+}
+
 // Describes a Zuul connection using the [ElasticSearch driver](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#connection-configuration).
 // When an optional parameter is not specified then Zuul's defaults apply
 type ElasticSearchConnection struct {
@@ -359,6 +381,8 @@ type ZuulSpec struct {
 	PagureConns []PagureConnection `json:"pagureconns,omitempty"`
 	// The list of ElasticSearch-based connections to add to Zuul's configuration
 	ElasticSearchConns []ElasticSearchConnection `json:"elasticsearchconns,omitempty"`
+	// The list of SMTP-based connections to add to Zuul's configuration
+	SMTPConns []SMTPConnection `json:"smtpconns,omitempty"`
 	// Configuration of the executor microservices
 	Executor ZuulExecutorSpec `json:"executor,omitempty"`
 	// Configuration of the scheduler microservice

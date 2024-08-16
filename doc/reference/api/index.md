@@ -333,6 +333,28 @@ _Appears in:_
 | `sourceWhitelist` _string_ | the [sourceWhitelist](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#attr-<pagure connection>.source_whitelist) | -|
 
 
+#### SMTPConnection
+
+
+
+Describes a Zuul connection using the [SMTP driver](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#connection-configuration).
+When an optional parameter is not specified then Zuul's defaults apply
+
+_Appears in:_
+- [ZuulSpec](#zuulspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `name` _string_ | How the connection will be named in Zuul's configuration and appear in zuul-web | -|
+| `server` _string_ | [server](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.server) | -|
+| `port` _integer_ | [port](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.port) | -|
+| `defaultFrom` _string_ | [default_from](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_from) | {openid profile}|
+| `defaultTo` _string_ | [default_to](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_to) | -|
+| `user` _string_ | [user](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.user) | -|
+| `password` _string_ | [password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password) | -|
+| `tls` _boolean_ | [use_starttls](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.use_starttls) | -|
+
+
 #### Secret
 
 
@@ -563,6 +585,7 @@ _Appears in:_
 | `gitconns` _[GitConnection](#gitconnection) array_ | The list of Git-based connections to add to Zuul's configuration | -|
 | `pagureconns` _[PagureConnection](#pagureconnection) array_ | The list of Pagure-based connections to add to Zuul's configuration | -|
 | `elasticsearchconns` _[ElasticSearchConnection](#elasticsearchconnection) array_ | The list of ElasticSearch-based connections to add to Zuul's configuration | -|
+| `smtpconns` _[SMTPConnection](#smtpconnection) array_ | The list of SMTP-based connections to add to Zuul's configuration | -|
 | `executor` _[ZuulExecutorSpec](#zuulexecutorspec)_ | Configuration of the executor microservices | -|
 | `scheduler` _[ZuulSchedulerSpec](#zuulschedulerspec)_ | Configuration of the scheduler microservice | -|
 | `web` _[ZuulWebSpec](#zuulwebspec)_ | Configuration of the web microservice | -|
