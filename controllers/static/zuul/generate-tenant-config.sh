@@ -10,6 +10,7 @@ cat << EOF > ~/main.yaml
     max-job-timeout: 10800
     name: internal
     report-build-page: true
+    exclude-unprotected-branches: true
     source:
       git-server:
         config-projects:
