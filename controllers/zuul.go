@@ -537,6 +537,11 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	ready := r.IsStatefulSetReady(current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-scheduler", ready)
 
+	if ready {
+		// TODO: make this configurable
+		return r.EnsureZuulWeeder(annotations["zuul-connections"])
+	}
+
 	return ready
 }
 
@@ -1138,7 +1143,13 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 
 // addKeyToSection add a tuple to the Section if the fieldValue is not empty
 func addKeyToSection(section *ini.Section, fieldKey string, fieldValue string) {
-	if fieldValue != "" {
+	// server key is mandatory.
+	if fieldKey == "server" || fieldValue != "" {
+		if fieldValue == "" {
+			// if the server is not set, use localhost
+			// todo: report an error to the user
+			fieldValue = "localhost"
+		}
 		section.NewKey(fieldKey, fieldValue)
 	}
 }

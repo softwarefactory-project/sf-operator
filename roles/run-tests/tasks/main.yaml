@@ -23,6 +23,7 @@
   when: role.when | default(true)
   loop:
     - name: check-service-uri
+    - name: check-zuul-weeder
     - name: enable-log-forward
     - name: scale-resources
     - name: zuul-connections
