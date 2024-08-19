@@ -286,6 +286,9 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 		r.EnsureDiskUsagePromRule(DURuleGroups)
 	}
 
+	// TODO: make this configurable
+	services["LogJuicer"] = r.EnsureLogJuicer()
+
 	return services
 }
 

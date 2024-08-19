@@ -1,0 +1,13 @@
+---
+- name: Get logjuicer status
+  ansible.builtin.uri:
+    url: "https://{{ fqdn }}/logjuicer/api/models"
+    validate_certs: "{{ validate_certs }}"
+    method: GET
+    return_content: true
+    body_format: json
+  register: logjuicer_models
+  until:
+    - "'json' in logjuicer_models"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"

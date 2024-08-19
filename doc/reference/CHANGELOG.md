@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - crd: capability disable Prometheus related resources like `PodMonitor` to enable `SoftwareFactory` deployment without
   Prometheus Operator installed on the cluster.
 - weeder: add zuul-weeder service to inspect the global config, available at $fqdn/weeder/
+- logjuicer: add log analysis service to debug build failure, available at $fqdn/logjuicer/
 
 ### Changed
 

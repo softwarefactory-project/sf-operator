@@ -70,6 +70,13 @@ cat << EOF > playbooks/base/post.yaml
     -  role: add-fileserver
        fileserver: "{{ site_sflogs }}"
     -  role: generate-zuul-manifest
+  tasks:
+    - when: not zuul_success | bool
+      include_role:
+        name: report-logjuicer
+      vars:
+        logjuicer_web_url: https://${FQDN}/logjuicer
+        zuul_web_url: https://${FQDN}/zuul/t/{{ zuul.tenant }}
 
 - hosts: ${ZUUL_LOGSERVER_HOST}
   gather_facts: false
