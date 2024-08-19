@@ -22,6 +22,14 @@ handlers:
     env_prefix: K8S_
 {{ end }}
 loggers:
+  zuul.GerritConnection.ssh:
+    handlers:
+      - console
+{{- if .ForwardLogs }}
+      - logforward
+{{ end }}
+    level: INFO
+    propagate: 0
   zuul.GerritConnection.io:
     handlers:
       - console
