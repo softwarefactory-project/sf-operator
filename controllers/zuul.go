@@ -284,7 +284,7 @@ func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []ap
 	})
 
 	// Install the logging settings config map resource
-	r.ensureZuulLoggingConfigMap()
+	r.EnsureConfigMap("zuul-logging", r.computeLoggingConfig())
 
 	volumes := []apiv1.Volume{
 		base.MkVolumeSecret("ca-cert"),
@@ -348,7 +348,7 @@ func (r *SFController) getTenantsEnvs() []apiv1.EnvVar {
 	}
 }
 
-func (r *SFController) ensureZuulLoggingConfigMap() {
+func (r *SFController) computeLoggingConfig() map[string]string {
 	loggingData := make(map[string]string)
 
 	zuulExecutorLogLevel := sfv1.InfoLogLevel
@@ -407,16 +407,12 @@ func (r *SFController) ensureZuulLoggingConfigMap() {
 			BaseURL:     inputBaseURL,
 		})
 
-	r.EnsureConfigMap("zuul-logging", loggingData)
-
+	return loggingData
 }
 
 func (r *SFController) getZuulLoggingString(service string) string {
-	var loggingcm apiv1.ConfigMap
-	if !r.GetM("zuul-logging-config-map", &loggingcm) {
-		return ""
-	}
-	return loggingcm.Data[service+"-logging.yaml"]
+	loggingData := r.computeLoggingConfig()
+	return loggingData[service+"-logging.yaml"]
 }
 
 func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {

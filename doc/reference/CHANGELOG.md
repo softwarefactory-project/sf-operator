@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 ### Deprecated
 ### Removed
 ### Fixed
+
+- zuul: fix services not rollout after log level change
+
 ### Security
 
 ## [v0.0.36] - 2024-08-14
