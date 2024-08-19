@@ -999,7 +999,6 @@ spec:
                         When an optional parameter is not specified then Zuul's defaults apply
                       properties:
                         defaultFrom:
-                          default: openid profile
                           description: '[default_from](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_from)'
                           type: string
                         defaultTo:

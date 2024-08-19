@@ -348,7 +348,7 @@ _Appears in:_
 | `name` _string_ | How the connection will be named in Zuul's configuration and appear in zuul-web | -|
 | `server` _string_ | [server](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.server) | -|
 | `port` _integer_ | [port](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.port) | -|
-| `defaultFrom` _string_ | [default_from](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_from) | {openid profile}|
+| `defaultFrom` _string_ | [default_from](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_from) | -|
 | `defaultTo` _string_ | [default_to](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_to) | -|
 | `user` _string_ | [user](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.user) | -|
 | `password` _string_ | [password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password) | -|

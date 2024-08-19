@@ -193,7 +193,6 @@ type SMTPConnection struct {
 	Server string `json:"server"`
 	// [port](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.port)
 	Port uint16 `json:"port,omitempty"`
-	// +kubebuilder:default:="openid profile"
 	// [default_from](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_from)
 	DefaultFrom string `json:"defaultFrom,omitempty"`
 	// [default_to](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_to)
