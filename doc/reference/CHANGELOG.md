@@ -17,6 +17,17 @@ All notable changes to this project will be documented in this file.
 
 ### Security
 
+## [v0.0.37] - 2024-08-19
+
+### Added
+
+- zuul: support of the SMTP connection
+- zuul: added pinned log INFO level for "zuul.GerritConnection.ssh" logger as too verbose in DEBUG level
+
+### Fixed
+
+- zuul: fix services not rollout after log level change
+
 ## [v0.0.36] - 2024-08-14
 
 ### Added
