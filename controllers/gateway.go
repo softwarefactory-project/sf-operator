@@ -24,7 +24,7 @@ func (r *SFController) DeployHTTPDGateway() bool {
 		port  = 8080
 	)
 
-	srv := base.MkService(ident, r.ns, ident, []int32{port}, ident)
+	srv := base.MkService(ident, r.ns, ident, []int32{port}, ident, r.cr.Spec.ExtraLabels)
 	r.GetOrCreate(&srv)
 
 	r.EnsureConfigMap(ident, map[string]string{
@@ -37,7 +37,7 @@ func (r *SFController) DeployHTTPDGateway() bool {
 		"serial":     "1",
 	}
 
-	dep := base.MkDeployment(ident, r.ns, base.HTTPDImage())
+	dep := base.MkDeployment(ident, r.ns, base.HTTPDImage(), r.cr.Spec.ExtraLabels)
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkVolumeCM(ident, ident+"-config-map"),

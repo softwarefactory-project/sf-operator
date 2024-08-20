@@ -286,7 +286,7 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Create the statefulset
-	sts := r.mkStatefulSet(GitServerIdent, base.GitServerImage(), r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), apiv1.ReadWriteOnce)
+	sts := r.mkStatefulSet(GitServerIdent, base.GitServerImage(), r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 	GSVolumeMountsRO := []apiv1.VolumeMount{
 		{
@@ -359,9 +359,9 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Create services exposed
-	svc := base.MkServicePod(GitServerIdent, r.ns, GitServerIdent+"-0", []int32{gsGitPort}, gsGitPortName)
+	svc := base.MkServicePod(GitServerIdent, r.ns, GitServerIdent+"-0", []int32{gsGitPort}, gsGitPortName, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
-	svcRW := base.MkServicePod(GitServerIdentRW, r.ns, GitServerIdent+"-0", []int32{gsGitPortRW}, gsGitPortName)
+	svcRW := base.MkServicePod(GitServerIdentRW, r.ns, GitServerIdent+"-0", []int32{gsGitPortRW}, gsGitPortName, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svcRW)
 
 	ready := r.IsStatefulSetReady(current)

@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"strconv"
 
+	"golang.org/x/exp/maps"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,11 +52,13 @@ type LogServerReconciler struct {
 }
 
 func (r *SFController) ensureLogserverPodMonitor() bool {
+	var labels = map[string]string{
+		"app": "sf",
+		"run": logserverIdent,
+	}
+	maps.Copy(labels, r.cr.Spec.ExtraLabels)
 	selector := metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"app": "sf",
-			"run": logserverIdent,
-		},
+		MatchLabels: labels,
 	}
 	nePort := sfmonitoring.GetTruncatedPortName(logserverIdent, sfmonitoring.NodeExporterPortNameSuffix)
 	desiredLsPodmonitor := sfmonitoring.MkPodMonitor(logserverIdent+"-monitor", r.ns, []string{nePort}, selector)
@@ -132,7 +135,7 @@ func (r *SFController) DeployLogserver() bool {
 	// Create service exposed by logserver
 	svc := base.MkServicePod(
 		logserverIdent, r.ns, logserverIdent+"-0",
-		[]int32{httpdPort, sshdPort, sfmonitoring.NodeExporterPort}, logserverIdent)
+		[]int32{httpdPort, sshdPort, sfmonitoring.NodeExporterPort}, logserverIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
 
 	volumeMounts := []apiv1.VolumeMount{
@@ -155,7 +158,7 @@ func (r *SFController) DeployLogserver() bool {
 
 	// Create the statefulset
 	sts := r.mkStatefulSet(logserverIdent, base.HTTPDImage(),
-		BaseGetStorageConfOrDefault(r.cr.Spec.Logserver.Storage, r.cr.Spec.StorageClassName), apiv1.ReadWriteOnce)
+		BaseGetStorageConfOrDefault(r.cr.Spec.Logserver.Storage, r.cr.Spec.StorageDefault), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
 
 	// Setup the main container
 	sts.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts

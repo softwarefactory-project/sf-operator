@@ -17,5 +17,3 @@ spec:
         controlPlanePublicZKHostname: "microshift.dev"
         controlPlanePublicGSHostname: "microshift.dev"
         publicHostname: microshift.dev
-  # NOTE: use "crc-csi-hostpath-provisioner" in CRC deployment
-  storageClassName: "topolvm-provisioner"

@@ -109,6 +109,11 @@ spec:
                 - name
                 - zuul-connection-name
                 type: object
+              extraLabels:
+                additionalProperties:
+                  type: string
+                description: Whether you need to add extra labels on all managed resources
+                type: object
               fqdn:
                 description: |-
                   The fully qualified domain name to use with the deployment. Relevant services will be served
@@ -358,10 +363,23 @@ spec:
                       in the form "host:port"
                     type: string
                 type: object
-              storageClassName:
-                default: topolvm-provisioner
-                description: Default storage class to use by Persistent Volume Claims
-                type: string
+              storageDefault:
+                description: Default setting to use by Persistent Volume Claims
+                properties:
+                  className:
+                    default: topolvm-provisioner
+                    description: Default storage class to use with Persistent Volume
+                      Claims issued by this resource. Consult your cluster's configuration
+                      to see what storage classes are available and recommended for
+                      your use case.
+                    type: string
+                  extraAnnotations:
+                    additionalProperties:
+                      type: string
+                    description: Whether you need to add extra annotations to the
+                      Persistent Volume Claims
+                    type: object
+                type: object
               zookeeper:
                 description: Zookeeper service spec
                 properties:

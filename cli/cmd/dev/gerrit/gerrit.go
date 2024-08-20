@@ -332,6 +332,7 @@ func (g *GerritCMDContext) ensureGerritPostInitJobOrDie() {
 	job := base.MkJob(
 		jobName, g.env.Ns,
 		createPostInitContainer(jobName, g.fqdn),
+		map[string]string{},
 	)
 	job.Spec.Template.Spec.Volumes = ManageSFVolumes
 	g.ensureJobCompletedOrDie(job)
@@ -359,10 +360,10 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie() {
 			resource.MustParse("768Mi"),
 			resource.MustParse("100m"),
 			resource.MustParse("1000m"))
-		storageConfig := controllers.BaseGetStorageConfOrDefault(v1.StorageSpec{}, "")
+		storageConfig := controllers.BaseGetStorageConfOrDefault(v1.StorageSpec{}, v1.StorageDefaultSpec{})
 		pvc := base.MkPVC(name, g.env.Ns, storageConfig, apiv1.ReadWriteOnce)
 		sts := base.MkStatefulset(
-			name, g.env.Ns, 1, name, container, pvc)
+			name, g.env.Ns, 1, name, container, pvc, map[string]string{})
 		volumeMounts := []apiv1.VolumeMount{
 			{
 				Name:      name,
@@ -382,7 +383,7 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie() {
 func (g *GerritCMDContext) ensureGerritIngressesOrDie() {
 	name := "gerrit"
 	route := base.MkHTTPSRoute(name, g.env.Ns, name+"."+g.fqdn,
-		gerritHTTPDPortName, "/", gerritHTTPDPort)
+		gerritHTTPDPortName, "/", gerritHTTPDPort, map[string]string{})
 	g.ensureRouteOrDie(route)
 }
 

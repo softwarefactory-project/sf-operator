@@ -213,7 +213,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 	r.EnsureSecret(&configSecret)
 	r.EnsureSecret(&initDBSecret)
 
-	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce)
+	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
 
 	base.SetContainerLimitsHighProfile(&sts.Spec.Template.Spec.Containers[0])
 	limitstr := base.UpdateContainerLimit(r.cr.Spec.MariaDB.Limits, &sts.Spec.Template.Spec.Containers[0])
@@ -292,7 +292,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 	}
 
 	servicePorts := []int32{mariadbPort}
-	srv := base.MkServicePod(MariaDBIdent, r.ns, "mariadb-0", servicePorts, mariaDBPortName)
+	srv := base.MkServicePod(MariaDBIdent, r.ns, "mariadb-0", servicePorts, mariaDBPortName, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&srv)
 
 	var zuulDBSecret apiv1.Secret

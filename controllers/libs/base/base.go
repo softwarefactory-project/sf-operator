@@ -6,6 +6,7 @@ package base
 
 import (
 	"fmt"
+	"maps"
 
 	apiroutev1 "github.com/openshift/api/route/v1"
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
@@ -221,6 +222,7 @@ func MkSSHKeySecret(name string, namespace string) apiv1.Secret {
 type StorageConfig struct {
 	StorageClassName string
 	Size             resource.Quantity
+	ExtraAnnotations map[string]string
 }
 
 // MkPVC produces PerssistentVolumeClaim
@@ -228,8 +230,9 @@ func MkPVC(name string, ns string, storageParams StorageConfig, accessMode apiv1
 	qty := storageParams.Size
 	return apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
+			Name:        name,
+			Namespace:   ns,
+			Annotations: storageParams.ExtraAnnotations,
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
 			StorageClassName: &storageParams.StorageClassName,
@@ -244,11 +247,12 @@ func MkPVC(name string, ns string, storageParams StorageConfig, accessMode apiv1
 }
 
 // MkJob produces a Job
-func MkJob(name string, ns string, container apiv1.Container) batchv1.Job {
+func MkJob(name string, ns string, container apiv1.Container, extraLabels map[string]string) batchv1.Job {
 	return batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
+			Labels:    extraLabels,
 		},
 		Spec: batchv1.JobSpec{
 			Template: apiv1.PodTemplateSpec{
@@ -280,11 +284,12 @@ func mkServicePorts(ports []int32, portName string) []apiv1.ServicePort {
 }
 
 // MkService produces a Service
-func MkService(name string, ns string, selector string, ports []int32, portName string) apiv1.Service {
+func MkService(name string, ns string, selector string, ports []int32, portName string, extraLabels map[string]string) apiv1.Service {
 	return apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
+			Labels:    extraLabels,
 		},
 		Spec: apiv1.ServiceSpec{
 			Ports: mkServicePorts(ports, portName),
@@ -296,11 +301,12 @@ func MkService(name string, ns string, selector string, ports []int32, portName 
 }
 
 // MkServicePod produces a Service that target a single Pod by name
-func MkServicePod(name string, ns string, podName string, ports []int32, portName string) apiv1.Service {
+func MkServicePod(name string, ns string, podName string, ports []int32, portName string, extraLabels map[string]string) apiv1.Service {
 	return apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
+			Labels:    extraLabels,
 		},
 		Spec: apiv1.ServiceSpec{
 			Ports: mkServicePorts(ports, portName),
@@ -312,16 +318,16 @@ func MkServicePod(name string, ns string, podName string, ports []int32, portNam
 }
 
 // MkHeadlessService produces a headless service.
-func MkHeadlessService(name string, ns string, selector string, ports []int32, portName string) apiv1.Service {
-	service := MkService(name, ns, selector, ports, portName)
+func MkHeadlessService(name string, ns string, selector string, ports []int32, portName string, extraLabels map[string]string) apiv1.Service {
+	service := MkService(name, ns, selector, ports, portName, extraLabels)
 	service.ObjectMeta.Name = name + "-headless"
 	service.Spec.ClusterIP = "None"
 	return service
 }
 
 // MkHeadlessServicePod produces a headless service.
-func MkHeadlessServicePod(name string, ns string, podName string, ports []int32, portName string) apiv1.Service {
-	service := MkServicePod(name, ns, podName, ports, portName)
+func MkHeadlessServicePod(name string, ns string, podName string, ports []int32, portName string, extraLabels map[string]string) apiv1.Service {
+	service := MkServicePod(name, ns, podName, ports, portName, extraLabels)
 	service.ObjectMeta.Name = name + "-headless"
 	service.Spec.ClusterIP = "None"
 	return service
@@ -329,7 +335,7 @@ func MkHeadlessServicePod(name string, ns string, podName string, ports []int32,
 
 // MkHTTPSRoute produces a Route on top of a Service
 func MkHTTPSRoute(
-	name string, ns string, host string, serviceName string, path string, port int) apiroutev1.Route {
+	name string, ns string, host string, serviceName string, path string, port int, extraLabels map[string]string) apiroutev1.Route {
 	tls := apiroutev1.TLSConfig{
 		InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
 		Termination:                   apiroutev1.TLSTerminationEdge,
@@ -338,6 +344,7 @@ func MkHTTPSRoute(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
+			Labels:    extraLabels,
 		},
 		Spec: apiroutev1.RouteSpec{
 			TLS:  &tls,
@@ -359,27 +366,27 @@ func MkHTTPSRoute(
 // MkStatefulset produces a StatefulSet.
 func MkStatefulset(
 	name string, ns string, replicas int32, serviceName string,
-	container apiv1.Container, pvc apiv1.PersistentVolumeClaim) appsv1.StatefulSet {
+	container apiv1.Container, pvc apiv1.PersistentVolumeClaim, extraLabels map[string]string) appsv1.StatefulSet {
+	var labels = map[string]string{
+		"app": "sf",
+		"run": name,
+	}
+	maps.Copy(labels, extraLabels)
 	return appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
+			Labels:    extraLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas:    utils.Int32Ptr(replicas),
 			ServiceName: serviceName,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "sf",
-					"run": name,
-				},
+				MatchLabels: labels,
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "sf",
-						"run": name,
-					},
+					Labels: labels,
 				},
 				Spec: apiv1.PodSpec{
 					SecurityContext: &DefaultPodSecurityContext,
@@ -397,8 +404,13 @@ func MkStatefulset(
 }
 
 // MkDeployment produces a Deployment.
-func MkDeployment(name string, ns string, image string) appsv1.Deployment {
+func MkDeployment(name string, ns string, image string, extraLabels map[string]string) appsv1.Deployment {
 	container := MkContainer(name, image)
+	var labels = map[string]string{
+		"app": "sf",
+		"run": name,
+	}
+	maps.Copy(labels, extraLabels)
 	return appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -407,17 +419,11 @@ func MkDeployment(name string, ns string, image string) appsv1.Deployment {
 		Spec: appsv1.DeploymentSpec{
 			Replicas: utils.Int32Ptr(1),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "sf",
-					"run": name,
-				},
+				MatchLabels: labels,
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "sf",
-						"run": name,
-					},
+					Labels: labels,
 				},
 				Spec: apiv1.PodSpec{
 					Containers: []apiv1.Container{
