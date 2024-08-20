@@ -281,8 +281,10 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 		},
 	}
 	// TODO? we could add this to the readiness computation.
-	r.EnsureSFPodMonitor(monitoredPorts, podMonitorSelector)
-	r.EnsureDiskUsagePromRule(DURuleGroups)
+	if !r.cr.Spec.PrometheusMonitorsDisabled {
+		r.EnsureSFPodMonitor(monitoredPorts, podMonitorSelector)
+		r.EnsureDiskUsagePromRule(DURuleGroups)
+	}
 
 	return services
 }

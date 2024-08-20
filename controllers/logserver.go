@@ -290,8 +290,10 @@ func (r *SFController) DeployLogserver() bool {
 
 	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
 	// TODO(mhu) we may want to include monitoring objects' status in readiness computation
-	r.ensureLogserverPodMonitor()
-	r.ensureLogserverPromRule()
+	if !r.cr.Spec.PrometheusMonitorsDisabled {
+		r.ensureLogserverPodMonitor()
+		r.ensureLogserverPromRule()
+	}
 
 	isReady := r.IsStatefulSetReady(current) && !stsUpdated && pvcReadiness
 	conds.UpdateConditions(&r.cr.Status.Conditions, logserverIdent, isReady)

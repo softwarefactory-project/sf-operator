@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 
 - crd: add capability to set extra labels on all managed resources
 - crd: add capability to set extra annotations on PVC
+- crd: capability disable Prometheus related resources like `PodMonitor` to enable `SoftwareFactory` deployment without
+  Prometheus Operator installed on the cluster.
 
 ### Changed
 

@@ -774,7 +774,9 @@ func (r *SFController) EnsureZuulComponents() bool {
 		return false
 	}
 
-	r.ensureZuulPromRule()
+	if !r.cr.Spec.PrometheusMonitorsDisabled {
+		r.ensureZuulPromRule()
+	}
 
 	// Install Services resources
 	r.EnsureZuulComponentsFrontServices()

@@ -363,6 +363,11 @@ spec:
                       in the form "host:port"
                     type: string
                 type: object
+              prometheusMonitorsDisabled:
+                default: false
+                description: Set to true to disable deployment of PodMonitors and
+                  related Prometheus resource
+                type: boolean
               storageDefault:
                 description: Default setting to use by Persistent Volume Claims
                 properties:

@@ -829,7 +829,9 @@ func (r *SFController) DeployNodepool() map[string]bool {
 	statsdVolume := base.MkVolumeCM("statsd-config", "np-statsd-config-map")
 
 	// Ensure monitoring - TODO add to condition
-	r.ensureNodepoolPromRule(cloudsYaml)
+	if !r.cr.Spec.PrometheusMonitorsDisabled {
+		r.ensureNodepoolPromRule(cloudsYaml)
+	}
 
 	deployments[LauncherIdent] = r.DeployNodepoolLauncher(
 		statsdVolume, nodepoolStatsdMappingConfig, volumeMounts, nodepoolProvidersSecrets, providerSecretsResourceExists)
