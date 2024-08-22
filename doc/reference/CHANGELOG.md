@@ -5,8 +5,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- zuul: support of the SMTP connection
-- zuul: added pinned log INFO level for "zuul.GerritConnection.ssh" logger as too verbose in DEBUG level
+- zuul: internal tenant - set exclude-unprotected-branches: true
 
 ### Changed
 ### Deprecated
