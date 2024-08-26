@@ -25,6 +25,17 @@ All notable changes to this project will be documented in this file.
 
 ### Security
 
+## [v0.0.38] - 2024-08-26
+
+### Added
+
+- add capability to set extra annotations and extra Labels for all resources
+- add capability to disable usage of Prometheus resources
+
+### Removed
+
+- remove restartPolicy from init container
+
 ## [v0.0.37] - 2024-08-19
 
 ### Added
