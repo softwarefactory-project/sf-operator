@@ -150,7 +150,7 @@ func (r *SFController) RunCommand(name string, args []string, extraVars []apiv1.
 	jobContainer.VolumeMounts = []apiv1.VolumeMount{
 		{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
 	}
-	job := base.MkJob(name, r.ns, jobContainer)
+	job := base.MkJob(name, r.ns, jobContainer, r.cr.Spec.ExtraLabels)
 	job.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkVolumeCM("pymod-sf-operator", "pymod-sf-operator-config-map"),
 	}

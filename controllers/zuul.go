@@ -512,7 +512,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 
 	zsVolumes := mkZuulVolumes("zuul-scheduler", r, corporateCMExists)
 
-	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), apiv1.ReadWriteOnce)
+	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	zs.Spec.Template.Spec.Containers = zuulContainers
@@ -558,7 +558,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	}
 	// TODO Add the zk-port-forward-kube-config secret resource version in the annotation if enabled
 
-	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), apiv1.ReadWriteOnce)
+	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
 	zuulContainer := r.mkZuulContainer("zuul-executor", corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Executor.Limits, &zuulContainer)
 	ze.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
@@ -632,7 +632,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
-	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), apiv1.ReadWriteOnce)
+	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
 	zuulContainer := r.mkZuulContainer(service, corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Merger.Limits, &zuulContainer)
 	zm.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
@@ -690,7 +690,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 	}
 
-	zw := base.MkDeployment("zuul-web", r.ns, "")
+	zw := base.MkDeployment("zuul-web", r.ns, "", r.cr.Spec.ExtraLabels)
 	zuulContainer := r.mkZuulContainer("zuul-web", false)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Web.Limits, &zuulContainer)
 	zw.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
@@ -743,13 +743,13 @@ func (r *SFController) IsExecutorEnabled() bool {
 
 func (r *SFController) EnsureZuulExecutorService() {
 	headlessPorts := []int32{zuulExecutorPort}
-	srvZE := base.MkHeadlessService("zuul-executor", r.ns, "zuul-executor", headlessPorts, "zuul-executor")
+	srvZE := base.MkHeadlessService("zuul-executor", r.ns, "zuul-executor", headlessPorts, "zuul-executor", r.cr.Spec.ExtraLabels)
 	r.GetOrCreate(&srvZE)
 }
 
 func (r *SFController) EnsureZuulComponentsFrontServices() {
 	servicePorts := []int32{zuulWEBPort}
-	srv := base.MkService("zuul-web", r.ns, "zuul-web", servicePorts, "zuul-web")
+	srv := base.MkService("zuul-web", r.ns, "zuul-web", servicePorts, "zuul-web", r.cr.Spec.ExtraLabels)
 	r.GetOrCreate(&srv)
 
 	if r.IsExecutorEnabled() {

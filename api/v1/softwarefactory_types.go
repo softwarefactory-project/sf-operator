@@ -52,6 +52,14 @@ type StorageSpec struct {
 	ClassName string `json:"className,omitempty"`
 }
 
+type StorageDefaultSpec struct {
+	// Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case.
+	// +kubebuilder:default:=topolvm-provisioner
+	ClassName string `json:"className,omitempty"`
+	// Whether you need to add extra annotations to the Persistent Volume Claims
+	ExtraAnnotations map[string]string `json:"extraAnnotations,omitempty"`
+}
+
 type ConfigRepositoryLocationSpec struct {
 	// Base URL to use to perform git-related actions on the config repository. For example, if hosted on GitHub, the Base URL would be `https://github.com/<username>/`
 	// +kubebuilder:validation:Pattern:=`^https?:\/\/.+$`
@@ -580,9 +588,11 @@ type SoftwareFactorySpec struct {
 	// Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http)
 	FluentBitLogForwarding *FluentBitForwarderSpec `json:"FluentBitLogForwarding,omitempty"`
 
-	// Default storage class to use by Persistent Volume Claims
-	// +kubebuilder:default:=topolvm-provisioner
-	StorageClassName string `json:"storageClassName,omitempty"`
+	// Default setting to use by Persistent Volume Claims
+	StorageDefault StorageDefaultSpec `json:"storageDefault,omitempty"`
+
+	// Whether you need to add extra labels on all managed resources
+	ExtraLabels map[string]string `json:"extraLabels,omitempty"`
 
 	// Config repository spec
 	ConfigRepositoryLocation ConfigRepositoryLocationSpec `json:"config-location,omitempty"`

@@ -297,7 +297,7 @@ func (r *SFUtilContext) EnsureLocalCA() {
 //----------------------------------------------------------------------------
 
 // mkStatefulSet Create a default statefulset.
-func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, accessMode apiv1.PersistentVolumeAccessMode, nameSuffix ...string) appsv1.StatefulSet {
+func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, accessMode apiv1.PersistentVolumeAccessMode, extraLabels map[string]string, nameSuffix ...string) appsv1.StatefulSet {
 	serviceName := name
 	if nameSuffix != nil {
 		serviceName = name + "-" + nameSuffix[0]
@@ -305,14 +305,14 @@ func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig b
 
 	container := base.MkContainer(name, image)
 	pvc := base.MkPVC(name, r.ns, storageConfig, accessMode)
-	return base.MkStatefulset(name, r.ns, 1, serviceName, container, pvc)
+	return base.MkStatefulset(name, r.ns, 1, serviceName, container, pvc, extraLabels)
 }
 
 // mkHeadlessSatefulSet Create a default headless statefulset.
 func (r *SFUtilContext) mkHeadlessSatefulSet(
 	name string, image string, storageConfig base.StorageConfig,
-	accessMode apiv1.PersistentVolumeAccessMode) appsv1.StatefulSet {
-	return r.mkStatefulSet(name, image, storageConfig, accessMode, "headless")
+	accessMode apiv1.PersistentVolumeAccessMode, extraLabels map[string]string) appsv1.StatefulSet {
+	return r.mkStatefulSet(name, image, storageConfig, accessMode, extraLabels, "headless")
 }
 
 // IsStatefulSetReady checks if StatefulSet is ready
@@ -428,12 +428,12 @@ func (r *SFUtilContext) getSecretData(name string) ([]byte, error) {
 }
 
 // BaseGetStorageConfOrDefault sets the default storageClassName
-func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName string) base.StorageConfig {
+func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageDefault sfv1.StorageDefaultSpec) base.StorageConfig {
 	var size = utils.Qty1Gi()
-	if storageClassName == "" {
-		storageClassName = "topolvm-provisioner"
+	var className = "topolvm-provisioner"
+	if storageDefault.ClassName != "" {
+		className = storageDefault.ClassName
 	}
-	var className = storageClassName
 	if !storageSpec.Size.IsZero() {
 		size = storageSpec.Size
 	}
@@ -443,6 +443,7 @@ func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageClassName 
 	return base.StorageConfig{
 		StorageClassName: className,
 		Size:             size,
+		ExtraAnnotations: storageDefault.ExtraAnnotations,
 	}
 }
 
@@ -513,7 +514,7 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 
 // getStorageConfOrDefault get storage configuration or sets the default configuration
 func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) base.StorageConfig {
-	return BaseGetStorageConfOrDefault(storageSpec, r.cr.Spec.StorageClassName)
+	return BaseGetStorageConfOrDefault(storageSpec, r.cr.Spec.StorageDefault)
 }
 
 // isConfigRepoSet checks if config repository is set in the CR

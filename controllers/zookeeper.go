@@ -137,16 +137,17 @@ func (r *SFController) DeployZookeeper() bool {
 	}
 	volumeMounts = append(volumeMounts, volumeMountsStatsExporter...)
 
-	srv := base.MkServicePod(ZookeeperIdent, r.ns, ZookeeperIdent+"-0", []int32{zkSSLPort}, ZookeeperIdent)
+	srv := base.MkServicePod(ZookeeperIdent, r.ns, ZookeeperIdent+"-0", []int32{zkSSLPort}, ZookeeperIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&srv)
 
 	storageConfig := r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage)
 	logStorageConfig := base.StorageConfig{
 		Size:             utils.Qty1Gi(),
 		StorageClassName: storageConfig.StorageClassName,
+		ExtraAnnotations: storageConfig.ExtraAnnotations,
 	}
 	zk := r.mkHeadlessSatefulSet(
-		ZookeeperIdent, base.ZookeeperImage(), storageConfig, apiv1.ReadWriteOnce)
+		ZookeeperIdent, base.ZookeeperImage(), storageConfig, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
 	// We overwrite the VolumeClaimTemplates set by MkHeadlessStatefulSet to keep the previous volume name
 	// Previously the default PVC created by MkHeadlessStatefulSet was not used by Zookeeper (not mounted). So to avoid having two Volumes
 	// and to ensure data persistence during the upgrade we keep the previous naming 'ZookeeperIdent + "-data"' and we discard the one

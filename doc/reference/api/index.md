@@ -418,7 +418,8 @@ _Appears in:_
 | --- | --- | --- |
 | `fqdn` _string_ | The fully qualified domain name to use with the deployment. Relevant services will be served<br /><br />at https://`service`.`FQDN` | -|
 | `FluentBitLogForwarding` _[FluentBitForwarderSpec](#fluentbitforwarderspec)_ | Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http) | -|
-| `storageClassName` _string_ | Default storage class to use by Persistent Volume Claims | {topolvm-provisioner}|
+| `storageDefault` _[StorageDefaultSpec](#storagedefaultspec)_ | Default setting to use by Persistent Volume Claims | -|
+| `extraLabels` _object (keys:string, values:string)_ | Whether you need to add extra labels on all managed resources | -|
 | `config-location` _[ConfigRepositoryLocationSpec](#configrepositorylocationspec)_ | Config repository spec | -|
 | `zuul` _[ZuulSpec](#zuulspec)_ | Zuul service spec | -|
 | `nodepool` _[NodepoolSpec](#nodepoolspec)_ | Nodepool services spec | -|
@@ -444,6 +445,21 @@ _Appears in:_
 | `controlPlanePublicZKHostname` _string_ | This is the public hostname or IP where control plane's Zookeeper can be reached | -|
 | `controlPlanePublicGSHostname` _string_ | This is the public hostname or IP where control plane's GitServer can be reached | -|
 | `publicHostname` _string_ | This is the public host or IP address reachable from zuul-web | -|
+
+
+#### StorageDefaultSpec
+
+
+
+
+
+_Appears in:_
+- [SoftwareFactorySpec](#softwarefactoryspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `className` _string_ | Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case. | {topolvm-provisioner}|
+| `extraAnnotations` _object (keys:string, values:string)_ | Whether you need to add extra annotations to the Persistent Volume Claims | -|
 
 
 #### StorageSpec

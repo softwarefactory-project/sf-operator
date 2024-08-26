@@ -107,7 +107,6 @@ func initializeSFManifest(withAuth bool, withBuilder bool, full bool, connection
 	}
 
 	manifest.Spec.FQDN = "sfop.me"
-	manifest.Spec.StorageClassName = "topolvm-provisioner"
 
 	if full {
 		fbSpec := sfv1.FluentBitForwarderSpec{

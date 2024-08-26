@@ -572,7 +572,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	nb := r.mkStatefulSet(
 		BuilderIdent, base.NodepoolBuilderImage(), r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage),
-		apiv1.ReadWriteOnce)
+		apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
 
 	nb.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nb.Spec.Template.Spec.Volumes = volumes
@@ -630,7 +630,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	)
 
 	svc := base.MkServicePod(
-		BuilderIdent, r.ns, BuilderIdent+"-0", []int32{buildLogsHttpdPort}, BuilderIdent)
+		BuilderIdent, r.ns, BuilderIdent+"-0", []int32{buildLogsHttpdPort}, BuilderIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
 
 	current, changed := r.ensureStatefulset(nb)
@@ -756,7 +756,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		initContainer.VolumeMounts = AppendCorporateCACertsVolumeMount(initContainer.VolumeMounts, "nodepool-launcher-corporate-ca-certs")
 	}
 
-	nl := base.MkDeployment("nodepool-launcher", r.ns, "")
+	nl := base.MkDeployment("nodepool-launcher", r.ns, "", r.cr.Spec.ExtraLabels)
 
 	container := base.MkContainer("launcher", base.NodepoolLauncherImage())
 	container.VolumeMounts = volumeMounts
@@ -799,7 +799,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		r.CreateR(&current)
 	}
 
-	srv := base.MkService(LauncherIdent, r.ns, LauncherIdent, []int32{launcherPort}, LauncherIdent)
+	srv := base.MkService(LauncherIdent, r.ns, LauncherIdent, []int32{launcherPort}, LauncherIdent, r.cr.Spec.ExtraLabels)
 	r.GetOrCreate(&srv)
 
 	isDeploymentReady := r.IsDeploymentReady(&current)

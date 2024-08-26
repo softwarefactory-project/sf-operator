@@ -5,11 +5,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- zuul: internal tenant - set exclude-unprotected-branches: true
+- crd: add capability to set extra labels on all managed resources
+- crd: add capability to set extra annotations on PVC
 
 ### Changed
-### Deprecated
+
+- crd: add new `storageDefault` to set default `storageClassName` and `extraAnnotations`
+- crd: add new `extraLabels`
+
 ### Removed
+
+- crd: attribute `storageClassName`
+
 ### Fixed
 
 - zuul: fix services not rollout after log level change
