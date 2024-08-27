@@ -167,6 +167,7 @@ func initializeCLIConfig(isDevEnv bool) {
 		defaultContextConfig.Dev.Microshift.User = "cloud-user"
 		defaultContextConfig.Dev.Microshift.OpenshiftPullSecret = "PULL SECRET"
 		defaultContextConfig.Dev.Microshift.DiskFileSize = "30G"
+		defaultContextConfig.Dev.Microshift.RAMDiskSize = "1g"
 		defaultContextConfig.Dev.Tests.ExtraVars = map[string]string{"foo": "bar"}
 	}
 

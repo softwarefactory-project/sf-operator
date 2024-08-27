@@ -109,6 +109,7 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 		ctrl.Log.Info("disk-file-size not set, defaulting to " + defaultDiskSpace)
 	}
 	msEtcdOnRamdisk := cliCtx.Dev.Microshift.ETCDOnRAMDisk
+	msRamdiskSize := cliCtx.Dev.Microshift.RAMDiskSize
 	msAnsibleMicroshiftRolePath := cliCtx.Dev.AnsibleMicroshiftRolePath
 	if msAnsibleMicroshiftRolePath == "" {
 		msAnsibleMicroshiftRolePath = rootDir + "/ansible-microshift-role"
@@ -116,7 +117,7 @@ func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigC
 	}
 	options := ms.MkAnsiblePlaybookOptions(msHost, msUser, msOpenshiftPullSecret, rootDir)
 	varsFile := ms.MkTemporaryVarsFile(
-		cliCtx.FQDN, msDiskFileSize, msAnsibleMicroshiftRolePath, rootDir, msEtcdOnRamdisk)
+		cliCtx.FQDN, msDiskFileSize, msAnsibleMicroshiftRolePath, rootDir, msEtcdOnRamdisk, msRamdiskSize)
 	options.ExtraVarsFile = []string{"@" + varsFile}
 	// Ensure ansible-microshift-role is available
 	ms.MkMicroshiftRoleSetupPlaybook(rootDir)

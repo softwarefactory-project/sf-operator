@@ -75,6 +75,7 @@ type SoftwareFactoryConfigContext struct {
 			OpenshiftPullSecret string `json:"openshift-pull-secret" mapstructure:"openshift-pull-secret"`
 			DiskFileSize        string `json:"disk-file-size" mapstructure:"disk-file-size"`
 			ETCDOnRAMDisk       bool   `json:"etcd-on-ramdisk" mapstructure:"etcd-on-ramdisk"`
+			RAMDiskSize         string `json:"ramdisk-size" mapstructure:"ramdisk-size"`
 		} `json:"microshift" mapstructure:"microshift"`
 		Tests struct {
 			DemoReposPath string            `json:"demo-repos-path" mapstructure:"demo-repos-path"`
