@@ -12,6 +12,7 @@ contexts:
         host: microshift.dev
         openshift-pull-secret: <PULL SECRET>
         user: cloud-user
+        ramdisk_size: 1g
       sf-operator-repository-path: /path/to/sf-operator
       tests:
         demo-repos-path: ""

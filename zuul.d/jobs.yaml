@@ -35,6 +35,7 @@
         - "sfop.me"
         - "microshift.dev"
       etcd_on_ramdisk: true
+      ramdisk_size: 1g
       cloudprovider_dns:
         - 199.204.44.24
         - 199.204.47.54

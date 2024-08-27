@@ -11,6 +11,7 @@ microshift_role_version: ee9a80a3338837e6f7ed58f424ddcb96b976984f
 disk_file_sparsed: true
 disk_file_size: {{ .DiskFileSize }}
 etcd_on_ramdisk: {{ .ETCDOnRAMDisk }}
+ramdisk_size: {{ .RAMDiskSize }}
 setup_olm: true
 microshift_additional_addresses:
   - {{ "\"{{ microshift_fqdn }}\"" }}
