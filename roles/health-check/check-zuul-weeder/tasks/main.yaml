@@ -1,0 +1,13 @@
+---
+- name: Get zuul-weeder status
+  ansible.builtin.uri:
+    url: "https://{{ fqdn }}/weeder/export"
+    validate_certs: "{{ validate_certs }}"
+    method: GET
+    return_content: true
+    body_format: json
+  register: weeder_export
+  until:
+    - "'jobs' in weeder_export.json"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
