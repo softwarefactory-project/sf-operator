@@ -80,9 +80,9 @@ func (r *SFController) DeployZookeeper() bool {
 		Encoding: certv1.PKCS8,
 	}
 	certificate := cert.MkCertificate(
-		"zookeeper-server", r.ns, "ca-issuer", dnsNames, "zookeeper-server-tls", &privateKey)
+		"zookeeper-server", r.ns, "ca-issuer", dnsNames, "zookeeper-server-tls", &privateKey, cert.EonDuration)
 	certClient := cert.MkCertificate(
-		"zookeeper-client", r.ns, "ca-issuer", dnsNames, "zookeeper-client-tls", &privateKey)
+		"zookeeper-client", r.ns, "ca-issuer", dnsNames, "zookeeper-client-tls", &privateKey, cert.EonDuration)
 	r.GetOrCreate(&certificate)
 	r.GetOrCreate(&certClient)
 
@@ -101,7 +101,7 @@ func (r *SFController) DeployZookeeper() bool {
 	annotations := map[string]string{
 		"configuration": utils.Checksum([]byte(configChecksumable)),
 		"image":         base.ZookeeperImage(),
-		"serial":        "4",
+		"serial":        "5",
 	}
 
 	volumeMountsStatsExporter := []apiv1.VolumeMount{

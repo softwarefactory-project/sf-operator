@@ -38,3 +38,29 @@ MariaDB is deployed as a single-pod statefulset.
 ZooKeeper coordinates data and configurations between all the Zuul and Nodepool microservices.
 
 ZooKeeper is deployed as a single-pod statefulset.
+
+### Certificates
+
+Zuul and Nodepool services authenticate to Zookeeper using a X509 client certificate. `sf-operator` manages a local Certificate Authority based on the `cert-manager` operator facilities to issue server and client certificates. Those certificates are set with a long validity period (25 years) and an operator might want to rotate those certificates for security reason. To do so:
+
+Delete `Certificate` resources named:
+
+- zookeeper-server
+- zookeeper-client
+- ca-cert
+
+Rollout the following `Statefulset` and `Deployment` resources:
+
+- zookeeper
+- zuul-scheduler
+- zuul-merger
+- zuul-executor
+- zuul-web
+- weeder
+- nodepool-builder
+- nodepool-launcher
+
+Then make sure to trigger the `Reconcile` loop of the `sf-operator` either by:
+
+- if using the `standalone` deployment mode, running the `standalone` command
+- if using the `OLM` deployment mode, the `Reconcile` will happen automatically

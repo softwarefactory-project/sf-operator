@@ -17,19 +17,23 @@ const (
 	LocalCACertSecretName = "ca-cert"
 )
 
+var EonDuration, _ = time.ParseDuration("219000h") // 25 years
+
 func MkBaseCertificate(name string, ns string, issuerName string,
 	dnsNames []string, secretName string, isCA bool, duration time.Duration,
 	usages []certv1.KeyUsage, commonName *string,
 	privateKey *certv1.CertificatePrivateKey) certv1.Certificate {
+	renewBefore, _ := time.ParseDuration("168h") // 7 days
 	cert := certv1.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 		},
 		Spec: certv1.CertificateSpec{
-			DNSNames:   dnsNames,
-			Duration:   &metav1.Duration{Duration: duration},
-			SecretName: secretName,
+			DNSNames:    dnsNames,
+			Duration:    &metav1.Duration{Duration: EonDuration},
+			RenewBefore: &metav1.Duration{Duration: renewBefore},
+			SecretName:  secretName,
 			IssuerRef: cmmeta.ObjectReference{
 				Kind: "Issuer",
 				Name: issuerName,
@@ -48,8 +52,7 @@ func MkBaseCertificate(name string, ns string, issuerName string,
 }
 
 func MkCertificate(name string, ns string, issuerName string,
-	dnsNames []string, secretName string, privateKey *certv1.CertificatePrivateKey) certv1.Certificate {
-	duration, _ := time.ParseDuration("2160h") // 3 months (default)
+	dnsNames []string, secretName string, privateKey *certv1.CertificatePrivateKey, duration time.Duration) certv1.Certificate {
 	usages := []certv1.KeyUsage{
 		certv1.UsageServerAuth,
 		certv1.UsageClientAuth,

@@ -531,7 +531,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"statsd_mapping":             utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		"image":                      base.NodepoolBuilderImage(),
 		"nodepool-providers-secrets": getSecretsVersion(providersSecrets, providerSecretsExists),
-		"serial":                     "15",
+		"serial":                     "16",
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
@@ -713,7 +713,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		"nodepool.yaml":         utils.Checksum([]byte(generateConfigScript)),
 		"nodepool-logging.yaml": utils.Checksum([]byte(loggingConfig)),
 		"statsd_mapping":        utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
-		"serial":                "10",
+		"serial":                "11",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
 		"image":                      base.NodepoolLauncherImage(),
 		"nodepool-providers-secrets": getSecretsVersion(providersSecrets, providerSecretsExists),

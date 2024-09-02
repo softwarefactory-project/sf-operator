@@ -102,6 +102,24 @@ func isOperatorReady(services map[string]bool) bool {
 
 // cleanup ensures removal of legacy resources
 func (r *SFController) cleanup() {
+
+	caCert := certv1.Certificate{}
+	if r.GetM(cert.LocalCACertSecretName, &caCert) {
+		// Here we are detecting the previous version duration to ensure we have to run the cleanup
+		prevDuration, _ := time.ParseDuration("87600h") // 10y
+		if caCert.Spec.Duration.Duration.String() == prevDuration.String() {
+			for _, name := range []string{"zookeeper-server", "zookeeper-client", "ca-cert"} {
+				// remove invalid certificate resource
+				r.DeleteR(&certv1.Certificate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: r.ns,
+					},
+				})
+			}
+		}
+	}
+
 	// remove a legacy Route definition for gateway
 	r.DeleteR(&apiroutev1.Route{
 		ObjectMeta: metav1.ObjectMeta{

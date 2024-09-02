@@ -15,7 +15,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -122,7 +121,7 @@ func (r *SFUtilContext) UpdateR(obj client.Object) bool {
 	return true
 }
 
-// PatchR delete a resource.
+// PatchR patches a resource.
 func (r *SFUtilContext) PatchR(obj client.Object, patch client.Patch) {
 	if err := r.Client.Patch(r.ctx, obj, patch); err != nil {
 		panic(err.Error())
@@ -283,10 +282,9 @@ func (r *SFUtilContext) EnsureLocalCA() {
 	// https://cert-manager.io/docs/configuration/selfsigned/#bootstrapping-ca-issuers
 	selfSignedIssuer := cert.MkSelfSignedIssuer("selfsigned-issuer", r.ns)
 	CAIssuer := cert.MkCAIssuer("ca-issuer", r.ns)
-	duration, _ := time.ParseDuration("87600h") // 10y
 	commonName := "cacert"
 	rootCACertificate := cert.MkBaseCertificate(cert.LocalCACertSecretName, r.ns, "selfsigned-issuer", []string{"caroot"},
-		cert.LocalCACertSecretName, true, duration, nil, &commonName, nil)
+		cert.LocalCACertSecretName, true, cert.EonDuration, nil, &commonName, nil)
 	r.GetOrCreate(&selfSignedIssuer)
 	r.GetOrCreate(&CAIssuer)
 	r.GetOrCreate(&rootCACertificate)

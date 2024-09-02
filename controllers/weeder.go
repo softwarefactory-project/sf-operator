@@ -21,6 +21,7 @@ func (r *SFController) EnsureZuulWeeder(checksum string) bool {
 
 	annotations := map[string]string{
 		"zuul-conf": checksum,
+		"serial":    "1",
 	}
 
 	dep := base.MkDeployment(ident, r.ns, "quay.io/software-factory/zuul-weeder:latest", r.cr.Spec.ExtraLabels)
