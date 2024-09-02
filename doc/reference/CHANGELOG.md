@@ -5,26 +5,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- crd: add capability to set extra labels on all managed resources
-- crd: add capability to set extra annotations on PVC
-- crd: capability disable Prometheus related resources like `PodMonitor` to enable `SoftwareFactory` deployment without
-  Prometheus Operator installed on the cluster.
 - weeder: add zuul-weeder service to inspect the global config, available at $fqdn/weeder/
 - logjuicer: add log analysis service to debug build failure, available at $fqdn/logjuicer/
 
-### Changed
-
-- crd: add new `storageDefault` to set default `storageClassName` and `extraAnnotations`
-- crd: add new `extraLabels`
-
 ### Removed
-
-- crd: attribute `storageClassName`
-
+### Changed
 ### Fixed
-
-- zuul: fix services not rollout after log level change
-
 ### Security
 
 ## [v0.0.38] - 2024-08-26
@@ -33,6 +19,13 @@ All notable changes to this project will be documented in this file.
 
 - add capability to set extra annotations and extra Labels for all resources
 - add capability to disable usage of Prometheus resources
+- crd: capability disable Prometheus related resources like `PodMonitor` to enable `SoftwareFactory` deployment without
+  Prometheus Operator installed on the cluster.
+
+### Changed
+
+- crd: add new `storageDefault` to set default `storageClassName` and `extraAnnotations`
+- crd: add new `extraLabels`
 
 ### Removed
 
