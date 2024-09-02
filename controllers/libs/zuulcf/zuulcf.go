@@ -647,7 +647,8 @@ func GetTriggerPostByDriver(driver string, connection string) (PipelineGenericTr
 			{
 				Event: "ref-updated",
 				Ref: []string{
-					"^refs/heads/.*$",
+					"^refs/heads/master$",
+					"^refs/heads/main$",
 				},
 			},
 		}
@@ -656,7 +657,8 @@ func GetTriggerPostByDriver(driver string, connection string) (PipelineGenericTr
 			{
 				Event: "gl_push",
 				Ref: []string{
-					"^refs/heads/.*$",
+					"^refs/heads/master$",
+					"^refs/heads/main$",
 				},
 			},
 		}

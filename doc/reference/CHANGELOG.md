@@ -11,6 +11,9 @@ All notable changes to this project will be documented in this file.
 ### Removed
 ### Changed
 ### Fixed
+
+- Restrict trigger rules for main branches for gitlab and gerrit
+
 ### Security
 
 ## [v0.0.38] - 2024-08-26
