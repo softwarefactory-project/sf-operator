@@ -15,7 +15,7 @@ CATALOG_IMG ?= $(CATALOG_REPO):latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # NOTE: MicroShift 4.13 got kubeAPI 1.26.
 # More info: https://docs.openshift.com/container-platform/4.13/release_notes/ocp-4-13-release-notes.html#ocp-4-13-about-this-release
-ENVTEST_K8S_VERSION = 1.26
+ENVTEST_K8S_VERSION = 1.29.0
 CERT_MANAGER_VERSION = v1.14.6
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -149,6 +149,12 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
+.PHONY: build-installer
+build-installer: manifests generate kustomize ## Generate a consolidated YAML with CRDs and deployment.
+	mkdir -p dist
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default > dist/install.yaml
+
 ##@ Build Dependencies
 
 ## Location to install dependencies to
@@ -165,9 +171,9 @@ MKDOCS ?= $(LOCALBIN)/mkdocs/bin/mkdocs
 ZC ?= $(LOCALBIN)/zc/bin/zuul-client
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.3.0
+KUSTOMIZE_VERSION ?= v5.4.3
 CONTROLLER_TOOLS_VERSION ?= v0.15.0
-OPERATOR_SDK_VERSION ?= 1.34.2
+OPERATOR_SDK_VERSION ?= 1.36.1
 STATICCHECK_VERSION ?= 2024.1.1
 MKDOCS_VERSION ?= 1.5.3
 SETUP_ENVTEST_VERSION ?= v0.0.0-20240320141353-395cfc7486e6
