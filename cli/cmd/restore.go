@@ -133,9 +133,11 @@ func restoreZuul(backupDir string, kubeContext string, env cliutils.ENV) {
 }
 
 func clearComponents(env cliutils.ENV) {
-	ctrl.Log.Info("Removing components requirering a complete restart ...")
+	ctrl.Log.Info("Removing components requiering a complete restart ...")
 
-	for _, stsName := range []string{"zuul-scheduler", "zuul-executor", "zuul-merger", "nodepool-builder", "zookeeper"} {
+	for _, stsName := range []string{
+		"zuul-scheduler", "zuul-executor", "zuul-merger",
+		"nodepool-builder", "zookeeper", "logserver"} {
 		cliutils.DeleteOrDie(&env, &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      stsName,

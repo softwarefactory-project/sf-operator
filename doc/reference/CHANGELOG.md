@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Restrict trigger rules for main branches for gitlab and gerrit
+- restore - logserver-sshd container not using the restored key for the authorized key
 
 ### Security
 
