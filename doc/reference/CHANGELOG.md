@@ -1,21 +1,26 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+
 ## [in development]
+
+### Added
+### Removed
+### Changed
+### Fixed
+### Security
+
+## [v0.0.39] - 2024-09-04
 
 ### Added
 
 - weeder: add zuul-weeder service to inspect the global config, available at $fqdn/weeder/
 - logjuicer: add log analysis service to debug build failure, available at $fqdn/logjuicer/
 
-### Removed
-### Changed
 ### Fixed
 
 - Restrict trigger rules for main branches for gitlab and gerrit
 - restore - logserver-sshd container not using the restored key for the authorized key
-
-### Security
 
 ## [v0.0.38] - 2024-08-26
 
