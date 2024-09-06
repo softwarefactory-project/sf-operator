@@ -313,7 +313,10 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 		}
 	}
 
-	isReady := stsReady && zuulDBSecret.Data != nil
+	pvcDataReadiness := r.reconcileExpandPVC(MariaDBIdent+"-"+MariaDBIdent+"-0", r.cr.Spec.MariaDB.DBStorage)
+	pvcLogsReadiness := r.reconcileExpandPVC(MariaDBIdent+"-logs-"+MariaDBIdent+"-0", r.cr.Spec.MariaDB.LogStorage)
+
+	isReady := stsReady && pvcDataReadiness && pvcLogsReadiness && zuulDBSecret.Data != nil
 
 	conds.UpdateConditions(&r.cr.Status.Conditions, MariaDBIdent, isReady)
 

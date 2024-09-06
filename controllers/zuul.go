@@ -611,7 +611,9 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		return false
 	}
 
-	ready := r.IsStatefulSetReady(current)
+	pvcReadiness := r.reconcileExpandPVCs("zuul-executor", r.cr.Spec.Zuul.Executor.Storage)
+
+	ready := r.IsStatefulSetReady(current) && pvcReadiness
 	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-executor", ready)
 
 	return ready
@@ -675,7 +677,9 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		return false
 	}
 
-	ready := r.IsStatefulSetReady(current)
+	pvcReadiness := r.reconcileExpandPVCs("zuul-merger", r.cr.Spec.Zuul.Merger.Storage)
+
+	ready := r.IsStatefulSetReady(current) && pvcReadiness
 	conds.UpdateConditions(&r.cr.Status.Conditions, service, ready)
 
 	return ready

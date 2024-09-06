@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 ### Security
 
+## [v0.0.40] - 2024-09-06
+
+### Added
+
+- support for storage (PVC) resize of zuul-executor, zuul-merger and mariadb.
+
 ## [v0.0.39] - 2024-09-04
 
 ### Added

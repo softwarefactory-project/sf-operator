@@ -447,6 +447,25 @@ func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageDefault sf
 	}
 }
 
+func (r *SFUtilContext) reconcileExpandPVCs(serviceName string, newStorageSpec sfv1.StorageSpec) bool {
+	PVCList := &apiv1.PersistentVolumeClaimList{}
+	err := r.Client.List(r.ctx, PVCList, client.MatchingLabels{"run": serviceName, "app": "sf"})
+	if err != nil {
+		utils.LogE(err, "Unable to get the list of PVC for service "+serviceName)
+		return false
+	}
+	readyList := []bool{}
+	for _, pvc := range PVCList.Items {
+		readyList = append(readyList, r.reconcileExpandPVC(pvc.Name, newStorageSpec))
+	}
+	for _, r := range readyList {
+		if !r {
+			return false
+		}
+	}
+	return true
+}
+
 // reconcileExpandPVC  resizes the pvc with the spec
 func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.StorageSpec) bool {
 	newQTY := newStorageSpec.Size
@@ -474,7 +493,7 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 		case
 			apiv1.PersistentVolumeClaimResizing,
 			apiv1.PersistentVolumeClaimFileSystemResizePending:
-			utils.LogI("Volume resizing in progress, not ready")
+			utils.LogI("Volume " + pvcName + " resizing in progress, not ready")
 			return false
 		}
 	}
