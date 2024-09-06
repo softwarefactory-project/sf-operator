@@ -449,7 +449,8 @@ func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageDefault sf
 
 func (r *SFUtilContext) reconcileExpandPVCs(serviceName string, newStorageSpec sfv1.StorageSpec) bool {
 	PVCList := &apiv1.PersistentVolumeClaimList{}
-	err := r.Client.List(r.ctx, PVCList, client.MatchingLabels{"run": serviceName, "app": "sf"})
+	selector := client.MatchingLabels{"run": serviceName, "app": "sf"}
+	err := r.Client.List(r.ctx, PVCList, selector, client.InNamespace(r.ns))
 	if err != nil {
 		utils.LogE(err, "Unable to get the list of PVC for service "+serviceName)
 		return false
