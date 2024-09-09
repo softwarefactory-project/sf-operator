@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 ### Removed
 ### Changed
 ### Fixed
+
+- weeder: ensure the service is restarted after backup restore to load the new ZK certs.
+
 ### Security
 
 ## [v0.0.40] - 2024-09-09

@@ -145,7 +145,7 @@ func clearComponents(env cliutils.ENV) {
 			},
 		})
 	}
-	for _, depName := range []string{"zuul-web", "nodepool-launcher"} {
+	for _, depName := range []string{"zuul-web", "zuul-weeder", "nodepool-launcher"} {
 		cliutils.DeleteOrDie(&env, &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      depName,
