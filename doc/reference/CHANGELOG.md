@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 ### Security
 
-## [v0.0.40] - 2024-09-06
+## [v0.0.40] - 2024-09-09
 
 ### Added
 
