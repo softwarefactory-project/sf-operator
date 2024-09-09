@@ -62,6 +62,7 @@ var SecretsToBackup = []string{
 	"zuul-ssh-key",
 	"zuul-keystore-password",
 	"zuul-auth-secret",
+	"logserver-keys",
 }
 
 func createSecretBackup(backupDir string, env cliutils.ENV) {

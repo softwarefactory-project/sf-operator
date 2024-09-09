@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - weeder: ensure the service is restarted after backup restore to load the new ZK certs.
+- backup: add the logserver sshd host key `Secret` into the backup/restore process.
 
 ### Security
 
