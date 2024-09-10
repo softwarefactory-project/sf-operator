@@ -52,7 +52,7 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sf-op-busybox.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: httpd
       container: registry.access.redhat.com/ubi8/httpd-24
-      version: 1-284.1696531168
+      version: 1-335.1724231549
     - name: node-exporter
       container: quay.io/prometheus/node-exporter
       version: v1.8.2
