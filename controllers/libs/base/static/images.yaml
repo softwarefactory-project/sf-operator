@@ -58,7 +58,7 @@ images:
       version: v1.8.2
     - name: statsd-exporter
       container: quay.io/prometheus/statsd-exporter
-      version: v0.26.1
+      version: v0.27.1
     - name: fluentbit
       container: cr.fluentbit.io/fluent/fluent-bit
       version: "2.1.10"

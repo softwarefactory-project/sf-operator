@@ -10,6 +10,10 @@ All notable changes to this project will be documented in this file.
 
 ### Removed
 ### Changed
+
+- zuul-scheduler: zuul-statsd sidecar use default container Limit profile
+- zuul-scheduler: statds-exporter bump version to 0.27.1
+
 ### Fixed
 
 - weeder: ensure the service is restarted after backup restore to load the new ZK certs.

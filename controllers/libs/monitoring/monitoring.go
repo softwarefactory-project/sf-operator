@@ -187,7 +187,6 @@ func MkStatsdExporterSideCarContainer(serviceName string, configVolumeName strin
 	sidecar.Args = args
 	sidecar.VolumeMounts = volumeMounts
 	sidecar.Ports = ports
-	base.SetContainerLimitsLowProfile(&sidecar)
 	return sidecar
 }
 
