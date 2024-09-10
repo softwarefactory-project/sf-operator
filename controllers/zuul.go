@@ -690,17 +690,22 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	authSections := utils.IniGetSectionNamesByPrefix(cfg, "auth")
 	sections = append(sections, authSections...)
 	sections = append(sections, "web")
+
+	// Check if Corporate Certificate exists
+	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
+
 	annotations := map[string]string{
-		"zuul-common-config":    utils.IniSectionsChecksum(cfg, commonIniConfigSections),
-		"zuul-component-config": utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":            getZuulImage("zuul-web"),
-		"serial":                "6",
-		"zuul-logging":          utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
-		"zuul-connections":      utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
+		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
+		"zuul-image":                 getZuulImage("zuul-web"),
+		"serial":                     "6",
+		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
+		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
+		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
 	zw := base.MkDeployment("zuul-web", r.ns, "", r.cr.Spec.ExtraLabels)
-	zuulContainer := r.mkZuulContainer("zuul-web", false)
+	zuulContainer := r.mkZuulContainer("zuul-web", corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Web.Limits, &zuulContainer)
 	zw.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
 	zw.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-web", r, false)
