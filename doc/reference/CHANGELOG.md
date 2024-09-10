@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - zookeeper - increase certificate validity duration to 25 years to avoid renewal burden
+- logjuicer: install corporate-ca-certs to support external SF.
 
 ### Fixed
 ### Security

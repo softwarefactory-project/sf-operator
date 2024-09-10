@@ -327,7 +327,7 @@ func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []ap
 	volumes = append(volumes, mkZuulConnectionSecretsVolumes(r)...)
 
 	if corporateCMExists {
-		volumes = append(volumes, base.MkVolumeCM(service+"-corporate-ca-certs", "corporate-ca-certs"))
+		volumes = append(volumes, base.MkVolumeCM(service+"-corporate-ca-certs", CorporateCACerts))
 	}
 
 	return volumes
