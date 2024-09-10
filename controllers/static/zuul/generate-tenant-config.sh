@@ -32,7 +32,8 @@ if [ "$CONFIG_REPO_SET" == "TRUE" ]; then
   cat << EOF >> ~/main.yaml
       ${CONFIG_REPO_CONNECTION_NAME}:
         config-projects:
-        - ${CONFIG_REPO_NAME}
+        - ${CONFIG_REPO_NAME}:
+            load-branch: ${CONFIG_REPO_BRANCH}
 EOF
 
   # Append the config repo provided tenant file to the default one

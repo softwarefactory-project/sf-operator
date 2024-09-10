@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - zuul: add corporate certs to zuul-web
+- crd: add new `branch` for the config location.
 
 ### Removed
 ### Changed

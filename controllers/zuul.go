@@ -335,11 +335,17 @@ func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []ap
 
 func (r *SFController) getTenantsEnvs() []apiv1.EnvVar {
 	if r.isConfigRepoSet() {
+		branch := r.cr.Spec.ConfigRepositoryLocation.Branch
+		if branch == "" {
+			// Default to "main" when not set
+			branch = "main"
+		}
 		return []apiv1.EnvVar{
 			base.MkEnvVar("CONFIG_REPO_SET", "TRUE"),
 			base.MkEnvVar("CONFIG_REPO_BASE_URL", strings.TrimSuffix(r.cr.Spec.ConfigRepositoryLocation.BaseURL, "/")),
 			base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigRepositoryLocation.Name),
 			base.MkEnvVar("CONFIG_REPO_CONNECTION_NAME", r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName),
+			base.MkEnvVar("CONFIG_REPO_BRANCH", branch),
 		}
 	} else {
 		return []apiv1.EnvVar{
@@ -442,7 +448,8 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	if r.isConfigRepoSet() {
 		annotations["config-repo-info-hash"] = r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName + ":" +
 			r.cr.Spec.ConfigRepositoryLocation.BaseURL +
-			r.cr.Spec.ConfigRepositoryLocation.Name
+			r.cr.Spec.ConfigRepositoryLocation.Name +
+			r.cr.Spec.ConfigRepositoryLocation.Branch
 	}
 
 	var relayAddress *string

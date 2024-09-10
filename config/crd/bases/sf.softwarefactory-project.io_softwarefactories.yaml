@@ -84,6 +84,10 @@ spec:
                       Base URL would be `https://github.com/<username>/`
                     pattern: ^https?:\/\/.+$
                     type: string
+                  branch:
+                    description: The branch of the `config` repository. This value
+                      is set to the load-branch.
+                    type: string
                   k8s-api-url:
                     description: |-
                       Public URL of the k8s cluster API. This is useful when running zuul executors outside

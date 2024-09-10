@@ -67,6 +67,8 @@ type ConfigRepositoryLocationSpec struct {
 	// The name of the `config` repository. This value is appended to `base-url` to clone the repository
 	// +kubebuilder:validation:MinLength:=1
 	Name string `json:"name"`
+	// The branch of the `config` repository. This value is set to the load-branch.
+	Branch string `json:"branch,omitempty"`
 	// Name of the Zuul connection through which Zuul can handle git events on the config repository
 	// +kubebuilder:validation:MinLength:=1
 	ZuulConnectionName string `json:"zuul-connection-name"`
