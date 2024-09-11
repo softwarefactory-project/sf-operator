@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+### Removed
+### Changed
+### Fixed
+### Security
+
+## [v0.0.41] - 2024-09-11
+
+### Added
 
 - zuul: add corporate certs to zuul-web
 - crd: add new `branch` for the config location.
