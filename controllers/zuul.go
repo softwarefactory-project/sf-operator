@@ -708,7 +708,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	zuulContainer := r.mkZuulContainer("zuul-web", corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Web.Limits, &zuulContainer)
 	zw.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
-	zw.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-web", r, false)
+	zw.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-web", r, corporateCMExists)
 
 	zwFluentBitLabels := append(zuulFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: "zuul-web"})
 	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-web", r.cr.Spec.FluentBitLogForwarding, zwFluentBitLabels, annotations)
