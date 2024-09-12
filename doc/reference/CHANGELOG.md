@@ -7,11 +7,17 @@ All notable changes to this project will be documented in this file.
 ### Added
 ### Removed
 ### Changed
+### Fixed
+### Security
 
+## [v0.0.42] - 2024-09-12
+
+### Changed
+
+- Zuul version has been bumped to 11.1.0 (https://zuul-ci.org/docs/zuul/latest/releasenotes.html#relnotes-11-1-0)
 - zookeeper - increase certificate validity duration to 25 years to avoid renewal burden
 - logjuicer: install corporate-ca-certs to support external SF.
 
-### Fixed
 ### Security
 
 - httpd-gateway: bump to latest container image (https://catalog.redhat.com/software/containers/ubi8/httpd-24/6065b844aee24f523c207943)

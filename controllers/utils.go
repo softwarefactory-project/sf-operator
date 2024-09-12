@@ -44,7 +44,7 @@ const (
 	CustomSSLSecretName      = "sf-ssl-cert"
 	CorporateCACerts         = "corporate-ca-certs"
 	UpdateCATrustAnchorsPath = "/usr/share/pki/ca-trust-source/anchors/"
-	UpdateCATrustCommand     = "set -x && mkdir -p /etc/pki/ca-trust/extracted/{pem,java,edk2,openssl} && update-ca-trust"
+	UpdateCATrustCommand     = "set -x && update-ca-trust extract -o /etc/pki/ca-trust/extracted"
 )
 
 //go:embed static/fetch-config-repo.sh
