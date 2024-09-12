@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 ### Security
 
+- httpd-gateway: bump to latest container image (https://catalog.redhat.com/software/containers/ubi8/httpd-24/6065b844aee24f523c207943)
+
 ## [v0.0.41] - 2024-09-11
 
 ### Added
