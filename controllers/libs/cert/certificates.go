@@ -17,7 +17,7 @@ const (
 	LocalCACertSecretName = "ca-cert"
 )
 
-var EonDuration, _ = time.ParseDuration("219000h") // 25 years
+var EonDuration, _ = time.ParseDuration("262800h") // 30 years
 
 func MkBaseCertificate(name string, ns string, issuerName string,
 	dnsNames []string, secretName string, isCA bool, duration time.Duration,

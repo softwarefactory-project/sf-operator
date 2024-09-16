@@ -106,11 +106,20 @@ func (r *SFController) cleanup() {
 	caCert := certv1.Certificate{}
 	if r.GetM(cert.LocalCACertSecretName, &caCert) {
 		// Here we are detecting the previous version duration to ensure we have to run the cleanup
-		prevDuration, _ := time.ParseDuration("87600h") // 10y
+		prevDuration, _ := time.ParseDuration("219000h") // 25y
 		if caCert.Spec.Duration.Duration.String() == prevDuration.String() {
 			for _, name := range []string{"zookeeper-server", "zookeeper-client", "ca-cert"} {
 				// remove invalid certificate resource
 				r.DeleteR(&certv1.Certificate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: r.ns,
+					},
+				})
+			}
+			for _, name := range []string{"zookeeper-server-tls", "zookeeper-client-tls", "ca-cert"} {
+				// Remove matching secrets
+				r.DeleteR(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,
 						Namespace: r.ns,

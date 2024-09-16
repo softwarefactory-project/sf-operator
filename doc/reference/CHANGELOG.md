@@ -7,7 +7,13 @@ All notable changes to this project will be documented in this file.
 ### Added
 ### Removed
 ### Changed
+
+- zookeeper - increase certificate validity duration to 30 years
+
 ### Fixed
+
+- zookeeper - certificates duration bump of version v0.0.42 was partially handled due to a missing removal of the corresponding `Secrets` resources. 
+
 ### Security
 
 ## [v0.0.42] - 2024-09-12
