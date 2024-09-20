@@ -292,6 +292,10 @@ type ZuulExecutorSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
 	Limits *LimitsSpec `json:"limits"`
+	// the [disk_limit_per_job](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.disk_limit_per_job)
+	// +kubebuilder:default:=250
+	// +kubebuilder:validation:Minimum:=-1
+	DiskLimitPerJob int `json:"diskLimitPerJob,omitempty"`
 }
 
 type ZuulWebSpec struct {

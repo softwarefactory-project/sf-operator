@@ -517,6 +517,7 @@ _Appears in:_
 | `enabled` _boolean_ | If set to false, the zuul-executor deployment won't be applied | {true}|
 | `standalone` _[StandaloneZuulExecutorSpec](#standalonezuulexecutorspec)_ | When set the Control plane is not deployed.<br /><br />The standalone executor must be able to connect to the control plane | -|
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `diskLimitPerJob` _integer_ | the [disk_limit_per_job](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.disk_limit_per_job) | {250}|
 
 
 #### ZuulMergerSpec

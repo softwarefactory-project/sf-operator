@@ -7,6 +7,17 @@ All notable changes to this project will be documented in this file.
 ### Added
 ### Removed
 ### Changed
+### Fixed
+### Security
+
+## [v0.0.43] - 2024-09-20
+
+### Added
+
+- crd/zuul-executor - support for disk_limit_per_job
+
+### Removed
+### Changed
 
 - zookeeper - increase certificate validity duration to 30 years
 

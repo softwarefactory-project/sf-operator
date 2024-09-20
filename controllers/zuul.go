@@ -995,6 +995,15 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 		cfgINI.Section("scheduler").NewKey("max_hold_expiration", strconv.Itoa(int(*r.cr.Spec.Zuul.Scheduler.MaxHoldExpiration)))
 	}
 
+	// Set executor settings
+	if r.cr.Spec.Zuul.Executor.DiskLimitPerJob != 0 {
+		size := int(r.cr.Spec.Zuul.Executor.DiskLimitPerJob)
+		if size < -1 {
+			size = -1
+		}
+		cfgINI.Section("executor").NewKey("disk_limit_per_job", strconv.Itoa(size))
+	}
+
 	// Enable prometheus metrics
 	for _, srv := range []string{"web", "executor", "scheduler", "merger"} {
 		cfgINI.Section(srv).NewKey("prometheus_port", strconv.Itoa(zuulPrometheusPort))

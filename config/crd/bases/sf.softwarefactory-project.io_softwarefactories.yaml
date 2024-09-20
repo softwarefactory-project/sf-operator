@@ -474,6 +474,11 @@ spec:
                   executor:
                     description: Configuration of the executor microservices
                     properties:
+                      diskLimitPerJob:
+                        default: 250
+                        description: the [disk_limit_per_job](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.disk_limit_per_job)
+                        minimum: -1
+                        type: integer
                       enabled:
                         default: true
                         description: If set to false, the zuul-executor deployment
