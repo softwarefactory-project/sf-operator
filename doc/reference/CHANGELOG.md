@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 ### Removed
 ### Changed
 ### Fixed
+
+- logserver not restarted when zuul-ssh-key change
+
 ### Security
 
 ## [v0.0.43] - 2024-09-20
