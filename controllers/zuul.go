@@ -58,6 +58,9 @@ var (
 	//go:embed static/zuul/logging.yaml.tmpl
 	zuulLoggingConfig string
 
+	//go:embed static/zuul/zuul-change-dump.py.tmpl
+	zuulChangeDump string
+
 	// Common config sections for all Zuul components
 	commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
 
@@ -204,6 +207,12 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 				Name:      "tooling-vol",
 				SubPath:   "fetch-config-repo.sh",
 				MountPath: "/usr/local/bin/fetch-config-repo.sh",
+				ReadOnly:  true,
+			},
+			apiv1.VolumeMount{
+				Name:      "tooling-vol",
+				SubPath:   "zuul-change-dump.py",
+				MountPath: "/usr/local/bin/zuul-change-dump.py",
 				ReadOnly:  true,
 			},
 		)
@@ -514,6 +523,9 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	schedulerToolingData["init-container.sh"] = zuulSchedulerInitContainerScript
 	schedulerToolingData["generate-zuul-tenant-yaml.sh"] = zuulGenerateTenantConfig
 	schedulerToolingData["fetch-config-repo.sh"] = fetchConfigRepoScript
+	schedulerToolingData["zuul-change-dump.py"], _ = utils.ParseString(zuulChangeDump, struct {
+		ZuulWebURL string
+	}{ZuulWebURL: "https://" + r.cr.Spec.FQDN + "/zuul"})
 
 	r.EnsureConfigMap("zuul-scheduler-tooling", schedulerToolingData)
 
