@@ -3,8 +3,7 @@
 set -ex
 
 # Update the CA Trust chain
-mkdir -p /etc/pki/ca-trust/extracted/{pem,java,edk2,openssl}
-update-ca-trust
+update-ca-trust extract -o /etc/pki/ca-trust/extracted
 
 # This create some directory expected by nodepool-builder
 mkdir -p ~/dib ~/nodepool/builds
