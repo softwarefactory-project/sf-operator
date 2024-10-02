@@ -94,19 +94,15 @@ var nodepoolFluentBitLabels = []logging.FluentBitLabel{
 }
 
 func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
-	var fbLogLevel = "info"
-	if r.cr.Spec.FluentBitLogForwarding.Debug != nil && *r.cr.Spec.FluentBitLogForwarding.Debug {
-		fbLogLevel = "debug"
-	}
 	fbForwarderConfig := make(map[string]string)
+	var loggingParams = logging.CreateForwarderConfigTemplateParams("diskimage-builder", r.cr.Spec.FluentBitLogForwarding)
+
 	fbForwarderConfig["fluent-bit.conf"], _ = utils.ParseString(
 		fluentBitForwarderConfig,
 		struct {
-			ExtraKeys              []logging.FluentBitLabel
-			FluentBitHTTPInputHost string
-			FluentBitHTTPInputPort string
-			LogLevel               string
-		}{[]logging.FluentBitLabel{}, r.cr.Spec.FluentBitLogForwarding.HTTPInputHost, strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort)), fbLogLevel})
+			ExtraKeys     []logging.FluentBitLabel
+			LoggingParams logging.TemplateLoggingParams
+		}{[]logging.FluentBitLabel{}, loggingParams})
 	fbForwarderConfig["parsers.conf"] = fluentBitForwarderParsersConfig
 	r.EnsureConfigMap("fluentbit-dib-cfg", fbForwarderConfig)
 
@@ -197,20 +193,16 @@ func (r *SFController) mkLoggingTemplate(serviceName string) (string, error) {
 		selectedLogLevel = logLevel
 	}
 
-	var forwardLogs = false
-	var inputBaseURL = ""
-	if r.cr.Spec.FluentBitLogForwarding != nil {
-		forwardLogs = true
-		inputBaseURL = "http://" + r.cr.Spec.FluentBitLogForwarding.HTTPInputHost + ":" + strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort))
-	}
+	var loggingParams = logging.CreateForwarderConfigTemplateParams("nodepool."+serviceName, r.cr.Spec.FluentBitLogForwarding)
+	// Change logLevel to what we actually want
+	loggingParams.LogLevel = string(selectedLogLevel)
 
 	loggingConfig, err := utils.ParseString(
 		loggingConfigTemplate,
-		logging.PythonTemplateLoggingParams{
-			LogLevel:    string(selectedLogLevel),
-			ForwardLogs: forwardLogs,
-			BaseURL:     inputBaseURL,
-		})
+		struct {
+			ExtraKeys     []logging.FluentBitLabel
+			LoggingParams logging.TemplateLoggingParams
+		}{[]logging.FluentBitLabel{}, loggingParams})
 
 	return loggingConfig, err
 }

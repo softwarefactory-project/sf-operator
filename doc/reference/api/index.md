@@ -85,6 +85,8 @@ _Appears in:_
 | `httpInputHost` _string_ | The Host for the Fluent Bit HTTP Input to forward logs to. | -|
 | `httpInputPort` _integer_ | The (optional) port on which to forward logs to, defaults to 80. | {80}|
 | `debug` _boolean_ | Run fluent bit sidecars in debug mode. This will output forwarded payloads and additional info in the sidecar's logs. Defaults to false. | {false}|
+| `forwardInputHost` _string_ | The Host for the Fluent Bit Forward Input to forward logs to. | -|
+| `forwardInputPort` _integer_ | The (optional) port of the forward input, defaults to 24224. | {24224}|
 
 
 #### GerritConnection

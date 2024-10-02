@@ -1,10 +1,10 @@
 [SERVICE]
     http_server On
     http_port   2020
-    log_level   {{ .LogLevel }}
+    log_level   {{ .LoggingParams.LogLevel }}
 [INPUT]
     name                tail
-    tag                 ${K8S_NAMESPACE}.${K8S_NODENAME}.${K8S_PODNAME}.zookeeper
+    tag                 zookeeper
     path                /watch/*.log
     path_key            full_path
     refresh_interval    5
@@ -24,14 +24,18 @@
 {{- range .ExtraKeys }}
     add     {{ .Key }} ${K8S_{{ .Value -}}}
 {{- end }}
+{{- if eq .LoggingParams.LogLevel "debug" }}
 [OUTPUT]
     name    stdout
     match   *
     format  json_lines
+{{ end }}
+{{- if .LoggingParams.HTTPInputConfig.InUse }}
 [OUTPUT]
     name    http
     match   *
-    uri     /${K8S_NAMESPACE}.${K8S_NODENAME}.${K8S_PODNAME}.dib
+    uri     /{{ .LoggingParams.Tag }}
     format  json
-    host    {{ .FluentBitHTTPInputHost }}
-    port    {{ .FluentBitHTTPInputPort }}
+    host    {{ .LoggingParams.HTTPInputConfig.Host }}
+    port    {{ .LoggingParams.HTTPInputConfig.Port }}
+{{ end }}

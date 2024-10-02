@@ -47,18 +47,14 @@ type ZuulDBOpts struct {
 func createLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
 
 	fbForwarderConfig := make(map[string]string)
-	var fbLogLevel = "info"
-	if r.cr.Spec.FluentBitLogForwarding.Debug != nil && *r.cr.Spec.FluentBitLogForwarding.Debug {
-		fbLogLevel = "debug"
-	}
+	var loggingParams = logging.CreateForwarderConfigTemplateParams("mariadb", r.cr.Spec.FluentBitLogForwarding)
+
 	fbForwarderConfig["fluent-bit.conf"], _ = utils.ParseString(
 		mariadbFluentBitForwarderConfig,
 		struct {
-			ExtraKeys              []logging.FluentBitLabel
-			FluentBitHTTPInputHost string
-			FluentBitHTTPInputPort string
-			LogLevel               string
-		}{[]logging.FluentBitLabel{}, r.cr.Spec.FluentBitLogForwarding.HTTPInputHost, strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort)), fbLogLevel})
+			ExtraKeys     []logging.FluentBitLabel
+			LoggingParams logging.TemplateLoggingParams
+		}{[]logging.FluentBitLabel{}, loggingParams})
 	r.EnsureConfigMap("fluentbit-mariadb-cfg", fbForwarderConfig)
 
 	volume := base.MkVolumeCM("mariadb-log-forwarder-config",

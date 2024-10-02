@@ -383,44 +383,46 @@ func (r *SFController) computeLoggingConfig() map[string]string {
 	if r.cr.Spec.Zuul.Merger.LogLevel != "" {
 		zuulMergerLogLevel = r.cr.Spec.Zuul.Merger.LogLevel
 	}
-	var forwardLogs = false
-	var inputBaseURL = ""
-	if r.cr.Spec.FluentBitLogForwarding != nil {
-		forwardLogs = true
-		inputBaseURL = "http://" + r.cr.Spec.FluentBitLogForwarding.HTTPInputHost + ":" + strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort))
-	}
 
+	var zeloggingParams = logging.CreateForwarderConfigTemplateParams("zuul.executor", r.cr.Spec.FluentBitLogForwarding)
+	// Change logLevel to what we actually want
+	zeloggingParams.LogLevel = string(zuulExecutorLogLevel)
 	loggingData["zuul-executor-logging.yaml"], _ = utils.ParseString(
 		zuulLoggingConfig,
-		logging.PythonTemplateLoggingParams{
-			LogLevel:    string(zuulExecutorLogLevel),
-			ForwardLogs: forwardLogs,
-			BaseURL:     inputBaseURL,
-		})
+		struct {
+			ExtraKeys     []logging.FluentBitLabel
+			LoggingParams logging.TemplateLoggingParams
+		}{[]logging.FluentBitLabel{}, zeloggingParams})
 
+	var zsloggingParams = logging.CreateForwarderConfigTemplateParams("zuul.scheduler", r.cr.Spec.FluentBitLogForwarding)
+	// Change logLevel to what we actually want
+	zsloggingParams.LogLevel = string(zuulSchedulerLogLevel)
 	loggingData["zuul-scheduler-logging.yaml"], _ = utils.ParseString(
 		zuulLoggingConfig,
-		logging.PythonTemplateLoggingParams{
-			LogLevel:    string(zuulSchedulerLogLevel),
-			ForwardLogs: forwardLogs,
-			BaseURL:     inputBaseURL,
-		})
+		struct {
+			ExtraKeys     []logging.FluentBitLabel
+			LoggingParams logging.TemplateLoggingParams
+		}{[]logging.FluentBitLabel{}, zsloggingParams})
 
+	var zwloggingParams = logging.CreateForwarderConfigTemplateParams("zuul.web", r.cr.Spec.FluentBitLogForwarding)
+	// Change logLevel to what we actually want
+	zwloggingParams.LogLevel = string(zuulWebLogLevel)
 	loggingData["zuul-web-logging.yaml"], _ = utils.ParseString(
 		zuulLoggingConfig,
-		logging.PythonTemplateLoggingParams{
-			LogLevel:    string(zuulWebLogLevel),
-			ForwardLogs: forwardLogs,
-			BaseURL:     inputBaseURL,
-		})
+		struct {
+			ExtraKeys     []logging.FluentBitLabel
+			LoggingParams logging.TemplateLoggingParams
+		}{[]logging.FluentBitLabel{}, zwloggingParams})
 
+	var zmloggingParams = logging.CreateForwarderConfigTemplateParams("zuul.merger", r.cr.Spec.FluentBitLogForwarding)
+	// Change logLevel to what we actually want
+	zmloggingParams.LogLevel = string(zuulMergerLogLevel)
 	loggingData["zuul-merger-logging.yaml"], _ = utils.ParseString(
 		zuulLoggingConfig,
-		logging.PythonTemplateLoggingParams{
-			LogLevel:    string(zuulMergerLogLevel),
-			ForwardLogs: forwardLogs,
-			BaseURL:     inputBaseURL,
-		})
+		struct {
+			ExtraKeys     []logging.FluentBitLabel
+			LoggingParams logging.TemplateLoggingParams
+		}{[]logging.FluentBitLabel{}, zmloggingParams})
 
 	return loggingData
 }

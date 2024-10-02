@@ -23,10 +23,17 @@ type FluentBitLabel struct {
 	Value string
 }
 
-type PythonTemplateLoggingParams struct {
-	LogLevel    string
-	ForwardLogs bool
-	BaseURL     string
+type TemplateInputParams struct {
+	InUse bool
+	Host  string
+	Port  string
+}
+
+type TemplateLoggingParams struct {
+	Tag                string
+	LogLevel           string
+	HTTPInputConfig    TemplateInputParams
+	ForwardInputConfig TemplateInputParams
 }
 
 func CreateForwarderEnvVars(name string, extraLabels []FluentBitLabel) []apiv1.EnvVar {
@@ -45,9 +52,46 @@ func CreateForwarderEnvVars(name string, extraLabels []FluentBitLabel) []apiv1.E
 	return forwarderEnvVars
 }
 
+func CreateForwarderConfigTemplateParams(tag string, forwarderSpec *v1.FluentBitForwarderSpec) TemplateLoggingParams {
+	var httpInputParams = TemplateInputParams{
+		InUse: false,
+		Host:  "",
+		Port:  "",
+	}
+	var forwardInputParams = TemplateInputParams{
+		InUse: false,
+		Host:  "",
+		Port:  "",
+	}
+	var loggingParams = TemplateLoggingParams{
+		Tag:                tag,
+		LogLevel:           "info",
+		HTTPInputConfig:    httpInputParams,
+		ForwardInputConfig: forwardInputParams,
+	}
+	if forwarderSpec != nil {
+		if forwarderSpec.HTTPInputHost != "" {
+			loggingParams.HTTPInputConfig.InUse = true
+			loggingParams.HTTPInputConfig.Host = forwarderSpec.HTTPInputHost
+			loggingParams.HTTPInputConfig.Port = strconv.Itoa(int(forwarderSpec.HTTPInputPort))
+		}
+		if forwarderSpec.ForwardInputHost != "" {
+			loggingParams.ForwardInputConfig.InUse = true
+			loggingParams.ForwardInputConfig.Host = forwarderSpec.ForwardInputHost
+			loggingParams.ForwardInputConfig.Port = strconv.Itoa(int(forwarderSpec.ForwardInputPort))
+		}
+
+		if forwarderSpec.Debug != nil && *forwarderSpec.Debug {
+			loggingParams.LogLevel = "debug"
+		}
+	}
+	return loggingParams
+}
+
 func SetupLogForwarding(serviceName string, forwarderSpec *v1.FluentBitForwarderSpec, extraLabels []FluentBitLabel, annotations map[string]string) []apiv1.EnvVar {
 	if forwarderSpec != nil {
 		annotations["log-forwarding"] = forwarderSpec.HTTPInputHost + ":" + strconv.Itoa(int(forwarderSpec.HTTPInputPort))
+		annotations["log-forwarding"] += forwarderSpec.ForwardInputHost + ":" + strconv.Itoa(int(forwarderSpec.ForwardInputPort))
 		return CreateForwarderEnvVars(serviceName, extraLabels)
 	} else {
 		annotations["log-forwarding"] = "disabled"

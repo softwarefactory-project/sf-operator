@@ -5,7 +5,6 @@ package controllers
 
 import (
 	_ "embed"
-	"strconv"
 
 	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
@@ -36,19 +35,16 @@ const ZookeeperIdent = "zookeeper"
 const zkPIMountPath = "/config-scripts"
 
 func createZKLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
-	var fbLogLevel = "info"
-	if r.cr.Spec.FluentBitLogForwarding.Debug != nil && *r.cr.Spec.FluentBitLogForwarding.Debug {
-		fbLogLevel = "debug"
-	}
+
 	fbForwarderConfig := make(map[string]string)
+	var loggingParams = logging.CreateForwarderConfigTemplateParams("zookeeper", r.cr.Spec.FluentBitLogForwarding)
+
 	fbForwarderConfig["fluent-bit.conf"], _ = utils.ParseString(
 		zkFluentBitForwarderConfig,
 		struct {
-			ExtraKeys              []logging.FluentBitLabel
-			FluentBitHTTPInputHost string
-			FluentBitHTTPInputPort string
-			LogLevel               string
-		}{[]logging.FluentBitLabel{}, r.cr.Spec.FluentBitLogForwarding.HTTPInputHost, strconv.Itoa(int(r.cr.Spec.FluentBitLogForwarding.HTTPInputPort)), fbLogLevel})
+			ExtraKeys     []logging.FluentBitLabel
+			LoggingParams logging.TemplateLoggingParams
+		}{[]logging.FluentBitLabel{}, loggingParams})
 	r.EnsureConfigMap("fluentbit-zk-cfg", fbForwarderConfig)
 
 	volume := base.MkVolumeCM("zk-log-forwarder-config",

@@ -43,6 +43,11 @@ type FluentBitForwarderSpec struct {
 	// +optional
 	// Run fluent bit sidecars in debug mode. This will output forwarded payloads and additional info in the sidecar's logs. Defaults to false.
 	Debug *bool `json:"debug,omitempty"`
+	// The Host for the Fluent Bit Forward Input to forward logs to.
+	ForwardInputHost string `json:"forwardInputHost,omitempty"`
+	// The (optional) port of the forward input, defaults to 24224.
+	// +kubebuilder:default:=24224
+	ForwardInputPort int32 `json:"forwardInputPort,omitempty"`
 }
 
 type StorageSpec struct {

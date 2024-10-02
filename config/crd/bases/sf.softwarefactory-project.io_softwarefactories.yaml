@@ -62,6 +62,16 @@ spec:
                       output forwarded payloads and additional info in the sidecar's
                       logs. Defaults to false.
                     type: boolean
+                  forwardInputHost:
+                    description: The Host for the Fluent Bit Forward Input to forward
+                      logs to.
+                    type: string
+                  forwardInputPort:
+                    default: 24224
+                    description: The (optional) port of the forward input, defaults
+                      to 24224.
+                    format: int32
+                    type: integer
                   httpInputHost:
                     description: The Host for the Fluent Bit HTTP Input to forward
                       logs to.

@@ -3,37 +3,37 @@ formatters:
   console:
     class: 'nodepool.logconfig.MultiLineFormatter'
     format: "%(asctime)s %(levelname)s %(name)s: %(message)s"
-{{- if .ForwardLogs }}
-  logforward:
+{{- if .LoggingParams.HTTPInputConfig.InUse }}
+  fluenthttp:
     format: '%(asctime)s %(levelname)s %(name)s: %(message)s'
 {{ end }}
 handlers:
   console:
     class: logging.StreamHandler
     formatter: console
-    level: {{.LogLevel}}
+    level: {{ .LoggingParams.LogLevel}}
     stream: ext://sys.stdout
-{{- if .ForwardLogs }}
-  logforward:
+{{- if .LoggingParams.HTTPInputConfig.InUse }}
+  fluenthttp:
     class: sfExtras.SimpleFluentBitHTTPInputHandler
-    level: {{ .LogLevel }}
-    formatter:
-    url: '{{ .BaseURL }}/nodepool'
+    level: {{ .LoggingParams.LogLevel }}
+    formatter: fluenthttp
+    url: 'http://{{ .LoggingParams.HTTPInputConfig.Host }}:{{ .LoggingParams.HTTPInputConfig.Port }}/{{ .LoggingParams.Tag }}'
     env_prefix: K8S_
 {{ end }}
 loggers:
   nodepool:
     handlers:
       - console
-{{- if .ForwardLogs }}
-      - logforward
+{{- if .LoggingParams.HTTPInputConfig.InUse }}
+      - fluenthttp
 {{ end }}
-    level: {{.LogLevel}}
+    level: {{.LoggingParams.LogLevel}}
     propagate: 0
 root:
   handlers:
     - console
-{{- if .ForwardLogs }}
-    - logforward
+{{- if .LoggingParams.HTTPInputConfig.InUse }}
+    - fluenthttp
 {{ end }}
-  level: {{.LogLevel}}
+  level: {{.LoggingParams.LogLevel}}
