@@ -8,8 +8,8 @@ data:
         log_level   debug
 
     [INPUT]
-        name    http
-        port    5140
+        name    forward
+        port    24224
 
     [OUTPUT]
         name    stdout
@@ -40,7 +40,7 @@ metadata:
 spec:
   containers:
   # append "-debug" to image name to run in debug mode, in case you run into CrashLoopBackOff errors.
-  - image: cr.fluentbit.io/fluent/fluent-bit:2.1.10
+  - image: cr.fluentbit.io/fluent/fluent-bit:latest
     name: test-fluentbit
     resources: {}
     securityContext:
@@ -58,8 +58,8 @@ spec:
     ports:
       - name: fb-http-server
         containerPort: 2020
-      - name: fb-http-input
-        containerPort: 5140
+      - name: fb-fw-input
+        containerPort: 24224
   dnsPolicy: ClusterFirst
   restartPolicy: Always
   volumes:
@@ -70,16 +70,16 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: fluent-bit-http-input
+  name: fluent-bit-forward-input
   labels:
     run: fluentbit
     app: demo-logging
 spec:
   ports:
-    - name: fb-http-input
-      port: 5140
+    - name: fb-fw-input
+      port: 24224
       protocol: TCP
-      targetPort: 5140
+      targetPort: 24224
   selector:
     run: fluentbit
     app: demo-logging

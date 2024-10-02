@@ -7,6 +7,16 @@ formatters:
   fluenthttp:
     format: '%(asctime)s %(levelname)s %(name)s: %(message)s'
 {{ end }}
+{{- if .LoggingParams.ForwardInputConfig.InUse }}
+  fluentforward:
+    '()': fluent.handler.FluentRecordFormatter
+    format:
+      level: '%(levelname)s'
+      log: '%(name)s: %(message)s'
+{{- range .ExtraKeys }}
+      {{ .Key }}: '{{ .Value -}}'
+{{- end }}
+{{ end }}
 handlers:
   console:
     class: logging.StreamHandler
@@ -21,12 +31,25 @@ handlers:
     url: 'http://{{ .LoggingParams.HTTPInputConfig.Host }}:{{ .LoggingParams.HTTPInputConfig.Port }}/{{ .LoggingParams.Tag }}'
     env_prefix: K8S_
 {{ end }}
+{{- if .LoggingParams.ForwardInputConfig.InUse }}
+  fluentforward:
+    class: fluent.handler.FluentHandler
+    level: {{ .LoggingParams.LogLevel }}
+    formatter: fluentforward
+#    buffer_overflow_handler: overflow_handler
+    host: {{ .LoggingParams.ForwardInputConfig.Host }}
+    port: {{ .LoggingParams.ForwardInputConfig.Port }}
+    tag: {{ .LoggingParams.Tag }}
+{{ end }}
 loggers:
   nodepool:
     handlers:
       - console
 {{- if .LoggingParams.HTTPInputConfig.InUse }}
       - fluenthttp
+{{ end }}
+{{- if .LoggingParams.ForwardInputConfig.InUse }}
+      - fluentforward
 {{ end }}
     level: {{.LoggingParams.LogLevel}}
     propagate: 0
@@ -35,5 +58,8 @@ root:
     - console
 {{- if .LoggingParams.HTTPInputConfig.InUse }}
     - fluenthttp
+{{ end }}
+{{- if .LoggingParams.ForwardInputConfig.InUse }}
+    - fluentforward
 {{ end }}
   level: {{.LoggingParams.LogLevel}}

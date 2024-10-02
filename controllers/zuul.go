@@ -385,6 +385,7 @@ func (r *SFController) computeLoggingConfig() map[string]string {
 	}
 
 	var zeloggingParams = logging.CreateForwarderConfigTemplateParams("zuul.executor", r.cr.Spec.FluentBitLogForwarding)
+	var zeloggingExtraKeys = logging.CreateBaseLoggingExtraKeys("zuul-executor", "zuul")
 	// Change logLevel to what we actually want
 	zeloggingParams.LogLevel = string(zuulExecutorLogLevel)
 	loggingData["zuul-executor-logging.yaml"], _ = utils.ParseString(
@@ -392,9 +393,10 @@ func (r *SFController) computeLoggingConfig() map[string]string {
 		struct {
 			ExtraKeys     []logging.FluentBitLabel
 			LoggingParams logging.TemplateLoggingParams
-		}{[]logging.FluentBitLabel{}, zeloggingParams})
+		}{zeloggingExtraKeys, zeloggingParams})
 
 	var zsloggingParams = logging.CreateForwarderConfigTemplateParams("zuul.scheduler", r.cr.Spec.FluentBitLogForwarding)
+	var zsloggingExtraKeys = logging.CreateBaseLoggingExtraKeys("zuul-scheduler", "zuul")
 	// Change logLevel to what we actually want
 	zsloggingParams.LogLevel = string(zuulSchedulerLogLevel)
 	loggingData["zuul-scheduler-logging.yaml"], _ = utils.ParseString(
@@ -402,9 +404,10 @@ func (r *SFController) computeLoggingConfig() map[string]string {
 		struct {
 			ExtraKeys     []logging.FluentBitLabel
 			LoggingParams logging.TemplateLoggingParams
-		}{[]logging.FluentBitLabel{}, zsloggingParams})
+		}{zsloggingExtraKeys, zsloggingParams})
 
 	var zwloggingParams = logging.CreateForwarderConfigTemplateParams("zuul.web", r.cr.Spec.FluentBitLogForwarding)
+	var zwloggingExtraKeys = logging.CreateBaseLoggingExtraKeys("zuul-web", "zuul")
 	// Change logLevel to what we actually want
 	zwloggingParams.LogLevel = string(zuulWebLogLevel)
 	loggingData["zuul-web-logging.yaml"], _ = utils.ParseString(
@@ -412,9 +415,10 @@ func (r *SFController) computeLoggingConfig() map[string]string {
 		struct {
 			ExtraKeys     []logging.FluentBitLabel
 			LoggingParams logging.TemplateLoggingParams
-		}{[]logging.FluentBitLabel{}, zwloggingParams})
+		}{zwloggingExtraKeys, zwloggingParams})
 
 	var zmloggingParams = logging.CreateForwarderConfigTemplateParams("zuul.merger", r.cr.Spec.FluentBitLogForwarding)
+	var zmloggingExtraKeys = logging.CreateBaseLoggingExtraKeys("zuul-merger", "zuul")
 	// Change logLevel to what we actually want
 	zmloggingParams.LogLevel = string(zuulMergerLogLevel)
 	loggingData["zuul-merger-logging.yaml"], _ = utils.ParseString(
@@ -422,7 +426,7 @@ func (r *SFController) computeLoggingConfig() map[string]string {
 		struct {
 			ExtraKeys     []logging.FluentBitLabel
 			LoggingParams logging.TemplateLoggingParams
-		}{[]logging.FluentBitLabel{}, zmloggingParams})
+		}{zmloggingExtraKeys, zmloggingParams})
 
 	return loggingData
 }

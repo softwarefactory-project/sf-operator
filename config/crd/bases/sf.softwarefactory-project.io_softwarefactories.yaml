@@ -82,8 +82,6 @@ spec:
                       defaults to 80.
                     format: int32
                     type: integer
-                required:
-                - httpInputHost
                 type: object
               config-location:
                 description: Config repository spec

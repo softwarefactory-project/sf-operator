@@ -4,8 +4,8 @@
     log_level   {{ .LoggingParams.LogLevel }}
 [INPUT]
     name                tail
-    tag                 mariadb
-    path                /watch/*.log
+    tag                 mariadb.error
+    path                /watch/error.log
     path_key            full_path
     refresh_interval    5
     read_from_head      True
@@ -24,6 +24,10 @@
 {{- range .ExtraKeys }}
     add     {{ .Key }} ${K8S_{{ .Value -}}}
 {{- end }}
+[FILTER]
+    name    modify
+    match   mariadb.error
+    add     level ERROR
 {{- if eq .LoggingParams.LogLevel "debug" }}
 [OUTPUT]
     name    stdout
@@ -38,4 +42,12 @@
     format  json
     host    {{ .LoggingParams.HTTPInputConfig.Host }}
     port    {{ .LoggingParams.HTTPInputConfig.Port }}
+{{ end }}
+{{- if .LoggingParams.ForwardInputConfig.InUse }}
+[OUTPUT]
+    name    forward
+    match   *
+    tag     {{ .LoggingParams.Tag }}
+    host    {{ .LoggingParams.ForwardInputConfig.Host }}
+    port    {{ .LoggingParams.ForwardInputConfig.Port }}
 {{ end }}

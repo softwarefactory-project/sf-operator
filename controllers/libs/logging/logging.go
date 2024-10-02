@@ -52,6 +52,24 @@ func CreateForwarderEnvVars(name string, extraLabels []FluentBitLabel) []apiv1.E
 	return forwarderEnvVars
 }
 
+func CreateBaseLoggingExtraKeys(name string, component string) []FluentBitLabel {
+	baseExtraKeys := []FluentBitLabel{
+		{
+			Key:   "labels_app",
+			Value: "sf",
+		},
+		{
+			Key:   "labels_run",
+			Value: name,
+		},
+		{
+			Key:   "component",
+			Value: component,
+		},
+	}
+	return baseExtraKeys
+}
+
 func CreateForwarderConfigTemplateParams(tag string, forwarderSpec *v1.FluentBitForwarderSpec) TemplateLoggingParams {
 	var httpInputParams = TemplateInputParams{
 		InUse: false,

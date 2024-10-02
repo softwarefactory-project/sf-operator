@@ -39,3 +39,11 @@
     host    {{ .LoggingParams.HTTPInputConfig.Host }}
     port    {{ .LoggingParams.HTTPInputConfig.Port }}
 {{ end }}
+{{- if .LoggingParams.ForwardInputConfig.InUse }}
+[OUTPUT]
+    name    forward
+    match   *
+    tag     {{ .LoggingParams.Tag }}
+    host    {{ .LoggingParams.ForwardInputConfig.Host }}
+    port    {{ .LoggingParams.ForwardInputConfig.Port }}
+{{ end }}

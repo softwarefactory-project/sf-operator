@@ -35,7 +35,7 @@ type LetsEncryptSpec struct {
 
 type FluentBitForwarderSpec struct {
 	// The Host for the Fluent Bit HTTP Input to forward logs to.
-	HTTPInputHost string `json:"httpInputHost"`
+	HTTPInputHost string `json:"httpInputHost,omitempty"`
 	// The (optional) port on which to forward logs to, defaults to 80.
 	// +kubebuilder:default:=80
 	HTTPInputPort int32 `json:"httpInputPort,omitempty"`

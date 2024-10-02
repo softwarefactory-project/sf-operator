@@ -22,6 +22,7 @@
     - zuul
     - nodepool
     - mariadb
+    - zookeeper
 
 - name: Ensure DIB logs are collected by loki
   ansible.builtin.shell: "~/bin/logcli query '{labels_run=\"dib\"}' --quiet --limit 5"

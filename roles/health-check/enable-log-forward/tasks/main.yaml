@@ -5,5 +5,5 @@
   vars:
     cr_spec:
       FluentBitLogForwarding:
-        httpInputHost: fluent-bit-http-input
-        httpInputPort: 5140
+        forwardInputHost: fluent-bit-forward-input
+        forwardInputPort: 24224

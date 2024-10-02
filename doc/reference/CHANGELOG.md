@@ -7,6 +7,10 @@ All notable changes to this project will be documented in this file.
 ### Added
 ### Removed
 ### Changed
+
+- log forwarding - Added support for the [forward input](https://docs.fluentbit.io/manual/pipeline/inputs/forward).
+  The HTTP input is deprecated and support for it will be removed at a later point.
+
 ### Fixed
 ### Security
 
@@ -23,7 +27,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- zookeeper - certificates duration bump of version v0.0.42 was partially handled due to a missing removal of the corresponding `Secrets` resources. 
+- zookeeper - certificates duration bump of version v0.0.42 was partially handled due to a missing removal of the corresponding `Secrets` resources.
 
 ### Security
 

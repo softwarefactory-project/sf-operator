@@ -39,8 +39,13 @@ and the most straightforward to implement as an application deployer.
 If **however** no such solution is available, or if the default solution does not suit your
 needs, the SF-Operator can set up Zuul and Nodepool to forward application logs to a
 [Fluent Bit](https://fluentbit.io/) collector. The collector must be configured to expose an
-[HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http) that your deployment
+[forward input](https://docs.fluentbit.io/manual/pipeline/inputs/forward) that your deployment
 will be able to reach.
+
+!!! warning
+    The initially supported [HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http)
+    will be deprecated in a future version of the operator. Make sure to transition to the
+    forward input if you have been using the HTTP input.
 
 ### Enabling log forwarding on a deployment
 
@@ -50,10 +55,10 @@ In the spec of your Software Factory deployment, edit the following:
 [...]
 spec:
   FluentBitLogForwarding:
-    httpInputHost: "fluentbit-http-input-service"
+    forwardInputHost: "fluentbit-forward-input-service"
 ```
 
-The **httpInputHost** is the host of the HTTP input to which logs should be sent.
+The **forwardInputHost** is the host of the HTTP input to which logs should be sent.
 
 ### Pre-defined labels
 
@@ -127,8 +132,8 @@ Then add or edit the following section in the spec:
 [...]
 spec:
   FluentBitLogForwarding:
-    httpInputHost: fluent-bit-http-input
-    httpInputPort: 5140
+    httpInputHost: fluent-bit-forward-input
+    forwardInputPort: 24224
 ```
 
 

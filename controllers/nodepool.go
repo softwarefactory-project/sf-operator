@@ -194,6 +194,7 @@ func (r *SFController) mkLoggingTemplate(serviceName string) (string, error) {
 	}
 
 	var loggingParams = logging.CreateForwarderConfigTemplateParams("nodepool."+serviceName, r.cr.Spec.FluentBitLogForwarding)
+	var loggingExtraKeys = logging.CreateBaseLoggingExtraKeys("nodepool-"+serviceName, "nodepool")
 	// Change logLevel to what we actually want
 	loggingParams.LogLevel = string(selectedLogLevel)
 
@@ -202,7 +203,7 @@ func (r *SFController) mkLoggingTemplate(serviceName string) (string, error) {
 		struct {
 			ExtraKeys     []logging.FluentBitLabel
 			LoggingParams logging.TemplateLoggingParams
-		}{[]logging.FluentBitLabel{}, loggingParams})
+		}{loggingExtraKeys, loggingParams})
 
 	return loggingConfig, err
 }
