@@ -16,14 +16,12 @@
             - build-operator-assets
             - clean-installations-cli
             - install-operator
-
         - name: Apply the minimal SF CR and ensure reconciled happened
           ansible.builtin.include_role:
             name: update-custom-resource
           vars:
             cr_spec:
               fqdn: "{{ fqdn }}"
-
         - name: Apply the base CI SF CR and ensure reconciled happened
           ansible.builtin.include_role:
             name: apply-custom-resources
