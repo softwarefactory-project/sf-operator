@@ -190,6 +190,12 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 			Name:      "zuul-ca",
 			MountPath: "/etc/pki/ca-trust/extracted",
 		},
+		{
+			Name:      "extra-python-module",
+			MountPath: "/usr/local/lib/python3.11/site-packages/sfExtras.py",
+			SubPath:   "sfExtras.py",
+			ReadOnly:  true,
+		},
 	}
 	envs := []apiv1.EnvVar{
 		base.MkEnvVar("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-bundle.crt"),
@@ -295,6 +301,11 @@ func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []ap
 	// Install the logging settings config map resource
 	r.EnsureConfigMap("zuul-logging", r.computeLoggingConfig())
 
+	// Install extra python module
+	r.EnsureConfigMap("extra-python-module", map[string]string{
+		"sfExtras.py": logging.SFExtrasPythonModule,
+	})
+
 	volumes := []apiv1.Volume{
 		base.MkVolumeSecret("ca-cert"),
 		base.MkVolumeSecret("zuul-config"),
@@ -311,6 +322,7 @@ func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []ap
 		},
 		base.MkVolumeCM("statsd-config", "zuul-statsd-config-map"),
 		base.MkVolumeCM("extra-config", "zuul-extra-config-map"),
+		base.MkVolumeCM("extra-python-module", "extra-python-module-config-map"),
 		base.MkEmptyDirVolume("zuul-ca"),
 	}
 	if !isStatefulset(service) {
@@ -452,6 +464,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		"zuul-extra":                 utils.Checksum([]byte(sshConfig)),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
+		"extras-python-module":       utils.Checksum([]byte(logging.SFExtrasPythonModule)),
 	}
 
 	if r.isConfigRepoSet() {
@@ -579,6 +592,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
+		"extras-python-module":       utils.Checksum([]byte(logging.SFExtrasPythonModule)),
 	}
 	// TODO Add the zk-port-forward-kube-config secret resource version in the annotation if enabled
 
@@ -656,6 +670,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-merger"))),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
+		"extras-python-module":       utils.Checksum([]byte(logging.SFExtrasPythonModule)),
 	}
 
 	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
@@ -721,6 +736,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
+		"extras-python-module":       utils.Checksum([]byte(logging.SFExtrasPythonModule)),
 	}
 
 	zw := base.MkDeployment("zuul-web", r.ns, "", r.cr.Spec.ExtraLabels)
