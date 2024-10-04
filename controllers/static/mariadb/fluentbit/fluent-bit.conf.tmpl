@@ -1,7 +1,12 @@
 [SERVICE]
-    http_server On
-    http_port   2020
-    log_level   {{ .LoggingParams.LogLevel }}
+    http_server             On
+    http_port               2020
+    log_level               {{ .LoggingParams.LogLevel }}
+    storage.path            /buffer-storage
+    storage.sync            normal
+    # A chunk is ~2MB, so this value is 128Mi / 4, where 128Mi is the default container profile's mem request
+    # TODO compute this automatically from code
+    storage.max_chunks_up   32
 [INPUT]
     name                tail
     tag                 mariadb.error
@@ -10,6 +15,7 @@
     refresh_interval    5
     read_from_head      True
     db                  /watch/mariadb_fluentbit.db
+    storage.type        filesystem
 [FILTER]
     name    modify
     match   *
@@ -45,9 +51,10 @@
 {{ end }}
 {{- if .LoggingParams.ForwardInputConfig.InUse }}
 [OUTPUT]
-    name    forward
-    match   *
-    tag     {{ .LoggingParams.Tag }}
-    host    {{ .LoggingParams.ForwardInputConfig.Host }}
-    port    {{ .LoggingParams.ForwardInputConfig.Port }}
+    name                        forward
+    match                       *
+    tag                         {{ .LoggingParams.Tag }}
+    host                        {{ .LoggingParams.ForwardInputConfig.Host }}
+    port                        {{ .LoggingParams.ForwardInputConfig.Port }}
+    storage.total_limit_size    100M
 {{ end }}

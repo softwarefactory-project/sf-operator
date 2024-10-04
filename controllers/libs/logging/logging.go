@@ -117,7 +117,7 @@ func SetupLogForwarding(serviceName string, forwarderSpec *v1.FluentBitForwarder
 	}
 }
 
-func CreateFluentBitSideCarContainer(serviceName string, extraLabels []FluentBitLabel, volumeMounts []apiv1.VolumeMount, debug bool) apiv1.Container {
+func CreateFluentBitSideCarContainer(serviceName string, extraLabels []FluentBitLabel, volumeMounts []apiv1.VolumeMount, debug bool) (apiv1.Container, apiv1.Volume) {
 	var img = base.FluentBitImage(debug)
 	container := base.MkContainer("fluentbit", img)
 	container.Env = CreateForwarderEnvVars(serviceName, extraLabels)
@@ -127,7 +127,14 @@ func CreateFluentBitSideCarContainer(serviceName string, extraLabels []FluentBit
 			ContainerPort: 2020,
 		},
 	}
+	// Note that the empty dir will be lost at restart. The idea is really to
+	// only provide buffering to prevent OOM killing of the pod.
+	storageEmptyDir := base.MkEmptyDirVolume(serviceName + "-fb-buf")
+	storageVolumeMount := apiv1.VolumeMount{
+		Name:      serviceName + "-fb-buf",
+		MountPath: "/buffer-storage/",
+	}
 	container.Ports = ports
-	container.VolumeMounts = volumeMounts
-	return container
+	container.VolumeMounts = append(volumeMounts, storageVolumeMount)
+	return container, storageEmptyDir
 }

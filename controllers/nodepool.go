@@ -93,7 +93,7 @@ var nodepoolFluentBitLabels = []logging.FluentBitLabel{
 	},
 }
 
-func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
+func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string]string) ([]apiv1.Volume, apiv1.Container) {
 	fbForwarderConfig := make(map[string]string)
 	var loggingParams = logging.CreateForwarderConfigTemplateParams("diskimage-builder", r.cr.Spec.FluentBitLogForwarding)
 
@@ -125,11 +125,11 @@ func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string
 		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
 	}
 	builderFluentBitLabels := append(nodepoolFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: BuilderIdent})
-	sidecar := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts, fluentbitDebug)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts, fluentbitDebug)
 	annotations["dib-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["dib-fluent-bit-parser"] = utils.Checksum([]byte(fbForwarderConfig["parsers.conf"]))
 	annotations["dib-fluent-bit-image"] = sidecar.Image
-	return volume, sidecar
+	return []apiv1.Volume{volume, storageEmptyDir}, sidecar
 
 }
 
@@ -524,7 +524,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"statsd_mapping":             utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		"image":                      base.NodepoolBuilderImage(),
 		"nodepool-providers-secrets": getSecretsVersion(providersSecrets, providerSecretsExists),
-		"serial":                     "16",
+		"serial":                     "17",
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
@@ -583,9 +583,9 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	extraLoggingEnvVars := logging.SetupLogForwarding("nodepool-builder", r.cr.Spec.FluentBitLogForwarding, nodepoolFluentBitLabels, annotations)
 	nb.Spec.Template.Spec.Containers[0].Env = append(nb.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
 	if r.cr.Spec.FluentBitLogForwarding != nil {
-		fbVolume, fbSidecar := createImageBuildLogForwarderSidecar(r, annotations)
+		fbVolumes, fbSidecar := createImageBuildLogForwarderSidecar(r, annotations)
 		nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers, fbSidecar)
-		nb.Spec.Template.Spec.Volumes = append(nb.Spec.Template.Spec.Volumes, fbVolume)
+		nb.Spec.Template.Spec.Volumes = append(nb.Spec.Template.Spec.Volumes, fbVolumes...)
 	}
 
 	nb.Spec.Template.ObjectMeta.Annotations = annotations

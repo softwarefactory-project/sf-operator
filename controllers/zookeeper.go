@@ -34,7 +34,7 @@ const zkSSLPort = 2281
 const ZookeeperIdent = "zookeeper"
 const zkPIMountPath = "/config-scripts"
 
-func createZKLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
+func createZKLogForwarderSidecar(r *SFController, annotations map[string]string) ([]apiv1.Volume, apiv1.Container) {
 
 	fbForwarderConfig := make(map[string]string)
 	var loggingParams = logging.CreateForwarderConfigTemplateParams("zookeeper", r.cr.Spec.FluentBitLogForwarding)
@@ -64,10 +64,10 @@ func createZKLogForwarderSidecar(r *SFController, annotations map[string]string)
 	if r.cr.Spec.FluentBitLogForwarding.Debug != nil {
 		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
 	}
-	sidecar := logging.CreateFluentBitSideCarContainer("zookeeper", []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("zookeeper", []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug)
 	annotations["zk-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["zk-fluent-bit-image"] = sidecar.Image
-	return volume, sidecar
+	return []apiv1.Volume{volume, storageEmptyDir}, sidecar
 }
 
 func (r *SFController) DeployZookeeper() bool {
@@ -97,7 +97,7 @@ func (r *SFController) DeployZookeeper() bool {
 	annotations := map[string]string{
 		"configuration": utils.Checksum([]byte(configChecksumable)),
 		"image":         base.ZookeeperImage(),
-		"serial":        "5",
+		"serial":        "6",
 	}
 
 	volumeMountsStatsExporter := []apiv1.VolumeMount{
@@ -169,9 +169,9 @@ func (r *SFController) DeployZookeeper() bool {
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zookeeper.Limits, &zk.Spec.Template.Spec.Containers[0])
 
 	if r.cr.Spec.FluentBitLogForwarding != nil {
-		fbVolume, fbSidecar := createZKLogForwarderSidecar(r, annotations)
+		fbVolumes, fbSidecar := createZKLogForwarderSidecar(r, annotations)
 		zk.Spec.Template.Spec.Containers = append(zk.Spec.Template.Spec.Containers, fbSidecar)
-		zk.Spec.Template.Spec.Volumes = append(zk.Spec.Template.Spec.Volumes, fbVolume)
+		zk.Spec.Template.Spec.Volumes = append(zk.Spec.Template.Spec.Volumes, fbVolumes...)
 	}
 
 	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(ZookeeperIdent, volumeMountsStatsExporter)

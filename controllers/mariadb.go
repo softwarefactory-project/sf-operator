@@ -44,7 +44,7 @@ type ZuulDBOpts struct {
 	Params   map[string]string
 }
 
-func createLogForwarderSidecar(r *SFController, annotations map[string]string) (apiv1.Volume, apiv1.Container) {
+func createLogForwarderSidecar(r *SFController, annotations map[string]string) ([]apiv1.Volume, apiv1.Container) {
 
 	fbForwarderConfig := make(map[string]string)
 	var loggingParams = logging.CreateForwarderConfigTemplateParams("mariadb", r.cr.Spec.FluentBitLogForwarding)
@@ -74,10 +74,10 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 	if r.cr.Spec.FluentBitLogForwarding.Debug != nil {
 		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
 	}
-	sidecar := logging.CreateFluentBitSideCarContainer(MariaDBIdent, []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer(MariaDBIdent, []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug)
 	annotations["mariadb-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["mariadb-fluent-bit-image"] = sidecar.Image
-	return volume, sidecar
+	return []apiv1.Volume{volume, storageEmptyDir}, sidecar
 }
 
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
@@ -267,14 +267,14 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 	}
 
 	annotations := map[string]string{
-		"serial": "5",
+		"serial": "6",
 		"image":  base.MariaDBImage(),
 		"limits": limitstr,
 	}
 	if r.cr.Spec.FluentBitLogForwarding != nil {
-		fbVolume, fbSidecar := createLogForwarderSidecar(r, annotations)
+		fbVolumes, fbSidecar := createLogForwarderSidecar(r, annotations)
 		sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, fbSidecar)
-		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, fbVolume)
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, fbVolumes...)
 	}
 
 	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(MariaDBIdent, volumeMountsStatsExporter)
