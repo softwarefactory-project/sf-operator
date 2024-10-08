@@ -57,7 +57,7 @@ func CreateForwarderEnvVars(name string, extraLabels []FluentBitLabel) []apiv1.E
 	return forwarderEnvVars
 }
 
-func CreateBaseLoggingExtraKeys(name string, component string) []FluentBitLabel {
+func CreateBaseLoggingExtraKeys(name string, component string, container string, namespace string) []FluentBitLabel {
 	baseExtraKeys := []FluentBitLabel{
 		{
 			Key:   "labels_app",
@@ -70,6 +70,14 @@ func CreateBaseLoggingExtraKeys(name string, component string) []FluentBitLabel 
 		{
 			Key:   "component",
 			Value: component,
+		},
+		{
+			Key:   "namespace",
+			Value: namespace,
+		},
+		{
+			Key:   "container",
+			Value: container,
 		},
 	}
 	return baseExtraKeys

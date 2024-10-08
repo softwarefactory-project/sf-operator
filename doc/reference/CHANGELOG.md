@@ -7,13 +7,28 @@ All notable changes to this project will be documented in this file.
 ### Added
 ### Removed
 ### Changed
+### Fixed
+### Security
+
+## [v0.0.44] - 2024-10-08
+
+### Added
 
 - log forwarding - Added support for the [forward input](https://docs.fluentbit.io/manual/pipeline/inputs/forward).
-  The HTTP input is deprecated and support for it will be removed at a later point.
+- log forwarding - improved fluent bit sidecar containers' resilience to OOM killing and backpressure issues.
+
+### Removed
+### Changed
+
+
+- log forwarding - The HTTP input is **deprecated** and support for it will be removed at a later point.
+- log forwarding - The predefined labels `podip`, `nodename` and `podname` are **deprecated**.
+  They are not supported in the Forward input for the Zuul and Nodepool components, and will
+  be removed for all components at a later point.
 
 ### Fixed
 
-SF bootstrap-tenant command - fix the base pre-run playbook for container based job (wrong condition check)
+- SF bootstrap-tenant command - fix the base pre-run playbook for container based job (wrong condition check)
 
 ### Security
 

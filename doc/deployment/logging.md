@@ -68,10 +68,10 @@ The log JSON payload that is sent to your Fluent Bit collector is enriched with 
 |--------|------------------|
 | labels_run    | the "run" label in the pod's metadata; ie the name of the microservice emitting the log line |
 | labels_app    | the "app" label, it is always set to "sf" |
-| podip     | the IP address of the pod |
+| podip     | [DEPRECATED] the IP address of the pod |
 | namespace | the namespace where the pod is running |
-| nodename | the node where the pod is running |
-| podname | the name of the pod where the service is running |
+| nodename | [DEPRECATED] the node where the pod is running |
+| podname | [DEPRECATED] the name of the pod where the service is running |
 | log    | the actual log line collected |
 | component | the name of the component running the microservice; typically "zuul" or "nodepool" |
 | container | the name of the container emitting the logs |
