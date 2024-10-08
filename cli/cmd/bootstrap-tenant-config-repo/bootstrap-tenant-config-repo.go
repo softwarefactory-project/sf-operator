@@ -218,7 +218,7 @@ pipeline to receive an initial +/-1 Verified vote.`,
 						getAnsibleIncludeRole("remove-zuul-sshkey"),
 					},
 					"run_once": true,
-					"when":     "ansible_connection != 'kubectl'",
+					"when":     "ansible_connection == 'kubectl'",
 				},
 				{
 					"import_role": map[string]string{

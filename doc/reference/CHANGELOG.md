@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
   The HTTP input is deprecated and support for it will be removed at a later point.
 
 ### Fixed
+
+SF bootstrap-tenant command - fix the base pre-run playbook for container based job (wrong condition check)
+
 ### Security
 
 ## [v0.0.43] - 2024-09-20
