@@ -36,6 +36,11 @@ type TemplateLoggingParams struct {
 	ForwardInputConfig TemplateInputParams
 }
 
+var (
+	//go:embed static/sfExtras.py
+	SFExtrasPythonModule string
+)
+
 func CreateForwarderEnvVars(name string, extraLabels []FluentBitLabel) []apiv1.EnvVar {
 	forwarderEnvVars := []apiv1.EnvVar{
 		base.MkEnvVarFromFieldRef("K8S_NODENAME", "spec.nodeName"),
