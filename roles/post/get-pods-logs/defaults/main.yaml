@@ -1,0 +1,3 @@
+---
+output_dir: "{{ output_logs_dir }}/pods-logs"
+log_directory: "/var/log/pods"

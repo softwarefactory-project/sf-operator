@@ -36,4 +36,4 @@
             name: post/get-system-logs
 
       - ansible.builtin.include_role:
-            name: post/get-loki-logs
+            name: post/get-pods-logs
