@@ -110,8 +110,8 @@ func initializeSFManifest(withAuth bool, withBuilder bool, full bool, connection
 
 	if full {
 		fbSpec := sfv1.FluentBitForwarderSpec{
-			HTTPInputHost: "fluentbit",
-			HTTPInputPort: 5140,
+			ForwardInputHost: "fluentbit",
+			ForwardInputPort: 24224,
 		}
 		manifest.Spec.FluentBitLogForwarding = &fbSpec
 
