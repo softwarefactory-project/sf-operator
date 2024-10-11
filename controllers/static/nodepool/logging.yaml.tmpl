@@ -28,6 +28,7 @@ handlers:
     host: {{ .LoggingParams.ForwardInputConfig.Host }}
     port: {{ .LoggingParams.ForwardInputConfig.Port }}
     tag: {{ .LoggingParams.Tag }}
+    nanosecond_precision: True
 {{ end }}
 loggers:
   nodepool:

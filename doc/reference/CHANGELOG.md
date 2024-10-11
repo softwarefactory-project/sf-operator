@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 ### Changed
 ### Fixed
 
+- log forwarding - nodepool and zuul logs were being stamped with a low precision (to the second), making verbose
+  deployments hard to exploit. Logs forwarded with the python-fluent-logger library use the "nanosecond_precision" setting.
 - logserver not restarted when zuul-ssh-key change
 
 ### Security
