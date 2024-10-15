@@ -100,3 +100,8 @@ func MkStartupHTTPProbe(path string, port int) *apiv1.Probe {
 		}}
 	return mkStartupProbe(handler)
 }
+
+func SlowStartingProbe(probe *apiv1.Probe) {
+	probe.PeriodSeconds = 60
+	probe.FailureThreshold = 60
+}

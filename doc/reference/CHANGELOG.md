@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 ### Removed
 
 - log forwarding - remove support for the HTTP input.
+- zuul - Increased Zuul Scheduler and Zuul Web Startup Probes Time
 
 ### Changed
 ### Fixed

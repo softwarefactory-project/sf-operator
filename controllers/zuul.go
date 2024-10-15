@@ -546,6 +546,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
 	zs.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/health/live", zuulPrometheusPort)
 	zs.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/health/ready", zuulPrometheusPort)
+	base.SlowStartingProbe(zs.Spec.Template.Spec.Containers[0].StartupProbe)
 	zs.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 	}
@@ -745,6 +746,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/api/info", zuulWEBPort)
+	base.SlowStartingProbe(zw.Spec.Template.Spec.Containers[0].StartupProbe)
 	zw.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 	}
