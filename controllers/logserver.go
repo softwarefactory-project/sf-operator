@@ -282,6 +282,7 @@ func (r *SFController) DeployLogserver() bool {
 		"httpd-image":     base.HTTPDImage(),
 		"purgelogs-image": base.PurgelogsImage(),
 		"sshd-image":      base.SSHDImage(),
+		"authorized-key":  utils.Checksum(pubKey),
 	}
 
 	current, stsUpdated := r.ensureStatefulset(sts)
