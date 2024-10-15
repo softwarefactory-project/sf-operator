@@ -36,15 +36,6 @@
     match   *
     format  json_lines
 {{ end }}
-{{- if .LoggingParams.HTTPInputConfig.InUse }}
-[OUTPUT]
-    name    http
-    match   *
-    uri     /{{ .LoggingParams.Tag }}
-    format  json
-    host    {{ .LoggingParams.HTTPInputConfig.Host }}
-    port    {{ .LoggingParams.HTTPInputConfig.Port }}
-{{ end }}
 {{- if .LoggingParams.ForwardInputConfig.InUse }}
 [OUTPUT]
     name                        forward

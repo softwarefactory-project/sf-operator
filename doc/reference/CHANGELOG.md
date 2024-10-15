@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Removed
+
+- log forwarding - remove support for the HTTP input.
+
 ### Changed
 ### Fixed
 

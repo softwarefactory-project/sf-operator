@@ -72,16 +72,6 @@ spec:
                       to 24224.
                     format: int32
                     type: integer
-                  httpInputHost:
-                    description: The Host for the Fluent Bit HTTP Input to forward
-                      logs to.
-                    type: string
-                  httpInputPort:
-                    default: 80
-                    description: The (optional) port on which to forward logs to,
-                      defaults to 80.
-                    format: int32
-                    type: integer
                 type: object
               config-location:
                 description: Config repository spec
