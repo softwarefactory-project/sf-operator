@@ -16,7 +16,7 @@
     release:
       jobs:
         - sf-operator-publish-olm-bundle-image
-    periodic-12h:
+    periodic:
       jobs:
         - sf-operator-olm
         - sf-operator-upgrade
