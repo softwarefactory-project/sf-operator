@@ -6,11 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Removed
+### Changed
+### Fixed
+### Security
+
+## [v0.0.45] - 2024-10-18
+
+### Added
+### Removed
 
 - log forwarding - remove support for the HTTP input.
-- zuul - Increased Zuul Scheduler and Zuul Web Startup Probes Time
 
 ### Changed
+
+- zuul - Increased Zuul Scheduler and Zuul Web Startup Probes Time
+
 ### Fixed
 
 - log forwarding - nodepool and zuul logs were being stamped with a low precision (to the second), making verbose
