@@ -74,12 +74,12 @@ While the tenant's config project could be setup manually, we also provide a `cl
 * the `base job` and `playbooks`
 
 !!! warning
-    The tool only supports the definition of `pipelines` compatible with a `Gerrit` connection.
+    The tool only supports the definition of `pipelines` compatible with a `Gerrit` and `GitLab` connections.
 
 Get a local checkout of the tenant's config project/repository then run:
 
 ```sh
-sf-operator SF bootstrap-tenant --connection [connection] [/path/to/repository]
+sf-operator SF bootstrap-tenant </path/to/repository> --connection [connection]
 ```
 
 ### Modify and merge

@@ -43,7 +43,7 @@ func getAnsibleIncludeRole(rolename string) map[string]any {
 
 // BootstrapTenantConfigRepoCmd command
 var BootstrapTenantConfigRepoCmd = &cobra.Command{
-	Use:   "bootstrap-tenant",
+	Use:   "bootstrap-tenant <path to directory>",
 	Short: "bootstrap a tenant's config repository",
 	Long: `Initialize a Zuul tenant's config repository
 with boilerplate code that define standard pipelines:
@@ -254,6 +254,6 @@ func MkBootstrapCmd() *cobra.Command {
 		driver     string
 	)
 	BootstrapTenantConfigRepoCmd.Flags().StringVar(&connection, "connection", "", "Name of the connection or a source")
-	BootstrapTenantConfigRepoCmd.Flags().StringVar(&driver, "driver", "", "Driver type of the connection")
+	BootstrapTenantConfigRepoCmd.Flags().StringVar(&driver, "driver", "", "Driver type of the connection. Supported drivers: gitlab, gerrit")
 	return BootstrapTenantConfigRepoCmd
 }

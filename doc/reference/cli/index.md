@@ -467,7 +467,7 @@ Initialize a Zuul tenant's config repository with boilerplate code that define s
 it also includes a boilerplate job and pre-run playbook.
 
 ```sh
-sf-operator SF bootstrap-tenant [FLAGS] /path/to/tenant-config-repo
+sf-operator SF bootstrap-tenant /path/to/tenant-config-repo [FLAGS]
 ```
 
 Flags:
@@ -475,7 +475,7 @@ Flags:
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 |--connection |string  | The name of the Zuul connection to use for pipelines | No | - |
-|--driver |string  | The driver used by the Zuul connection | No | - |
+|--driver |string  | The driver used by the Zuul connection. Supported drivers: gerrit, gitlab | No | - |
 
 #### configure TLS
 
