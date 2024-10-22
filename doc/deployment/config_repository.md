@@ -232,3 +232,12 @@ Once the resource is ready, the config repository will appear listed in the inte
 ## Next Steps
 
 You may now want to configure [connection secrets for nodepool providers](./nodepool.md) (kubeconfig, clouds.yaml).
+
+## How to be an administrator in Internal Tenant
+
+As said in the [Concept](#concept) section, SF-Operator manages a hidden git repository which defines and sets the
+`internal` tenant.
+
+This tenant has an `admin-rules` definition, setting the `admin-internal` group as the tenant administrator.
+
+To be an `internal` administrator, just set a [`authorization-rule`](https://zuul-ci.org/docs/zuul/latest/tenants.html#authorization-rule) named `admin-internal` in the config project defined at `Set the config repository location`
