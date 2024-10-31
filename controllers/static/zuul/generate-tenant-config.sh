@@ -10,6 +10,8 @@ cat << EOF > ~/main.yaml
     max-job-timeout: 10800
     name: internal
     report-build-page: true
+    admin-rules:
+      - admin-internal
     exclude-unprotected-branches: true
     source:
       git-server:

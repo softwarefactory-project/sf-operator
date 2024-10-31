@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- zuul - add admin-rule for internal tenant
+
 ### Removed
 ### Changed
 ### Fixed
