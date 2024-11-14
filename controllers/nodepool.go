@@ -640,6 +640,15 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	return isReady
 }
 
+func hasProviderSecret(volumeMounts []apiv1.VolumeMount) bool {
+	for _, volume := range volumeMounts {
+		if volume.Name == "nodepool-providers-secrets" {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume, nodepoolStatsdMappingConfig string,
 	initialVolumeMounts []apiv1.VolumeMount, providersSecrets apiv1.Secret, providerSecretsExists bool) bool {
 
@@ -777,6 +786,17 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	nl.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/ready", launcherPort)
 	nl.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(launcherPort, launcherPortName),
+	}
+
+	if hasProviderSecret(initialVolumeMounts) {
+		// Append zuul-capacity sidecar
+		nl.Spec.Template.Spec.Containers = append(nl.Spec.Template.Spec.Containers,
+			MkZuulCapacityContainer(),
+		)
+
+		// Setup zuul-capacity service
+		zcSrv := base.MkService("zuul-capacity", r.ns, "zuul-capacity", []int32{8080}, "zuul-capacity", r.cr.Spec.ExtraLabels)
+		r.GetOrCreate(&zcSrv)
 	}
 
 	current := appsv1.Deployment{}

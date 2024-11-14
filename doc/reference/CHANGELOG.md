@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - zuul - add admin-rule for internal tenant
+- zuul-capacity - a service to collect cloud provider usage metrics
 
 ### Removed
 ### Changed

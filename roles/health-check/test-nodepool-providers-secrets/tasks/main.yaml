@@ -33,4 +33,4 @@
 
 - name: "Check that clouds.yaml available in nodepool-launcher containers"
   ansible.builtin.shell: |
-    kubectl exec {{ nodepool_launcher_info.resources[0].metadata.name }} -- bash -c "ls /var/lib/nodepool/.config/openstack/clouds.yaml"
+    kubectl exec {{ nodepool_launcher_info.resources[0].metadata.name }} -c launcher -- bash -c "ls /var/lib/nodepool/.config/openstack/clouds.yaml"
