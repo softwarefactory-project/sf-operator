@@ -517,29 +517,6 @@ func GetTriggerCheckByDriver(driver string, connection string) (PipelineGenericT
 					Event:   "comment-added",
 					Comment: "(?i)^(Patch Set [0-9]+:)?( [\\w\\+-]*)*(\\n\\n)?\\s*(recheck|reverify)",
 				},
-				{
-					Event: "comment-added",
-					GitTrigger: PipelineTriggerGit{
-						Gerrit: PipelineTriggerGitGerrit{
-							Approval: []PipelineRequireApproval{
-								{
-									Gerrit: PipelineGerritRequirement{
-										Username: "zuul",
-										Verified: []GerritVotePoint{
-											GetZuulPipelineReporterVerified("-1"),
-											GetZuulPipelineReporterVerified("-2"),
-										},
-									},
-								},
-							},
-						},
-						Approval: []PipelineRequireGerritApproval{
-							{
-								Workflow: GetGerritWorkflowValue("1"),
-							},
-						},
-					},
-				},
 			},
 		}
 	case "gitlab":
