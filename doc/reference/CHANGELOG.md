@@ -5,14 +5,18 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [v0.0.46] - 2024-11-18
+
+### Added
 
 - zuul - add admin-rule for internal tenant
 - zuul-capacity - a service to collect cloud provider usage metrics
-
-### Removed
-### Changed
-### Fixed
-### Security
 
 ## [v0.0.45] - 2024-10-18
 
