@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 ### Deprecated
 ### Removed
 ### Fixed
+
+- zuul-capacity service selector to enable external access
+
 ### Security
 
 ## [v0.0.46] - 2024-11-18
