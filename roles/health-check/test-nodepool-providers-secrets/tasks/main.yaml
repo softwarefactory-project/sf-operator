@@ -24,13 +24,11 @@
   ansible.builtin.shell: |
     kubectl exec nodepool-builder-0 -- bash -c "ls /var/lib/nodepool/.config/openstack/clouds.yaml"
 
-- name: Fetch nodepool-launcher Pod info
-  kubernetes.core.k8s_info:
-    kind: Pod
-    label_selectors:
-      - "run = nodepool-launcher"
-  register: nodepool_launcher_info
-
 - name: "Check that clouds.yaml available in nodepool-launcher containers"
   ansible.builtin.shell: |
-    kubectl exec {{ nodepool_launcher_info.resources[0].metadata.name }} -c launcher -- bash -c "ls /var/lib/nodepool/.config/openstack/clouds.yaml"
+    POD=$(kubectl get pods -l=run=nodepool-launcher -o name | tail -n 1)
+    kubectl exec $POD -- bash -c "ls /var/lib/nodepool/.config/openstack/clouds.yaml"
+  register: _result
+  retries: 60
+  delay: 1
+  until: _result.rc == 0
