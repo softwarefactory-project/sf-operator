@@ -10,6 +10,10 @@ All notable changes to this project will be documented in this file.
 ### Removed
 ### Fixed
 
+## [v0.0.47] - 2024-11-20
+
+### Fixed
+
 - zuul-capacity service selector to enable external access
 
 ### Security
