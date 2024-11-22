@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [in development]
 
+## [v0.0.48] - 2024-11-22
+
 ### Added
 
 - monitoring - Updated Zuul's statsd mappings to reflect metrics issued by the applications' current versions.
@@ -11,12 +13,21 @@ All notable changes to this project will be documented in this file.
 
   * zuul_tenant_pipeline_queue_branch
   * zuul_executor_pct_used_inodes
+  * nodepool_image_image_build_requests
+  * nodepool_builder_current_builds
+  * nodepool_builder_current_uploads
+  * nodepool_builder_build_workers
+  * nodepool_builder_upload_workers
+  * nodepool_builder_image_build_state
+  * nodepool_builder_image_provider_upload_state
+  * nodepool_provider_pool_addressable_requests
 
 - development - Document the process to update a container
 
 ### Changed
 
 - security: bumped cert-manager go dependency to v1.15.4
+- nodepool: update version to 11.0.0
 
 ### Deprecated
 ### Removed

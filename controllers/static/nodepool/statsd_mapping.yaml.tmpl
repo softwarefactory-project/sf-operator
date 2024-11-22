@@ -1,4 +1,4 @@
-# Auto-generated with zuuldoc2statsdmapper.py, please check with: 
+# Auto-generated with zuuldoc2statsdmapper.py, please check with:
 # podman run --rm -v controllers/static/nodepool/statsd_mapping.yaml.tmpl:/tmp/statsd_mapping.yaml:z docker.io/prom/statsd-exporter --statsd.mapping-config=/tmp/statsd_mapping.yaml
 #
 mappings:
@@ -33,6 +33,47 @@ mappings:
 - help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.image_build_requests
   match: nodepool.image_build_requests
   name: nodepool_image_build_requests
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.image.<diskimage
+    name>.image_build_requests
+  labels:
+    diskimage: "$1"
+  match: nodepool.image.*.image_build_requests
+  name: nodepool_image_image_build_requests
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.builder.<hostname>.current_builds
+  labels:
+    hostname: "$1"
+  match: nodepool.builder.*.current_builds
+  name: nodepool_builder_current_builds
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.builder.<hostname>.current_uploads
+  labels:
+    hostname: "$1"
+  match: nodepool.builder.*.current_uploads
+  name: nodepool_builder_current_uploads
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.builder.<hostname>.build_workers
+  labels:
+    hostname: "$1"
+  match: nodepool.builder.*.build_workers
+  name: nodepool_builder_build_workers
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.builder.<hostname>.upload_workers
+  labels:
+    hostname: "$1"
+  match: nodepool.builder.*.upload_workers
+  name: nodepool_builder_upload_workers
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.builder.<hostname>.image.<image
+    name>.build.state
+  labels:
+    hostname: "$1"
+    image: "$2"
+  match: nodepool.builder.*.image.*.build.state
+  name: nodepool_builder_image_build_state
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.builder.<hostname>.image.<image
+    name>.provider.<provider name>.upload.state
+  labels:
+    hostname: "$1"
+    image: "$2"
+    provider: "$3"
+  match: nodepool.builder.*.image.*.provider.*.upload.state
+  name: nodepool_builder_image_provider_upload_state
 - help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.nodes.<state>
   labels:
     state: "$1"
@@ -121,6 +162,12 @@ mappings:
     provider: "$1"
   match: nodepool.provider.*.leaked.volumes
   name: nodepool_provider_leaked_volumes
+- help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.provider.<provider>.pool.<pool>.addressable_requests
+  labels:
+    pool: "$2"
+    provider: "$1"
+  match: nodepool.provider.*.pool.*.addressable_requests
+  name: nodepool_provider_pool_addressable_requests
 - help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.launch.<result>
   labels: {}
   match: nodepool.launch.ready
@@ -202,19 +249,19 @@ mappings:
   name: nodepool_launcher_zk_image_cache_playback_queue
 
 # Uncomment below after testing
-# {{- range . }}
-# - name: {{ .Name }}
-#   match: {{ .Match }}
-#   help: {{ .Help }}, see https://zuul-ci.org/docs/nodepool/latest/operation.html#openstack-api-metrics
-#   labels:
-# {{- range .Labels }}
-#     {{ .LabelName }}: "{{ .LabelValue -}}"
-# {{- end }}
-# {{- end }}
-# - action: drop
-#   match: .
-#   match_type: regex
-#   name: "dropped"
+{{- range . }}
+- name: {{ .Name }}
+  match: {{ .Match }}
+  help: {{ .Help }}, see https://zuul-ci.org/docs/nodepool/latest/operation.html#openstack-api-metrics
+  labels:
+{{- range .Labels }}
+    {{ .LabelName }}: "{{ .LabelValue -}}"
+{{- end }}
+{{- end }}
+- action: drop
+  match: .
+  match_type: regex
+  name: "dropped"
 
 - action: drop
   match: .
