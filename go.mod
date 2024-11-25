@@ -6,7 +6,7 @@ toolchain go1.22.5
 
 require (
 	github.com/apenella/go-ansible v1.3.0
-	github.com/cert-manager/cert-manager v1.15.1
+	github.com/cert-manager/cert-manager v1.15.4
 	github.com/fatih/color v1.17.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/google/uuid v1.6.0

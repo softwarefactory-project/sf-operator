@@ -5,7 +5,19 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- monitoring - Updated Zuul's statsd mappings to reflect metrics issued by the applications' current versions.
+  This adds the following metrics:
+
+  * zuul_tenant_pipeline_queue_branch
+  * zuul_executor_pct_used_inodes
+
+- development - Document the process to update a container
+
 ### Changed
+
+- security: bumped cert-manager go dependency to v1.15.4
+
 ### Deprecated
 ### Removed
 ### Fixed

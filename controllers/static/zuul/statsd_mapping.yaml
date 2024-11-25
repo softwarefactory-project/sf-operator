@@ -179,46 +179,56 @@ mappings:
     tenant: "$1"
   match: zuul.tenant.*.pipeline.*.queue
   name: zuul_tenant_pipeline_queue
-- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue
-    name>
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue>
   labels:
     pipeline: "$2"
     queue: "$3"
     tenant: "$1"
   match: zuul.tenant.*.pipeline.*.queue.*
   name: zuul_tenant_pipeline_queue
-- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue
-    name>.current_changes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue>.current_changes
   labels:
     pipeline: "$2"
     queue: "$3"
     tenant: "$1"
   match: zuul.tenant.*.pipeline.*.queue.*.current_changes
   name: zuul_tenant_pipeline_queue_current_changes
-- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue
-    name>.window
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue>.window
   labels:
     pipeline: "$2"
     queue: "$3"
     tenant: "$1"
   match: zuul.tenant.*.pipeline.*.queue.*.window
   name: zuul_tenant_pipeline_queue_window
-- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue
-    name>.resident_time
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue>.resident_time
   labels:
     pipeline: "$2"
     queue: "$3"
     tenant: "$1"
   match: zuul.tenant.*.pipeline.*.queue.*.resident_time
   name: zuul_tenant_pipeline_queue_resident_time
-- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue
-    name>.total_changes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue>.total_changes
   labels:
     pipeline: "$2"
     queue: "$3"
     tenant: "$1"
   match: zuul.tenant.*.pipeline.*.queue.*.total_changes
   name: zuul_tenant_pipeline_queue_total_changes
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue>.branch
+  labels:
+    pipeline: "$2"
+    queue: "$3"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.queue.*.branch
+  name: zuul_tenant_pipeline_queue_branch
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.queue.<queue>.branch.<branch>
+  labels:
+    branch: "$4"
+    pipeline: "$2"
+    queue: "$3"
+    tenant: "$1"
+  match: zuul.tenant.*.pipeline.*.queue.*.branch.*
+  name: zuul_tenant_pipeline_queue_branch
 - help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.tenant.<tenant>.pipeline.<pipeline>.project
   labels:
     pipeline: "$2"
@@ -464,6 +474,11 @@ mappings:
     executor: "$1"
   match: zuul.executor.*.pct_used_hdd
   name: zuul_executor_pct_used_hdd
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.pct_used_inodes
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.pct_used_inodes
+  name: zuul_executor_pct_used_inodes
 - help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.pct_used_ram
   labels:
     executor: "$1"
@@ -659,6 +674,7 @@ mappings:
     hostname: "$1"
   match: zuul.web.server.*.streamers
   name: zuul_web_server_streamers
+
 - action: drop
   match: .
   match_type: regex

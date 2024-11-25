@@ -11,6 +11,7 @@ for development purposes.
 1. [Modify an existing image](#modify-an-existing-image)
 1. [Create and use an image from a Containerfile](#create-and-use-an-image-from-a-containerfile)
 1. [Edit Zuul source code and mount in a pod](#edit-the-zuul-source-code-and-mount-in-a-pod)
+1. [Upgrading an image](#upgrading-an-image)
 
 ## Root access inside containers
 
@@ -134,3 +135,85 @@ mv usr/local/lib/python3.11/site-packages/zuul/web/static static
 rm -Rf usr
 ```
 
+### Upgrading an image
+
+This paragraph describes the upgrade image container process, whether a major component version, a security fix or a custom patch is released.
+
+This project's containers are managed in the [containers](https://softwarefactory-project.io/r/plugins/gitiles/containers) repository.
+The first step is to clone this repository locally.
+
+The containerfiles and versions are managed with Dhall, in the `images-sf/master` directory of the repository.
+
+#### General process
+
+1. Submit your change to the `containers` repo.
+1. When this change is merged, edit the `controllers/libs/base/static/images.yaml` in the sf-operator repo to reflect
+   the new version and container id.
+1. Submit your change.
+
+#### Upgrading Zuul and Nodepool
+
+Upgrading Zuul and Nodepool requires a few extra steps:
+
+##### Containers Repo
+
+1. Ensure python dependencies are up to date by running `make update-pip-freeze`
+
+##### SF-Operator Repo
+
+*Prerequisite*: you need a local clone of [zuul](https://opendev.org/zuul/zuul) and [nodepool](https://opendev.org/zuul/nodepool).
+
+**Zuul:**
+
+1. Set your local Zuul repo to the desired tag:
+
+```sh
+cd <path/to/zuul> && git fetch --all && git checkout <tag>
+```
+
+2. Run the statsd mapper utility tool in the `sf-operator` repo:
+
+```sh
+cd <path/to/sf-operator>
+python tools/zuuldoc2statsdmapper.py -i <path/to/zuul>/doc/source/monitoring.rst controllers/static/zuul/statsd_mapping.yaml
+```
+
+3. Validate that the generated configuration can run with statsd-exporter (make sure the container version matches the one in
+   `controllers/libs/base/static/images.yaml`)
+
+```sh
+podman run --rm -v ./controllers/static/zuul/statsd_mapping.yaml:/tmp/statsd_mapping.yaml:z docker.io/prom/statsd-exporter:v0.27.1 --statsd.mapping-config=/tmp/statsd_mapping.yaml
+```
+
+Any issue with the configuration will appear in the application logs. Otherwise, if all goes fine, the last log should be similar to
+`level=info msg="Accepting Prometheus Requests" addr=:9102`.
+
+**Nodepool:**
+
+1. Set your local Nodepool repo to the desired tag:
+
+```sh
+cd <path/to/nodepool> && git fetch --all && git checkout <tag>
+```
+
+2. Run the statsd mapper utility tool in the `sf-operator` repo:
+
+```sh
+cd <path/to/sf-operator>
+python tools/zuuldoc2statsdmapper.py -i <path/to/nodepool>/doc/source/operation.rst controllers/static/nodepool/statsd_mapping.yaml.tmpl
+```
+
+3. Validate that the generated configuration can run with statsd-exporter (make sure the container version matches the one in
+   `controllers/libs/base/static/images.yaml`)
+
+```sh
+podman run --rm -v ./controllers/static/nodepool/statsd_mapping.yaml.tmpl:/tmp/statsd_mapping.yaml:z docker.io/prom/statsd-exporter:v0.27.1 --statsd.mapping-config=/tmp/statsd_mapping.yaml
+```
+
+Any issue with the configuration will appear in the application logs. Otherwise, if all goes fine, the last log should be similar to
+`level=info msg="Accepting Prometheus Requests" addr=:9102`.
+
+4. Uncomment the templated part at the end of `controllers/static/nodepool/statsd_mapping.yaml.tmpl`
+
+Finally, check the diffs on `controllers/static/nodepool/statsd_mapping.yaml.tmpl` and `controllers/static/zuul/statsd_mapping.yaml`
+and document any change (new or removed metrics) in the CHANGELOG.

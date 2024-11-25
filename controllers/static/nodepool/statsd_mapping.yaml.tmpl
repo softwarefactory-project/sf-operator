@@ -1,5 +1,5 @@
 # Auto-generated with zuuldoc2statsdmapper.py, please check with: 
-# podman run --rm -v controllers/static/nodepool/statsd_mapping.yaml:/tmp/statsd_mapping.yaml:z docker.io/prom/statsd-exporter --statsd.mapping-config=/tmp/statsd_mapping.yaml
+# podman run --rm -v controllers/static/nodepool/statsd_mapping.yaml.tmpl:/tmp/statsd_mapping.yaml:z docker.io/prom/statsd-exporter --statsd.mapping-config=/tmp/statsd_mapping.yaml
 #
 mappings:
 - help: Description at https://zuul-ci.org/docs/nodepool/latest/operation.html#stat-nodepool.dib_image_build.<diskimage_name>.<ext>.size
@@ -200,15 +200,22 @@ mappings:
     hostname: "$1"
   match: nodepool.launcher.*.zk.image_cache.playback_queue
   name: nodepool_launcher_zk_image_cache_playback_queue
-{{- range . }}
-- name: {{ .Name }}
-  match: {{ .Match }}
-  help: {{ .Help }}, see https://zuul-ci.org/docs/nodepool/latest/operation.html#openstack-api-metrics
-  labels:
-{{- range .Labels }}
-    {{ .LabelName }}: "{{ .LabelValue -}}"
-{{- end }}
-{{- end }}
+
+# Uncomment below after testing
+# {{- range . }}
+# - name: {{ .Name }}
+#   match: {{ .Match }}
+#   help: {{ .Help }}, see https://zuul-ci.org/docs/nodepool/latest/operation.html#openstack-api-metrics
+#   labels:
+# {{- range .Labels }}
+#     {{ .LabelName }}: "{{ .LabelValue -}}"
+# {{- end }}
+# {{- end }}
+# - action: drop
+#   match: .
+#   match_type: regex
+#   name: "dropped"
+
 - action: drop
   match: .
   match_type: regex

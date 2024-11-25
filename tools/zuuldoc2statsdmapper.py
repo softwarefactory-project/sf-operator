@@ -39,6 +39,8 @@ def fix_label(label):
         return "provider"
     elif label == "diskimage_name":
         return "diskimage"
+    elif label == "diskimage name":
+        return "diskimage"
     else:
         return label
 
@@ -89,8 +91,9 @@ def stat_to_mapping(stat):
             mapping['labels'] = labels
         return [mapping, ]
 
-
-docstat_re = re.compile('^(\s*)\.\. (zuul:)?stat:: (.+)$')
+# Every metric is prefixed with "stat::" for specific rendering,
+# we use that to extract the metrics from the documentation.
+docstat_re = re.compile(r'^(.*)\.\. (zuul:)?stat:: (.+)$')
 
 
 if __name__ == "__main__":
@@ -146,16 +149,36 @@ if __name__ == "__main__":
     #         }
     #     )
 
-    # Drop all non-matching metrics to avoid spamming
-    mappings.append(
-        {
-         'match': '.',
-         'match_type': 'regex',
-         'action': 'drop',
-         'name': quoted('dropped')
-        }
-    )
+
+    rendered = yaml.dump({'mappings': mappings})
+
     with open(args.output_file, 'w') as o:
         o.write("# Auto-generated with zuuldoc2statsdmapper.py, please check with: \n")
         o.write("# podman run --rm -v %s:/tmp/statsd_mapping.yaml:z docker.io/prom/statsd-exporter --statsd.mapping-config=/tmp/statsd_mapping.yaml\n#\n" % args.output_file)
-        o.write(yaml.dump({'mappings': mappings}))
+        o.write(rendered)
+        if "nodepool" in args.input:
+            template_code = """
+# Uncomment below after testing
+# {{- range . }}
+# - name: {{ .Name }}
+#   match: {{ .Match }}
+#   help: {{ .Help }}, see https://zuul-ci.org/docs/nodepool/latest/operation.html#openstack-api-metrics
+#   labels:
+# {{- range .Labels }}
+#     {{ .LabelName }}: "{{ .LabelValue -}}"
+# {{- end }}
+# {{- end }}
+# - action: drop
+#   match: .
+#   match_type: regex
+#   name: "dropped"
+"""
+            o.write(template_code)
+        # Drop all non-matching metrics to avoid spamming
+        drop = """
+- action: drop
+  match: .
+  match_type: regex
+  name: "dropped"
+"""
+        o.write(drop)
