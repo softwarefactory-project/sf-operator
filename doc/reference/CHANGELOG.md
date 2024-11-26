@@ -4,7 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [in development]
 
-## [v0.0.48] - 2024-11-22
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+
+## [v0.0.48] - 2024-11-26
 
 ### Added
 
