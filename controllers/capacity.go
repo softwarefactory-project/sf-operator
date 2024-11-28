@@ -10,13 +10,14 @@ import (
 
 func MkZuulCapacityContainer() apiv1.Container {
 	container := base.MkContainer("zuul-capacity", "ghcr.io/softwarefactory-project/zuul-capacity:latest")
+	container.Args = []string{"--port", "9100"}
 	container.Env = []apiv1.EnvVar{
 		base.MkEnvVar("OS_CLIENT_CONFIG_FILE", "/.openstack/clouds.yaml"),
 	}
 	container.Ports = []apiv1.ContainerPort{
-		base.MkContainerPort(8080, "zuul-capacity"),
+		base.MkContainerPort(9100, "zuul-capacity"),
 	}
-	container.ReadinessProbe = base.MkReadinessHTTPProbe("/", 8080)
+	container.ReadinessProbe = base.MkReadinessHTTPProbe("/", 9100)
 	container.VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      "nodepool-config",

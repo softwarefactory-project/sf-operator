@@ -795,7 +795,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		)
 
 		// Setup zuul-capacity service
-		zcSrv := base.MkService("zuul-capacity", r.ns, "nodepool-launcher", []int32{8080}, "zuul-capacity", r.cr.Spec.ExtraLabels)
+		zcSrv := base.MkService("zuul-capacity", r.ns, "nodepool-launcher", []int32{9100}, "zuul-capacity", r.cr.Spec.ExtraLabels)
 		r.GetOrCreate(&zcSrv)
 	}
 

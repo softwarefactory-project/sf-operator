@@ -10,6 +10,13 @@ All notable changes to this project will be documented in this file.
 ### Removed
 ### Fixed
 
+## [v0.0.49] - 2024-12-03
+
+### Changed
+
+- zuul-capacity default port is changed to 9100
+
+
 ## [v0.0.48] - 2024-11-26
 
 ### Added
