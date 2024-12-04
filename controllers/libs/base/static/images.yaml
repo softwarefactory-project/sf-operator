@@ -4,20 +4,20 @@
 images:
     - name: zuul-scheduler
       container: quay.io/software-factory/zuul-scheduler
-      version: 11.1.0-4
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=2e842ac6d9e577d21cd53e1c3e869409d2c04cdf
+      version: 11.1.0-5
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=7eb332be8909d1b3f2e7dd19bff0cfe40dcc34e4
     - name: zuul-executor
       container: quay.io/software-factory/zuul-executor
-      version: 11.1.0-4
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=2e842ac6d9e577d21cd53e1c3e869409d2c04cdf
+      version: 11.1.0-5
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=7eb332be8909d1b3f2e7dd19bff0cfe40dcc34e4
     - name: zuul-merger
       container: quay.io/software-factory/zuul-merger
-      version: 11.1.0-4
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=2e842ac6d9e577d21cd53e1c3e869409d2c04cdf
+      version: 11.1.0-5
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=7eb332be8909d1b3f2e7dd19bff0cfe40dcc34e4
     - name: zuul-web
       container: quay.io/software-factory/zuul-web
-      version: 11.1.0-4
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=2e842ac6d9e577d21cd53e1c3e869409d2c04cdf
+      version: 11.1.0-5
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=7eb332be8909d1b3f2e7dd19bff0cfe40dcc34e4
     - name: nodepool-launcher
       container: quay.io/software-factory/nodepool-launcher
       version: 11.0.0-2
