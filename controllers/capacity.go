@@ -25,6 +25,11 @@ func MkZuulCapacityContainer() apiv1.Container {
 			ReadOnly:  true,
 		},
 		{
+			Name:      "zookeeper-client-tls",
+			MountPath: "/tls/client",
+			ReadOnly:  true,
+		},
+		{
 			Name:      "nodepool-providers-secrets",
 			SubPath:   "clouds.yaml",
 			MountPath: "/.openstack/clouds.yaml",
