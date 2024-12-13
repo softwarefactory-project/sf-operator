@@ -6,13 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
-
-- zuul-web: add new version (PS/13) of the upstream patch "improving UX when authn session expired" https://review.opendev.org/c/zuul/zuul/+/936440
-- zuul: update version to 11.2.0 https://zuul-ci.org/docs/zuul/latest/releasenotes.html#relnotes-11-2-0
-
 ### Deprecated
 ### Removed
 ### Fixed
+
+## [v0.0.50] - 2024-12-13
+
+### Changed
+
+- zuul-web: add new version (PS/13) of the upstream patch "improving UX when authn session expired" https://review.opendev.org/c/zuul/zuul/+/936440
+- zuul: update version to 11.2.0 https://zuul-ci.org/docs/zuul/latest/releasenotes.html#relnotes-11-2-0
 
 ## [v0.0.49] - 2024-12-04
 
