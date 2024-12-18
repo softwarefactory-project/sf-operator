@@ -41,9 +41,34 @@
         - 199.204.47.54
       inject_dev_ssh_keys: true
 
+
+- job:
+    name: sf-operator-rhel
+    parent: sf-operator-microshift-rhel
+    pre-run: *pre-run
+    post-run: *post-run
+    timeout: 5200
+    attempts: 5
+    run: playbooks/main.yaml
+    abstract: true
+    irrelevant-files: *irrelevant-files
+    vars: *vars
+
 - job:
     name: sf-operator-multinode
     parent: sf-operator-microshift-multinode
+    pre-run: *pre-run
+    post-run: *post-run
+    timeout: 5200
+    attempts: 5
+    run: playbooks/main.yaml
+    abstract: true
+    irrelevant-files: *irrelevant-files
+    vars: *vars
+
+- job:
+    name: sf-operator-multinode-rhel
+    parent: sf-operator-microshift-multinode-rhel
     pre-run: *pre-run
     post-run: *post-run
     timeout: 5200
@@ -105,6 +130,28 @@
     name: sf-operator-standalone
     description: Validates a sf-operator standalone deployment in multinode
     parent: sf-operator-multinode
+    vars:
+      mode: "standalone"
+
+- job:
+    name: sf-operator-olm-rhel
+    description: Validates a sf-operator deployment via OLM on RHEL
+    parent: sf-operator-rhel
+    vars:
+      mode: "olm"
+
+- job:
+    name: sf-operator-upgrade-rhel
+    description: Validates a sf-operator upgrade via OLM on RHEL
+    parent: sf-operator-rhel
+    run: playbooks/upgrade.yaml
+    vars:
+      mode: "olm"
+
+- job:
+    name: sf-operator-standalone-rhel
+    description: Validates a sf-operator standalone deployment in multinode on RHEL
+    parent: sf-operator-multinode-rhel
     vars:
       mode: "standalone"
 

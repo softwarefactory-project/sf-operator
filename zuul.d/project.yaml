@@ -6,6 +6,9 @@
         - sf-operator-upgrade
         - sf-operator-standalone
         - sf-operator-ansible-lint
+        - sf-operator-olm-rhel
+        - sf-operator-upgrade-rhel
+        - sf-operator-standalone-rhel
     gate:
       jobs:
         - sf-operator-vuln-check
@@ -13,6 +16,9 @@
         - sf-operator-upgrade
         - sf-operator-standalone
         - sf-operator-ansible-lint
+        - sf-operator-olm-rhel
+        - sf-operator-upgrade-rhel
+        - sf-operator-standalone-rhel
     release:
       jobs:
         - sf-operator-publish-olm-bundle-image

@@ -40,8 +40,6 @@
     - name: Install packages
       ansible.builtin.package:
         name:
-          - git-review
-          - golang
           - jq
           - make
           - podman
@@ -65,6 +63,24 @@
           - kubernetes-client
       when: ansible_distribution == "Fedora"
 
+    # NOTE: Tasks are required on multinode-deployment to get kubectl binary
+    # NOTE: The command needs to be executed via shell/command module
+    # not rhsm_repository modue, because it will raise an error on
+    # Centos deployment.
+    - name: Install openshift-client when RHEL
+      when: ansible_distribution | lower == 'redhat'
+      block:
+        - name: Enable RHOCP subscription using command
+          become: true
+          ansible.builtin.command: |
+            subscription-manager repos --enable rhocp-{{ microshift_version }}-for-rhel-9-{{ ansible_architecture }}-rpms
+
+        - name: Install openshift-clients
+          become: true
+          ansible.builtin.package:
+            name: openshift-clients
+            state: present
+
     - name: Install python3-pip
       ansible.builtin.package:
         name:
@@ -78,3 +94,43 @@
           - kubernetes
           - oauthlib>=3.2.2
           - websocket-client
+
+# FIXME: Install golang package when 1.21 is available
+# ERROR on `go build` for sf-operator:
+# go: go.mod requires go >= 1.22.0 (running go 1.21.13; GOTOOLCHAIN=local)
+- name: Configure TEMPORARY solution for Golang 1.22
+  when: ansible_distribution | lower == 'redhat'
+  block:
+    - name: Check golang version
+      ansible.builtin.package_facts:
+
+    - name: Install minimum version when Go binary is old
+      when:
+        - "'golang' in ansible_facts.packages"
+        - "ansible_facts.packages['golang'][0]['version'] is version('1.22.0', 'lt')"
+      block:
+        - name: Remove golang
+          become: true
+          ansible.builtin.package:
+            name: golang
+            state: absent
+
+        - name: Extract Go archive
+          become: true
+          ansible.builtin.unarchive:
+            src: https://go.dev/dl/go1.22.10.linux-amd64.tar.gz
+            dest: /usr/local
+            remote_src: true
+
+        - name: Create symlinks for go binary
+          become: true
+          ansible.builtin.file:
+            src: "/usr/local/go/bin/{{ item }}"
+            dest: "/usr/bin/{{ item }}"
+            state: link
+          loop:
+            - go
+            - gofmt
+
+- name: Print golang version
+  ansible.builtin.command: go version
