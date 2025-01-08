@@ -41,7 +41,6 @@ import (
 )
 
 const (
-	CustomSSLSecretName      = "sf-ssl-cert"
 	CorporateCACerts         = "corporate-ca-certs"
 	UpdateCATrustAnchorsPath = "/usr/share/pki/ca-trust-source/anchors/"
 	UpdateCATrustCommand     = "set -x && update-ca-trust extract -o /etc/pki/ca-trust/extracted"

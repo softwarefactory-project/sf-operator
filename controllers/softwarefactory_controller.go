@@ -519,8 +519,6 @@ func (r *SoftwareFactoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					switch updatedResourceName := a.GetName(); updatedResourceName {
 					case NodepoolProvidersSecretsName:
 						return req
-					case CustomSSLSecretName:
-						return req
 					default:
 						// Discover secrets for GitHub, GitLab and Pagure connections
 						otherSecretNames := []string{}
