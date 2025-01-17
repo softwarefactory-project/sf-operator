@@ -25,7 +25,6 @@
       # microshift deployment
       disk_file_sparsed: true
       disk_file_size: 40G
-      standard_user: false
       create_pv: false
       setup_olm: true
       # post tasks artifacts directory
@@ -34,13 +33,9 @@
       microshift_additional_addresses:
         - "sfop.me"
         - "microshift.dev"
-      etcd_on_ramdisk: true
+      ramdisk: true
       ramdisk_size: 1g
-      cloudprovider_dns:
-        - 199.204.44.24
-        - 199.204.47.54
       inject_dev_ssh_keys: true
-
 
 - job:
     name: sf-operator-rhel
