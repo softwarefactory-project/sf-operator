@@ -11,6 +11,5 @@
       ansible.builtin.blockinfile:
         path: /etc/hosts
         block: |
-          {{ microshift_ip }} {{ microshift_fqdn }}
-          {{ microshift_ip }} {{ sf_fqdn }}
+          {{ microshift_ip }} {{ microshift_fqdn }} {{ sf_fqdn }}
       become: yes
