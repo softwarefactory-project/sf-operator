@@ -64,7 +64,7 @@ Consult [Create a sf-operator configuration file](../reference/cli/index.md#conf
 Then run the `sf-operator` command:
 
 ```sh
-go run ./main.go --config /path/to/sfcli.yaml dev create demo-env
+go run main.go --config /path/to/sfcli.yaml dev create demo-env
 ```
 
 [This command](./../reference/cli/index.md#create-demo-env) performs the following tasks:
@@ -98,7 +98,7 @@ To iterate on the development of the `sf-operator` you can either start the oper
     then run the operator with the following command:
 
     ```sh
-    go run ./main.go --namespace sf operator
+    go run main.go --namespace sf operator
     ```
 
     !!! note
@@ -114,7 +114,7 @@ To iterate on the development of the `sf-operator` you can either start the oper
     Run the operator with the following command:
 
     ```sh
-    go run ./main.go --namespace sf dev create standalone-sf --cr playbooks/files/sf.yaml
+    go run main.go --namespace sf dev create standalone-sf --cr playbooks/files/sf.yaml
     ```
 
     !!! note
@@ -140,7 +140,7 @@ firefox https://gerrit.<FQDN>
 Wipe your deployment by running:
 
 ```sh
-go run ./main.go --namespace sf dev wipe sf --rm-data
+go run main.go --namespace sf dev wipe sf --rm-data
 ```
 
 ## Next actions

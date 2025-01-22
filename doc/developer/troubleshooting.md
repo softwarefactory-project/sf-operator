@@ -34,7 +34,7 @@ To check calls and analyze code:
 ```sh
 # in that step, we assume that a SF resource has been created beforehand, and we are doing a re-run
 # of the sf-operator in dev mode.
-dlv debug ./main.go --namespace sf
+dlv debug main.go --namespace sf
 ```
 
 With delve running, we can add breakpoints like this:

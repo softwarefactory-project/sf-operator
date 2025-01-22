@@ -41,7 +41,7 @@
 # As nodepool builder will connected to the image-builder node (which is the microshift node in CI usecase)
 # here we ensure that the nodepool-builder pod can connect
 - name: Get nodepool-builder public SSH key
-  ansible.builtin.command: go run ./main.go {{ cli_global_flags }} nodepool get builder-ssh-key
+  ansible.builtin.command: go run main.go {{ cli_global_flags }} nodepool get builder-ssh-key
   args:
     chdir: "{{ zuul.project.src_dir }}"
   register: nodepool_get_key

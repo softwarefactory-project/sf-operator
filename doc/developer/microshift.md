@@ -67,7 +67,7 @@ sudo dnf install -y ansible-core golang
 You have to generate and adapt the configuration file to deploy microshift
 
 ```sh
-go run ./main.go init config --dev > myconfig.yaml
+go run main.go init config --dev > myconfig.yaml
 ```
 
 Then edit `myconfig.yaml` as follow:
@@ -90,7 +90,7 @@ Refer to the [`dev create microshift --config myconfig.yaml` subcommand](./../re
 Finally run the sf-operator CLI as follow:
 
 ```sh
-go run ./main.go --config ./myconfig.yaml dev create microshift --skip-local-setup
+go run main.go --config ./myconfig.yaml dev create microshift --skip-local-setup
 ```
 
 Once the deployment has ended successfully, you are now ready to deploy and hack SF-Operator, congratulations!

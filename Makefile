@@ -97,7 +97,7 @@ build-api-doc: # Build the API documentation.
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run main.go
 
 .PHONY: operator-build
 operator-build: ## Build podman image with the manager.

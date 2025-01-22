@@ -8,7 +8,7 @@
 
 - name: Create a zuul-client configuration file
   ansible.builtin.shell: >
-    go run ./main.go --config playbooks/files/sf-operator-cli.yaml zuul create client-config --insecure
+    go run main.go --config playbooks/files/sf-operator-cli.yaml zuul create client-config --insecure
   register: zc_config
   args:
     chdir: "{{ zuul.project.src_dir }}"
