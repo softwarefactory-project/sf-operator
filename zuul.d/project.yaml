@@ -2,9 +2,6 @@
     check:
       jobs:
         - sf-operator-vuln-check
-        - sf-operator-olm
-        - sf-operator-upgrade
-        - sf-operator-standalone
         - sf-operator-ansible-lint
         - sf-operator-olm-rhel
         - sf-operator-upgrade-rhel
@@ -12,9 +9,6 @@
     gate:
       jobs:
         - sf-operator-vuln-check
-        - sf-operator-olm
-        - sf-operator-upgrade
-        - sf-operator-standalone
         - sf-operator-ansible-lint
         - sf-operator-olm-rhel
         - sf-operator-upgrade-rhel
@@ -24,6 +18,6 @@
         - sf-operator-publish-olm-bundle-image
     periodic:
       jobs:
-        - sf-operator-olm
-        - sf-operator-upgrade
-        - sf-operator-standalone
+        - sf-operator-olm-rhel
+        - sf-operator-upgrade-rhel
+        - sf-operator-standalone-rhel
