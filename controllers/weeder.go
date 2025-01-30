@@ -24,7 +24,7 @@ func (r *SFController) EnsureZuulWeeder(checksum string) bool {
 		"serial":    "1",
 	}
 
-	dep := base.MkDeployment(ident, r.ns, "quay.io/software-factory/zuul-weeder:latest", r.cr.Spec.ExtraLabels)
+	dep := base.MkDeployment(ident, r.ns, "ghcr.io/softwarefactory-project/zuul-weeder:latest", r.cr.Spec.ExtraLabels)
 	dep.Spec.Template.Spec.Containers[0].ImagePullPolicy = "Always"
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
