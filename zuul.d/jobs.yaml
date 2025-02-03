@@ -42,7 +42,7 @@
     parent: sf-operator-microshift-rhel
     pre-run: *pre-run
     post-run: *post-run
-    timeout: 5200
+    timeout: 7200
     attempts: 5
     run: playbooks/main.yaml
     abstract: true
@@ -172,7 +172,7 @@
     parent: golang-go
     vars:
       go_command: "install golang.org/x/vuln/cmd/govulncheck@latest"
-      go_version: 1.22.2
+      go_version: 1.22.11
     nodeset:
       nodes:
         - name: controller
