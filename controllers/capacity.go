@@ -8,8 +8,8 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-func MkZuulCapacityContainer() apiv1.Container {
-	container := base.MkContainer("zuul-capacity", "ghcr.io/softwarefactory-project/zuul-capacity:latest")
+func MkZuulCapacityContainer(openshiftUser bool) apiv1.Container {
+	container := base.MkContainer("zuul-capacity", "ghcr.io/softwarefactory-project/zuul-capacity:latest", openshiftUser)
 	container.Args = []string{"--port", "9100"}
 	container.Env = []apiv1.EnvVar{
 		base.MkEnvVar("OS_CLIENT_CONFIG_FILE", "/.openstack/clouds.yaml"),

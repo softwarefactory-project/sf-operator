@@ -90,10 +90,13 @@ func npConfigure(kmd *cobra.Command, args []string) {
 		ctrl.Log.Error(err, "Error opening %s", kubeFile)
 		os.Exit(1)
 	}
+	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
+	ctx := context.TODO()
 	env := cliutils.ENV{
-		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-		Ctx: context.TODO(),
-		Ns:  ns,
+		Cli:         client,
+		Ctx:         ctx,
+		Ns:          ns,
+		IsOpenShift: controllers.CheckOpenShift(),
 	}
 	ensureNodepoolProvidersSecrets(&env, cloudsContent, kubeContent)
 }
@@ -102,10 +105,13 @@ func npCreate(kmd *cobra.Command, args []string) {
 	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, npCreateAllowedArgs)
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
+	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
+	ctx := context.TODO()
 	sfEnv := cliutils.ENV{
-		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-		Ctx: context.TODO(),
-		Ns:  ns,
+		Cli:         client,
+		Ctx:         ctx,
+		Ns:          ns,
+		IsOpenShift: controllers.CheckOpenShift(),
 	}
 	if args[0] == "openshiftpods-namespace" {
 		nodepoolContext, _ := kmd.Flags().GetString("nodepool-context")
@@ -129,11 +135,15 @@ func npCreate(kmd *cobra.Command, args []string) {
 }
 
 func CreateNamespaceForNodepool(sfEnv *cliutils.ENV, nodepoolContext, nodepoolNamespace string, skipProvidersSecrets bool) {
+	client := cliutils.CreateKubernetesClientOrDie(nodepoolContext)
+	ctx := context.TODO()
 	nodepoolEnv := cliutils.ENV{
-		Cli: cliutils.CreateKubernetesClientOrDie(nodepoolContext),
-		Ctx: context.TODO(),
-		Ns:  nodepoolNamespace,
+		Cli:         client,
+		Ctx:         ctx,
+		Ns:          nodepoolNamespace,
+		IsOpenShift: controllers.CheckOpenShift(),
 	}
+
 	cliutils.EnsureNamespaceOrDie(&nodepoolEnv, nodepoolNamespace)
 	cliutils.EnsureServiceAccountOrDie(&nodepoolEnv, nodepoolServiceAccount)
 	ensureNodepoolRole(&nodepoolEnv)
@@ -208,11 +218,14 @@ func ensureNodepoolProvidersSecrets(env *cliutils.ENV, cloudconfig []byte, kubec
 }
 
 func getProvidersSecret(ns string, kubeContext string, cloudsFile string, kubeFile string) {
+	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
+	ctx := context.TODO()
 	sfEnv := cliutils.ENV{
-		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-		Ctx: context.TODO(),
+		Cli: client,
+		Ctx: ctx,
 		Ns:  ns,
 	}
+
 	var secret apiv1.Secret
 	if cliutils.GetMOrDie(&sfEnv, controllers.NodepoolProvidersSecretsName, &secret) {
 		if len(secret.Data["clouds.yaml"]) > 0 {

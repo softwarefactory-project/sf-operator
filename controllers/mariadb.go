@@ -74,7 +74,7 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 	if r.cr.Spec.FluentBitLogForwarding.Debug != nil {
 		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
 	}
-	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer(MariaDBIdent, []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer(MariaDBIdent, []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug, r.isOpenShift)
 	annotations["mariadb-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["mariadb-fluent-bit-image"] = sidecar.Image
 	return []apiv1.Volume{volume, storageEmptyDir}, sidecar
@@ -83,7 +83,7 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
 	c := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8 COLLATE utf8_general_ci;", dbname)
 	g := fmt.Sprintf("GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;", dbname, username)
-	container := base.MkContainer("mariadb-client", base.MariaDBImage())
+	container := base.MkContainer("mariadb-client", base.MariaDBImage(), r.isOpenShift)
 	base.SetContainerLimitsLowProfile(&container)
 	container.Command = []string{"sh", "-c", `
 	echo 'Running: mysql --host="` + MariaDBIdent + `" --user=root --password="$MARIADB_ROOT_PASSWORD" -e "` + c + g + `"'
@@ -208,7 +208,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 	r.EnsureSecret(&configSecret)
 	r.EnsureSecret(&initDBSecret)
 
-	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
+	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 
 	base.SetContainerLimitsHighProfile(&sts.Spec.Template.Spec.Containers[0])
 	limitstr := base.UpdateContainerLimit(r.cr.Spec.MariaDB.Limits, &sts.Spec.Template.Spec.Containers[0])
@@ -276,7 +276,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, fbVolumes...)
 	}
 
-	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(MariaDBIdent, volumeMountsStatsExporter)
+	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(MariaDBIdent, volumeMountsStatsExporter, r.isOpenShift)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
 
 	sts.Spec.Template.ObjectMeta.Annotations = annotations

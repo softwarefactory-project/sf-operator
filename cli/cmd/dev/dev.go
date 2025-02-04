@@ -64,7 +64,9 @@ func ensureGatewayRoute(env *cliutils.ENV, fqdn string) {
 }
 
 func createDemoEnv(env cliutils.ENV, restConfig *rest.Config, fqdn string, reposPath, sfOperatorRepoPath string, keepDemoTenantDefinition bool, hostAliases []sfv1.HostAlias) {
-	ensureGatewayRoute(&env, fqdn)
+	if env.IsOpenShift {
+		ensureGatewayRoute(&env, fqdn)
+	}
 	gerrit.EnsureGerrit(&env, fqdn, hostAliases)
 	ctrl.Log.Info("Making sure Gerrit is up and ready...")
 	gerrit.EnsureGerritAccess(fqdn)
@@ -179,10 +181,13 @@ func devRunTests(kmd *cobra.Command, args []string) {
 		kubeContext := cliCtx.KubeContext
 		restConfig := controllers.GetConfigContextOrDie(kubeContext)
 		fqdn := cliCtx.FQDN
+		client := cliutils.CreateKubernetesClientOrDie(kubeContext)
+		ctx := context.TODO()
 		env := cliutils.ENV{
-			Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-			Ctx: context.TODO(),
-			Ns:  ns,
+			Cli:         client,
+			Ctx:         ctx,
+			Ns:          ns,
+			IsOpenShift: controllers.CheckOpenShift(),
 		}
 		reposPath := cliCtx.Dev.Tests.DemoReposPath
 		if reposPath == "" {
@@ -231,10 +236,14 @@ func devCreate(kmd *cobra.Command, args []string) {
 		createMicroshift(kmd, cliCtx)
 		return
 	}
+
+	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
+	ctx := context.TODO()
 	env := cliutils.ENV{
-		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-		Ctx: context.TODO(),
-		Ns:  ns,
+		Cli:         client,
+		Ctx:         ctx,
+		Ns:          ns,
+		IsOpenShift: controllers.CheckOpenShift(),
 	}
 
 	// The Gerrit container ip address is unknown and poting to 127.0.0.1
@@ -403,10 +412,13 @@ func devWipe(kmd *cobra.Command, args []string) {
 	kubeContext := cliCtx.KubeContext
 	rmData, _ := kmd.Flags().GetBool("rm-data")
 	rmOp, _ := kmd.Flags().GetBool("rm-operator")
+	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
+	ctx := context.TODO()
 	env := cliutils.ENV{
-		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-		Ctx: context.TODO(),
-		Ns:  ns,
+		Cli:         client,
+		Ctx:         ctx,
+		Ns:          ns,
+		IsOpenShift: controllers.CheckOpenShift(),
 	}
 	if target == "gerrit" {
 		gerrit.WipeGerrit(&env, rmData)
@@ -440,10 +452,13 @@ func devCloneAsAdmin(kmd *cobra.Command, args []string) {
 	kubeContext := cliCtx.KubeContext
 	fqdn := cliCtx.FQDN
 	verify, _ := kmd.Flags().GetBool("verify")
+	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
+	ctx := context.TODO()
 	env := cliutils.ENV{
-		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-		Ctx: context.TODO(),
-		Ns:  ns,
+		Cli:         client,
+		Ctx:         ctx,
+		Ns:          ns,
+		IsOpenShift: controllers.CheckOpenShift(),
 	}
 	gerrit.CloneAsAdmin(&env, fqdn, repoName, dest, verify)
 }
