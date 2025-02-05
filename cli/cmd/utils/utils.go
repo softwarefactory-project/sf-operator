@@ -56,6 +56,9 @@ import (
 	ctrlutils "github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
 	"k8s.io/client-go/kubernetes"
+
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 // CLI config struct
@@ -159,14 +162,20 @@ func GetCLIContext(command *cobra.Command) (SoftwareFactoryConfigContext, error)
 	}
 	// Override with defaults
 	// We don't set a default namespace here so as not to interfere with rootcommand.
-	ns, _ := command.Flags().GetString("namespace")
-	if cliContext.Namespace == "" {
-		cliContext.Namespace = ns
-	}
 	kubeContext, _ := command.Flags().GetString("kube-context")
 	if cliContext.KubeContext == "" {
 		cliContext.KubeContext = kubeContext
 	}
+
+	ns, _ := command.Flags().GetString("namespace")
+	currentContext := GetKubeConfigContextByName(cliContext.KubeContext)
+	if ns == "" && currentContext != nil {
+		ns = currentContext.Namespace
+	}
+	if cliContext.Namespace == "" {
+		cliContext.Namespace = ns
+	}
+
 	fqdn, _ := command.Flags().GetString("fqdn")
 	if fqdn == "" {
 		fqdn = "sfop.me"
@@ -510,4 +519,33 @@ func ExecuteKubectlClient(ns string, podName string, containerName string, execu
 		os.Exit(1)
 	}
 
+}
+
+func GetKubeConfig() *clientcmdapi.Config {
+	clientCfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+	if err != nil {
+		return nil
+	}
+	return clientCfg
+}
+
+func GetKubeConfigContextByName(Context string) *clientcmdapi.Context {
+	clientCfg := GetKubeConfig()
+	if clientCfg == nil {
+		return nil
+	}
+	context, ok := clientCfg.Contexts[Context]
+	if !ok {
+		return nil
+	}
+	return context
+}
+
+
+func GetKubeConfigDefaultContext() *clientcmdapi.Context {
+	clientCfg := GetKubeConfig()
+	if clientCfg == nil {
+		return nil
+	}
+	return GetKubeConfigContextByName(clientCfg.CurrentContext)
 }
