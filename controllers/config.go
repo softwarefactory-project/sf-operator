@@ -34,7 +34,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 	}
 
 	roleAnnotations := map[string]string{
-		"serial": "2",
+		"serial": "3",
 	}
 
 	roleName := "config-updater-role"
@@ -42,7 +42,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 		{
 			APIGroups: []string{""},
 			Resources: []string{"pods"},
-			Verbs:     []string{"get", "list"},
+			Verbs:     []string{"get", "list", "delete"},
 		},
 		{
 			APIGroups: []string{""},

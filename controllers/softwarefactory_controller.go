@@ -270,6 +270,7 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 	}
 
 	if services["Zuul"] {
+		services["HoundSearch"] = r.DeployHoundSearch()
 		monitoredPorts = append(
 			monitoredPorts,
 			sfmonitoring.GetTruncatedPortName("zuul-scheduler", sfmonitoring.NodeExporterPortNameSuffix),

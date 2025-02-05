@@ -158,6 +158,13 @@ cat << EOF > playbooks/config/update.yaml
   roles:
     - setup-k8s-config
     - add-k8s-hosts
+  post_tasks:
+    - name: Update hound-search config
+      command: kubectl exec hound-search-0 -- /sf-tooling/hound-search-config.sh "{{ zuul.newrev | default('origin/master') }}"
+    # Would be nice to hot-reload the config: https://github.com/hound-search/hound/issues/287
+    # Or check if the repo list is changed (to avoid restarting hound each time a change is merged)
+    - name: Force hound-search restart
+      command: kubectl delete pod hound-search-0
 
 - hosts: zuul-scheduler
   vars:

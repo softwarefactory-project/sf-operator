@@ -635,3 +635,16 @@ func AppendCorporateCACertsVolumeMount(volumeMounts []apiv1.VolumeMount, volumeN
 	})
 	return volumeMounts
 }
+
+func AppendToolingVolume(volumeMounts []apiv1.Volume) []apiv1.Volume {
+	return append(volumeMounts, apiv1.Volume{
+		Name: "tooling-vol",
+		VolumeSource: apiv1.VolumeSource{
+			ConfigMap: &apiv1.ConfigMapVolumeSource{
+				LocalObjectReference: apiv1.LocalObjectReference{
+					Name: "zuul-scheduler-tooling-config-map",
+				},
+				DefaultMode: &utils.Execmod,
+			},
+		}})
+}

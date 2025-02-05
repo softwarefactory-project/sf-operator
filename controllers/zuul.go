@@ -61,6 +61,12 @@ var (
 	//go:embed static/zuul/zuul-change-dump.py.tmpl
 	zuulChangeDump string
 
+	//go:embed static/hound-search-init.sh
+	houndSearchInit string
+
+	//go:embed static/hound-search-config.sh
+	houndSearchConfig string
+
 	// Common config sections for all Zuul components
 	commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
 
@@ -320,18 +326,7 @@ func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []ap
 		volumes = append(volumes, base.MkEmptyDirVolume(service))
 	}
 	if service == "zuul-scheduler" {
-		toolingVol := apiv1.Volume{
-			Name: "tooling-vol",
-			VolumeSource: apiv1.VolumeSource{
-				ConfigMap: &apiv1.ConfigMapVolumeSource{
-					LocalObjectReference: apiv1.LocalObjectReference{
-						Name: "zuul-scheduler-tooling-config-map",
-					},
-					DefaultMode: &utils.Execmod,
-				},
-			},
-		}
-		volumes = append(volumes, toolingVol)
+		volumes = AppendToolingVolume(volumes)
 	}
 
 	volumes = append(volumes, mkZuulConnectionSecretsVolumes(r)...)
@@ -530,6 +525,8 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	schedulerToolingData["init-container.sh"] = zuulSchedulerInitContainerScript
 	schedulerToolingData["generate-zuul-tenant-yaml.sh"] = zuulGenerateTenantConfig
 	schedulerToolingData["fetch-config-repo.sh"] = fetchConfigRepoScript
+	schedulerToolingData["hound-search-init.sh"] = houndSearchInit
+	schedulerToolingData["hound-search-config.sh"] = houndSearchConfig
 	schedulerToolingData["zuul-change-dump.py"], _ = utils.ParseString(zuulChangeDump, struct {
 		ZuulWebURL string
 	}{ZuulWebURL: "https://" + r.cr.Spec.FQDN + "/zuul"})
