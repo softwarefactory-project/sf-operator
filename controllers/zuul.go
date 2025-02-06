@@ -67,6 +67,9 @@ var (
 	//go:embed static/hound-search-config.sh
 	houndSearchConfig string
 
+	//go:embed static/hound-search-render.py
+	houndSearchRender string
+
 	// Common config sections for all Zuul components
 	commonIniConfigSections = []string{"zookeeper", "keystore", "database"}
 
@@ -527,6 +530,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	schedulerToolingData["fetch-config-repo.sh"] = fetchConfigRepoScript
 	schedulerToolingData["hound-search-init.sh"] = houndSearchInit
 	schedulerToolingData["hound-search-config.sh"] = houndSearchConfig
+	schedulerToolingData["hound-search-render.py"] = houndSearchRender
 	schedulerToolingData["zuul-change-dump.py"], _ = utils.ParseString(zuulChangeDump, struct {
 		ZuulWebURL string
 	}{ZuulWebURL: "https://" + r.cr.Spec.FQDN + "/zuul"})

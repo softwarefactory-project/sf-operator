@@ -11,7 +11,7 @@ import (
 )
 
 func MkHoundSearchContainer() apiv1.Container {
-	container := base.MkContainer("hound-search", "quay.io/software-factory/hound:0.5.1-1")
+	container := base.MkContainer("hound-search", "quay.io/software-factory/hound:0.5.1-3")
 	container.Command = []string{"/sf-tooling/hound-search-init.sh"}
 	container.Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(6080, "hound-search"),
