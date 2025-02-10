@@ -105,3 +105,16 @@
     - this.status == 200
     - "'Index of /nodepool/builds' in this.content"
   retries: "{{ retries }}"
+
+- name: Attempt to access Hound
+  ansible.builtin.uri:
+    url: "https://{{ fqdn }}/codesearch"
+    method: GET
+    return_content: true
+    validate_certs: "{{ validate_certs }}"
+    status_code: [200, 503]
+  register: this
+  until:
+    - this.status == 200
+    - "'open_search.xml' in this.content"
+  retries: "{{ retries }}"

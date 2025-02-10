@@ -182,6 +182,10 @@ func (r *SFController) validateZuulConnectionsSecrets() error {
 	return nil
 }
 
+func (r *SFController) IsCodesearchEnabled() bool {
+	return r.cr.Spec.Codesearch.Enabled == nil || *r.cr.Spec.Codesearch.Enabled
+}
+
 func (r *SFController) deployStandaloneExectorStep(services map[string]bool) map[string]bool {
 	services["Zuul"] = false
 
@@ -270,7 +274,11 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 	}
 
 	if services["Zuul"] {
-		services["HoundSearch"] = r.DeployHoundSearch()
+		if r.IsCodesearchEnabled() {
+			services["HoundSearch"] = r.DeployHoundSearch()
+		} else {
+			r.TerminateHoundSearch()
+		}
 		monitoredPorts = append(
 			monitoredPorts,
 			sfmonitoring.GetTruncatedPortName("zuul-scheduler", sfmonitoring.NodeExporterPortNameSuffix),
