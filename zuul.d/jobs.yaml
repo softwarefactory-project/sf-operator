@@ -172,7 +172,7 @@
     parent: golang-go
     vars:
       go_command: "install golang.org/x/vuln/cmd/govulncheck@latest"
-      go_version: 1.22.11
+      go_version: 1.22.12
     nodeset:
       nodes:
         - name: controller
