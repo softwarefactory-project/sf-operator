@@ -6,7 +6,9 @@ package controllers
 import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func MkHoundSearchContainer() apiv1.Container {
@@ -36,7 +38,19 @@ func MkHoundSearchContainer() apiv1.Container {
 }
 
 func (r *SFController) TerminateHoundSearch() {
-	// todo: delete service, statefulset and pvc
+	r.DeleteR(&apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "hound-search",
+			Namespace: r.ns,
+		},
+	})
+	r.DeleteR(&appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "hound-search",
+			Namespace: r.ns,
+		},
+	})
+	// todo: delete pvc
 }
 
 func (r *SFController) DeployHoundSearch() bool {
