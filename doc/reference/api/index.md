@@ -34,6 +34,22 @@ _Appears in:_
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#condition-v1-meta) array_ | Information about ongoing or completed reconciliation processes between the Log server spec and the observed state of the cluster | -|
 
 
+#### CodesearchSpec
+
+
+
+
+
+_Appears in:_
+- [SoftwareFactorySpec](#softwarefactoryspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `storage` _[StorageSpec](#storagespec)_ |  | -|
+| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `enabled` _boolean_ | If set to false, the service won't be deployed | {true}|
+
+
 #### ConfigRepositoryLocationSpec
 
 
@@ -203,6 +219,7 @@ _Appears in:_
 
 
 _Appears in:_
+- [CodesearchSpec](#codesearchspec)
 - [MariaDBSpec](#mariadbspec)
 - [NodepoolBuilderSpec](#nodepoolbuilderspec)
 - [NodepoolLauncherSpec](#nodepoollauncherspec)
@@ -429,6 +446,7 @@ _Appears in:_
 | `logserver` _[LogServerSpec](#logserverspec)_ | Logserver service spec | {map[loopDelay:3600 retentionDays:60]}|
 | `mariadb` _[MariaDBSpec](#mariadbspec)_ | MariaDB service spec | -|
 | `gitserver` _[GitServerSpec](#gitserverspec)_ | Git server spec | -|
+| `codesearch` _[CodesearchSpec](#codesearchspec)_ | Codesearch service spec | -|
 
 
 
@@ -471,6 +489,7 @@ _Appears in:_
 
 
 _Appears in:_
+- [CodesearchSpec](#codesearchspec)
 - [GitServerSpec](#gitserverspec)
 - [LogServerSpec](#logserverspec)
 - [MariaDBSpec](#mariadbspec)

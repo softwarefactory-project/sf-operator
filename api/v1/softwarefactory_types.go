@@ -534,6 +534,18 @@ type ZookeeperSpec struct {
 	Limits *LimitsSpec `json:"limits"`
 }
 
+type CodesearchSpec struct {
+	Storage StorageSpec `json:"storage"`
+	// Memory/CPU Limit
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	Limits *LimitsSpec `json:"limits"`
+	// +kubebuilder:default:=true
+	// +optional
+	// If set to false, the service won't be deployed
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
 type LimitsSpec struct {
 	// +kubebuilder:default:="2Gi"
 	Memory resource.Quantity `json:"memory"`
@@ -626,6 +638,9 @@ type SoftwareFactorySpec struct {
 
 	// Git server spec
 	GitServer GitServerSpec `json:"gitserver,omitempty"`
+
+	// Codesearch service spec
+	Codesearch CodesearchSpec `json:"codesearch,omitempty"`
 }
 
 // BaseStatus struct which defines the observed state for a Controller

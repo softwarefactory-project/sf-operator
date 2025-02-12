@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- codesearch: a new service provided by hound-search to search the repositories configured in Zuul.
+
 ### Changed
 
 - zuul-weeder: updated the image to support job.role attribute

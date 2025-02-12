@@ -4,7 +4,6 @@
 package controllers
 
 import (
-	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	apiv1 "k8s.io/api/core/v1"
@@ -36,10 +35,14 @@ func MkHoundSearchContainer() apiv1.Container {
 	return container
 }
 
+func (r *SFController) TerminateHoundSearch() {
+	// todo: delete service, statefulset and pvc
+}
+
 func (r *SFController) DeployHoundSearch() bool {
 	svc := base.MkService("hound-search", r.ns, "hound-search", []int32{6080}, "hound-search", r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
-	pvc := base.MkPVC("hound-search-data", r.ns, BaseGetStorageConfOrDefault(v1.StorageSpec{}, r.cr.Spec.StorageDefault), apiv1.ReadWriteOnce)
+	pvc := base.MkPVC("hound-search-data", r.ns, r.getStorageConfOrDefault(r.cr.Spec.Codesearch.Storage), apiv1.ReadWriteOnce)
 	container := MkHoundSearchContainer()
 	container.Env = []apiv1.EnvVar{
 		base.MkEnvVar("CONFIG_REPO_BASE_URL", r.cr.Spec.ConfigRepositoryLocation.BaseURL),
