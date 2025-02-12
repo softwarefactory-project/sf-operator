@@ -56,6 +56,9 @@ import (
 	ctrlutils "github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
 	"k8s.io/client-go/kubernetes"
+
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 // CLI config struct
@@ -159,14 +162,38 @@ func GetCLIContext(command *cobra.Command) (SoftwareFactoryConfigContext, error)
 	}
 	// Override with defaults
 	// We don't set a default namespace here so as not to interfere with rootcommand.
+
 	ns, _ := command.Flags().GetString("namespace")
-	if cliContext.Namespace == "" {
-		cliContext.Namespace = ns
-	}
+
 	kubeContext, _ := command.Flags().GetString("kube-context")
-	if cliContext.KubeContext == "" {
-		cliContext.KubeContext = kubeContext
+	currentContext, contextName := GetKubeConfigContextByName(kubeContext)
+
+	defaultFunc := func(userProvided string, defaultValue string) string {
+		if userProvided != "" {
+			return userProvided
+		}
+		return defaultValue
 	}
+
+	// Default ladder: 1st what is in sf-operator cli config file passed as --config argument
+	//                 2st what is in sf-operator cli passed as --namespace argumente
+	//                 3rd what is defind default kubeconfig
+	if cliContext.Namespace == "" {
+		// The user did not provide a --namespace argument, let's find it in the context
+		currentContextNamespace := ""
+		if currentContext != nil {
+			currentContextNamespace = currentContext.Namespace
+		}
+		cliContext.Namespace = defaultFunc(ns, currentContextNamespace)
+	}
+
+	// Default ladder: 1st what is in sf-operator cli config file passed as --config argument
+	//                 2st what is in sf-operator cli passed as --kube-context argumente
+	//                 3rd what is defind default kubeconfig
+	if cliContext.KubeContext == "" {
+		cliContext.KubeContext = defaultFunc(kubeContext, contextName)
+	}
+
 	fqdn, _ := command.Flags().GetString("fqdn")
 	if fqdn == "" {
 		fqdn = "sfop.me"
@@ -510,4 +537,36 @@ func ExecuteKubectlClient(ns string, podName string, containerName string, execu
 		os.Exit(1)
 	}
 
+}
+
+func GetKubeConfig() *clientcmdapi.Config {
+	clientCfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+	if err != nil {
+		ctrlutils.LogE(err, "Could not find the kubeconfig")
+		os.Exit(1)
+	}
+	return clientCfg
+}
+
+func GetKubeConfigContextByName(contextName string) (*clientcmdapi.Context, string) {
+	clientCfg := GetKubeConfig()
+
+	// The user did not specify a context, let's pick the current one from the kubeconfig
+	if contextName == "" {
+		if clientCfg.CurrentContext == "" {
+			// Use the first available context
+			for k := range clientCfg.Contexts {
+				contextName = k
+				break
+			}
+		} else {
+			contextName = clientCfg.CurrentContext
+		}
+	}
+	// Load the context
+	context, err := clientCfg.Contexts[contextName]
+	if !err {
+		ctrlutils.LogD("could not find the context " + contextName)
+	}
+	return context, contextName
 }
