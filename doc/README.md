@@ -83,7 +83,7 @@ Should you have any questions or feedback concerning the SF-Operator, you can:
 
 ## Contributing
 
-Refer to [CONTRIBUTING.md](https://github.com/softwarefactory-project/sf-operator/blob/master/CONTRIBUTING.md).
+Refer to [CONTRIBUTING.md](https://softwarefactory-project.github.io/sf-operator/developer/CONTRIBUTING/).
 
 ## Licence
 

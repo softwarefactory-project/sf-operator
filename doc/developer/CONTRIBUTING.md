@@ -6,7 +6,7 @@ General guidelines about contributing to the SF-Operator can be found in this do
 
 ## Project repositories
 
-The main repository of the project is hosted at [softwarefactory-project.io](https://softwarefactory-project.io/r/software-factory/sf-operator).
+The main repository of the project is hosted at [softwarefactory-project.io](https://softwarefactory-project.io/r/plugins/gitiles/software-factory/sf-operator).
 
 The custom container images used by the SF-Operator are defined in the [container-pipeline project](https://softwarefactory-project.io/r/containers) and
 published on [quay.io](https://quay.io/organization/software-factory).
