@@ -186,6 +186,21 @@ func (r *SFController) IsCodesearchEnabled() bool {
 	return r.cr.Spec.Codesearch.Enabled == nil || *r.cr.Spec.Codesearch.Enabled
 }
 
+func (r *SFController) EnsureToolingVolume() {
+	schedulerToolingData := make(map[string]string)
+	schedulerToolingData["init-container.sh"] = zuulSchedulerInitContainerScript
+	schedulerToolingData["generate-zuul-tenant-yaml.sh"] = zuulGenerateTenantConfig
+	schedulerToolingData["fetch-config-repo.sh"] = fetchConfigRepoScript
+	schedulerToolingData["hound-search-init.sh"] = houndSearchInit
+	schedulerToolingData["hound-search-config.sh"] = houndSearchConfig
+	schedulerToolingData["hound-search-render.py"] = houndSearchRender
+	schedulerToolingData["zuul-change-dump.py"], _ = utils.ParseString(zuulChangeDump, struct {
+		ZuulWebURL string
+	}{ZuulWebURL: "https://" + r.cr.Spec.FQDN + "/zuul"})
+
+	r.EnsureConfigMap("zuul-scheduler-tooling", schedulerToolingData)
+}
+
 func (r *SFController) deployStandaloneExectorStep(services map[string]bool) map[string]bool {
 	services["Zuul"] = false
 
@@ -234,6 +249,9 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 	// Ensure SF Admin ssh key pair
 	r.DeployZuulSecrets()
 
+	// Setup custom tools used by zuul and code-search
+	r.EnsureToolingVolume()
+
 	// The git server service is needed to store system jobs (config-check and config-update)
 	services["GitServer"] = r.DeployGitServer()
 	if services["GitServer"] {
@@ -274,11 +292,6 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 	}
 
 	if services["Zuul"] {
-		if r.IsCodesearchEnabled() {
-			services["HoundSearch"] = r.DeployHoundSearch()
-		} else {
-			r.TerminateHoundSearch()
-		}
 		monitoredPorts = append(
 			monitoredPorts,
 			sfmonitoring.GetTruncatedPortName("zuul-scheduler", sfmonitoring.NodeExporterPortNameSuffix),
@@ -300,6 +313,12 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 		if services["Config"] {
 			conds.RefreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
 		}
+	}
+
+	if r.IsCodesearchEnabled() {
+		services["HoundSearch"] = r.DeployHoundSearch()
+	} else {
+		r.TerminateHoundSearch()
 	}
 
 	services["Gateway"] = r.DeployHTTPDGateway()

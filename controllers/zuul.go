@@ -524,19 +524,6 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	}
 	base.SetContainerLimitsLowProfile(&initContainer)
 
-	schedulerToolingData := make(map[string]string)
-	schedulerToolingData["init-container.sh"] = zuulSchedulerInitContainerScript
-	schedulerToolingData["generate-zuul-tenant-yaml.sh"] = zuulGenerateTenantConfig
-	schedulerToolingData["fetch-config-repo.sh"] = fetchConfigRepoScript
-	schedulerToolingData["hound-search-init.sh"] = houndSearchInit
-	schedulerToolingData["hound-search-config.sh"] = houndSearchConfig
-	schedulerToolingData["hound-search-render.py"] = houndSearchRender
-	schedulerToolingData["zuul-change-dump.py"], _ = utils.ParseString(zuulChangeDump, struct {
-		ZuulWebURL string
-	}{ZuulWebURL: "https://" + r.cr.Spec.FQDN + "/zuul"})
-
-	r.EnsureConfigMap("zuul-scheduler-tooling", schedulerToolingData)
-
 	zsVolumes := mkZuulVolumes("zuul-scheduler", r, corporateCMExists)
 
 	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
