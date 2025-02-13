@@ -1,0 +1,4 @@
+---
+- hosts: "{{ hostname | default('controller') }}"
+  roles:
+    - install-golang

@@ -1,6 +1,7 @@
 - project:
     check:
       jobs:
+        - sf-operator-minikube
         - sf-operator-vuln-check
         - sf-operator-ansible-lint
         - sf-operator-olm-rhel
@@ -8,6 +9,7 @@
         - sf-operator-standalone-rhel
     gate:
       jobs:
+        - sf-operator-minikube
         - sf-operator-vuln-check
         - sf-operator-ansible-lint
         - sf-operator-olm-rhel

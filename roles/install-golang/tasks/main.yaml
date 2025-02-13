@@ -1,0 +1,21 @@
+- name: Extract Go archive
+  become: true
+  ansible.builtin.unarchive:
+    src: https://go.dev/dl/go1.22.10.linux-amd64.tar.gz
+    dest: /usr/local
+    remote_src: true
+
+- name: Create bin directory in user home folder
+  ansible.builtin.file:
+    dest: "{{ ansible_user_dir }}/bin"
+    state: directory
+
+- name: Create symlinks for go binary
+  become: true
+  ansible.builtin.file:
+    src: "/usr/local/go/bin/{{ item }}"
+    dest: "{{ ansible_user_dir }}/bin/{{ item }}"
+    state: link
+  loop:
+    - go
+    - gofmt

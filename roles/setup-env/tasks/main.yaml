@@ -82,22 +82,8 @@
             name: golang
             state: absent
 
-        - name: Extract Go archive
-          become: true
-          ansible.builtin.unarchive:
-            src: https://go.dev/dl/go1.22.10.linux-amd64.tar.gz
-            dest: /usr/local
-            remote_src: true
-
-        - name: Create symlinks for go binary
-          become: true
-          ansible.builtin.file:
-            src: "/usr/local/go/bin/{{ item }}"
-            dest: "/usr/bin/{{ item }}"
-            state: link
-          loop:
-            - go
-            - gofmt
+    - ansible.builtin.include_role:
+        name: "roles/install-golang"
 
 - name: Print golang version
   ansible.builtin.command: go version

@@ -1,0 +1,74 @@
+---
+- hosts: "{{ hostname | default('controller') }}"
+  vars:
+    kubectl: "minikube kubectl -- "
+    # Kubernetes Version used by Minikube
+    # https://kubernetes.io/releases/version-skew-policy/
+    kubernetes_version: v1.32
+    crio_version: v1.32
+    minikube_package: https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+  tasks:
+    - name: Add Kubernetes Repo
+      become: true
+      vars:
+        KUBERNETES_VERSION: "{{ kubernetes_version }}"
+      ansible.builtin.yum_repository:
+        name: Kubernetes
+        description: "Add the Kubernetes repository"
+        baseurl: https://pkgs.k8s.io/addons:/cri-o:/stable:/{{KUBERNETES_VERSION}}/rpm/
+        enabled: true
+        gpgcheck: true
+        gpgkey: https://pkgs.k8s.io/addons:/cri-o:/stable:/{{KUBERNETES_VERSION}}/rpm/repodata/repomd.xml.key
+
+    - name: Add cri-o Repo
+      become: true
+      vars:
+        CRIO_VERSION: "{{ crio_version }}"
+      ansible.builtin.yum_repository:
+        name: CRI-O
+        description: "Cri-o runtime for containers"
+        baseurl: https://pkgs.k8s.io/addons:/cri-o:/stable:/{{CRIO_VERSION}}/rpm/
+        enabled: true
+        gpgcheck: true
+        gpgkey: https://pkgs.k8s.io/addons:/cri-o:/stable:/{{CRIO_VERSION}}/rpm/repodata/repomd.xml.key
+
+    - name: Installing packages
+      become: true
+      ansible.builtin.dnf:
+        state: present
+        name:
+          - cri-o
+          - podman
+          - bind-utils
+
+    - name: Installing Minikube
+      become: true
+      ansible.builtin.uri:
+        url: "{{ minikube_package }}"
+        dest: /usr/bin/minikube
+        mode: "0755"
+        status_code: [200, 304]
+
+    - name: Start minikube
+      vars:
+        start_cmd: "minikube start --kubernetes-version={{ kubernetes_version }} --embed-certs --container-runtime=cri-o"
+      block:
+        - name: Run minikube start
+          command: "{{ start_cmd }}"
+      rescue:
+        # Sometime, minikube fails with:
+        #  ! StartHost failed, but will try again: driver start: start: sudo -n podman start --cgroup-manager cgroupfs minikube: exit status 125
+        #  stdout:
+        #
+        #  stderr:
+        #  Error: unable to start container "eab86b78f6ed6d15c04d62a522dd3deb2553d52f9cd6aff159ccaf7da21b8b62": mounting storage for container eab86b78f6ed6d15c04d62a522dd3deb2553d52f9cd6aff159ccaf7da21b8b62: creating overlay mount to /var/lib/containers/storage/overlay/0e3dea21abaf8b88f44fb6977e30397f28f97db6d6d1515b43ba6a01f477c0c2/merged, mount_data="lowerdir=/var/lib/containers/storage/overlay/0e3dea21abaf8b88f44fb6977e30397f28f97db6d6d1515b43ba6a01f477c0c2/empty,upperdir=/var/lib/containers/storage/overlay/0e3dea21abaf8b88f44fb6977e30397f28f97db6d6d1515b43ba6a01f477c0c2/diff,workdir=/var/lib/containers/storage/overlay/0e3dea21abaf8b88f44fb6977e30397f28f97db6d6d1515b43ba6a01f477c0c2/work,metacopy=on,context=\"system_u:object_r:container_file_t:s0:c1022,c1023\"": no such file or directory
+        #  * Restarting existing podman container for "minikube" ...
+        # The restart doesn't work, that is why we try again by manually deleting and restarting the cluster
+        - name: Delete previous minikube cluster
+          command: minikube delete
+        - name: Try again minikube start
+          command: "{{ start_cmd }}"
+
+    - name: Test minikube
+      ansible.builtin.command:
+        cmd: "{{ kubectl }} get pod -A"
