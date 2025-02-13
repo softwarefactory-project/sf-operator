@@ -442,7 +442,6 @@ spec:
                 description: Default setting to use by Persistent Volume Claims
                 properties:
                   className:
-                    default: topolvm-provisioner
                     description: Default storage class to use with Persistent Volume
                       Claims issued by this resource. Consult your cluster's configuration
                       to see what storage classes are available and recommended for

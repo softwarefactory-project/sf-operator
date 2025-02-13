@@ -220,7 +220,7 @@ func MkSSHKeySecret(name string, namespace string) apiv1.Secret {
 
 // StorageConfig is used to define PVC Storage
 type StorageConfig struct {
-	StorageClassName string
+	StorageClassName *string
 	Size             resource.Quantity
 	ExtraAnnotations map[string]string
 }
@@ -235,7 +235,7 @@ func MkPVC(name string, ns string, storageParams StorageConfig, accessMode apiv1
 			Annotations: storageParams.ExtraAnnotations,
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
-			StorageClassName: &storageParams.StorageClassName,
+			StorageClassName: storageParams.StorageClassName,
 			AccessModes:      []apiv1.PersistentVolumeAccessMode{accessMode},
 			Resources: apiv1.VolumeResourceRequirements{
 				Requests: apiv1.ResourceList{

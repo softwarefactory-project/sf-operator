@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+- storage: topolvm-provisioner is no longer the default storageClassName; if storageClassName parameters
+  are not set, use the cluster's default storage class for persistent volumes.
+
 ### Deprecated
 ### Removed
 ### Fixed

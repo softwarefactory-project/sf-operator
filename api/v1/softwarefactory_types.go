@@ -54,7 +54,6 @@ type StorageSpec struct {
 
 type StorageDefaultSpec struct {
 	// Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case.
-	// +kubebuilder:default:=topolvm-provisioner
 	ClassName string `json:"className,omitempty"`
 	// Whether you need to add extra annotations to the Persistent Volume Claims
 	ExtraAnnotations map[string]string `json:"extraAnnotations,omitempty"`

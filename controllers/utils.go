@@ -432,15 +432,15 @@ func (r *SFUtilContext) getSecretData(name string) ([]byte, error) {
 // BaseGetStorageConfOrDefault sets the default storageClassName
 func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageDefault sfv1.StorageDefaultSpec) base.StorageConfig {
 	var size = utils.Qty1Gi()
-	var className = "topolvm-provisioner"
+	var className *string
 	if storageDefault.ClassName != "" {
-		className = storageDefault.ClassName
+		className = &storageDefault.ClassName
 	}
 	if !storageSpec.Size.IsZero() {
 		size = storageSpec.Size
 	}
 	if storageSpec.ClassName != "" {
-		className = storageSpec.ClassName
+		className = &storageSpec.ClassName
 	}
 	return base.StorageConfig{
 		StorageClassName: className,

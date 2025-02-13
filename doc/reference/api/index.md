@@ -494,7 +494,7 @@ _Appears in:_
 
 | Field | Description | Default Value |
 | --- | --- | --- |
-| `className` _string_ | Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case. | {topolvm-provisioner}|
+| `className` _string_ | Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case. | -|
 | `extraAnnotations` _object (keys:string, values:string)_ | Whether you need to add extra annotations to the Persistent Volume Claims | -|
 
 

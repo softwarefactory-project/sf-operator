@@ -361,6 +361,7 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie(hostAliases []v1.HostAlias) {
 			resource.MustParse("768Mi"),
 			resource.MustParse("100m"),
 			resource.MustParse("1000m"))
+
 		storageConfig := controllers.BaseGetStorageConfOrDefault(v1.StorageSpec{}, v1.StorageDefaultSpec{})
 		pvc := base.MkPVC(name, g.env.Ns, storageConfig, apiv1.ReadWriteOnce)
 		sts := base.MkStatefulset(
