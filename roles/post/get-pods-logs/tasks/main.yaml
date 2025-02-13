@@ -13,3 +13,6 @@
 
 - name: "Sync {{ log_directory }} in {{ output_dir }}"
   ansible.builtin.command: "rsync -aq {{ log_directory }}/ {{ output_dir }}/"
+  retries: 3
+  until: result is not failed
+  register: result
