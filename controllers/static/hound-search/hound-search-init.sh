@@ -4,6 +4,13 @@
 
 set -ex
 
+if [ ! -d /etc/pki/ca-trust/extracted/openssl ]; then
+  cd /etc/pki/ca-trust/extracted
+  mkdir -p openssl pem java edk2
+  cd -
+  update-ca-trust extract -o /etc/pki/ca-trust/extracted
+fi
+
 export HOME=/var/lib/hound
 mkdir -p ${HOME}/data
 cd $HOME
