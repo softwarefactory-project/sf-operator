@@ -61,13 +61,13 @@ var (
 	//go:embed static/zuul/zuul-change-dump.py.tmpl
 	zuulChangeDump string
 
-	//go:embed static/hound-search-init.sh
+	//go:embed static/hound-search/hound-search-init.sh
 	houndSearchInit string
 
-	//go:embed static/hound-search-config.sh
+	//go:embed static/hound-search/hound-search-config.sh
 	houndSearchConfig string
 
-	//go:embed static/hound-search-render.py
+	//go:embed static/hound-search/hound-search-render.py
 	houndSearchRender string
 
 	// Common config sections for all Zuul components

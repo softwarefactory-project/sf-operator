@@ -51,12 +51,11 @@ def read_repos(zuul_yaml):
                 # TODO: add support for project group
                 if isinstance(proj, str):
                     # This is a literal project, assume default branch name
-                    projs.append((conn, proj, "master"))
+                    projs.append((conn, proj))
                 else:
                     # This is a project object, it's name is the first key
                     name = list(proj.keys())[0]
-                    branch = proj.get("load-branch", "master")
-                    projs.append((conn, name, branch))
+                    projs.append((conn, name))
 
     return projs
 
@@ -79,35 +78,35 @@ test_zuul_yaml = """
 """
 
 
-def get_git_urls(conn, repo, branch):
+def get_git_urls(conn, repo):
     """Create the hound URLs from the zuul connection and repo config."""
     base_url = conn["baseurl"]
     if conn["driver"] == "gerrit":
         uri = base_url + f"/{repo}"
         gitweb = (
             base_url
-            + f"/plugins/gitiles/{repo}/+/refs/head/{branch}"
-            + "/{path}{anchor}"
+            + f"/plugins/gitiles/{repo}/+/{{rev}}/"
+            + "{path}{anchor}"
         )
         anchor = "#{line}"
         if "https://review.gerrithub.io" in base_url:
-            gitweb = f"http://github.com/{repo}/blob/{branch}/" + "{path}{anchor}"
+            gitweb = f"http://github.com/{repo}/blob/{{rev}}/" + "{path}{anchor}"
             anchor = "#L{line}"
     elif conn["driver"] == "github":
         uri = f"http://github.com/{repo}"
-        gitweb = f"http://github.com/{repo}/blob/{branch}/" + "{path}{anchor}"
+        gitweb = f"http://github.com/{repo}/blob/{{rev}}/" + "{path}{anchor}"
         anchor = "#L{line}"
     elif conn["driver"] == "pagure":
         uri = base_url + f"/{repo}"
-        gitweb = base_url + f"/{repo}/blob/{branch}/f/" + "{path}{anchor}"
+        gitweb = base_url + f"/{repo}/blob/{{rev}}/f/" + "{path}{anchor}"
         anchor = "#_{line}"
     elif conn["driver"] == "gitlab":
         uri = base_url + f"/{repo}"
-        gitweb = base_url + f"/{repo}/-/blob/{branch}/" + "{path}{anchor}"
+        gitweb = base_url + f"/{repo}/-/blob/{{rev}}/" + "{path}{anchor}"
         anchor = "#L{line}"
     elif conn["driver"] == "git" and base_url.startswith("https://opendev.org"):
         uri = base_url + f"/{repo}"
-        gitweb = base_url + f"/{repo}/src/branch/{branch}/" + "{path}{anchor}"
+        gitweb = base_url + f"/{repo}/src/commit/{{rev}}/" + "{path}{anchor}"
         anchor = "#L{line}"
     else:
         return None, None, None
@@ -117,14 +116,13 @@ def get_git_urls(conn, repo, branch):
 def render_hound(connections, projs):
     """Create the hound-search config"""
     repos = {}
-    for conn, repo, branch in projs:
-        url, base_url, anchor = get_git_urls(connections[conn], repo, branch)
+    for conn, repo in projs:
+        url, base_url, anchor = get_git_urls(connections[conn], repo)
         if not url:
             continue
         repos[repo] = {
             "url": url,
             "ms-between-poll": int(12 * 60 * 60 * 1000),
-            "vcs-connfig": dict(ref=branch),
             "url-pattern": {
                 "base-url": base_url,
                 "anchor": anchor,
@@ -133,6 +131,11 @@ def render_hound(connections, projs):
     return {
         "max-concurrent-indexers": 2,
         "dbpath": "/var/lib/hound/data",
+        "vcs-config": {
+            "git": {
+                "detect-ref": True
+            }
+        },
         "repos": repos,
     }
 
@@ -156,40 +159,41 @@ def do_test():
     expected = {
         "max-concurrent-indexers": 2,
         "dbpath": "/var/lib/hound/data",
+        "vcs-config": {
+            "git": {
+                "detect-ref": True
+            }
+        },
         "repos": {
             "demo-tenant-config": {
                 "url": "https://gitlab.com/demo-tenant-config",
                 "ms-between-poll": 43200000,
-                "vcs-connfig": {"ref": "master"},
                 "url-pattern": {
-                    "base-url": "https://gitlab.com/demo-tenant-config/-/blob/master/{path}{anchor}",
+                    "base-url": "https://gitlab.com/demo-tenant-config/-/blob/{rev}/{path}{anchor}",
                     "anchor": "#L{line}",
                 },
             },
             "demo-project": {
                 "url": "https://gitlab.com/demo-project",
                 "ms-between-poll": 43200000,
-                "vcs-connfig": {"ref": "master"},
                 "url-pattern": {
-                    "base-url": "https://gitlab.com/demo-project/-/blob/master/{path}{anchor}",
+                    "base-url": "https://gitlab.com/demo-project/-/blob/{rev}/{path}{anchor}",
                     "anchor": "#L{line}",
                 },
             },
             "zuul/sandbox-config": {
                 "url": "https://gerrit.sfop.me/zuul/sandbox-config",
                 "ms-between-poll": 43200000,
-                "vcs-connfig": {"ref": "master"},
                 "url-pattern": {
-                    "base-url": "https://gerrit.sfop.me/plugins/gitiles/zuul/sandbox-config/+/refs/head/master/{path}{anchor}",
+                    "base-url": "https://gerrit.sfop.me/plugins/gitiles/zuul/sandbox-config/+/refs/head/{rev}/{path}{anchor}",
                     "anchor": "#{line}",
                 },
             },
             "zuul/zuul-jobs": {
                 "url": "https://gerrit.sfop.me/zuul/zuul-jobs",
                 "ms-between-poll": 43200000,
-                "vcs-connfig": {"ref": "master"},
                 "url-pattern": {
-                    "base-url": "https://gerrit.sfop.me/plugins/gitiles/zuul/zuul-jobs/+/refs/head/master/{path}{anchor}",
+                    "base-url": "https://gerrit.sfop.me/plugins/gitiles/zuul/zuul-jobs/+/refs/head/{rev}/{path}{anchor}",
                     "anchor": "#{line}",
                 },
             },
