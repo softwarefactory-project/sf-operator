@@ -5,16 +5,20 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+
+## [v0.0.51] - 2025-02-14
+
+### Added
 
 - codesearch: a new service provided by hound-search to search the repositories configured in Zuul.
 
 ### Changed
 
 - zuul-weeder: updated the image to support job.role attribute
-
-### Deprecated
-### Removed
-### Fixed
 
 ## [v0.0.50] - 2024-12-13
 
