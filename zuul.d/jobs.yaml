@@ -29,10 +29,8 @@
       setup_olm: true
       # post tasks artifacts directory
       output_logs_dir: ~/zuul-output/logs
-      # dnsmasq
-      microshift_additional_addresses:
-        - "sfop.me"
-        - "microshift.dev"
+      # disable dnsmasq configuration
+      configure_dnsmasq: false
       ramdisk: true
       ramdisk_size: 1g
       inject_dev_ssh_keys: true

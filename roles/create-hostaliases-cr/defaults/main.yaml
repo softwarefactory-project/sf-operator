@@ -1,0 +1,14 @@
+---
+# NOTE: when "ip" is empty or there is no "ip" set,
+# it will take iplb ip address.
+# You can take it using script: /usr/local/bin/recognize-iplb-ip-address.sh
+# NOTE: iplb_ip_address it is a fact from running mentioned script.
+hostaliases:
+  - ip: "{{ iplb_ip_address }}"
+    hostnames:
+      - "gerrit.sfop.me"
+      - "sfop.me"
+      - "dashboards.sfop.me"
+  - ip: "{{ microshift_ip_address | default(ansible_default_ipv4.address) }}"
+    hostnames:
+      - microshift.dev
