@@ -21,7 +21,7 @@ func MkHoundSearchContainer(corporateCMExists bool) apiv1.Container {
 	container.Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(6080, houndSearchIdent),
 	}
-	container.ReadinessProbe = base.MkReadinessHTTPProbe("/", 6080)
+	// container.ReadinessProbe = base.MkReadinessHTTPProbe("/", 6080)
 	container.VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      "hound-search-data",
@@ -98,6 +98,9 @@ func (r *SFController) DeployHoundSearch() bool {
 		"serial":                     "1",
 		"config-scripts":             utils.Checksum([]byte(houndSearchRender + houndSearchInit + houndSearchConfig)),
 	}
+	limitstr := base.UpdateContainerLimit(r.cr.Spec.Codesearch.Limits, &sts.Spec.Template.Spec.Containers[0])
+	annotations["limits"] = limitstr
+
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 	current, stsUpdated := r.ensureStatefulset(sts)
 
