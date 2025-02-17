@@ -233,7 +233,7 @@ var ManageSFVolumes = []apiv1.Volume{
 	},
 }
 
-func configureGerritContainer(sts *appsv1.StatefulSet, volumeMounts []apiv1.VolumeMount, fqdn string) {
+func configureGerritContainer(sts *appsv1.StatefulSet, volumeMounts []apiv1.VolumeMount, fqdn string, hostAliases []v1.HostAlias) {
 	sts.Spec.Template.Spec.Containers[0].Command = []string{"sh", "-c", entrypoint}
 	sts.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 	sts.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
@@ -250,6 +250,7 @@ func configureGerritContainer(sts *appsv1.StatefulSet, volumeMounts []apiv1.Volu
 	sts.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessCMDProbe([]string{"bash", "/gerrit/ready.sh"})
 	sts.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupCMDProbe([]string{"bash", "/gerrit/ready.sh"})
 	sts.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLivenessCMDProbe([]string{"bash", "/gerrit/ready.sh"})
+	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(hostAliases)
 }
 
 func addManageSFContainer(sts *appsv1.StatefulSet, fqdn string) {
@@ -349,7 +350,7 @@ func (g *GerritCMDContext) isStatefulSetReady(name string) bool {
 	return b && base.IsStatefulSetRolloutDone(&sts)
 }
 
-func (g *GerritCMDContext) ensureStatefulSetOrDie() {
+func (g *GerritCMDContext) ensureStatefulSetOrDie(hostAliases []v1.HostAlias) {
 	name := gerritIdent
 	b, _ := g.getStatefulSetOrDie(name)
 	if !b {
@@ -370,7 +371,7 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie() {
 				MountPath: gerritSiteMountPath,
 			},
 		}
-		configureGerritContainer(&sts, volumeMounts, g.fqdn)
+		configureGerritContainer(&sts, volumeMounts, g.fqdn, hostAliases)
 		sts.Spec.Template.Spec.InitContainers = createInitContainers(volumeMounts, g.fqdn)
 
 		addManageSFContainer(&sts, g.fqdn)
@@ -404,7 +405,7 @@ func ensureNamespaceOrDie(env *cliutils.ENV) {
 	}
 }
 
-func EnsureGerrit(env *cliutils.ENV, fqdn string) {
+func EnsureGerrit(env *cliutils.ENV, fqdn string, hostAliases []v1.HostAlias) {
 	ensureNamespaceOrDie(env)
 
 	g := GerritCMDContext{
@@ -442,7 +443,7 @@ func EnsureGerrit(env *cliutils.ENV, fqdn string) {
 	g.ensureConfigMapOrDie(managesfResourcesIdent+"-tooling", toolingData)
 
 	// Ensure gerrit statefulset
-	g.ensureStatefulSetOrDie()
+	g.ensureStatefulSetOrDie(hostAliases)
 
 	// Wait for Gerrit statefulset to be ready
 	for !g.isStatefulSetReady(gerritIdent) {

@@ -91,6 +91,7 @@ type SoftwareFactoryConfigContext struct {
 			KubeFile   string `json:"kube-file" mapstructure:"kube-file"`
 		} `json:"nodepool" mapstructure:"nodepool"`
 	} `json:"components" mapstructure:"components"`
+	HostAliases []sfv1.HostAlias `json:"hostaliases,omitempty" mapstructure:"hostaliases"`
 }
 
 type SoftwareFactoryConfig struct {

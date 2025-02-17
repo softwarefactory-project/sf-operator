@@ -197,6 +197,21 @@ spec:
                     - size
                     type: object
                 type: object
+              hostaliases:
+                description: HostAliases
+                items:
+                  properties:
+                    hostnames:
+                      items:
+                        type: string
+                      type: array
+                    ip:
+                      type: string
+                  required:
+                  - hostnames
+                  - ip
+                  type: object
+                type: array
               logserver:
                 default:
                   loopDelay: 3600

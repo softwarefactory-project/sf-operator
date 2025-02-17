@@ -101,6 +101,8 @@ func (r *SFController) DeployHoundSearch() bool {
 	limitstr := base.UpdateContainerLimit(r.cr.Spec.Codesearch.Limits, &sts.Spec.Template.Spec.Containers[0])
 	annotations["limits"] = limitstr
 
+	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
+
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 	current, stsUpdated := r.ensureStatefulset(sts)
 

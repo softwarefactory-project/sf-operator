@@ -60,6 +60,11 @@ type SFUtilContext struct {
 	standalone bool
 }
 
+type HostAlias struct {
+	IP        string   `json:"ip" mapstructure:"ip"`
+	Hostnames []string `json:"hostnames" mapstructure:"hostnames"`
+}
+
 // --- API Interact primitive functions ---
 
 // setOwnerReference set the Owner of a resources

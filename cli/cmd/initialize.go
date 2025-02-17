@@ -159,6 +159,12 @@ func initializeCLIConfig(isDevEnv bool) {
 	defaultContextConfig.FQDN = "sfop.me"
 	defaultContextConfig.Components.Nodepool.CloudsFile = "/path/to/clouds.yaml"
 	defaultContextConfig.Components.Nodepool.KubeFile = "/path/to/kube.config"
+	defaultContextConfig.HostAliases = []sfv1.HostAlias{
+		{
+			IP:        "",
+			Hostnames: []string{""},
+		},
+	}
 
 	if isDevEnv {
 		defaultContextConfig.Dev.AnsibleMicroshiftRolePath = "/path/to/ansible-microshift-role"

@@ -50,6 +50,7 @@ func (r *SFController) DeployHTTPDGateway() bool {
 			SubPath:   "gateway.conf",
 		},
 	}
+	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	current := appsv1.Deployment{}
 	if r.GetM(ident, &current) {

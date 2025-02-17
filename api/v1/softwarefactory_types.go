@@ -595,6 +595,11 @@ type LogServerSpec struct {
 	Storage StorageSpec `json:"storage,omitempty"`
 }
 
+type HostAlias struct {
+	IP        string   `json:"ip"`
+	Hostnames []string `json:"hostnames" mapstructure:"hostnames"`
+}
+
 // SoftwareFactorySpec defines the desired state of SoftwareFactory
 type SoftwareFactorySpec struct {
 	// Important: Run "make manifests" to regenerate code after modifying this file
@@ -641,6 +646,9 @@ type SoftwareFactorySpec struct {
 
 	// Codesearch service spec
 	Codesearch CodesearchSpec `json:"codesearch,omitempty"`
+
+	// HostAliases
+	HostAliases []HostAlias `json:"hostaliases,omitempty"`
 }
 
 // BaseStatus struct which defines the observed state for a Controller

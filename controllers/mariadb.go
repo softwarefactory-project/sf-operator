@@ -282,6 +282,8 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 
+	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
+
 	current, changed := r.ensureStatefulset(sts)
 	if changed {
 		return false

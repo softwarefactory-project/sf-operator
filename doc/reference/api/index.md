@@ -199,6 +199,21 @@ _Appears in:_
 | `storage` _[StorageSpec](#storagespec)_ |  | -|
 
 
+#### HostAlias
+
+
+
+
+
+_Appears in:_
+- [SoftwareFactorySpec](#softwarefactoryspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `ip` _string_ |  | -|
+| `hostnames` _string array_ |  | -|
+
+
 #### LEServer
 
 _Underlying type:_ _string_
@@ -447,6 +462,7 @@ _Appears in:_
 | `mariadb` _[MariaDBSpec](#mariadbspec)_ | MariaDB service spec | -|
 | `gitserver` _[GitServerSpec](#gitserverspec)_ | Git server spec | -|
 | `codesearch` _[CodesearchSpec](#codesearchspec)_ | Codesearch service spec | -|
+| `hostaliases` _[HostAlias](#hostalias) array_ | HostAliases | -|
 
 
 
