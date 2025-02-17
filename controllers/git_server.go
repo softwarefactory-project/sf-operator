@@ -328,16 +328,11 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Define initContainer
-	codesearchEnabled := "false"
-	if r.IsCodesearchEnabled() {
-		codesearchEnabled = "true"
-	}
 	initContainer := base.MkContainer("init-config", base.GitServerImage())
 	initContainer.Command = []string{"/bin/bash", "/entry/pre-init.sh"}
 	initContainer.Env = []apiv1.EnvVar{
 		base.MkEnvVar("FQDN", r.cr.Spec.FQDN),
 		base.MkEnvVar("ZUUL_LOGSERVER_HOST", logserverHost),
-		base.MkEnvVar("CODESEARCH_ENABLED", codesearchEnabled),
 	}
 	initContainer.VolumeMounts = []apiv1.VolumeMount{
 		{

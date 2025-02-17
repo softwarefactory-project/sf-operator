@@ -158,15 +158,6 @@ cat << EOF > playbooks/config/update.yaml
   roles:
     - setup-k8s-config
     - add-k8s-hosts
-  post_tasks:
-    - block:
-        - name: Update hound-search config
-          command: kubectl exec hound-search-0 -- /sf-tooling/hound-search-config.sh "{{ zuul.newrev | default('origin/master') }}"
-        # Would be nice to hot-reload the config: https://github.com/hound-search/hound/issues/287
-        # Or check if the repo list is changed (to avoid restarting hound each time a change is merged)
-        - name: Force hound-search restart
-          command: kubectl delete pod hound-search-0
-      when: "'${CODESEARCH_ENABLED}' == 'true'"
 
 - hosts: zuul-scheduler
   vars:
@@ -194,6 +185,19 @@ cat << EOF > playbooks/config/update.yaml
       command: /usr/local/bin/generate-config.sh "{{ config_ref }}"
       environment:
         NODEPOOL_CONFIG_FILE: nodepool-builder.yaml
+
+# Handle code-search config-update tasks
+# The StatefulSet controller will restart the pod after the deletion
+# Ideally we should run a rollout restart but kubectl does not have that capability, or better, run the hound config update script in-place but hound does not support hot reload.
+- hosts: localhost
+  tasks:
+    - name: Check if hound-search pod is running
+      command: kubectl get pod hound-search-0
+      register: houndsearch_pod_get
+      ignore_errors: true
+    - name: Force hound-search restart by deleting the pod
+      command: kubectl delete pod hound-search-0
+      when: houndsearch_pod_get.rc == 0
 
 EOF
 
