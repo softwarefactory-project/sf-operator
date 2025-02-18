@@ -63,9 +63,9 @@ func ensureGatewayRoute(env *cliutils.ENV, fqdn string) {
 	}
 }
 
-func createDemoEnv(env cliutils.ENV, restConfig *rest.Config, fqdn string, reposPath, sfOperatorRepoPath string, keepDemoTenantDefinition bool) {
+func createDemoEnv(env cliutils.ENV, restConfig *rest.Config, fqdn string, reposPath, sfOperatorRepoPath string, keepDemoTenantDefinition bool, hostAliases []sfv1.HostAlias) {
 	ensureGatewayRoute(&env, fqdn)
-	gerrit.EnsureGerrit(&env, fqdn)
+	gerrit.EnsureGerrit(&env, fqdn, hostAliases)
 	ctrl.Log.Info("Making sure Gerrit is up and ready...")
 	gerrit.EnsureGerritAccess(fqdn)
 	for _, repo := range []string{
@@ -173,6 +173,7 @@ func devRunTests(kmd *cobra.Command, args []string) {
 	if debug {
 		verbosity = "debug"
 	}
+
 	if prepareDemoEnv {
 		ns := cliCtx.Namespace
 		kubeContext := cliCtx.KubeContext
@@ -189,7 +190,13 @@ func devRunTests(kmd *cobra.Command, args []string) {
 			reposPath = "deploy"
 		}
 		extraVars["demo_repos_path"] = reposPath
-		createDemoEnv(env, restConfig, fqdn, reposPath, cliCtx.Dev.SFOperatorRepositoryPath, false)
+
+		// The Gerrit container ip address is unknown and poting to 127.0.0.1
+		// does not work as expected. In that case, point to the ingress
+		// dpawlik: We are doing similar code in Ansible Microshift role
+		// https://github.com/openstack-k8s-operators/ansible-microshift-role/blob/b48b04b96c1e819da28e535cc289ed25c81b2591/tasks/dnsmasq.yaml#L39
+		hostAliases := cliCtx.HostAliases
+		createDemoEnv(env, restConfig, fqdn, reposPath, cliCtx.Dev.SFOperatorRepositoryPath, false, hostAliases)
 	}
 	// use config file and context for CLI calls in the tests
 	var cliGlobalFlags string
@@ -229,8 +236,15 @@ func devCreate(kmd *cobra.Command, args []string) {
 		Ctx: context.TODO(),
 		Ns:  ns,
 	}
+
+	// The Gerrit container ip address is unknown and poting to 127.0.0.1
+	// does not work as expected. In that case, point to the ingress
+	// dpawlik: We are doing similar code in Ansible Microshift role
+	// https://github.com/openstack-k8s-operators/ansible-microshift-role/blob/b48b04b96c1e819da28e535cc289ed25c81b2591/tasks/dnsmasq.yaml#L39
+	hostAliases := cliCtx.HostAliases
+
 	if target == "gerrit" {
-		gerrit.EnsureGerrit(&env, fqdn)
+		gerrit.EnsureGerrit(&env, fqdn, hostAliases)
 	} else if target == "standalone-sf" {
 		sfResource, _ := kmd.Flags().GetString("cr")
 		hasManifest := &cliCtx.Manifest
@@ -254,7 +268,8 @@ func devCreate(kmd *cobra.Command, args []string) {
 			reposPath = "deploy"
 		}
 		keepDemoTenantDefinition, _ := kmd.Flags().GetBool("keep-demo-tenant")
-		createDemoEnv(env, restConfig, fqdn, reposPath, cliCtx.Dev.SFOperatorRepositoryPath, keepDemoTenantDefinition)
+
+		createDemoEnv(env, restConfig, fqdn, reposPath, cliCtx.Dev.SFOperatorRepositoryPath, keepDemoTenantDefinition, hostAliases)
 
 	} else {
 		ctrl.Log.Error(errors.New("unsupported target"), "Invalid argument '"+target+"'")

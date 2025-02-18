@@ -621,6 +621,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers,
 		buildLogsContainer,
 	)
+	nb.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	svc := base.MkServicePod(
 		BuilderIdent, r.ns, BuilderIdent+"-0", []int32{buildLogsHttpdPort}, BuilderIdent, r.cr.Spec.ExtraLabels)
@@ -798,6 +799,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		zcSrv := base.MkService("zuul-capacity", r.ns, "nodepool-launcher", []int32{9100}, "zuul-capacity", r.cr.Spec.ExtraLabels)
 		r.GetOrCreate(&zcSrv)
 	}
+	nl.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	current := appsv1.Deployment{}
 	if r.GetM(LauncherIdent, &current) {

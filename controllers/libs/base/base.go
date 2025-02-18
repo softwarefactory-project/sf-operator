@@ -454,3 +454,18 @@ func IsDeploymentRolloutDone(obj *appsv1.Deployment) bool {
 func IsDeploymentReady(dep *appsv1.Deployment) bool {
 	return dep.Status.ReadyReplicas > 0 && IsDeploymentRolloutDone(dep)
 }
+
+func CreateHostAliases(hostAliases []v1.HostAlias) []apiv1.HostAlias {
+	// Add hostAliases
+	// https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/#adding-additional-entries-with-hostaliases
+	var k8sHostAliases []apiv1.HostAlias
+	for i, halias := range hostAliases {
+		if hostAliases[i].IP != "" {
+			k8sHostAliases = append(k8sHostAliases, apiv1.HostAlias{
+				IP:        hostAliases[i].IP,
+				Hostnames: halias.Hostnames,
+			})
+		}
+	}
+	return k8sHostAliases
+}

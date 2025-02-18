@@ -284,6 +284,7 @@ func (r *SFController) DeployLogserver() bool {
 		"sshd-image":      base.SSHDImage(),
 		"authorized-key":  utils.Checksum(pubKey),
 	}
+	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	current, stsUpdated := r.ensureStatefulset(sts)
 

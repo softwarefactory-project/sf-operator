@@ -63,6 +63,7 @@ func (r *SFController) EnsureLogJuicer() bool {
 	dep.Spec.Template.ObjectMeta.Annotations = map[string]string{
 		"certs": r.AddCorporateCA(&dep.Spec.Template.Spec),
 	}
+	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	current := appsv1.Deployment{}
 	if r.GetM(ident, &current) {

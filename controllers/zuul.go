@@ -538,6 +538,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	zs.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 	}
+	zs.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	// Mount a local directory in place of the Zuul source from the container image
 	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
@@ -615,6 +616,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	// Anyhow, the simplest fix is to elevate privileges on the node exporter sidecar.
 	ze.Spec.Template.Spec.Containers[1].SecurityContext = base.MkSecurityContext(true)
 	ze.Spec.Template.Spec.Containers[1].SecurityContext.RunAsUser = ptr.To[int64](1000)
+	ze.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	// Mount a local directory in place of the Zuul source from the container image
 	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
@@ -681,6 +683,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 	zm.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 	}
+	zm.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	// Mount a local directory in place of the Zuul source from the container image
 	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
@@ -738,6 +741,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	zw.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 	}
+	zw.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	// Mount a local directory in place of the Zuul source from the container image
 	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {

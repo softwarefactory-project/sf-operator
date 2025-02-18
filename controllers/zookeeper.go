@@ -179,6 +179,8 @@ func (r *SFController) DeployZookeeper() bool {
 
 	zk.Spec.Template.ObjectMeta.Annotations = annotations
 
+	zk.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
+
 	current, changed := r.ensureStatefulset(zk)
 	if changed {
 		return false

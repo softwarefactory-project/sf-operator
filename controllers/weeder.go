@@ -55,6 +55,7 @@ func (r *SFController) EnsureZuulWeeder(checksum string) bool {
 		base.MkContainerPort(port, ident),
 	}
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health", port)
+	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 	current := appsv1.Deployment{}
 	if r.GetM(ident, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
