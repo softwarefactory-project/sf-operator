@@ -21,7 +21,7 @@ func MkHoundSearchContainer(corporateCMExists bool) apiv1.Container {
 	container.Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(6080, houndSearchIdent),
 	}
-	// container.ReadinessProbe = base.MkReadinessHTTPProbe("/", 6080)
+	container.ReadinessProbe = base.MkReadinessHTTPProbe("/healthz", 6080)
 	container.VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      "hound-search-data",

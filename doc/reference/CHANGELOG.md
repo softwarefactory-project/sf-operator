@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+codesearch - re-enable the probe by using the correct endpoint "/healthz"
+
 ### Deprecated
 ### Removed
 ### Fixed
