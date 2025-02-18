@@ -129,7 +129,7 @@ def render_hound(connections, projs):
             },
         }
     return {
-        "max-concurrent-indexers": 2,
+        "max-concurrent-indexers": 4,
         "dbpath": "/var/lib/hound/data",
         "vcs-config": {
             "git": {
@@ -157,7 +157,7 @@ def do_main():
 def do_test():
     conf = render_hound(read_connections(test_zuul_conf), read_repos(test_zuul_yaml))
     expected = {
-        "max-concurrent-indexers": 2,
+        "max-concurrent-indexers": 4,
         "dbpath": "/var/lib/hound/data",
         "vcs-config": {
             "git": {

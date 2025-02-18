@@ -7,7 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Added
 ### Changed
 
-codesearch - re-enable the probe by using the correct endpoint "/healthz"
+- codesearch - re-enable the probe by using the correct endpoint "/healthz"
+- codesearch: Set 4 indexers instead of 2 by default
 
 ### Deprecated
 ### Removed
