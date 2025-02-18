@@ -10,6 +10,17 @@ All notable changes to this project will be documented in this file.
 ### Removed
 ### Fixed
 
+## [v0.0.52] - 2025-02-18
+
+### Added
+
+- codesearch: Support for custom Memory and CPU limits
+
+### Changed
+
+- codesearch: improved the config-update tasks
+- codesearch: temporary remove the healthcheck probe as the service returns 503 when indexing, at startup.
+
 ## [v0.0.51] - 2025-02-14
 
 ### Added
