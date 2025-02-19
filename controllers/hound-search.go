@@ -4,11 +4,13 @@
 package controllers
 
 import (
+	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -98,7 +100,16 @@ func (r *SFController) DeployHoundSearch() bool {
 		"serial":                     "1",
 		"config-scripts":             utils.Checksum([]byte(houndSearchRender + houndSearchInit + houndSearchConfig)),
 	}
-	limitstr := base.UpdateContainerLimit(r.cr.Spec.Codesearch.Limits, &sts.Spec.Template.Spec.Containers[0])
+	limits := v1.LimitsSpec{
+		CPU:    resource.MustParse("2000m"),
+		Memory: resource.MustParse("2Gi"),
+	}
+	if r.cr.Spec.Codesearch.Limits != nil {
+		limits.CPU = r.cr.Spec.Codesearch.Limits.CPU
+		limits.Memory = r.cr.Spec.Codesearch.Limits.Memory
+	}
+
+	limitstr := base.UpdateContainerLimit(&limits, &sts.Spec.Template.Spec.Containers[0])
 	annotations["limits"] = limitstr
 
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
