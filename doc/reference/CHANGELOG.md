@@ -6,13 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
-
-- codesearch - re-enable the probe by using the correct endpoint "/healthz"
-- codesearch: Set 4 indexers instead of 2 by default
-
 ### Deprecated
 ### Removed
 ### Fixed
+
+## [v0.0.53] - 2025-02-19
+
+### Added
+
+- hostAliases: add custom defined hostAliases - https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/#adding-additional-entries-with-hostaliases
+
+### Changed
+
+- codesearch - re-enable the probe by using the correct endpoint "/healthz"
+- codesearch - Set 4 indexers instead of 2 by default
 
 ## [v0.0.52] - 2025-02-18
 
