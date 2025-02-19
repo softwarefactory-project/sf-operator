@@ -12,6 +12,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -45,6 +46,7 @@ func init() {
 	utilruntime.Must(certv1.AddToScheme(controllerScheme))
 	utilruntime.Must(apiroutev1.AddToScheme(controllerScheme))
 	utilruntime.Must(monitoringv1.AddToScheme(controllerScheme))
+	utilruntime.Must(apiextensions.AddToScheme(controllerScheme))
 }
 
 func getPodRESTClient(config *rest.Config) rest.Interface {

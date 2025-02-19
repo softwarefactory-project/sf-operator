@@ -21,6 +21,8 @@ import (
 	"k8s.io/utils/strings/slices"
 
 	corev1 "k8s.io/api/core/v1"
+
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -57,10 +59,12 @@ type SoftwareFactoryReconciler struct {
 //+kubebuilder:rbac:groups=*,resources=jobs/status;pods/status;services/status;routes/status;statefulsets/status;deployments/status;configmaps/status;secrets/status;persistentvolumeclaims/status;serviceaccounts/status;roles/status,verbs=get
 //+kubebuilder:rbac:groups=cert-manager.io,resources=*,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=list
 
 type SFController struct {
 	SFUtilContext
-	cr sfv1.SoftwareFactory
+	cr          sfv1.SoftwareFactory
+	isOpenShift bool
 }
 
 func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
@@ -386,6 +390,22 @@ func (r *SFController) DebugService(debugService string) {
 	}
 }
 
+func checkOpenShift(ctx context.Context, client client.Client) bool {
+	crds := &apiextensions.CustomResourceDefinitionList{}
+	if err := client.List(ctx, crds); err != nil {
+		utils.LogI(fmt.Sprintf("Couldn't list crds, assume this is not openshift, %s", err))
+		return false
+	}
+	for _, crd := range crds.Items {
+		if crd.Spec.Names.Kind == "Route" {
+			utils.LogI("API has Route, assume it is OpenShift")
+			return true
+		}
+	}
+	utils.LogI("API has no Route, assume it is vanilla Kubernetes")
+	return false
+}
+
 func (r *SoftwareFactoryReconciler) mkSFController(
 	ctx context.Context, ns string, owner client.Object, cr sfv1.SoftwareFactory,
 	standalone bool) SFController {
@@ -400,7 +420,8 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 			owner:      owner,
 			standalone: standalone,
 		},
-		cr: cr,
+		cr:          cr,
+		isOpenShift: checkOpenShift(ctx, r.Client),
 	}
 }
 

@@ -37,6 +37,8 @@ import (
 	apiroutev1 "github.com/openshift/api/route/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -245,6 +247,7 @@ func CreateKubernetesClient(contextName string) (client.Client, error) {
 	utilruntime.Must(apiroutev1.AddToScheme(scheme))
 	utilruntime.Must(opv1.AddToScheme(scheme))
 	utilruntime.Must(sfv1.AddToScheme(scheme))
+	utilruntime.Must(apiextensions.AddToScheme(scheme))
 	var conf = controllers.GetConfigContextOrDie(contextName)
 	return client.New(conf, client.Options{
 		Scheme: scheme,
