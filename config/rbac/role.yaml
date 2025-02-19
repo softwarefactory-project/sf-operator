@@ -15,8 +15,6 @@ rules:
   - pods/exec
   - rolebindings
   - roles
-  - routes
-  - routes/custom-host
   - secrets
   - serviceaccounts
   - services
@@ -38,7 +36,6 @@ rules:
   - persistentvolumeclaims/status
   - pods/status
   - roles/status
-  - routes/status
   - secrets/status
   - serviceaccounts/status
   - services/status
