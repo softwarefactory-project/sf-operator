@@ -73,7 +73,7 @@ func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
 	return color.RedString(badmsg)
 }
 
-func messageInfo(r *SFController, services map[string]bool) string {
+func messageInfo(services map[string]bool) string {
 	msg := ""
 	servicesSorted := []string{}
 	for servicename := range services {
@@ -363,7 +363,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		services = r.deploySFStep(services)
 	}
 
-	utils.LogI(messageInfo(r, services))
+	utils.LogI(messageInfo(services))
 
 	return sfv1.SoftwareFactoryStatus{
 		Ready:              isOperatorReady(services),

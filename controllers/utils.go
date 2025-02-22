@@ -260,7 +260,7 @@ func (r *SFUtilContext) EnsureService(service *apiv1.Service) {
 	var current apiv1.Service
 	spsAsString := func(sps []apiv1.ServicePort) string {
 		s := []string{}
-		for _, p := range current.Spec.Ports {
+		for _, p := range sps {
 			s = append(s, []string{strconv.Itoa(int(p.Port)), p.Name, p.TargetPort.String(), string(p.Protocol)}...)
 		}
 		sort.Strings(s)

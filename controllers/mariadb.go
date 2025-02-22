@@ -139,7 +139,6 @@ func (r *SFController) DBPostInit(configSecret apiv1.Secret) apiv1.Secret {
 		Host:     MariaDBIdent,
 		Port:     mariadbPort,
 		Database: "zuul",
-		Params:   map[string]string{},
 	}
 
 	config := mysql.NewConfig()

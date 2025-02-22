@@ -2,7 +2,10 @@
 # Copyright (C) 2025 Red Hat
 # SPDX-License-Identifier: Apache-2.0
 
-import configparser, json, sys, yaml
+import configparser
+import json
+import sys
+import yaml
 
 
 def read_connections(zuul_conf):
@@ -20,7 +23,8 @@ def read_connections(zuul_conf):
             else:
                 url = ""
             # Get the connection name, driver and baseurl
-            connections[kv[1]] = dict(driver=parser.get(section, "driver"), baseurl=url)
+            connections[kv[1]] = dict(
+                driver=parser.get(section, "driver"), baseurl=url)
     return connections
 
 
@@ -90,7 +94,8 @@ def get_git_urls(conn, repo):
         )
         anchor = "#{line}"
         if "https://review.gerrithub.io" in base_url:
-            gitweb = f"http://github.com/{repo}/blob/{{rev}}/" + "{path}{anchor}"
+            gitweb = f"http://github.com/{repo}/blob/{{rev}}/" + \
+                "{path}{anchor}"
             anchor = "#L{line}"
     elif conn["driver"] == "github":
         uri = f"http://github.com/{repo}"
@@ -104,7 +109,8 @@ def get_git_urls(conn, repo):
         uri = base_url + f"/{repo}"
         gitweb = base_url + f"/{repo}/-/blob/{{rev}}/" + "{path}{anchor}"
         anchor = "#L{line}"
-    elif conn["driver"] == "git" and base_url.startswith("https://opendev.org"):
+    elif conn["driver"] == "git" and \
+            base_url.startswith("https://opendev.org"):
         uri = base_url + f"/{repo}"
         gitweb = base_url + f"/{repo}/src/commit/{{rev}}/" + "{path}{anchor}"
         anchor = "#L{line}"
@@ -143,7 +149,7 @@ def render_hound(connections, projs):
 def do_main():
     try:
         zuul_yaml = open("/var/lib/hound/config/zuul/main.yaml").read()
-    except:
+    except Exception:
         zuul_yaml = "[]"
     conf = json.dumps(
         render_hound(
@@ -155,7 +161,8 @@ def do_main():
 
 
 def do_test():
-    conf = render_hound(read_connections(test_zuul_conf), read_repos(test_zuul_yaml))
+    conf = render_hound(read_connections(test_zuul_conf),
+                        read_repos(test_zuul_yaml))
     expected = {
         "max-concurrent-indexers": 4,
         "dbpath": "/var/lib/hound/data",
@@ -169,7 +176,8 @@ def do_test():
                 "url": "https://gitlab.com/demo-tenant-config",
                 "ms-between-poll": 43200000,
                 "url-pattern": {
-                    "base-url": "https://gitlab.com/demo-tenant-config/-/blob/{rev}/{path}{anchor}",
+                    "base-url": "https://gitlab.com/demo-tenant-config/-/" +
+                                "blob/{rev}/{path}{anchor}",
                     "anchor": "#L{line}",
                 },
             },
@@ -177,7 +185,8 @@ def do_test():
                 "url": "https://gitlab.com/demo-project",
                 "ms-between-poll": 43200000,
                 "url-pattern": {
-                    "base-url": "https://gitlab.com/demo-project/-/blob/{rev}/{path}{anchor}",
+                    "base-url": "https://gitlab.com/demo-project/-/" +
+                                "blob/{rev}/{path}{anchor}",
                     "anchor": "#L{line}",
                 },
             },
@@ -185,7 +194,9 @@ def do_test():
                 "url": "https://gerrit.sfop.me/zuul/sandbox-config",
                 "ms-between-poll": 43200000,
                 "url-pattern": {
-                    "base-url": "https://gerrit.sfop.me/plugins/gitiles/zuul/sandbox-config/+/refs/head/{rev}/{path}{anchor}",
+                    "base-url": "https://gerrit.sfop.me/plugins/gitiles/" +
+                                "zuul/sandbox-config/+/refs/head/{rev}/" +
+                                "{path}{anchor}",
                     "anchor": "#{line}",
                 },
             },
@@ -193,7 +204,9 @@ def do_test():
                 "url": "https://gerrit.sfop.me/zuul/zuul-jobs",
                 "ms-between-poll": 43200000,
                 "url-pattern": {
-                    "base-url": "https://gerrit.sfop.me/plugins/gitiles/zuul/zuul-jobs/+/refs/head/{rev}/{path}{anchor}",
+                    "base-url": "https://gerrit.sfop.me/plugins/gitiles/" +
+                                "zuul/zuul-jobs/+/refs/head/{rev}/" +
+                                "{path}{anchor}",
                     "anchor": "#{line}",
                 },
             },

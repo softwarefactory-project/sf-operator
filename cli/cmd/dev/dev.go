@@ -247,8 +247,7 @@ func devCreate(kmd *cobra.Command, args []string) {
 		gerrit.EnsureGerrit(&env, fqdn, hostAliases)
 	} else if target == "standalone-sf" {
 		sfResource, _ := kmd.Flags().GetString("cr")
-		hasManifest := &cliCtx.Manifest
-		if sfResource == "" && hasManifest != nil {
+		if sfResource == "" && cliCtx.Manifest != "" {
 			sfResource = cliCtx.Manifest
 		}
 		if (sfResource != "" && ns == "") || (sfResource == "" && ns != "") {

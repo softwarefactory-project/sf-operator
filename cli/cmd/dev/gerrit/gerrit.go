@@ -581,24 +581,8 @@ func EnsureGerritAccess(fqdn string) {
 		},
 	}
 	client := &http.Client{Transport: tr}
-	var (
-		resp      *http.Response
-		err       error
-		bodyBytes []byte
-	)
+
 	for {
-		if attempt > maxTries {
-			endpointError := errors.New("endpoint failure")
-			ctrl.Log.Error(endpointError, "Could not reach gerrit after "+strconv.Itoa(maxTries)+" tries")
-			defer resp.Body.Close()
-			bodyBytes, err = io.ReadAll(resp.Body)
-			if err != nil {
-				ctrl.Log.Error(err, "Error reading Gerrit response")
-			} else {
-				ctrl.Log.Error(endpointError, fmt.Sprintf("Last status:%d - Last response body:\"%s\"", resp.StatusCode, string(bodyBytes)))
-			}
-			os.Exit(1)
-		}
 		url := fmt.Sprintf("https://gerrit.%s/projects/", fqdn)
 		ctrl.Log.Info(fmt.Sprintf("Querying Gerrit projects endpoint... [attempt %d/%d]", attempt, maxTries))
 		resp, err := client.Get(url)
@@ -609,6 +593,21 @@ func EnsureGerritAccess(fqdn string) {
 		if resp.StatusCode < 400 {
 			ctrl.Log.Info("Gerrit is up and available")
 			break
+		}
+
+		if attempt > maxTries {
+			endpointError := errors.New("endpoint failure")
+			ctrl.Log.Error(endpointError, "Could not reach gerrit after "+strconv.Itoa(maxTries)+" tries")
+			if resp != nil {
+				defer resp.Body.Close()
+				bodyBytes, err := io.ReadAll(resp.Body)
+				if err != nil {
+					ctrl.Log.Error(err, "Error reading Gerrit response")
+				} else {
+					ctrl.Log.Error(endpointError, fmt.Sprintf("Last status:%d - Last response body:\"%s\"", resp.StatusCode, string(bodyBytes)))
+				}
+			}
+			os.Exit(1)
 		}
 		attempt += 1
 		time.Sleep(delay)
