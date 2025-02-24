@@ -61,6 +61,10 @@ import (
 
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 // CLI config struct
@@ -573,4 +577,34 @@ func GetKubeConfigContextByName(contextName string) (*clientcmdapi.Context, stri
 		ctrlutils.LogD("could not find the context " + contextName)
 	}
 	return context, contextName
+}
+
+// MkHTTPSRoute produces a Route on top of a Service
+func MkHTTPSRoute(
+	name string, ns string, host string, serviceName string, path string, port int, extraLabels map[string]string) apiroutev1.Route {
+	tls := apiroutev1.TLSConfig{
+		InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
+		Termination:                   apiroutev1.TLSTerminationEdge,
+	}
+	return apiroutev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+			Labels:    extraLabels,
+		},
+		Spec: apiroutev1.RouteSpec{
+			TLS:  &tls,
+			Host: host,
+			To: apiroutev1.RouteTargetReference{
+				Kind:   "Service",
+				Name:   serviceName,
+				Weight: ptr.To[int32](100),
+			},
+			Port: &apiroutev1.RoutePort{
+				TargetPort: intstr.FromInt(port),
+			},
+			Path:           path,
+			WildcardPolicy: "None",
+		},
+	}
 }

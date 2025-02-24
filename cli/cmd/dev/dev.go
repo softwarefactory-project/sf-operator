@@ -56,7 +56,7 @@ var defaultHost = "microshift.dev"
 var errMissingArg = errors.New("missing argument")
 
 func ensureGatewayRoute(env *cliutils.ENV, fqdn string) {
-	route := base.MkHTTPSRoute("sf-gateway", env.Ns, fqdn, "gateway", "/", 8080, map[string]string{})
+	route := cliutils.MkHTTPSRoute("sf-gateway", env.Ns, fqdn, "gateway", "/", 8080, map[string]string{})
 	exists, _ := cliutils.GetM(env, "gateway", &apiroutev1.Route{})
 	if !exists {
 		cliutils.CreateROrDie(env, &route)
