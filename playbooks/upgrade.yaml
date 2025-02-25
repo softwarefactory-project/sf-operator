@@ -5,17 +5,55 @@
     - setup-env
     - sanity-check
     - sfconfig-dev-prepare
-    - role: build-operator-assets
+  tasks:
+    - name: Get iplb ip address
+      ansible.builtin.command: /usr/local/bin/recognize-iplb-ip-address.sh
+      register: _iplb_ip
+
+    - name: Set fact with iplb ip address
+      ansible.builtin.set_fact:
+        iplb_ip_address: "{{ _iplb_ip.stdout }}"
+
+    - name: Set hostAliases - edit playbooks/files/ yaml files
+      ansible.builtin.include_role:
+        name: create-hostaliases-cr
+      loop:
+        - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/ext-ze.yaml"
+        - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/sf.yaml"
+        - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/sf-operator-cli.yaml"
+      loop_control:
+        loop_var: yaml_file
+
+    - name: Build operator assets
+      ansible.builtin.include_role:
+        name: build-operator-assets
       vars:
         build_bundle: false
-    - clean-installations-cli
-    - role: install-operator
+
+    - name: Clean installation cli
+      ansible.builtin.include_role:
+        name: clean-installations-cli
+
+    - name: Install operator
+      ansible.builtin.include_role:
+        name: install-operator
       vars:
         ci_bundle_img: quay.io/software-factory/sf-operator-bundle:latest
-    - apply-custom-resources
-    - role: build-operator-assets
+
+    - name: Apply custom resources
+      ansible.builtin.include_role:
+        name: apply-custom-resources
+
+    - name: Build operator assets
+      ansible.builtin.include_role:
+        name: build-operator-assets
       vars:
         build_bundle: true
         ci_bundle_img: localhost:5000/sf-operator-bundle:latest
-    - upgrade-operator
-    - run-tests
+
+    - name: Upgrade operator and run tests
+      ansible.builtin.include_role:
+        name: "{{ item }}"
+      loop:
+        - upgrade-operator
+        - run-tests

@@ -7,10 +7,19 @@
       ansible.builtin.include_role:
         name: "roles/setup-env"
 
+    - name: Get Ingress IP Address
+      ansible.builtin.command: /usr/local/bin/recognize-iplb-ip-address.sh
+      register: _lb_ip
+      changed_when: true
+
+    - name: Set the LB or Router IP address as default address for FQDN
+      when: _lb_ip.stdout | length > 0
+      ansible.builtin.set_fact:
+        microshift_frontend_address: "{{ _lb_ip.stdout }}"
+
     - name: Populate /etc/hosts
+      become: yes
       ansible.builtin.blockinfile:
         path: /etc/hosts
         block: |
-          {{ microshift_ip }} {{ microshift_fqdn }}
-          {{ microshift_ip }} {{ sf_fqdn }}
-      become: yes
+          {{ microshift_frontend_address | default(microshift_ip) }} {{ microshift_fqdn }} {{ sf_fqdn }} gerrit.{{ sf_fqdn }}

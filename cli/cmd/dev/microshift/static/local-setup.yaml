@@ -6,10 +6,3 @@
     - name: Install required packages
       ansible.builtin.include_role:
         name: "roles/setup-env"
-
-    - name: Populate /etc/hosts
-      ansible.builtin.blockinfile:
-        path: /etc/hosts
-        block: |
-          {{ microshift_ip }} {{ microshift_fqdn }} {{ sf_fqdn }}
-      become: yes

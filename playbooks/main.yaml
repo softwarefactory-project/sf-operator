@@ -6,6 +6,24 @@
     - sanity-check
     - sfconfig-dev-prepare
   tasks:
+    - name: Get iplb ip address
+      ansible.builtin.command: /usr/local/bin/recognize-iplb-ip-address.sh
+      register: _iplb_ip
+
+    - name: Set fact with iplb ip address
+      ansible.builtin.set_fact:
+        iplb_ip_address: "{{ _iplb_ip.stdout }}"
+
+    - name: Set hostAliases - edit playbooks/files/ yaml files
+      ansible.builtin.include_role:
+        name: create-hostaliases-cr
+      loop:
+        - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/ext-ze.yaml"
+        - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/sf.yaml"
+        - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/sf-operator-cli.yaml"
+      loop_control:
+        loop_var: yaml_file
+
     - name: Run OLM specific tasks
       when: mode == 'olm'
       block:
@@ -16,12 +34,24 @@
             - build-operator-assets
             - clean-installations-cli
             - install-operator
+
         - name: Apply the minimal SF CR and ensure reconciled happened
           ansible.builtin.include_role:
             name: update-custom-resource
           vars:
             cr_spec:
               fqdn: "{{ fqdn }}"
+              # NOTE: similar hostaliases are set in create-hostaliases-cr role.
+              hostaliases:
+                - ip: "{{ iplb_ip_address }}"
+                  hostnames:
+                    - "gerrit.{{ fqdn }}"
+                    - "{{ fqdn }}"
+                    - "dashboards.{{ fqdn }}"
+                - ip: "{{ ansible_default_ipv4.address }}"
+                  hostnames:
+                    - "{{ microshift_fqdn }}"
+
         - name: Apply the base CI SF CR and ensure reconciled happened
           ansible.builtin.include_role:
             name: apply-custom-resources
