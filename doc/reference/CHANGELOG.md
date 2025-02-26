@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- A new OPENSHIFT_USER environment variable is required to configure the operator to setup OpenShift attributes.
+
 ### Changed
 
 - storage: topolvm-provisioner is no longer the default storageClassName; if storageClassName parameters
@@ -13,6 +16,8 @@ All notable changes to this project will be documented in this file.
 ### Deprecated
 ### Removed
 ### Fixed
+
+- OpenShift detection logic required the permission to list crds, this has been changed to use a new OPENSHIFT_USER environment variable.
 
 ## [v0.0.53] - 2025-02-19
 
