@@ -64,10 +64,15 @@ func ensureGatewayRoute(env *cliutils.ENV, fqdn string) {
 }
 
 func createDemoEnv(env cliutils.ENV, restConfig *rest.Config, fqdn string, reposPath, sfOperatorRepoPath string, keepDemoTenantDefinition bool, hostAliases []sfv1.HostAlias) {
+	gerrit.EnsureGerrit(&env, fqdn, hostAliases)
 	if env.IsOpenShift {
 		ensureGatewayRoute(&env, fqdn)
+		// TODO: write the gateway and gerrit ip to the local /etc/hosts, like we do for k8s
+		// (this is presently done in the test suite)
+	} else {
+		cliutils.EnsureGatewayIngress(&env, fqdn)
+		cliutils.WriteIngressToEtcHosts(&env, fqdn)
 	}
-	gerrit.EnsureGerrit(&env, fqdn, hostAliases)
 	ctrl.Log.Info("Making sure Gerrit is up and ready...")
 	gerrit.EnsureGerritAccess(fqdn)
 	for _, repo := range []string{

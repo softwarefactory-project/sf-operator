@@ -20,16 +20,22 @@ package utils
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/yaml.v3"
 	"io/fs"
+	"math/big"
 	"os"
 	"os/exec"
 	"reflect"
 	"strings"
-
-	"go.uber.org/zap/zapcore"
-	"gopkg.in/yaml.v3"
+	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -61,6 +67,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
+	networkv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -606,4 +613,157 @@ func MkHTTPSRoute(
 			WildcardPolicy: "None",
 		},
 	}
+}
+
+func Ptr[T any](v T) *T {
+	return &v
+}
+
+func MkHTTPSIngress(ns string, name string, host string, service string, port int32, extraLabels map[string]string) networkv1.Ingress {
+	rule := networkv1.IngressRuleValue{
+		HTTP: &networkv1.HTTPIngressRuleValue{
+			Paths: []networkv1.HTTPIngressPath{
+				{
+					Path:     "/",
+					PathType: Ptr(networkv1.PathTypePrefix),
+					Backend: networkv1.IngressBackend{
+						Service: &networkv1.IngressServiceBackend{
+							Name: service,
+							Port: networkv1.ServiceBackendPort{
+								Number: port,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	return networkv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+			Labels:    extraLabels,
+		},
+		Spec: networkv1.IngressSpec{
+			IngressClassName: ptr.To[string]("nginx"),
+			TLS: []networkv1.IngressTLS{
+				networkv1.IngressTLS{
+					Hosts:      []string{host},
+					SecretName: "self-signed-cert",
+				},
+			},
+			Rules: []networkv1.IngressRule{
+				networkv1.IngressRule{
+					Host:             host,
+					IngressRuleValue: rule,
+				},
+			},
+		},
+	}
+}
+
+func EnsureSelfSignCert(env *ENV) {
+	name := "self-signed-cert"
+	var secret apiv1.Secret
+	if !GetMOrDie(env, name, &secret) {
+		// Generate key
+		var err error
+		var priv *rsa.PrivateKey
+		priv, err = rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			ctrl.Log.Error(err, "Failed to generate private key")
+			os.Exit(1)
+		}
+
+		// Generate cert
+		template := x509.Certificate{
+			SerialNumber: new(big.Int).Lsh(big.NewInt(1), 128),
+			Subject: pkix.Name{
+				Organization: []string{"Acme Co"},
+			},
+			BasicConstraintsValid: true,
+		}
+		derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+		if err != nil {
+			ctrl.Log.Error(err, "Unable to create public key")
+			os.Exit(1)
+		}
+
+		// Generate priv key
+		privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
+		if err != nil {
+			ctrl.Log.Error(err, "Unable to marshal private key")
+			os.Exit(1)
+		}
+
+		// Encode the certificate in a Secret
+		data := make(map[string][]byte)
+		data["tls.crt"] = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+		data["tls.key"] = pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privBytes})
+		secret = apiv1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: env.Ns},
+			Data:       data,
+			Type:       "kubernetes.io/tls",
+		}
+		CreateROrDie(env, &secret)
+	}
+}
+
+func ReadIngressIP(env *ENV, name string) string {
+	attempt := 1
+	maxTries := 10
+	for {
+		var ingress networkv1.Ingress
+		if GetMOrDie(env, name, &ingress) {
+			lb := ingress.Status.LoadBalancer.Ingress
+			if len(lb) > 0 {
+				return lb[0].IP
+			}
+		}
+		if attempt > maxTries {
+			ctrl.Log.Error(nil, "Couldn't find the %s IP", name)
+			os.Exit(1)
+		}
+		ctrl.Log.Info(fmt.Sprintf("Waiting for %s ... [attempt %d/%d]", name, attempt, maxTries))
+		attempt += 1
+		time.Sleep(5 * time.Second)
+	}
+}
+
+func EnsureGatewayIngress(env *ENV, fqdn string) {
+	EnsureSelfSignCert(env)
+	ingress := MkHTTPSIngress(env.Ns, "sf-ingress", fqdn, "gateway", 8080, map[string]string{})
+	if !GetMOrDie(env, ingress.Name, &ingress) {
+		CreateROrDie(env, &ingress)
+	}
+}
+
+func WriteIngressToEtcHosts(env *ENV, fqdn string) {
+	// Grab the ingress ip
+	var gerritIP = ReadIngressIP(env, "gerrit-ingress")
+	var gatewayIP = ReadIngressIP(env, "sf-ingress")
+
+	// Remove the previous dns from /etc/hosts
+	hosts, err := GetFileContent("/etc/hosts")
+	if err != nil {
+		ctrl.Log.Error(nil, "Couldn't read /etc/hosts")
+		os.Exit(1)
+	}
+	lines := strings.Split(string(hosts), "\n")
+	newLines := make([]string, 0)
+	for _, l := range lines {
+		if !strings.Contains(l, fqdn) {
+			newLines = append(newLines, l)
+		}
+	}
+
+	// Add the new dns to /etc/hosts
+	if gerritIP == gatewayIP {
+		newLines = append(newLines, gatewayIP+" gerrit."+fqdn+" "+fqdn)
+	} else {
+		newLines = append(newLines, gerritIP+" gerrit."+fqdn)
+		newLines = append(newLines, gatewayIP+" "+fqdn)
+	}
+	ctrl.Log.Info("Updating /etc/hosts")
+	WriteContentToFile("/etc/hosts", []byte(strings.Join(newLines, "\n")+"\n"), 0644)
 }

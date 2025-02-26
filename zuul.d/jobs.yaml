@@ -198,4 +198,5 @@
     parent: minikube-env
     attempts: 1
     run:
-      - playbooks/sf-operator-minikube.yaml
+      - playbooks/run-deploy.yaml
+      - playbooks/run-tests.yaml

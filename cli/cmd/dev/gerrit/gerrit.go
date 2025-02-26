@@ -382,11 +382,19 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie(hostAliases []v1.HostAlias) {
 	}
 }
 
-func (g *GerritCMDContext) ensureGerritIngressesOrDie() {
+func (g *GerritCMDContext) ensureGerritRouteOrDie() {
 	name := "gerrit"
 	route := cliutils.MkHTTPSRoute(name, g.env.Ns, name+"."+g.fqdn,
 		gerritHTTPDPortName, "/", gerritHTTPDPort, map[string]string{})
 	g.ensureRouteOrDie(route)
+}
+
+func (g *GerritCMDContext) ensureGerritIngressOrDie() {
+	cliutils.EnsureSelfSignCert(g.env)
+	ingress := cliutils.MkHTTPSIngress(g.env.Ns, "gerrit-ingress", "gerrit."+g.fqdn, gerritHTTPDPortName, gerritHTTPDPort, map[string]string{})
+	if !cliutils.GetMOrDie(g.env, ingress.Name, &ingress) {
+		cliutils.CreateROrDie(g.env, &ingress)
+	}
 }
 
 func ensureNamespaceOrDie(env *cliutils.ENV) {
@@ -456,13 +464,19 @@ func EnsureGerrit(env *cliutils.ENV, fqdn string, hostAliases []v1.HostAlias) {
 	g.ensureGerritPostInitJobOrDie()
 
 	// Ensure the Ingress route
-	g.ensureGerritIngressesOrDie()
+	if g.env.IsOpenShift {
+		g.ensureGerritRouteOrDie()
+	} else {
+		g.ensureGerritIngressOrDie()
+	}
 }
 
 func WipeGerrit(env *cliutils.ENV, rmData bool) {
 	ns := env.Ns
 	// Delete route
-	cliutils.DeleteOrDie(env, &apiroutev1.Route{ObjectMeta: metav1.ObjectMeta{Name: "gerrit", Namespace: ns}})
+	if env.IsOpenShift {
+		cliutils.DeleteOrDie(env, &apiroutev1.Route{ObjectMeta: metav1.ObjectMeta{Name: "gerrit", Namespace: ns}})
+	}
 	// Delete secrets
 	for _, secret := range []string{
 		"admin-ssh-key",
@@ -586,11 +600,7 @@ func EnsureGerritAccess(fqdn string) {
 		url := fmt.Sprintf("https://gerrit.%s/projects/", fqdn)
 		ctrl.Log.Info(fmt.Sprintf("Querying Gerrit projects endpoint... [attempt %d/%d]", attempt, maxTries))
 		resp, err := client.Get(url)
-		if err != nil {
-			ctrl.Log.Error(err, "Redirect failure or HTTP protocol error")
-			os.Exit(1)
-		}
-		if resp.StatusCode < 400 {
+		if err == nil && resp.StatusCode < 400 {
 			ctrl.Log.Info("Gerrit is up and available")
 			break
 		}
