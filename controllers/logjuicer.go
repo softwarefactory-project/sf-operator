@@ -40,7 +40,7 @@ func (r *SFController) EnsureLogJuicer() bool {
 	srv := base.MkService(ident, r.ns, ident, []int32{port}, ident, r.cr.Spec.ExtraLabels)
 	r.GetOrCreate(&srv)
 
-	dep := base.MkDeployment(ident, r.ns, "ghcr.io/logjuicer/logjuicer:latest", r.cr.Spec.ExtraLabels)
+	dep := base.MkDeployment(ident, r.ns, "ghcr.io/logjuicer/logjuicer:latest", r.cr.Spec.ExtraLabels, r.isOpenShift)
 	dep.Spec.Template.Spec.Containers[0].ImagePullPolicy = "Always"
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		// TODO: make this persistent

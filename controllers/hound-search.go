@@ -17,8 +17,8 @@ import (
 const houndSearchIdent = "hound-search"
 const houndSearchImage = "quay.io/software-factory/hound:0.5.1-3"
 
-func MkHoundSearchContainer(corporateCMExists bool) apiv1.Container {
-	container := base.MkContainer(houndSearchIdent, houndSearchImage)
+func MkHoundSearchContainer(corporateCMExists bool, openshiftUser bool) apiv1.Container {
+	container := base.MkContainer(houndSearchIdent, houndSearchImage, openshiftUser)
 	container.Command = []string{"/sf-tooling/hound-search-init.sh"}
 	container.Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(6080, houndSearchIdent),
@@ -77,7 +77,7 @@ func (r *SFController) DeployHoundSearch() bool {
 	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
 
 	pvc := base.MkPVC("hound-search-data", r.ns, r.getStorageConfOrDefault(r.cr.Spec.Codesearch.Storage), apiv1.ReadWriteOnce)
-	container := MkHoundSearchContainer(corporateCMExists)
+	container := MkHoundSearchContainer(corporateCMExists, r.isOpenShift)
 	container.Env = []apiv1.EnvVar{
 		base.MkEnvVar("CONFIG_REPO_BASE_URL", r.cr.Spec.ConfigRepositoryLocation.BaseURL),
 		base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigRepositoryLocation.Name),

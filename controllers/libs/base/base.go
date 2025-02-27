@@ -28,8 +28,8 @@ var DefaultPodSecurityContext = apiv1.PodSecurityContext{
 }
 
 // MkSecurityContext produces a SecurityContext
-func MkSecurityContext(privileged bool) *apiv1.SecurityContext {
-	return &apiv1.SecurityContext{
+func MkSecurityContext(privileged bool, openshiftUser bool) *apiv1.SecurityContext {
+	scc := &apiv1.SecurityContext{
 		Privileged:               ptr.To(privileged),
 		AllowPrivilegeEscalation: ptr.To(privileged),
 		Capabilities: &apiv1.Capabilities{
@@ -41,6 +41,11 @@ func MkSecurityContext(privileged bool) *apiv1.SecurityContext {
 			Type: apiv1.SeccompProfileTypeRuntimeDefault,
 		},
 	}
+	if !openshiftUser {
+		helper := int64(1001)
+		scc.RunAsUser = &helper
+	}
+	return scc
 }
 
 // SetContainerLimits sets the Resource limit according to
@@ -62,12 +67,12 @@ func SetContainerLimits(container *apiv1.Container, memRequest resource.Quantity
 }
 
 // MkContainer produces a Container with the default settings
-func MkContainer(name string, image string) apiv1.Container {
+func MkContainer(name string, image string, openshiftUser bool) apiv1.Container {
 	var container = apiv1.Container{
 		Name:            name,
 		Image:           image,
 		ImagePullPolicy: "IfNotPresent",
-		SecurityContext: MkSecurityContext(false),
+		SecurityContext: MkSecurityContext(false, openshiftUser),
 	}
 	setContainerLimitsDefaultProfile(&container)
 	return container
@@ -373,8 +378,8 @@ func MkStatefulset(
 }
 
 // MkDeployment produces a Deployment.
-func MkDeployment(name string, ns string, image string, extraLabels map[string]string) appsv1.Deployment {
-	container := MkContainer(name, image)
+func MkDeployment(name string, ns string, image string, extraLabels map[string]string, openshiftUser bool) appsv1.Deployment {
+	container := MkContainer(name, image, openshiftUser)
 	var labels = map[string]string{
 		"app": "sf",
 		"run": name,

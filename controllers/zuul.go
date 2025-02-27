@@ -84,7 +84,7 @@ var (
 	}
 )
 
-func enableZuulLocalSource(template *apiv1.PodTemplateSpec, zuulSourceHostPath string, withInitContainer bool) {
+func enableZuulLocalSource(template *apiv1.PodTemplateSpec, zuulSourceHostPath string, withInitContainer bool, openshiftUser bool) {
 	template.Spec.Volumes = append(template.Spec.Volumes, apiv1.Volume{
 		Name: "host-mount",
 		VolumeSource: apiv1.VolumeSource{
@@ -93,7 +93,7 @@ func enableZuulLocalSource(template *apiv1.PodTemplateSpec, zuulSourceHostPath s
 			},
 		},
 	})
-	template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(true)
+	template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(true, openshiftUser)
 	template.Spec.SecurityContext.RunAsNonRoot = ptr.To(false)
 	template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts,
 		apiv1.VolumeMount{
@@ -101,7 +101,7 @@ func enableZuulLocalSource(template *apiv1.PodTemplateSpec, zuulSourceHostPath s
 			MountPath: "/usr/local/lib/python3.11/site-packages/zuul",
 		})
 	if withInitContainer {
-		template.Spec.InitContainers[0].SecurityContext = base.MkSecurityContext(true)
+		template.Spec.InitContainers[0].SecurityContext = base.MkSecurityContext(true, openshiftUser)
 	}
 	template.ObjectMeta.Annotations["zuul-local-source"] = "true"
 }
@@ -247,8 +247,9 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 				"git config --global --add safe.directory '*'" + " && " +
 				// Start the service
 				"/usr/local/bin/" + service + " -f -d"},
-		Env:          envs,
-		VolumeMounts: volumeMounts,
+		Env:             envs,
+		VolumeMounts:    volumeMounts,
+		SecurityContext: base.MkSecurityContext(false, r.isOpenShift),
 	}
 
 	base.SetContainerLimitsHighProfile(&container)
@@ -478,7 +479,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-scheduler", r.cr.Spec.FluentBitLogForwarding, zsFluentBitLabels, annotations)
 	zuulContainer.Env = append(zuulContainer.Env, extraLoggingEnvVars...)
 
-	statsdSidecar := monitoring.MkStatsdExporterSideCarContainer("zuul", "statsd-config", relayAddress)
+	statsdSidecar := monitoring.MkStatsdExporterSideCarContainer("zuul", "statsd-config", relayAddress, r.isOpenShift)
 	nodeExporterSidecar := monitoring.MkNodeExporterSideCarContainer(
 		"zuul-scheduler",
 		[]apiv1.VolumeMount{
@@ -486,11 +487,11 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 				Name:      "zuul-scheduler",
 				MountPath: "/var/lib/zuul",
 			},
-		})
+		}, r.isOpenShift)
 
 	zuulContainers := append([]apiv1.Container{}, zuulContainer, statsdSidecar, nodeExporterSidecar)
 
-	initContainer := base.MkContainer("init-scheduler-config", getZuulImage("zuul-scheduler"))
+	initContainer := base.MkContainer("init-scheduler-config", getZuulImage("zuul-scheduler"), r.isOpenShift)
 	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
 	initContainer.Env = append(r.getTenantsEnvs(),
 		base.MkEnvVar("HOME", "/var/lib/zuul"), base.MkEnvVar("INIT_CONTAINER", "1"))
@@ -526,11 +527,14 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 
 	zsVolumes := mkZuulVolumes("zuul-scheduler", r, corporateCMExists)
 
-	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
+	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	zs.Spec.Template.Spec.Containers = zuulContainers
 	zs.Spec.Template.Spec.Volumes = zsVolumes
+	if !r.isOpenShift {
+		zs.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To[int64](1001)
+	}
 	zs.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
 	zs.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/health/live", zuulPrometheusPort)
 	zs.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/health/ready", zuulPrometheusPort)
@@ -542,7 +546,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 
 	// Mount a local directory in place of the Zuul source from the container image
 	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
-		enableZuulLocalSource(&zs.Spec.Template, path, true)
+		enableZuulLocalSource(&zs.Spec.Template, path, true, r.isOpenShift)
 	}
 
 	current, changed := r.ensureStatefulset(zs)
@@ -579,7 +583,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	}
 	// TODO Add the zk-port-forward-kube-config secret resource version in the annotation if enabled
 
-	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
+	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	zuulContainer := r.mkZuulContainer("zuul-executor", corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Executor.Limits, &zuulContainer)
 	ze.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
@@ -599,8 +603,12 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	}
 	// NOTE(dpawlik): Zuul Executor needs to privileged pod, due error in the console log:
 	// "bwrap: Can't bind mount /oldroot/etc/resolv.conf on /newroot/etc/resolv.conf: Permission denied""
-	ze.Spec.Template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(true)
-	ze.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To[int64](1000)
+	ze.Spec.Template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(true, r.isOpenShift)
+	zeuid := int64(1000)
+	if !r.isOpenShift {
+		zeuid = int64(65534)
+	}
+	ze.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To[int64](zeuid)
 
 	nodeExporterSidecar := monitoring.MkNodeExporterSideCarContainer(
 		"zuul-executor",
@@ -609,18 +617,18 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 				Name:      "zuul-executor",
 				MountPath: "/var/lib/zuul",
 			},
-		})
+		}, r.isOpenShift)
 	ze.Spec.Template.Spec.Containers = append(ze.Spec.Template.Spec.Containers, nodeExporterSidecar)
 	// FIXME: OpenShift doesn't seem very happy when containers in the same pod don't share
 	// the same security context; or maybe it is because a volume is shared between the two?
 	// Anyhow, the simplest fix is to elevate privileges on the node exporter sidecar.
-	ze.Spec.Template.Spec.Containers[1].SecurityContext = base.MkSecurityContext(true)
+	ze.Spec.Template.Spec.Containers[1].SecurityContext = base.MkSecurityContext(true, r.isOpenShift)
 	ze.Spec.Template.Spec.Containers[1].SecurityContext.RunAsUser = ptr.To[int64](1000)
 	ze.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	// Mount a local directory in place of the Zuul source from the container image
 	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
-		enableZuulLocalSource(&ze.Spec.Template, path, false)
+		enableZuulLocalSource(&ze.Spec.Template, path, false, r.isOpenShift)
 	}
 
 	current, changed := r.ensureStatefulset(ze)
@@ -656,7 +664,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
-	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
+	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	zuulContainer := r.mkZuulContainer(service, corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Merger.Limits, &zuulContainer)
 	zm.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
@@ -673,11 +681,14 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 				Name:      service,
 				MountPath: "/var/lib/zuul",
 			},
-		})
+		}, r.isOpenShift)
 	zm.Spec.Template.Spec.Containers = append(zm.Spec.Template.Spec.Containers, nodeExporterSidecar)
 
 	zm.Spec.Template.ObjectMeta.Annotations = annotations
 
+	if !r.isOpenShift {
+		zm.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To[int64](1001)
+	}
 	zm.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
 	zm.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkReadinessHTTPProbe("/health/live", zuulPrometheusPort)
 	zm.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
@@ -687,7 +698,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 
 	// Mount a local directory in place of the Zuul source from the container image
 	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
-		enableZuulLocalSource(&zm.Spec.Template, path, false)
+		enableZuulLocalSource(&zm.Spec.Template, path, false, r.isOpenShift)
 	}
 
 	current, changed := r.ensureStatefulset(zm)
@@ -722,7 +733,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
-	zw := base.MkDeployment("zuul-web", r.ns, "", r.cr.Spec.ExtraLabels)
+	zw := base.MkDeployment("zuul-web", r.ns, "", r.cr.Spec.ExtraLabels, r.isOpenShift)
 	zuulContainer := r.mkZuulContainer("zuul-web", corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Web.Limits, &zuulContainer)
 	zw.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
@@ -734,6 +745,9 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
 
+	if !r.isOpenShift {
+		zw.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To[int64](1001)
+	}
 	zw.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/api/info", zuulWEBPort)
 	zw.Spec.Template.Spec.Containers[0].StartupProbe = base.MkStartupHTTPProbe("/api/info", zuulWEBPort)
@@ -745,7 +759,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 
 	// Mount a local directory in place of the Zuul source from the container image
 	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
-		enableZuulLocalSource(&zw.Spec.Template, path, false)
+		enableZuulLocalSource(&zw.Spec.Template, path, false, r.isOpenShift)
 	}
 
 	current := appsv1.Deployment{}

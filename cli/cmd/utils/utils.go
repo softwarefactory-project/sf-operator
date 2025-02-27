@@ -238,9 +238,10 @@ func GetCRUDSubcommands() (*cobra.Command, *cobra.Command, *cobra.Command) {
 
 // Moving code from cli/sfconfig/cmd/utils/utils.go as we need it to avoid dead code
 type ENV struct {
-	Cli client.Client
-	Ns  string
-	Ctx context.Context
+	Cli         client.Client
+	Ns          string
+	Ctx         context.Context
+	IsOpenShift bool
 }
 
 func CreateKubernetesClient(contextName string) (client.Client, error) {

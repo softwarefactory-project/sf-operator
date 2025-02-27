@@ -8,6 +8,7 @@ package controllers
 import (
 	_ "embed"
 	"encoding/base64"
+	"k8s.io/utils/ptr"
 	"strconv"
 
 	"golang.org/x/exp/maps"
@@ -158,10 +159,18 @@ func (r *SFController) DeployLogserver() bool {
 
 	// Create the statefulset
 	sts := r.mkStatefulSet(logserverIdent, base.HTTPDImage(),
-		BaseGetStorageConfOrDefault(r.cr.Spec.Logserver.Storage, r.cr.Spec.StorageDefault), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
+		BaseGetStorageConfOrDefault(r.cr.Spec.Logserver.Storage, r.cr.Spec.StorageDefault), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 
 	// Setup the main container
 	sts.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
+
+	defaultMode := &utils.Readmod
+	if !r.isOpenShift {
+		// That's odd, with vanilla kubernetes, when the default mode is Read,
+		// then the logserver-sshd process fails with:
+		//  cat: /var/ssh-keys/priv: permission denied
+		defaultMode = nil
+	}
 
 	sts.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		{
@@ -179,8 +188,9 @@ func (r *SFController) DeployLogserver() bool {
 			Name: logserverIdent + "-keys",
 			VolumeSource: apiv1.VolumeSource{
 				Secret: &apiv1.SecretVolumeSource{
-					SecretName:  logserverIdent + "-keys",
-					DefaultMode: &utils.Readmod,
+					SecretName: logserverIdent + "-keys",
+					// TODO: comment if this cause an issue in k8s
+					DefaultMode: defaultMode,
 				},
 			},
 		},
@@ -198,8 +208,12 @@ func (r *SFController) DeployLogserver() bool {
 	}
 
 	// Setup the sidecar container for sshd
-	sshdContainer := base.MkContainer(sshdPortName, base.SSHDImage())
+	sshdContainer := base.MkContainer(sshdPortName, base.SSHDImage(), r.isOpenShift)
 	sshdContainer.Command = []string{"bash", "/conf/run.sh"}
+	if !r.isOpenShift {
+		sshdContainer.SecurityContext.RunAsUser = ptr.To[int64](1000)
+		sshdContainer.SecurityContext.RunAsGroup = ptr.To[int64](1000)
+	}
 	sshdContainer.LivenessProbe = base.MkReadinessTCPProbe(sshdPort)
 	sshdContainer.StartupProbe = base.MkReadinessTCPProbe(sshdPort)
 
@@ -243,7 +257,7 @@ func (r *SFController) DeployLogserver() bool {
 		loopDelay = 3600
 	}
 
-	purgelogsContainer := base.MkContainer(purgelogIdent, base.PurgelogsImage())
+	purgelogsContainer := base.MkContainer(purgelogIdent, base.PurgelogsImage(), r.isOpenShift)
 	purgelogsContainer.Command = []string{
 		"/usr/local/bin/purgelogs",
 		"--retention-days",
@@ -269,7 +283,7 @@ func (r *SFController) DeployLogserver() bool {
 		},
 	}
 
-	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(logserverIdent, volumeMountsStatsExporter)
+	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(logserverIdent, volumeMountsStatsExporter, r.isOpenShift)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
 
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions

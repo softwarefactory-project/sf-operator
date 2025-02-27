@@ -286,7 +286,7 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Create the statefulset
-	sts := r.mkStatefulSet(GitServerIdent, base.GitServerImage(), r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
+	sts := r.mkStatefulSet(GitServerIdent, base.GitServerImage(), r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 	GSVolumeMountsRO := []apiv1.VolumeMount{
 		{
@@ -303,7 +303,7 @@ func (r *SFController) DeployGitServer() bool {
 	base.SetContainerLimitsLowProfile(&sts.Spec.Template.Spec.Containers[0])
 
 	// Add a second container to serve the git-server with RW access (should not be exposed)
-	containerRW := base.MkContainer(GitServerIdentRW, base.GitServerImage())
+	containerRW := base.MkContainer(GitServerIdentRW, base.GitServerImage(), r.isOpenShift)
 	containerRW.Command = []string{"git", "daemon", "--base-path=/git",
 		"--enable=receive-pack", "--export-all", "--port=" + strconv.Itoa(gsGitPortRW)}
 	containerRW.VolumeMounts = []apiv1.VolumeMount{
@@ -328,7 +328,7 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Define initContainer
-	initContainer := base.MkContainer("init-config", base.GitServerImage())
+	initContainer := base.MkContainer("init-config", base.GitServerImage(), r.isOpenShift)
 	initContainer.Command = []string{"/bin/bash", "/entry/pre-init.sh"}
 	initContainer.Env = []apiv1.EnvVar{
 		base.MkEnvVar("FQDN", r.cr.Spec.FQDN),

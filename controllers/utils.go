@@ -299,13 +299,13 @@ func (r *SFUtilContext) EnsureLocalCA() {
 //----------------------------------------------------------------------------
 
 // mkStatefulSet Create a default statefulset.
-func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, accessMode apiv1.PersistentVolumeAccessMode, extraLabels map[string]string, nameSuffix ...string) appsv1.StatefulSet {
+func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, accessMode apiv1.PersistentVolumeAccessMode, extraLabels map[string]string, openshiftUser bool, nameSuffix ...string) appsv1.StatefulSet {
 	serviceName := name
 	if nameSuffix != nil {
 		serviceName = name + "-" + nameSuffix[0]
 	}
 
-	container := base.MkContainer(name, image)
+	container := base.MkContainer(name, image, openshiftUser)
 	pvc := base.MkPVC(name, r.ns, storageConfig, accessMode)
 	return base.MkStatefulset(name, r.ns, 1, serviceName, container, pvc, extraLabels)
 }
@@ -313,8 +313,8 @@ func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig b
 // mkHeadlessSatefulSet Create a default headless statefulset.
 func (r *SFUtilContext) mkHeadlessSatefulSet(
 	name string, image string, storageConfig base.StorageConfig,
-	accessMode apiv1.PersistentVolumeAccessMode, extraLabels map[string]string) appsv1.StatefulSet {
-	return r.mkStatefulSet(name, image, storageConfig, accessMode, extraLabels, "headless")
+	accessMode apiv1.PersistentVolumeAccessMode, extraLabels map[string]string, openshiftUser bool) appsv1.StatefulSet {
+	return r.mkStatefulSet(name, image, storageConfig, accessMode, extraLabels, openshiftUser, "headless")
 }
 
 // IsStatefulSetReady checks if StatefulSet is ready

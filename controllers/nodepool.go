@@ -125,7 +125,7 @@ func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string
 		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
 	}
 	builderFluentBitLabels := append(nodepoolFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: BuilderIdent})
-	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts, fluentbitDebug)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts, fluentbitDebug, r.isOpenShift)
 	annotations["dib-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["dib-fluent-bit-parser"] = utils.Checksum([]byte(fbForwarderConfig["parsers.conf"]))
 	annotations["dib-fluent-bit-image"] = sidecar.Image
@@ -532,7 +532,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		annotations["config-repo-info-hash"] = r.cr.Spec.ConfigRepositoryLocation.BaseURL + r.cr.Spec.ConfigRepositoryLocation.Name
 	}
 
-	initContainer := base.MkContainer("nodepool-builder-init", base.NodepoolBuilderImage())
+	initContainer := base.MkContainer("nodepool-builder-init", base.NodepoolBuilderImage(), r.isOpenShift)
 	base.SetContainerLimitsLowProfile(&initContainer)
 
 	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
@@ -565,7 +565,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	nb := r.mkStatefulSet(
 		BuilderIdent, base.NodepoolBuilderImage(), r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage),
-		apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
+		apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 
 	nb.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nb.Spec.Template.Spec.Volumes = volumes
@@ -592,14 +592,14 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	// Append statsd exporter sidecar
 	nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers,
-		monitoring.MkStatsdExporterSideCarContainer(shortIdent, "statsd-config", relayAddress),
+		monitoring.MkStatsdExporterSideCarContainer(shortIdent, "statsd-config", relayAddress, r.isOpenShift),
 	)
 
-	diskUsageExporter := monitoring.MkNodeExporterSideCarContainer(BuilderIdent, nodeExporterVolumeMount)
+	diskUsageExporter := monitoring.MkNodeExporterSideCarContainer(BuilderIdent, nodeExporterVolumeMount, r.isOpenShift)
 	nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers, diskUsageExporter)
 
 	// Append image build logs HTTPD sidecar
-	buildLogsContainer := base.MkContainer("build-logs-httpd", base.HTTPDImage())
+	buildLogsContainer := base.MkContainer("build-logs-httpd", base.HTTPDImage(), r.isOpenShift)
 	buildLogsContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      BuilderIdent,
@@ -727,7 +727,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		annotations["config-repo-info-hash"] = r.cr.Spec.ConfigRepositoryLocation.BaseURL + r.cr.Spec.ConfigRepositoryLocation.Name
 	}
 
-	initContainer := base.MkContainer("nodepool-launcher-init", base.NodepoolLauncherImage())
+	initContainer := base.MkContainer("nodepool-launcher-init", base.NodepoolLauncherImage(), r.isOpenShift)
 	base.SetContainerLimitsLowProfile(&initContainer)
 
 	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
@@ -759,9 +759,9 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		initContainer.VolumeMounts = AppendCorporateCACertsVolumeMount(initContainer.VolumeMounts, "nodepool-launcher-corporate-ca-certs")
 	}
 
-	nl := base.MkDeployment("nodepool-launcher", r.ns, "", r.cr.Spec.ExtraLabels)
+	nl := base.MkDeployment("nodepool-launcher", r.ns, "", r.cr.Spec.ExtraLabels, r.isOpenShift)
 
-	container := base.MkContainer("launcher", base.NodepoolLauncherImage())
+	container := base.MkContainer("launcher", base.NodepoolLauncherImage(), r.isOpenShift)
 	container.VolumeMounts = volumeMounts
 	container.Command = []string{
 		"/usr/local/bin/dumb-init", "--", "bash", "-c",
@@ -780,7 +780,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	nl.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nl.Spec.Template.Spec.Containers = []apiv1.Container{
 		container,
-		monitoring.MkStatsdExporterSideCarContainer(shortIdent, "statsd-config", relayAddress)}
+		monitoring.MkStatsdExporterSideCarContainer(shortIdent, "statsd-config", relayAddress, r.isOpenShift)}
 	nl.Spec.Template.ObjectMeta.Annotations = annotations
 	nl.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/ready", launcherPort)
 	nl.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/ready", launcherPort)
@@ -792,7 +792,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	if hasProviderSecret(initialVolumeMounts) {
 		// Append zuul-capacity sidecar
 		nl.Spec.Template.Spec.Containers = append(nl.Spec.Template.Spec.Containers,
-			MkZuulCapacityContainer(),
+			MkZuulCapacityContainer(r.isOpenShift),
 		)
 
 		// Setup zuul-capacity service

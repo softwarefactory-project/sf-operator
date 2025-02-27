@@ -253,8 +253,8 @@ func configureGerritContainer(sts *appsv1.StatefulSet, volumeMounts []apiv1.Volu
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(hostAliases)
 }
 
-func addManageSFContainer(sts *appsv1.StatefulSet, fqdn string) {
-	container := base.MkContainer(managesfResourcesIdent, base.BusyboxImage())
+func addManageSFContainer(sts *appsv1.StatefulSet, fqdn string, openshiftUser bool) {
+	container := base.MkContainer(managesfResourcesIdent, base.BusyboxImage(), openshiftUser)
 	container.Command = []string{"sh", "-c", managesfEntrypoint}
 	container.Env = []apiv1.EnvVar{
 		base.MkEnvVar("HOME", "/tmp"),
@@ -281,7 +281,7 @@ func addManageSFVolumes(sts *appsv1.StatefulSet) {
 	)
 }
 
-func createPostInitContainer(jobName string, fqdn string) apiv1.Container {
+func createPostInitContainer(jobName string, fqdn string, openshiftUser bool) apiv1.Container {
 	env := []apiv1.EnvVar{
 		base.MkEnvVar("HOME", "/tmp"),
 		base.MkEnvVar("FQDN", fqdn),
@@ -291,7 +291,7 @@ func createPostInitContainer(jobName string, fqdn string) apiv1.Container {
 		base.MkSecretEnvVar("ZUUL_HTTP_PASSWORD", "zuul-gerrit-api-key", "zuul-gerrit-api-key"),
 	}
 
-	container := base.MkContainer(fmt.Sprintf("%s-container", jobName), base.BusyboxImage())
+	container := base.MkContainer(fmt.Sprintf("%s-container", jobName), base.BusyboxImage(), openshiftUser)
 	container.Command = []string{"sh", "-c", postInitScript}
 	container.Env = env
 	container.VolumeMounts = []apiv1.VolumeMount{
@@ -307,8 +307,8 @@ func createPostInitContainer(jobName string, fqdn string) apiv1.Container {
 	return container
 }
 
-func createInitContainers(volumeMounts []apiv1.VolumeMount, fqdn string) []apiv1.Container {
-	container := base.MkContainer("gerrit-init", gerritImage)
+func createInitContainers(volumeMounts []apiv1.VolumeMount, fqdn string, openshiftUser bool) []apiv1.Container {
+	container := base.MkContainer("gerrit-init", gerritImage, openshiftUser)
 	container.Command = []string{"sh", "-c", gerritInitScript}
 	container.Env = []apiv1.EnvVar{
 		base.MkSecretEnvVar("GERRIT_ADMIN_SSH_PUB", "admin-ssh-key", "pub"),
@@ -332,7 +332,7 @@ func (g *GerritCMDContext) ensureGerritPostInitJobOrDie() {
 	jobName := "post-init"
 	job := base.MkJob(
 		jobName, g.env.Ns,
-		createPostInitContainer(jobName, g.fqdn),
+		createPostInitContainer(jobName, g.fqdn, g.env.IsOpenShift),
 		map[string]string{},
 	)
 	job.Spec.Template.Spec.Volumes = ManageSFVolumes
@@ -354,7 +354,7 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie(hostAliases []v1.HostAlias) {
 	name := gerritIdent
 	b, _ := g.getStatefulSetOrDie(name)
 	if !b {
-		container := base.MkContainer(name, gerritImage)
+		container := base.MkContainer(name, gerritImage, g.env.IsOpenShift)
 		base.SetContainerLimits(
 			&container,
 			resource.MustParse("512Mi"),
@@ -373,9 +373,9 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie(hostAliases []v1.HostAlias) {
 			},
 		}
 		configureGerritContainer(&sts, volumeMounts, g.fqdn, hostAliases)
-		sts.Spec.Template.Spec.InitContainers = createInitContainers(volumeMounts, g.fqdn)
+		sts.Spec.Template.Spec.InitContainers = createInitContainers(volumeMounts, g.fqdn, g.env.IsOpenShift)
 
-		addManageSFContainer(&sts, g.fqdn)
+		addManageSFContainer(&sts, g.fqdn, g.env.IsOpenShift)
 		addManageSFVolumes(&sts)
 
 		cliutils.CreateROrDie(g.env, &sts)

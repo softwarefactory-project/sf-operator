@@ -64,7 +64,7 @@ func createZKLogForwarderSidecar(r *SFController, annotations map[string]string)
 	if r.cr.Spec.FluentBitLogForwarding.Debug != nil {
 		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
 	}
-	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("zookeeper", []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("zookeeper", []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug, r.isOpenShift)
 	annotations["zk-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["zk-fluent-bit-image"] = sidecar.Image
 	return []apiv1.Volume{volume, storageEmptyDir}, sidecar
@@ -143,7 +143,7 @@ func (r *SFController) DeployZookeeper() bool {
 		ExtraAnnotations: storageConfig.ExtraAnnotations,
 	}
 	zk := r.mkHeadlessSatefulSet(
-		ZookeeperIdent, base.ZookeeperImage(), storageConfig, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels)
+		ZookeeperIdent, base.ZookeeperImage(), storageConfig, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	// We overwrite the VolumeClaimTemplates set by MkHeadlessStatefulSet to keep the previous volume name
 	// Previously the default PVC created by MkHeadlessStatefulSet was not used by Zookeeper (not mounted). So to avoid having two Volumes
 	// and to ensure data persistence during the upgrade we keep the previous naming 'ZookeeperIdent + "-data"' and we discard the one
@@ -174,7 +174,7 @@ func (r *SFController) DeployZookeeper() bool {
 		zk.Spec.Template.Spec.Volumes = append(zk.Spec.Template.Spec.Volumes, fbVolumes...)
 	}
 
-	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(ZookeeperIdent, volumeMountsStatsExporter)
+	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(ZookeeperIdent, volumeMountsStatsExporter, r.isOpenShift)
 	zk.Spec.Template.Spec.Containers = append(zk.Spec.Template.Spec.Containers, statsExporter)
 
 	zk.Spec.Template.ObjectMeta.Annotations = annotations

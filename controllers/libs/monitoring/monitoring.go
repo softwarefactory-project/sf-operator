@@ -50,8 +50,8 @@ func getNodeExporterArgs(volumeMounts []apiv1.VolumeMount) []string {
 	}
 }
 
-func MkNodeExporterSideCarContainer(serviceName string, volumeMounts []apiv1.VolumeMount) apiv1.Container {
-	container := base.MkContainer(serviceName+NodeExporterNameSuffix, base.NodeExporterImage())
+func MkNodeExporterSideCarContainer(serviceName string, volumeMounts []apiv1.VolumeMount, openshiftUser bool) apiv1.Container {
+	container := base.MkContainer(serviceName+NodeExporterNameSuffix, base.NodeExporterImage(), openshiftUser)
 	container.Args = getNodeExporterArgs(volumeMounts)
 	container.Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(NodeExporterPort, GetTruncatedPortName(serviceName, NodeExporterPortNameSuffix)),
@@ -157,7 +157,7 @@ func GetStatsdExporterPort(serviceName string) string {
 	return GetTruncatedPortName(serviceName, statsdExporterPortNameSuffix+"e")
 }
 
-func MkStatsdExporterSideCarContainer(serviceName string, configVolumeName string, relayAddress *string) apiv1.Container {
+func MkStatsdExporterSideCarContainer(serviceName string, configVolumeName string, relayAddress *string, openshiftUser bool) apiv1.Container {
 	var seListenPortName = GetTruncatedPortName(serviceName, statsdExporterPortNameSuffix+"l")
 	var seExposePortName = GetStatsdExporterPort(serviceName)
 	var configFile = StatsdExporterConfigFile
@@ -183,7 +183,7 @@ func MkStatsdExporterSideCarContainer(serviceName string, configVolumeName strin
 			ContainerPort: statsdExporterPortExpose,
 		},
 	}
-	sidecar := base.MkContainer(serviceName+statsdExporterNameSuffix, base.StatsdExporterImage())
+	sidecar := base.MkContainer(serviceName+statsdExporterNameSuffix, base.StatsdExporterImage(), openshiftUser)
 	sidecar.Args = args
 	sidecar.VolumeMounts = volumeMounts
 	sidecar.Ports = ports
