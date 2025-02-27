@@ -28,6 +28,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -501,6 +502,15 @@ func (r *SFUtilContext) reconcileExpandPVCs(serviceName string, newStorageSpec s
 	return true
 }
 
+func (r *SFUtilContext) canStorageResize(storageName *string) bool {
+	var sc storagev1.StorageClass
+	if storageName == nil || *storageName == "" || !r.GetM(*storageName, &sc) {
+		// This is odd, so let's assume that unknown storage class support expansion
+		return true
+	}
+	return sc.AllowVolumeExpansion != nil && *sc.AllowVolumeExpansion
+}
+
 // reconcileExpandPVC  resizes the pvc with the spec
 func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.StorageSpec) bool {
 	newQTY := newStorageSpec.Size
@@ -542,6 +552,14 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 		utils.LogD("Volume " + pvcName + " at expected size, nothing to do")
 		return true
 	case 1:
+		if !r.canStorageResize(foundPVC.Spec.StorageClassName) {
+			scn := ""
+			if foundPVC.Spec.StorageClassName != nil {
+				scn = *(foundPVC.Spec.StorageClassName)
+			}
+			utils.LogI("Volume expansion is not supported for " + scn)
+			return true
+		}
 		utils.LogI("Volume expansion required for  " + pvcName +
 			". current size: " + currentQTY.String() + " -> new size: " + newQTY.String())
 		newResources := apiv1.VolumeResourceRequirements{

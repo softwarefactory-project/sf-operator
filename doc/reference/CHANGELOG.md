@@ -12,6 +12,9 @@ Updated components will trigger pod rerolls at upgrade.
 
 ### Added
 ### Changed
+
+- Persistent Volume automatic expansion is no longer performed when the StorageClass does not support it.
+
 ### Deprecated
 ### Removed
 

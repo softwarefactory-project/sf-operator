@@ -19,6 +19,7 @@ rules:
   - serviceaccounts
   - services
   - statefulsets
+  - storageclasses
   verbs:
   - create
   - delete
