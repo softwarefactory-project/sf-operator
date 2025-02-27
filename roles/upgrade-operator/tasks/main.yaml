@@ -21,7 +21,7 @@
     - name: Build the operator's images
       community.general.make:
         target: "{{ item }}"
-        chdir: "{{ src_dir }}"
+        chdir: "{{ zuul.project.src_dir }}"
         params:
           VERSION: "{{ version }}"
           IMG: "{{ imagename }}"
@@ -55,7 +55,7 @@
     --use-http
     --timeout 5m0s
   args:
-    chdir: "{{ src_dir }}"
+    chdir: "{{ zuul.project.src_dir }}"
 
 - name: Ensure operator expected version ready
   ansible.builtin.include_role:

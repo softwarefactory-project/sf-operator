@@ -25,4 +25,4 @@
   delay: 10
   until: run_bundle is success
   args:
-    chdir: "{{ src_dir }}"
+    chdir: "{{ zuul.project.src_dir }}"
