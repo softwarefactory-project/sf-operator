@@ -1,0 +1,14 @@
+---
+# NOTE: We need to ensure if the deployment is done on multi-nodes.
+- name: Ensure Ansible is present
+  become: true
+  ansible.builtin.package:
+    name: ansible-core
+    state: present
+
+- name: Install ansible collection
+  ansible.builtin.command: ansible-galaxy collection install community.general community.crypto ansible.posix
+
+- name: Install required packages
+  ansible.builtin.include_role:
+    name: "roles/setup-env"

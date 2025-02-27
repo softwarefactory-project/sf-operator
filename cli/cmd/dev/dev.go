@@ -30,7 +30,6 @@ import (
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/cli/cmd/dev/gerrit"
-	ms "github.com/softwarefactory-project/sf-operator/cli/cmd/dev/microshift"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
@@ -45,13 +44,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var devCreateAllowedArgs = []string{"gerrit", "microshift", "standalone-sf", "demo-env"}
+var devCreateAllowedArgs = []string{"gerrit", "standalone-sf", "demo-env"}
 var devWipeAllowedArgs = []string{"gerrit", "sf"}
 var devRunTestsAllowedArgs = []string{"olm", "standalone", "upgrade"}
-
-var microshiftUser = "cloud-user"
-var defaultDiskSpace = "20G"
-var defaultHost = "microshift.dev"
 
 var errMissingArg = errors.New("missing argument")
 
@@ -80,78 +75,6 @@ func createDemoEnv(env cliutils.ENV, restConfig *rest.Config, fqdn string, repos
 	SetupDemoConfigRepo(reposPath, "gerrit", "gerrit", !keepDemoTenantDefinition)
 	ctrl.Log.Info("Applying CRDs (did you run \"make manifests\" first?)...")
 	ApplyCRDs(restConfig, sfOperatorRepoPath)
-}
-
-func createMicroshift(kmd *cobra.Command, cliCtx cliutils.SoftwareFactoryConfigContext) {
-	skipLocalSetup, _ := kmd.Flags().GetBool("skip-local-setup")
-	skipDeploy, _ := kmd.Flags().GetBool("skip-deploy")
-	skipPostInstall, _ := kmd.Flags().GetBool("skip-post-install")
-	dryRun, _ := kmd.Flags().GetBool("dry-run")
-	rootDir := ms.CreateTempRootDir()
-
-	msHost := cliCtx.Dev.Microshift.Host
-	if msHost == "" {
-		msHost = defaultHost
-		ctrl.Log.Info("Host not set, defaulting to " + defaultHost)
-	}
-	msUser := cliCtx.Dev.Microshift.User
-	if msUser == "" {
-		// set default of "cloud-user" since these playbooks are meant to target a CentOS deployment
-		msUser = microshiftUser
-		ctrl.Log.Info("Host user not set, defaulting to " + microshiftUser)
-	}
-	msOpenshiftPullSecret := cliCtx.Dev.Microshift.OpenshiftPullSecret
-	if msOpenshiftPullSecret == "" {
-		msOpenshiftPullSecret = "not-a-valid-pull-secret"
-		ctrl.Log.Info("A valid OpenShift pull secret must be set in `microshift` section of the configuration file")
-	}
-	msDiskFileSize := cliCtx.Dev.Microshift.DiskFileSize
-	if msDiskFileSize == "" {
-		msDiskFileSize = defaultDiskSpace
-		ctrl.Log.Info("disk-file-size not set, defaulting to " + defaultDiskSpace)
-	}
-	msEtcdOnRamdisk := cliCtx.Dev.Microshift.ETCDOnRAMDisk
-	msRamdiskSize := cliCtx.Dev.Microshift.RAMDiskSize
-	msAnsibleMicroshiftRolePath := cliCtx.Dev.AnsibleMicroshiftRolePath
-	if msAnsibleMicroshiftRolePath == "" {
-		msAnsibleMicroshiftRolePath = rootDir + "/ansible-microshift-role"
-		ctrl.Log.Info("No path to ansible-microshift-role provided, the role will be cloned into " + msAnsibleMicroshiftRolePath)
-	}
-	options := ms.MkAnsiblePlaybookOptions(msHost, msUser, msOpenshiftPullSecret, rootDir)
-	varsFile := ms.MkTemporaryVarsFile(
-		cliCtx.FQDN, msDiskFileSize, msAnsibleMicroshiftRolePath, rootDir, msEtcdOnRamdisk, msRamdiskSize)
-	options.ExtraVarsFile = []string{"@" + varsFile}
-	// Ensure ansible-microshift-role is available
-	ms.MkMicroshiftRoleSetupPlaybook(rootDir)
-	if !dryRun {
-		ms.RunMicroshiftRoleSetup(rootDir, cliCtx.Dev.SFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
-	}
-	// Ensure tooling and prerequisites are installed
-	if !skipLocalSetup {
-		ms.MkLocalSetupPlaybook(rootDir)
-		if !dryRun {
-			ms.RunLocalSetup(rootDir, cliCtx.Dev.SFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
-		}
-	}
-	// Deploy MicroShift
-	if !skipDeploy {
-		ms.MkDeployMicroshiftPlaybook(rootDir)
-		if !dryRun {
-			ms.RunDeploy(rootDir, cliCtx.Dev.SFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
-		}
-	}
-	// Configure cluster for development and testing
-	if !skipPostInstall {
-		ms.MkPostInstallPlaybook(rootDir)
-		if !dryRun {
-			ms.RunPostInstall(rootDir, cliCtx.Dev.SFOperatorRepositoryPath, msAnsibleMicroshiftRolePath, options)
-		}
-	}
-	if !dryRun {
-		defer os.RemoveAll(rootDir)
-	} else {
-		ctrl.Log.Info("Playbooks can be found in " + rootDir)
-	}
 }
 
 func devRunTests(kmd *cobra.Command, args []string) {
@@ -231,14 +154,9 @@ func devCreate(kmd *cobra.Command, args []string) {
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
 	fqdn := cliCtx.FQDN
-	// we can't initialize an env if deploying microshift, so deal this case first and exit early
-	if target == "microshift" {
-		createMicroshift(kmd, cliCtx)
-		return
-	}
-
 	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
 	ctx := context.TODO()
+
 	env := cliutils.ENV{
 		Cli:         client,
 		Ctx:         ctx,
@@ -542,8 +460,6 @@ func MkDevCmd() *cobra.Command {
 		deleteData              bool
 		deleteOperator          bool
 		verifyCloneSSL          bool
-		msSkipDeploy            bool
-		msSkipLocalSetup        bool
 		msSkipPostInstall       bool
 		msDryRun                bool
 		sfResource              string
@@ -593,8 +509,6 @@ func MkDevCmd() *cobra.Command {
 
 	cloneAsAdminCmd.Flags().BoolVar(&verifyCloneSSL, "verify", false, "Verify SSL endpoint")
 
-	createCmd.Flags().BoolVar(&msSkipLocalSetup, "skip-local-setup", false, "(microshift) Do not install local requirements")
-	createCmd.Flags().BoolVar(&msSkipDeploy, "skip-deploy", false, "(microshift) Do not deploy MicroShift")
 	createCmd.Flags().BoolVar(&msSkipPostInstall, "skip-post-install", false, "(microshift) Do not setup namespace or install required operators")
 	createCmd.Flags().BoolVar(&msDryRun, "dry-run", false, "(microshift) only create the playbook files, do not run them")
 

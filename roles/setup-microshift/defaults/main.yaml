@@ -1,12 +1,15 @@
 ---
-microshift_ip: "{{ hostvars.microshift.ansible_host }}"
+microshift_ip: "{{ hostvars.controller.ansible_host | default(ansible_default_ipv4.address) }}"
 microshift_fqdn: microshift.dev
 sf_fqdn: sfop.me
 disk_file_sparsed: true
 create_pv: false
 disk_file_size: 30G
 setup_olm: true
+enable_ramdisk: true
+ramdisk_size: 1G
 microshift_additional_addresses:
   - "{{ microshift_fqdn }}"
   - "{{ sf_fqdn }}"
 microshift_role_path: "~/src/github.com/openstack-k8s-operators/ansible-microshift-role"
+microshift_role_version: 985a720f4653a8017d03f8d28d3eb8d8e0ff6236

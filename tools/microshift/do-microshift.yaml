@@ -1,0 +1,5 @@
+---
+- hosts: "{{ hostname | default('controller') }}"
+  gather_facts: true
+  roles:
+    - setup-microshift
