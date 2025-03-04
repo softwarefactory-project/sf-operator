@@ -221,7 +221,7 @@ AVAILTAGS = $(shell skopeo list-tags docker://$(BUNDLE_REPO) | jq -r '.Tags[]' |
 OPERATOR_REGISTRY_VERSION = v1.28.0
 
 .PHONY: install-opm
-install-opm: ## Install the cert-manager cmctl CLI
+install-opm: ## Install the Operator Registry opm CLI
 	@bash -c "mkdir -p $(LOCALBIN); test -f $(OPM) || (curl -sSL https://github.com/operator-framework/operator-registry/releases/download/${OPERATOR_REGISTRY_VERSION}/linux-amd64-opm -o $(OPM) && chmod +x $(OPM) )"
 
 .PHONY: opm-dir-gen

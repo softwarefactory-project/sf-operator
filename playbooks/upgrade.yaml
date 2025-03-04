@@ -43,21 +43,9 @@
       vars:
         ci_bundle_img: quay.io/software-factory/sf-operator-bundle:latest
 
-    - name: Add back the config base-url for the previous version. Remove this after v56 is released
-      command: |
-        sed -e 's|name: config|name: config\n    base-url: "http://gerrit-httpd/"|' -i "playbooks/files/sf.yaml"
-      args:
-        chdir: "{{ zuul.project.src_dir }}"
-
     - name: Apply custom resources
       ansible.builtin.include_role:
         name: apply-custom-resources
-
-    - name: Remove the config base-url from the previous version. Remove this after v56 is released
-      command: |
-        sed -e 's|.*base-url: "http://gerrit-httpd/".*||' -i "playbooks/files/sf.yaml"
-      args:
-        chdir: "{{ zuul.project.src_dir }}"
 
     - name: Build operator assets
       ansible.builtin.include_role:
