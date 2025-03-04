@@ -1,0 +1,39 @@
+---
+- hosts: "{{ hostname | default('controller') }}"
+  vars:
+    kubectl: "minikube kubectl -- "
+    # Cert Manager https://cert-manager.io/docs/installation/
+    cert_manager: https://github.com/cert-manager/cert-manager/releases/download/v1.17.0/cert-manager.yaml
+    # Prometheus Operator https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/getting-started/installation.md
+    # To get Prometheus Operator version
+    # curl -s https://api.github.com/repos/prometheus-operator/prometheus-operator/releases/latest | jq -cr .tag_name
+    prometheus_operator: https://github.com/prometheus-operator/prometheus-operator/releases/download/v0.80.1/bundle.yaml
+  tasks:
+    - name: Install CRDs
+      ansible.builtin.command:
+        cmd: "{{ item }}"
+      loop:
+        - "{{ kubectl }} create -f {{ cert_manager }}"
+        - "{{ kubectl }} create -f {{ prometheus_operator }}"
+      # Note: here we would like to use "apply" so that this playbook is indempotent,
+      # unfortunately the prometheus operator resources are failing with:
+      #   "scrapeconfigs.monitoring.coreos.com" is invalid: metadata.annotations:
+      #  Too long: may not be more than 262144 bytes
+
+    - name: Enable addons on minikube
+      ansible.builtin.command:
+        cmd: minikube addons enable {{ item }}
+      loop:
+        - ingress
+        - ingress-dns
+
+      # TODO: add the ip to the cr hostAlias
+      # TODO: patch the storage class
+
+    - name: Crete sf namespace
+      ansible.builtin.command:
+        cmd: "{{ kubectl }} create ns sf"
+
+    - name: Set sf as the default namespace
+      ansible.builtin.command:
+        cmd: "{{ kubectl }} config set-context --current --namespace sf"

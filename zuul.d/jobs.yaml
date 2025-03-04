@@ -180,3 +180,22 @@
     name: sf-operator-vuln-check
     parent: sf-operator-golang-env
     run: playbooks/run-golang-vuln.yaml
+
+- job:
+    name: minikube-env
+    abstract: true
+    pre-run:
+      - playbooks/install-minikube.yaml
+      - playbooks/prepare-minikube.yaml
+      - playbooks/install-golang.yaml
+    nodeset:
+      nodes:
+        - name: controller
+          label: cloud-centos-9-big
+
+- job:
+    name: sf-operator-minikube
+    parent: minikube-env
+    attempts: 1
+    run:
+      - playbooks/sf-operator-minikube.yaml
