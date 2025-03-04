@@ -5,39 +5,14 @@
     # Kubernetes Version used by Minikube
     # https://kubernetes.io/releases/version-skew-policy/
     kubernetes_version: v1.32
-    crio_version: v1.32
-    minikube_package: https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+    minikube_package: https://github.com/kubernetes/minikube/releases/download/v1.35.0/minikube-linux-amd64
+    kicbase_version: v0.0.46 # keep in sync with the minikube release
   tasks:
-    - name: Add Kubernetes Repo
-      become: true
-      vars:
-        KUBERNETES_VERSION: "{{ kubernetes_version }}"
-      ansible.builtin.yum_repository:
-        name: Kubernetes
-        description: "Add the Kubernetes repository"
-        baseurl: https://pkgs.k8s.io/addons:/cri-o:/stable:/{{KUBERNETES_VERSION}}/rpm/
-        enabled: true
-        gpgcheck: true
-        gpgkey: https://pkgs.k8s.io/addons:/cri-o:/stable:/{{KUBERNETES_VERSION}}/rpm/repodata/repomd.xml.key
-
-    - name: Add cri-o Repo
-      become: true
-      vars:
-        CRIO_VERSION: "{{ crio_version }}"
-      ansible.builtin.yum_repository:
-        name: CRI-O
-        description: "Cri-o runtime for containers"
-        baseurl: https://pkgs.k8s.io/addons:/cri-o:/stable:/{{CRIO_VERSION}}/rpm/
-        enabled: true
-        gpgcheck: true
-        gpgkey: https://pkgs.k8s.io/addons:/cri-o:/stable:/{{CRIO_VERSION}}/rpm/repodata/repomd.xml.key
-
     - name: Installing packages
       become: true
       ansible.builtin.dnf:
         state: present
         name:
-          - cri-o
           - podman
           - bind-utils
 
@@ -48,6 +23,12 @@
         dest: /usr/bin/minikube
         mode: "0755"
         status_code: [200, 304]
+
+    # This try to work-around the minikube start error described below, for which we believe the podman pull is somehow interrupted midway when running in Zuul.
+    # By pulling in advance, it seems like we avoid the container storage issue
+    - name: Pull the minikube image
+      command: "podman pull gcr.io/k8s-minikube/kicbase:{{ kicbase_version }}"
+      become: true
 
     - name: Start minikube
       vars:
@@ -66,6 +47,9 @@
         # The restart doesn't work, that is why we try again by manually deleting and restarting the cluster
         - name: Delete previous minikube cluster
           command: minikube delete
+        - name: Remove previous images
+          command: podman rmi --all
+          become: true
         - name: Try again minikube start
           command: "{{ start_cmd }}"
 
