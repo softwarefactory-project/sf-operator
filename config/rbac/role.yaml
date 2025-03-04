@@ -43,18 +43,6 @@ rules:
   verbs:
   - get
 - apiGroups:
-  - cert-manager.io
-  resources:
-  - '*'
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - monitoring.coreos.com
   resources:
   - podmonitors

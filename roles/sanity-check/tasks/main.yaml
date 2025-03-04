@@ -6,7 +6,7 @@
       args:
         chdir: "{{ zuul.project.src_dir }}"
 
-    # for some reasons, LICENSE file is updated with cert-manager license during go build
+    # for some reasons, LICENSE file was updated with cert-manager license during go build
     - name: Check for diff
       ansible.builtin.command: git diff -- ":(exclude)LICENSE"
       args:
