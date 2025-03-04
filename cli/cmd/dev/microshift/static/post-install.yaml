@@ -20,21 +20,6 @@
           serviceaccount: prometheus-operator
     - name: Set default kubectl context to sf namespace
       ansible.builtin.command: kubectl config set-context microshift --namespace=sf
-    # TODO we do this so that this playbook doesn't rely on a local copy of the repo. There may be a better way to do that.
-    - name: Ensure certmanager operator is installed
-      block:
-        - name: Apply certmanager subscription
-          ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/olm-deps/cert-manager.yaml
-        - name: Wait for pod to be ready
-          ansible.builtin.command: >
-            kubectl wait --for=condition=Ready --timeout 5s pods
-            -l app.kubernetes.io/instance=cert-manager -n operators
-          register: ready_cm
-          until:
-            - '"condition met" in ready_cm.stdout'
-            - ready_cm.rc == 0
-          retries: 60
-          delay: 5
     - name: Ensure prometheus operator is installed
       block:
         - name: Apply prometheus-operator subscription

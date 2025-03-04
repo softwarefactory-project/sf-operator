@@ -41,12 +41,12 @@ ZooKeeper is deployed as a single-pod statefulset.
 
 ### Certificates
 
-Zuul and Nodepool services authenticate to Zookeeper using a X509 client certificate. `sf-operator` manages a local Certificate Authority based on the `cert-manager` operator facilities to issue server and client certificates. Those certificates are set with a long validity period (25 years) and an operator might want to rotate those certificates for security reason. To do so:
+Zuul and Nodepool services authenticate to Zookeeper using a X509 client certificate. `sf-operator` manages a local Certificate Infrastructure (self-signed Certificate Authority, server and clients certificates). Those certificates are set with a long validity period (30 years) and an operator might want to rotate those certificates for security reason. To do so:
 
-Delete `Certificate` resources named:
+Delete `secret` resources named:
 
-- zookeeper-server
-- zookeeper-client
+- zookeeper-server-tls
+- zookeeper-client-tls
 - ca-cert
 
 Rollout the following `Statefulset` and `Deployment` resources:

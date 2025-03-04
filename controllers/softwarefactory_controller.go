@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"time"
 
-	certv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/fatih/color"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
@@ -56,7 +55,6 @@ type SoftwareFactoryReconciler struct {
 //+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=softwarefactories/finalizers,verbs=update
 //+kubebuilder:rbac:groups=*,resources=jobs;pods;pods/exec;services;statefulsets;deployments;configmaps;secrets;persistentvolumeclaims;serviceaccounts;roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=*,resources=jobs/status;pods/status;services/status;statefulsets/status;deployments/status;configmaps/status;secrets/status;persistentvolumeclaims/status;serviceaccounts/status;roles/status,verbs=get
-//+kubebuilder:rbac:groups=cert-manager.io,resources=*,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
 
 type SFController struct {
@@ -105,39 +103,7 @@ func isOperatorReady(services map[string]bool) bool {
 // cleanup ensures removal of legacy resources
 func (r *SFController) cleanup() {
 
-	//--TODO-- Remove this chunk after release v0.0.54
-
-	// We need to clean the Local CA resources managed by cert-manager
-	// This means deleting the Certificate resources and related
-	// We need to ensure that ca-cert, zookeeper-client-tls, zookeeper-server-tls Secrets are deleted
-	// but only if those secrets have been created by cert-manager.
-	for _, name := range []string{"zookeeper-server", "zookeeper-client", "ca-cert"} {
-		// Remove Certificate Resources that are no longer needed
-		r.DeleteR(&certv1.Certificate{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-			},
-		})
-	}
-
-	for _, name := range []string{"zookeeper-server-tls", "zookeeper-client-tls", "ca-cert"} {
-		// Remove Secrets generated via cert-manager related to the deleted Certificats
-		secret := corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: r.ns,
-			}}
-		found := r.GetM(name, &secret)
-		if found {
-			_, ok := secret.Annotations["cert-manager.io/certificate-name"]
-			if ok {
-				r.DeleteR(&secret)
-			}
-		}
-	}
-
-	//--END TODO--
+	utils.LogI("Nothing to clean up.")
 
 }
 
@@ -557,6 +523,5 @@ func (r *SoftwareFactoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return []reconcile.Request{}
 			}),
 		).
-		Owns(&certv1.Certificate{}).
 		Complete(r)
 }

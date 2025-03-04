@@ -85,7 +85,6 @@ softwarefactories.sf.softwarefactory-project.io
 
 Note that the SF-Operator OLM package depends on the following operators:
 
-* [cert-manager](https://cert-manager.io)
 * [prometheus-operator](https://prometheus-operator.dev)
 
 Congratulations, the SF Operator is now running on your cluster!

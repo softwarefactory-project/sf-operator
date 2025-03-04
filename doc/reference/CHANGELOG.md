@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 ### Changed
 ### Deprecated
 ### Removed
+
+- cert-manager: dependency removal complete. If you deployed a Software Factory with sf-operator prior to version
+  v0.0.55 please upgrade to [v0.0.55](#v0055---2025-03-03) first to ensure proper removal of dangling cert-manager-related resources.
+
 ### Fixed
 
 ## [v0.0.55] - 2025-03-03
