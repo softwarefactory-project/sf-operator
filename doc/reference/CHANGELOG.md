@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [in development]
 
+### Component Updates
+
+- zuul-* : bumped to 11.3.0
+
+Updated components will trigger pod rerolls at upgrade.
+
 ### Added
 ### Changed
 ### Deprecated

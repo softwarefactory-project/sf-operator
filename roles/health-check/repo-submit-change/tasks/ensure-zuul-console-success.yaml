@@ -17,7 +17,7 @@
   ansible.builtin.shell: |
     (sleep 5; echo "") | wsdump --nocert -r -t '{"uuid":"{{ _job_uuid.stdout_lines[0] }}","logfile":"console.log"}' wss://{{ zuul_endpoint }}/api/tenant/internal/console-stream
   register: console_stream
-  until: "'Job console starting...' in console_stream.stdout"
+  until: "'Job console starting' in console_stream.stdout"
   retries: "{{ zuul_api_retries }}"
   delay: "{{ zuul_api_delay }}"
   tags:
