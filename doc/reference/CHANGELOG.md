@@ -11,6 +11,9 @@ All notable changes to this project will be documented in this file.
 Updated components will trigger pod rerolls at upgrade.
 
 ### Added
+
+- A new HAS_PROC_MOUNT environment variable is supported to deploy zuul-executor without a privilege context, providing the Kubernetes API supports the ProcMountType feature gate.
+
 ### Changed
 
 - Persistent Volume automatic expansion is no longer performed when the StorageClass does not support it.

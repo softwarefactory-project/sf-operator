@@ -59,8 +59,9 @@ type SoftwareFactoryReconciler struct {
 
 type SFController struct {
 	SFUtilContext
-	cr          sfv1.SoftwareFactory
-	isOpenShift bool
+	cr           sfv1.SoftwareFactory
+	isOpenShift  bool
+	hasProcMount bool
 }
 
 func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
@@ -360,8 +361,9 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 			owner:      owner,
 			standalone: standalone,
 		},
-		cr:          cr,
-		isOpenShift: CheckOpenShift(),
+		cr:           cr,
+		isOpenShift:  CheckOpenShift(),
+		hasProcMount: os.Getenv("HAS_PROC_MOUNT") == "true",
 	}
 }
 
