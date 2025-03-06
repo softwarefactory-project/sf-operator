@@ -1,0 +1,7 @@
+---
+all:
+  hosts:
+    controller:
+      ansible_user: "ANSIBLE_USER"
+      ansible_host: "ANSIBLE_HOST"
+      ansible_connection: ssh

@@ -64,33 +64,28 @@ sudo dnf install -y ansible-core golang
 
 ## Install MicroShift
 
-You have to generate and adapt the configuration file to deploy microshift
+As it was mentioned, MicroShift deployment requires to have pull secret. Make sure that you have it.
 
-```sh
-go run main.go init config --dev > myconfig.yaml
-```
+Steps:
 
-Then edit `myconfig.yaml` as follow:
+* Create a file, located in `~/openshift-pull-secret.yaml` or export it: `export PULL_SECRET_FILE_PATH=<path to file>`
+  using your favourite editor, that has such structure:
 
 ```yaml
-contexts:
-  my-context:
-    development:
-      microshift:
-        disk-file-size: "30G"
-        etcd-on-ramdisk: true
-        host: "microshift.dev"
-        openshift-pull-secret: '<paste-pull-secret-here>'
-        user: "cloud-user"
-default-context: my-context
+openshift_pull_secret: |
+  <YOUR PULL SECRET>
 ```
 
-Refer to the [`dev create microshift --config myconfig.yaml` subcommand](./../reference/cli/index.md#create-microshift) for more information about the command.
+* Run script
 
-Finally run the sf-operator CLI as follow:
+```shell
+cd sf-operator
 
-```sh
-go run main.go --config ./myconfig.yaml dev create microshift --skip-local-setup
+# run in sf-operator directory
+tools/microshift/setup-microshift.sh localhost
+
+# or with remote host: 10.0.0.1 and remote username: cloud-user
+tools/microshift/setup-microshift.sh 10.0.0.1 cloud-user
 ```
 
 Once the deployment has ended successfully, you are now ready to deploy and hack SF-Operator, congratulations!

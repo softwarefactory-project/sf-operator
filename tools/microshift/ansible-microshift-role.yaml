@@ -1,5 +1,8 @@
-- hosts: localhost
+---
+# NOTE: It needs to be in separate playbook due ansible will not
+# have that "role" in inventory if all would be done "one by one".
+- hosts: "{{ hostname | default('controller') }}"
   tasks:
     - ansible.builtin.include_role:
-        name: "roles/setup-env"
-        tasks_from: clone-microshift-role
+        name: "roles/setup-microshift"
+        tasks_from: ansible-microshift-role

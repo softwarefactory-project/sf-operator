@@ -1,0 +1,9 @@
+---
+- name: Run local setup playbook
+  ansible.builtin.include_tasks: local-setup.yaml
+
+- name: Run deploy microshift playbook
+  ansible.builtin.include_tasks: deploy-microshift.yaml
+
+- name: Run post install playbook
+  ansible.builtin.include_tasks: post-install.yaml
