@@ -44,7 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var devCreateAllowedArgs = []string{"gerrit", "standalone-sf", "demo-env"}
+var devCreateAllowedArgs = []string{"gerrit", "demo-env"}
 var devWipeAllowedArgs = []string{"gerrit", "sf"}
 var devRunTestsAllowedArgs = []string{"olm", "standalone", "upgrade"}
 
@@ -177,17 +177,6 @@ func devCreate(kmd *cobra.Command, args []string) {
 
 	if target == "gerrit" {
 		gerrit.EnsureGerrit(&env, fqdn, hostAliases)
-	} else if target == "standalone-sf" {
-		sfResource, _ := kmd.Flags().GetString("cr")
-		if sfResource == "" && cliCtx.Manifest != "" {
-			sfResource = cliCtx.Manifest
-		}
-		if (sfResource != "" && ns == "") || (sfResource == "" && ns != "") {
-			err := errors.New("standalone mode requires both --cr and --namespace to be set")
-			ctrl.Log.Error(err, "Argument error:")
-			os.Exit(1)
-		}
-		applyStandalone(ns, sfResource, kubeContext)
 	} else if target == "demo-env" {
 		restConfig := controllers.GetConfigContextOrDie(kubeContext)
 		reposPath, _ := kmd.Flags().GetString("repos-path")
@@ -467,7 +456,6 @@ func MkDevCmd() *cobra.Command {
 		verifyCloneSSL          bool
 		msSkipPostInstall       bool
 		msDryRun                bool
-		sfResource              string
 		extraVars               []string
 		testVerbose             bool
 		testDebug               bool
@@ -481,7 +469,7 @@ func MkDevCmd() *cobra.Command {
 		}
 		createCmd = &cobra.Command{
 			Use:       "create {" + strings.Join(devCreateAllowedArgs, ", ") + "}",
-			Long:      "Create a development resource. The resource can be a MicroShift cluster, a standalone SF deployment, a demo environment or a gerrit instance",
+			Long:      "Create a development resource. The resource can be a MicroShift cluster, a demo environment or a gerrit instance",
 			ValidArgs: devCreateAllowedArgs,
 			Run:       devCreate,
 		}
@@ -516,8 +504,6 @@ func MkDevCmd() *cobra.Command {
 
 	createCmd.Flags().BoolVar(&msSkipPostInstall, "skip-post-install", false, "(microshift) Do not setup namespace or install required operators")
 	createCmd.Flags().BoolVar(&msDryRun, "dry-run", false, "(microshift) only create the playbook files, do not run them")
-
-	createCmd.Flags().StringVar(&sfResource, "cr", "", "The path to the CR defining the Software Factory deployment.")
 
 	createCmd.Flags().BoolVar(&demoEnvKeepTenantConfig, "keep-tenant-config", false, "(demo-env) Do not update the demo tenant configuration")
 	createCmd.Flags().StringVar(&demoEnvReposPath, "repos-path", "", "(demo-env) the path to clone demo repos at")

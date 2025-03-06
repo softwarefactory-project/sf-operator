@@ -25,7 +25,7 @@ go version > /dev/null || {
 export OPENSHIFT_USER=false
 
 echo "[+] Deploying sf-operator"
-go run ./main.go dev --namespace sf create standalone-sf --cr ./playbooks/files/sf-minimal.yaml
+go run ./main.go deploy ./playbooks/files/sf-minimal.yaml
 
 # TODO: add a SF_OPERATOR_DEMO environment variable to skip gerrit deployment
 grep -q " gerrit\." /etc/hosts > /dev/null || {

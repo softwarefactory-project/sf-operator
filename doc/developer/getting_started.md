@@ -114,14 +114,13 @@ To iterate on the development of the `sf-operator` you can either start the oper
     Run the operator with the following command:
 
     ```sh
-    go run main.go --namespace sf dev create standalone-sf --cr playbooks/files/sf.yaml
+    go run main.go --namespace sf deploy playbooks/files/sf.yaml
     ```
 
     !!! note
         The command returns when the expected state is applied.
 
     Each change to the `CR`, passed as parameter, will require a new run of the command to `reconcile` the change.
-
 
 ## Access the services web UI
 

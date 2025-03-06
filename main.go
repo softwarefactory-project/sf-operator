@@ -21,7 +21,9 @@ import (
 	zuul "github.com/softwarefactory-project/sf-operator/cli/cmd/zuul"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+
 	//+kubebuilder:scaffold:imports
+	"errors"
 )
 
 // getWatchNamespace returns the Namespace the operator should be watching for changes
@@ -56,6 +58,34 @@ func operatorCmd(kmd *cobra.Command, args []string) {
 	controllers.Main(ns, metricsAddr, probeAddr, enableLeaderElection, false)
 }
 
+func deployCmd(kmd *cobra.Command, args []string) {
+
+	var sfResource string
+
+	cliCtx, err := cliutils.GetCLIContext(kmd)
+	if err != nil {
+		ctrl.Log.Error(err, "Error initializing:")
+		os.Exit(1)
+	}
+	ns := cliCtx.Namespace
+	kubeContext := cliCtx.KubeContext
+	if len(args) != 1 {
+		ctrl.Log.Error(errors.New("wrong number of arguments"), "deploy command only accepts 1 argument.")
+		os.Exit(1)
+	}
+
+	sfResource = args[0]
+	if sfResource == "" && cliCtx.Manifest != "" {
+		sfResource = cliCtx.Manifest
+	}
+	if (sfResource != "" && ns == "") || (sfResource == "" && ns != "") {
+		err := errors.New("standalone mode requires --namespace to be set")
+		ctrl.Log.Error(err, "Argument error:")
+		os.Exit(1)
+	}
+	dev.ApplyStandalone(ns, sfResource, kubeContext)
+}
+
 func main() {
 
 	var (
@@ -78,6 +108,13 @@ func main() {
 			Short: "Start the SF Operator",
 			Long:  `This command starts the sf-operator service locally, for the cluster defined in the current kube context. The SF CRDs must be installed on the cluster.`,
 			Run:   operatorCmd,
+		}
+
+		deployCmd = &cobra.Command{
+			Use:   "deploy [The path to the CR defining the Software Factory deployment.]",
+			Short: "Start SF Operator as standalone",
+			Long:  `This command starts a sf-operator deployment locally, without the need to install or run the software factory operator controller`,
+			Run:   deployCmd,
 		}
 	)
 
@@ -104,6 +141,7 @@ func main() {
 		operatorCmd,
 		dev.MkDevCmd(),
 		zuul.MkZuulCmd(),
+		deployCmd,
 	}
 	for _, c := range subcommands {
 		rootCmd.AddCommand(c)
