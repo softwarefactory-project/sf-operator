@@ -1,5 +1,7 @@
 ---
 - hosts: "{{ hostname | default('controller') }}"
+  vars:
+    mode: standalone
   environment:
     OPENSHIFT_USER: false
   vars:
@@ -19,11 +21,18 @@
         - "{{ project_dir }}/playbooks/files/sf-operator-cli.yaml"
       loop_control:
         loop_var: yaml_file
+
+    - name: Install test dependencies
+      become: true
+      ansible.builtin.package:
+        name:
+          - unzip
   roles:
     - setup-variables
     - setup-nodepool-ns
     - utils/get-gerrit-admin-user-api-key
     - utils/config-repo-reset
+    - utils/setup-log-forwarding-stack
 
     # Apply the sf.yaml resources with the config repo on gerrit
     - run-operator-standalone
@@ -31,4 +40,17 @@
     # Validate services are working
     - health-check/check-service-uri
     - health-check/check-zuul-weeder
+    - health-check/enable-log-forward
+    - health-check/scale-resources
+    - health-check/zuul-connections
+
     # FIXME: add more health-check
+    # - health-check/zuul-authenticators
+    # - health-check/config-update-zuul
+    # - health-check/check-logjuicer
+    # - health-check/zuul-demo-tenant-workflow
+    # - health-check/test-nodepool-providers-secrets
+    # - health-check/config-update-nodepool-launcher
+    # - health-check/config-update-nodepool-builder
+    # - health-check/test-nodepool-launcher-pod
+    # - health-check/test-volumestats-sidecar
