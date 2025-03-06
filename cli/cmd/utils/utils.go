@@ -711,7 +711,7 @@ func EnsureSelfSignCert(env *ENV) {
 
 func ReadIngressIP(env *ENV, name string) string {
 	attempt := 1
-	maxTries := 10
+	maxTries := 20
 	for {
 		var ingress networkv1.Ingress
 		if GetMOrDie(env, name, &ingress) {
@@ -721,7 +721,7 @@ func ReadIngressIP(env *ENV, name string) string {
 			}
 		}
 		if attempt > maxTries {
-			ctrl.Log.Error(nil, "Couldn't find the %s IP", name)
+			ctrl.Log.Error(nil, fmt.Sprintf("Couldn't find the %s IP", name))
 			os.Exit(1)
 		}
 		ctrl.Log.Info(fmt.Sprintf("Waiting for %s ... [attempt %d/%d]", name, attempt, maxTries))
