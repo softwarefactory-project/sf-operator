@@ -12,7 +12,7 @@ type -p kubectl > /dev/null || {
     chmod 555 kubectl
     sudo mv kubectl /bin
 }
-kubectl get pods > /dev/null || {
+timeout 5s kubectl get pods 2>/dev/null >/dev/null > /dev/null || {
     echo "[+] Deploying minikube"
     ./tools/setup-minikube.sh localhost
 }
@@ -28,7 +28,7 @@ echo "[+] Deploying sf-operator"
 go run ./main.go dev --namespace sf create standalone-sf --cr ./playbooks/files/sf-minimal.yaml
 
 # TODO: add a SF_OPERATOR_DEMO environment variable to skip gerrit deployment
-grep " gerrit\." /etc/hosts > /dev/null || {
+grep -q " gerrit\." /etc/hosts > /dev/null || {
     echo "[+] Setting up gerrit"
     sudo chown $USER /etc/hosts
     go run main.go --config playbooks/files/sf-operator-cli.yaml dev create demo-env --repos-path deploy

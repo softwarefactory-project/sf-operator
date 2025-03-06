@@ -11,4 +11,6 @@ then
   sudo sed '/ gerrit\./d' -i /etc/hosts
   rm -Rf deploy
   minikube delete
+  echo "If tools/deploy.sh doesn't work, delete further the cache by running:"
+  echo "sudo rm -Rf ~/.minikube /var/lib/containers/storage/volumes/minikube"
 fi

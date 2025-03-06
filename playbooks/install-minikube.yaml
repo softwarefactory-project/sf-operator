@@ -32,7 +32,7 @@
 
     - name: Start minikube
       vars:
-        start_cmd: "minikube start --kubernetes-version={{ kubernetes_version }} --embed-certs --container-runtime=cri-o"
+        start_cmd: "minikube start --kubernetes-version={{ kubernetes_version }} --embed-certs --container-runtime=cri-o --addons ingress,ingress-dns"
       block:
         - name: Run minikube start
           command: "{{ start_cmd }}"
