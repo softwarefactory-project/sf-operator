@@ -189,6 +189,7 @@
       - playbooks/install-minikube.yaml
       - playbooks/prepare-minikube.yaml
       - playbooks/install-golang.yaml
+    post-run: playbooks/get-minikube-logs.yaml
     nodeset:
       nodes:
         - name: controller

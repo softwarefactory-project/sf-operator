@@ -1,0 +1,12 @@
+- hosts: "{{ hostname | default('controller') }}"
+  tasks:
+    - name: "Grab minikube logs"
+      shell: |
+        mkdir -p ~/zuul-output/logs/
+        minikube logs > ~/zuul-output/logs/minikube.logs
+
+    # Fetch k8s resources for the sf namespace
+    - ansible.builtin.include_role:
+        name: post/get-k8s-resources
+      vars:
+        namespace: sf
