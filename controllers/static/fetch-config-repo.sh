@@ -5,6 +5,12 @@ set -ex
 # config-update usage context required a specific git ref
 REF=$1
 
+if [[ "$CONFIG_REPO_BASE_URL" =~ https://gerrit.sfop.me.* ]]; then
+    # FIXME: use internal CA to secure that connection when it is available.
+    # Until then, we know for sure that this domain can't be verified
+    export GIT_SSL_NO_VERIFY=true
+fi
+
 # Clone or fetch config repository
 if [ -d ~/config/.git ]; then
   pushd ~/config

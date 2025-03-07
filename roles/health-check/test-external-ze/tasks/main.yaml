@@ -19,7 +19,6 @@
     # workaround which is using the internal API url.
     cr_spec:
       config-location:
-        base-url: "http://gerrit-httpd/"
         name: config
         zuul-connection-name: gerrit
         k8s-api-url: "https://10.43.0.1:443"
@@ -154,7 +153,6 @@
   vars:
     cr_spec:
       config-location:
-        base-url: "http://gerrit-httpd/"
         name: config
         zuul-connection-name: gerrit
         k8s-api-url: ""

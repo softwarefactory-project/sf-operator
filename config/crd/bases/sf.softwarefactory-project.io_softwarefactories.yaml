@@ -129,12 +129,6 @@ spec:
               config-location:
                 description: Config repository spec
                 properties:
-                  base-url:
-                    description: Base URL to use to perform git-related actions on
-                      the config repository. For example, if hosted on GitHub, the
-                      Base URL would be `https://github.com/<username>/`
-                    pattern: ^https?:\/\/.+$
-                    type: string
                   branch:
                     description: The branch of the `config` repository. This value
                       is set to the load-branch.
@@ -151,7 +145,7 @@ spec:
                     type: string
                   name:
                     description: The name of the `config` repository. This value is
-                      appended to `base-url` to clone the repository
+                      appended to the `base-url` of the connection to clone the repository
                     minLength: 1
                     type: string
                   zuul-connection-name:
@@ -160,7 +154,6 @@ spec:
                     minLength: 1
                     type: string
                 required:
-                - base-url
                 - name
                 - zuul-connection-name
                 type: object

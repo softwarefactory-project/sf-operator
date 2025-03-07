@@ -213,7 +213,6 @@ kubectl edit sf my-sf
 [...]
 spec:
   config-location:
-    base-url: "<gerrit_url>"
     name: <config repository name>
     zuul-connection-name: gerrit
 [...]

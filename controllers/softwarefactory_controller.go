@@ -59,9 +59,10 @@ type SoftwareFactoryReconciler struct {
 
 type SFController struct {
 	SFUtilContext
-	cr           sfv1.SoftwareFactory
-	isOpenShift  bool
-	hasProcMount bool
+	cr            sfv1.SoftwareFactory
+	isOpenShift   bool
+	hasProcMount  bool
+	configBaseURL string
 }
 
 func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
@@ -130,6 +131,64 @@ func (r *SFController) validateZuulConnectionsSecrets() error {
 		}
 	}
 	return nil
+}
+
+func ensureTrailingSlash(url string) string {
+	if len(url) > 0 && url[len(url)-1:] != "/" {
+		return url + "/"
+	}
+	return url
+}
+
+func resolveConfigBaseURL(cr sfv1.SoftwareFactory) string {
+	name := cr.Spec.ConfigRepositoryLocation.ZuulConnectionName
+	url := ""
+	for _, conn := range cr.Spec.Zuul.GerritConns {
+		if conn.Name == name {
+			if conn.Puburl != "" {
+				url = conn.Puburl
+			} else {
+				url = fmt.Sprintf("https://%s/", conn.Hostname)
+			}
+			return ensureTrailingSlash(url)
+		}
+	}
+	for _, conn := range cr.Spec.Zuul.GitHubConns {
+		if conn.Name == name {
+			if conn.Server == "" {
+				url = "https://github.com/"
+			} else {
+				url = fmt.Sprintf("https://%s/", conn.Server)
+			}
+			return ensureTrailingSlash(url)
+		}
+	}
+	for _, conn := range cr.Spec.Zuul.GitLabConns {
+		if conn.Name == name {
+			if conn.BaseURL != "" {
+				url = conn.BaseURL
+			} else {
+				url = fmt.Sprintf("https://%s/", conn.Server)
+			}
+			return ensureTrailingSlash(url)
+		}
+	}
+	for _, conn := range cr.Spec.Zuul.GitConns {
+		if conn.Name == name {
+			return ensureTrailingSlash(conn.Baseurl)
+		}
+	}
+	for _, conn := range cr.Spec.Zuul.PagureConns {
+		if conn.Name == name {
+			if conn.BaseURL != "" {
+				url = conn.BaseURL
+			} else {
+				url = fmt.Sprintf("https://%s/", conn.Server)
+			}
+			return ensureTrailingSlash(url)
+		}
+	}
+	return ""
 }
 
 func (r *SFController) IsCodesearchEnabled() bool {
@@ -361,9 +420,10 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 			owner:      owner,
 			standalone: standalone,
 		},
-		cr:           cr,
-		isOpenShift:  CheckOpenShift(),
-		hasProcMount: os.Getenv("HAS_PROC_MOUNT") == "true",
+		cr:            cr,
+		isOpenShift:   CheckOpenShift(),
+		hasProcMount:  os.Getenv("HAS_PROC_MOUNT") == "true",
+		configBaseURL: resolveConfigBaseURL(cr),
 	}
 }
 

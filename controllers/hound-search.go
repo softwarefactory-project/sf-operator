@@ -79,7 +79,7 @@ func (r *SFController) DeployHoundSearch() bool {
 	pvc := base.MkPVC("hound-search-data", r.ns, r.getStorageConfOrDefault(r.cr.Spec.Codesearch.Storage), apiv1.ReadWriteOnce)
 	container := MkHoundSearchContainer(corporateCMExists, r.isOpenShift)
 	container.Env = []apiv1.EnvVar{
-		base.MkEnvVar("CONFIG_REPO_BASE_URL", r.cr.Spec.ConfigRepositoryLocation.BaseURL),
+		base.MkEnvVar("CONFIG_REPO_BASE_URL", r.configBaseURL),
 		base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigRepositoryLocation.Name),
 	}
 	sts := base.MkStatefulset(houndSearchIdent, r.ns, 1, houndSearchIdent, container, pvc, r.cr.Spec.ExtraLabels)
@@ -94,7 +94,7 @@ func (r *SFController) DeployHoundSearch() bool {
 	}
 
 	annotations := map[string]string{
-		"config-repo-info":           r.cr.Spec.ConfigRepositoryLocation.BaseURL + r.cr.Spec.ConfigRepositoryLocation.Name,
+		"config-repo-info":           r.configBaseURL + r.cr.Spec.ConfigRepositoryLocation.Name,
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 		"image":                      houndSearchImage,
 		"serial":                     "1",

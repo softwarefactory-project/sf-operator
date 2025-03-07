@@ -50,7 +50,6 @@ func initializeSFManifest(withAuth bool, withBuilder bool, full bool, connection
 	manifest.Kind = "SoftwareFactory"
 	manifest.Metadata.Name = "my-sf"
 
-	manifest.Spec.ConfigRepositoryLocation.BaseURL = "http://" + connections[0]
 	manifest.Spec.ConfigRepositoryLocation.Name = "config"
 	manifest.Spec.ConfigRepositoryLocation.ZuulConnectionName = connections[0]
 
