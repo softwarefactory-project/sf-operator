@@ -25,7 +25,7 @@ then
         fi
 fi
 
-ansible-playbook -e "hostname=${HOST}" ./playbooks/install-minikube.yaml
+ansible-playbook -e "hostname=${HOST}" -e "create_ramdisk=false" ./playbooks/install-minikube.yaml
 [ $? -ne 0 ] && fail "Installation of Minikube failed"
 ansible-playbook -e "hostname=${HOST}" ./playbooks/prepare-minikube.yaml
 [ $? -ne 0 ] && fail "Configuration of Minikube failed"

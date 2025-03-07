@@ -7,7 +7,31 @@
     kubernetes_version: v1.32
     minikube_package: https://github.com/kubernetes/minikube/releases/download/v1.35.0/minikube-linux-amd64
     kicbase_version: v0.0.46 # keep in sync with the minikube release
+    etcd_ramdisk_path: /dev/shm/etcd
   tasks:
+    # This block is for slow machine, e.g. in SF CI, it is recommened to setup etcd data in RAM
+    - name: Create ramdisk
+      when: create_ramdisk | default(true)
+      block:
+        - name: Create etcd ramdisk folder
+          become: true
+          ansible.builtin.file:
+            path: "{{ etcd_ramdisk_path }}"
+            state: directory
+            mode: 0700
+            owner: root
+            group: root
+
+        - name: Set etcd ramdisk SELinux context
+          become: true
+          ansible.builtin.command: restorecon -F "{{ etcd_ramdisk_path }}"
+
+        - name: Set fact for ramdisk mount
+          ansible.builtin.set_fact:
+            ramdisk_command: >-
+              --mount
+              --mount-string="{{ etcd_ramdisk_path }}:/var/lib/minikube/etcd"
+
     - name: Installing packages
       become: true
       ansible.builtin.dnf:
@@ -32,7 +56,15 @@
 
     - name: Start minikube
       vars:
-        start_cmd: "minikube start --kubernetes-version={{ kubernetes_version }} --embed-certs --container-runtime=cri-o --addons ingress,ingress-dns"
+        start_cmd: >-
+          minikube start
+          --kubernetes-version={{ kubernetes_version }}
+          --embed-certs
+          --container-runtime=cri-o
+          --addons ingress,ingress-dns
+          --cpus {{ ansible_processor_vcpus }}
+          --memory {{ ansible_memory_mb['real']['total'] }}
+          {{ ramdisk_command | default('') }}
       block:
         - name: Run minikube start
           command: "{{ start_cmd }}"
@@ -52,6 +84,11 @@
           become: true
         - name: Try again minikube start
           command: "{{ start_cmd }}"
+
+      always:
+        - name: Print executed minikube command
+          ansible.builtin.debug:
+            var: start_cmd
 
     - name: Test minikube
       ansible.builtin.command:

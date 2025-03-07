@@ -10,7 +10,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]
 then
   sudo sed '/ gerrit\./d' -i /etc/hosts
   rm -Rf deploy
-  minikube delete
+  minikube delete || true
+  sudo rm -Rf /dev/shm/etcd
   echo "If tools/deploy.sh doesn't work, delete further the cache by running:"
   echo "sudo rm -Rf ~/.minikube /var/lib/containers/storage/volumes/minikube"
 fi
