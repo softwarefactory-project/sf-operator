@@ -6,11 +6,113 @@
 <a href="https://github.com/softwarefactory-project/sf-operator/tags" ><img src="https://img.shields.io/github/v/tag/softwarefactory-project/sf-operator" /></a>
 <img src="https://img.shields.io/badge/project%20status-ALPHA-FF2060" alt="Testing only; use in production at your own risks" />
 
+SF-Operator is a Kubernetes deployment system to install Software Factory (SF) on the OpenShift Container Platform.
+SF is a Continuous Integration (CI) service based on [Zuul](https://zuul-ci.org) to provide project gating with Ansible
+for developer platforms like GitLab using cloud providers like OpenStack.
+
+## Getting Started
+
+To try SF-Operator you will need:
+
+- A Linux system to run the operator standalone (RHEL, CentOS or Fedora are supported).
+- A copy of the source code.
+- Access to a Kubernetes or OpenShift cluster (recommended).
+
+Run the following commands:
+
+```ShellSession
+git clone https://softwarefactory-project.io/r/software-factory/sf-operator
+cd sf-operator
+./tools/deploy.sh
+```
+
+> This procedure is expected to work out of the box on a fresh system, please create a [bug report][bugreport] if it ever fails.
+
+You now have the Software Factory services running at the default `https://sfop.me` domain. The next steps are:
+
+- Configure the custom resource (CR) to change the FQDN, add Zuul connections and Nodepool providers.
+- Configure public access to the SF services using a Route or Ingress.
+- Create a Zuul tenant in the provided project config.
+- Manage the project config through the config-update pipelines by hosting the configuration on your developer platform.
+
+The next sections introduces the SF architecture and the installation options.
+
+## Architecture Overview
+
+Software Factory is composed of the following services:
+
+- Zuul, for running the CI.
+- Gateway, for the HTTP frontend.
+- Nodepool, for the resource providers.
+- LogServer, for the build logs.
+- HoundSearch, for code search.
+- LogJuicer, for build analysis.
+- Weeder, for inspecting whole tenant config.
+
+Internally, SF leverage the following services:
+
+- ZooKeeper, for the Zuul state.
+- MariaDB, for storing the build results.
+- GitServer, for hosting the internal tenant config.
+- Gerrit, for the initial config project location until it is moved to an external location.
+
+SF-Operator deployment is defined with the following elements:
+
+- The Software Factory custom resource (CR) to manage the services configuration.
+- The project config repository to manage the Zuul tenants and Nodepool providers.
+
+## Install
+
+SF-Operator supports OpenShift and Kubernetes, and it is tested with the following local cluster deployment:
+
+- MicroShift for OpenShift
+- Minikube for Kubernetes
+
+Beside the Getting Started process, here are the available installation modes:
+
+- Run the SF-Operator in standalone mode (recommended).
+- Install the CRD and deploy the SF-Operator on the cluster to manage the SF resources with kubectl.
+- Install the OLM catalog to manage the SF-Operator installation through the web console.
+
+For example, here is a standard configuration resource (CR), adapted from the getting started one, which is available in [sf.yaml](./playbooks/files/sf.yaml):
+
+```yaml
+apiVersion: sf.softwarefactory-project.io/v1
+kind: SoftwareFactory
+metadata:
+  name: my-sf
+spec:
+  fqdn: "sfop.me"
+  config-location:
+    name: sf/project-config
+    zuul-connection-name: my-gitlab
+  zuul:
+    gitlabconns:
+      - name: my-gitlab
+        server: gitlab.me
+        baseurl: https://gitlab.me
+        secrets: gitlab-secret
+```
+
+Which can be installed by running:
+
+```ShellSession
+# Make sure the ~/.kube/config is valid
+oc login --token=SECRET --server=https://openshift.me:6443
+
+# Apply the CR
+go run ./main.go deploy ./my-sf.yaml
+```
+
+Checkout the other documentations:
+
+* [Deploying Zuul and dependencies with SF-Operator](deployment/getting_started)
+* [Installing the Operator (OLM)](operator/getting_started/)
+* [Developing the SF-Operator](developer/getting_started)
+
 ## About
 
-SF-Operator is an Operator that simplifies the deployment and operation of Software Factory instances on the OpenShift Container Platform. An instance of Software Factory is composed of [Zuul](https://zuul-ci.org) and its dependencies ([NodePool](https://zuul-ci.org/docs/nodepool/latest/), [Zookeeper](https://zookeeper.apache.org/doc/r3.8.3/index.html), [MariaDB](https://mariadb.org/documentation/#entry-header), [Log Server](./deployment/logserver.md)).
-
-It is the natural evolution of the [Software Factory project](https://softwarefactory-project.io): the 3.8.x release of Software Factory saw the containerization of every major service, but was still delivered as RPM packages, in the form of a custom CentOS 7 distribution.
+SF-Operator is the natural evolution of the [Software Factory project](https://softwarefactory-project.io): the 3.8.x release of Software Factory saw the containerization of every major service, but was still delivered as RPM packages, in the form of a custom CentOS 7 distribution.
 SF-Operator builds upon this containerization effort to move from a distro-centric approach to a cloud-native deployment.
 This is also an opportunity to focus on the leanest service suite needed to provide a working gated CI infrastructure; hence a scope reduced to Zuul and its dependencies only.
 
@@ -27,7 +129,7 @@ Finally, we also provide a [Command Line Interface (CLI)](reference/cli/index.md
 
 ## Status
 
-The current project status is: **Alpha - NOT PRODUCTION READY**
+The current project status is: **Beta**
 
 ## Capability Levels
 
@@ -79,7 +181,7 @@ Should you have any questions or feedback concerning the SF-Operator, you can:
 
 * [Join our Matrix channel](https://matrix.to/#/#softwarefactory-project:matrix.org)
 * Send an email to [softwarefactory-dev@redhat.com](mailto:softwarefactory-dev@redhat.com)
-* [File an issue](https://github.com/softwarefactory-project/sf-operator/issues/new) for bugs and feature suggestions
+* [File an issue][bugreport] for bugs and feature suggestions
 
 ## Contributing
 
@@ -88,3 +190,5 @@ Refer to [CONTRIBUTING.md](https://softwarefactory-project.github.io/sf-operator
 ## Licence
 
 Sf-operator is distributed under the [Apache License](https://www.apache.org/licenses/LICENSE-2.0.txt).
+
+[bugreport]: https://github.com/softwarefactory-project/sf-operator/issues/new

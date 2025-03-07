@@ -34,3 +34,5 @@ grep -q " gerrit\." /etc/hosts > /dev/null || {
     go run main.go --config playbooks/files/sf-operator-cli.yaml dev create demo-env --repos-path deploy
     sudo chown root /etc/hosts
 }
+
+# FIXME: print the gateway URL and explain the next steps.
