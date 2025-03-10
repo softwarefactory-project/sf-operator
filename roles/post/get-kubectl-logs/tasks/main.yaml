@@ -1,0 +1,17 @@
+- name: List pods
+  command: "kubectl get pod -o=custom-columns=NAME:.metadata.name --no-headers"
+  register: podlist
+  failed_when: false
+
+- name: Get pod logs
+  loop: "{{ podlist.stdout_lines | default([]) }}"
+  vars:
+    out_dir: "{{ ansible_user_dir }}/zuul-output/logs/pods-logs"
+  loop_control:
+    loop_var: zj_pod_name
+  shell: |
+    mkdir -p {{ out_dir }}
+    for cname in $(kubectl get pod {{ zj_pod_name }} -o jsonpath='{.spec.containers[*].name}'); do
+      kubectl logs --container=${cname} {{ zj_pod_name }} &> {{ out_dir }}/{{ zj_pod_name }}--${cname}.txt
+    done
+  failed_when: false

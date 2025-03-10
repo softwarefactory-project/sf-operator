@@ -7,6 +7,6 @@
 
     # Fetch k8s resources for the sf namespace
     - ansible.builtin.include_role:
-        name: post/get-k8s-resources
+        name: post/get-kubectl-logs
       vars:
         namespace: sf
