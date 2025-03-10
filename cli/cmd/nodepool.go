@@ -28,8 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var npGetAllowedArgs = []string{"providers-secrets", "builder-ssh-key"}
-var npConfigureAllowedArgs = []string{"providers-secrets"}
+var npGetAllowedArgs = []string{"builder-ssh-key"}
 var npCreateAllowedArgs = []string{"openshiftpods-namespace"}
 
 // openshiftpods namespace default values
@@ -46,59 +45,10 @@ func npGet(kmd *cobra.Command, args []string) {
 	target := args[0]
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
-	if target == "providers-secrets" {
-		cloudsFile, _ := kmd.Flags().GetString("clouds")
-		if cloudsFile == "" {
-			cloudsFile = cliCtx.Components.Nodepool.CloudsFile
-		}
-		kubeFile, _ := kmd.Flags().GetString("kube")
-		if kubeFile == "" {
-			kubeFile = cliCtx.Components.Nodepool.KubeFile
-		}
-		getProvidersSecret(ns, kubeContext, cloudsFile, kubeFile)
-	}
 	if target == "builder-ssh-key" {
 		pubKey, _ := kmd.Flags().GetString("pubkey")
 		getBuilderSSHKey(ns, kubeContext, pubKey)
 	}
-}
-
-func npConfigure(kmd *cobra.Command, args []string) {
-	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, npConfigureAllowedArgs)
-	ns := cliCtx.Namespace
-	kubeContext := cliCtx.KubeContext
-	cloudsFile, _ := kmd.Flags().GetString("clouds")
-	if cloudsFile == "" {
-		cloudsFile = cliCtx.Components.Nodepool.CloudsFile
-	}
-	kubeFile, _ := kmd.Flags().GetString("kube")
-	if kubeFile == "" {
-		kubeFile = cliCtx.Components.Nodepool.KubeFile
-	}
-	if cloudsFile == "" && kubeFile == "" {
-		ctrl.Log.Error(errors.New("not enough parameters"),
-			"a clouds.yaml file or a kube.config file must be passed to the command via the --clouds or --kube arguments")
-		os.Exit(1)
-	}
-	cloudsContent, err := cliutils.GetFileContent(cloudsFile)
-	if err != nil {
-		ctrl.Log.Error(err, "Error opening %s", cloudsFile)
-		os.Exit(1)
-	}
-	kubeContent, err := cliutils.GetFileContent(kubeFile)
-	if err != nil {
-		ctrl.Log.Error(err, "Error opening %s", kubeFile)
-		os.Exit(1)
-	}
-	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
-	ctx := context.TODO()
-	env := cliutils.ENV{
-		Cli:         client,
-		Ctx:         ctx,
-		Ns:          ns,
-		IsOpenShift: controllers.CheckOpenShift(),
-	}
-	ensureNodepoolProvidersSecrets(&env, cloudsContent, kubeContent)
 }
 
 func npCreate(kmd *cobra.Command, args []string) {
@@ -158,21 +108,18 @@ func CreateNamespaceForNodepool(sfEnv *cliutils.ENV, nodepoolContext, nodepoolNa
 		fmt.Println("Provider kubeconfig:")
 		fmt.Println(string(kconfig))
 	} else {
-		ensureNodepoolProvidersSecrets(sfEnv, []byte{}, kconfig)
+		ensureNodepoolKubeProvidersSecrets(sfEnv, kconfig)
 	}
 
 }
 
-func ensureNodepoolProvidersSecrets(env *cliutils.ENV, cloudconfig []byte, kubeconfig []byte) {
+func ensureNodepoolKubeProvidersSecrets(env *cliutils.ENV, kubeconfig []byte) {
 
 	var secret apiv1.Secret
 	if !cliutils.GetMOrDie(env, controllers.NodepoolProvidersSecretsName, &secret) {
 		// Initialize the secret data
 		secret.Name = controllers.NodepoolProvidersSecretsName
 		secret.Data = make(map[string][]byte)
-		if cloudconfig != nil {
-			secret.Data["clouds.yaml"] = cloudconfig
-		}
 		if kubeconfig != nil {
 			secret.Data["kube.config"] = kubeconfig
 		}
@@ -183,19 +130,6 @@ func ensureNodepoolProvidersSecrets(env *cliutils.ENV, cloudconfig []byte, kubec
 			secret.Data = make(map[string][]byte)
 		}
 		needUpdate := false
-		if cloudconfig != nil {
-			if !bytes.Equal(secret.Data["clouds.yaml"], cloudconfig) {
-				ctrl.Log.Info("Updating clouds config ...")
-				secret.Data["clouds.yaml"] = cloudconfig
-				needUpdate = true
-			}
-		} else {
-			if _, ok := secret.Data["clouds.yaml"]; ok {
-				ctrl.Log.Info("Removing clouds config ...")
-				delete(secret.Data, "clouds.yaml")
-				needUpdate = true
-			}
-		}
 		if kubeconfig != nil {
 			if !bytes.Equal(secret.Data["kube.config"], kubeconfig) {
 				ctrl.Log.Info("Updating the kube config ...")
@@ -214,44 +148,6 @@ func ensureNodepoolProvidersSecrets(env *cliutils.ENV, cloudconfig []byte, kubec
 		} else {
 			ctrl.Log.Info("Secret \"" + controllers.NodepoolProvidersSecretsName + "\" already up to date, doing nothing")
 		}
-	}
-}
-
-func getProvidersSecret(ns string, kubeContext string, cloudsFile string, kubeFile string) {
-	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
-	ctx := context.TODO()
-	sfEnv := cliutils.ENV{
-		Cli: client,
-		Ctx: ctx,
-		Ns:  ns,
-	}
-
-	var secret apiv1.Secret
-	if cliutils.GetMOrDie(&sfEnv, controllers.NodepoolProvidersSecretsName, &secret) {
-		if len(secret.Data["clouds.yaml"]) > 0 {
-			if cloudsFile == "" {
-				fmt.Println("clouds.yaml:")
-				fmt.Println(string(secret.Data["clouds.yaml"]))
-			} else {
-				// TODO before we write to file, we should ensure the file, if it exists, is older than
-				// the upstream secret to avoid losing more recent secrets.
-				os.WriteFile(cloudsFile, secret.Data["clouds.yaml"], 0600)
-				ctrl.Log.Info("File " + cloudsFile + " updated")
-			}
-		}
-		if len(secret.Data["kube.config"]) > 0 {
-			if kubeFile == "" {
-				fmt.Println("kube.config:")
-				fmt.Println(string(secret.Data["kube.config"]))
-			} else {
-				os.WriteFile(kubeFile, secret.Data["kube.config"], 0644)
-				ctrl.Log.Info("File " + kubeFile + " updated")
-			}
-		}
-	} else {
-		ctrl.Log.Error(errors.New("Secret "+controllers.NodepoolProvidersSecretsName+" not found in namespace "+ns),
-			"Error fetching providers secrets")
-		os.Exit(1)
 	}
 }
 
@@ -422,8 +318,6 @@ func mkNodepoolOpenshiftPodsConfigTemplate(nodepoolNamespace string) string {
 func MkNodepoolCmd() *cobra.Command {
 
 	var (
-		cloudsOutput         string
-		kubeconfigOutput     string
 		builderPubKey        string
 		nodepoolContext      string
 		nodepoolNamespace    string
@@ -435,23 +329,14 @@ func MkNodepoolCmd() *cobra.Command {
 			Short: "Nodepool subcommands",
 			Long:  `These subcommands can be used to interact with the Nodepool component of a Software Factory deployment.`,
 		}
-		createCmd, configureCmd, getCmd = cliutils.GetCRUDSubcommands()
+		createCmd, _, getCmd = cliutils.GetCRUDSubcommands()
 	)
 
 	getCmd.Run = npGet
-	getCmd.Use = "get {providers-secrets, builder-ssh-key}"
+	getCmd.Use = "get {builder-ssh-key}"
 	getCmd.Long = "Get a Nodepool resource. The resource can be the providers secrets or the builder's public SSH key."
 	getCmd.ValidArgs = npGetAllowedArgs
-	getCmd.Flags().StringVar(&cloudsOutput, "clouds", "", "(use with providers-secrets) File where to dump the clouds secrets")
-	getCmd.Flags().StringVar(&kubeconfigOutput, "kube", "", "(use with providers-secrets) File where to dump the kube secrets")
 	getCmd.Flags().StringVar(&builderPubKey, "pubkey", "", "(use with builder-ssh-key) File where to dump nodepool-builder's SSH public key")
-
-	configureCmd.Run = npConfigure
-	configureCmd.Use = "configure {providers-secrets}"
-	configureCmd.Long = "Configure OpenStack and/or K8s-based providers' secrets from local files."
-	configureCmd.ValidArgs = npConfigureAllowedArgs
-	configureCmd.Flags().StringVar(&cloudsOutput, "clouds", "", "(use with providers-secrets) File to read the clouds secrets from")
-	configureCmd.Flags().StringVar(&kubeconfigOutput, "kube", "", "(use with providers-secrets) File to read the kube secrets from")
 
 	createCmd.Run = npCreate
 	createCmd.Use = "create {openshiftpods-namespace}"
@@ -463,7 +348,6 @@ func MkNodepoolCmd() *cobra.Command {
 	createCmd.Flags().BoolVar(&skipProvidersSecrets, "skip-providers-secrets", false, "openshiftpods-namespace) do not update providers secrets, and instead display the nodepool kube config on stdout")
 
 	nodepoolCmd.AddCommand(createCmd)
-	nodepoolCmd.AddCommand(configureCmd)
 	nodepoolCmd.AddCommand(getCmd)
 	return nodepoolCmd
 }
