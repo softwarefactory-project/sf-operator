@@ -17,7 +17,7 @@
 - name: Run the operator in standalone mode
   ansible.builtin.shell: |
     set -o pipefail
-    go run main.go {{ cli_global_flags }} --context {{ context }} dev create standalone-sf --cr {{ cr_path }} 2>&1 | tee -a ~/zuul-output/logs/{{ log_file }}
+    go run main.go {{ cli_global_flags }} --context {{ context }} deploy {{ cr_path }} 2>&1 | tee -a ~/zuul-output/logs/{{ log_file }}
   args:
     chdir: "{{ zuul.project.src_dir }}"
 

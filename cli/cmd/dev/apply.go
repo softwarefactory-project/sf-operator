@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func applyStandalone(ns string, sfResource string, kubeContext string) {
+func ApplyStandalone(ns string, sfResource string, kubeContext string) {
 	if sfResource != "" && ns != "" {
 		var sf sfv1.SoftwareFactory
 		dat, err := os.ReadFile(sfResource)

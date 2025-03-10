@@ -99,7 +99,7 @@ Then you can run the operator by providing the environment variable `ZUUL_LOCAL_
 For instance (using the standalone mode'):
 
 ```
-ZUUL_LOCAL_SOURCE=/home/cloud-user/git/zuul/zuul go run main.go --namespace sf dev create standalone-sf --cr playbooks/files/sf.yaml
+ZUUL_LOCAL_SOURCE=/home/cloud-user/git/zuul/zuul go run main.go --namespace sf deploy playbooks/files/sf.yaml
 ```
 
 After any code change, you can restart the Zuul pods, for instance the zuul-scheduler pod:

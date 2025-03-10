@@ -13,7 +13,6 @@ deployments, beyond what can be defined in a custom resource manifest.
     - [create demo-env](#create-demo-env)
     - [create gerrit](#create-gerrit)
     - [create microshift](#create-microshift)
-    - [create standalone-sf](#create-standalone-sf)
     - [getImagesSecurityIssues](#getimagessecurityissues)
     - [run-tests](#run-tests)
     - [wipe gerrit](#wipe-gerrit)
@@ -31,8 +30,10 @@ deployments, beyond what can be defined in a custom resource manifest.
     1. [configure TLS](#configure-tls)
     1. [restore](#restore)
   1. [Zuul](#zuul)
-    - [create auth-token](#create-auth-token)
+    - [create auth-token](#create-aut
+	h-token)
     - [create client-config](#create-client-config)
+  1. [Deploy](#deploy-sf)
 
 ## Installing the CLI
 
@@ -223,22 +224,6 @@ Flags:
 | --skip-local-setup | boolean | Do not install requirements and dependencies locally | yes | False |
 | --skip-deploy | boolean | Do not install and start MicroShift on the target host | yes | False |
 | --skip-post-install | boolean | Do not install operator dependencies, pre-configure namespaces | yes | False |
-
-#### create standalone-sf
-
-Deploy a "standalone" Software Factory. In standalone mode, you do not need to install or run the operator
-controller within your cluster. You do not need to install the Software Factory CRDs as well. The CLI will take
-a Software Factory manifest as input and deploy all the required services as a one-shot.
-
-```sh
-sf-operator [GLOBAL FLAGS] dev create standalone-sf --cr /path/to/manifest
-```
-
-Flags:
-
-| Argument | Type | Description | Optional | Default |
-|----------|------|-------|----|----|
-|--cr |string | The path to the custom resource to apply | No | If a config file is used and the flag not provided, will default to the context's `manifest-file` if set |
 
 #### run-tests
 
@@ -554,3 +539,13 @@ Flags:
 | --user | string | a username, used for audit purposes in Zuul's access logs | yes | "John Doe" |
 | --expiry | int | How long in seconds the authentication token should be valid for | yes | 3600 |
 | --insecure | boolean | skip SSL validation when connecting to Zuul | yes | False |
+
+### Deploy
+
+Deploy a "standalone" Software Factory. In standalone mode, you do not need to install or run the operator
+controller within your cluster. You do not need to install the Software Factory CRDs as well. The CLI will take
+a Software Factory manifest as input and deploy all the required services as a one-shot.
+
+```sh
+sf-operator [GLOBAL FLAGS] deploy /path/to/manifest
+```
