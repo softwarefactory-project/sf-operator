@@ -6,7 +6,6 @@
         - sf-operator-ansible-lint
         - sf-operator-olm-rhel
         - sf-operator-upgrade-rhel
-        - sf-operator-standalone-rhel
     gate:
       jobs:
         - sf-operator-minikube
@@ -14,7 +13,6 @@
         - sf-operator-ansible-lint
         - sf-operator-olm-rhel
         - sf-operator-upgrade-rhel
-        - sf-operator-standalone-rhel
     release:
       jobs:
         - sf-operator-publish-olm-bundle-image
@@ -22,5 +20,4 @@
       jobs:
         - sf-operator-olm-rhel
         - sf-operator-upgrade-rhel
-        - sf-operator-standalone-rhel
         - sf-operator-minikube
