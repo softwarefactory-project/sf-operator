@@ -58,7 +58,14 @@ cp tools/microshift/example-inventory.yaml tools/microshift/inventory.yaml
 sed -i "s/ANSIBLE_USER/$ANSIBLE_USER/g" tools/microshift/inventory.yaml
 sed -i "s/ANSIBLE_HOST/$ANSIBLE_HOST/g" tools/microshift/inventory.yaml
 
-ansible-galaxy collection install community.general community.crypto ansible.posix
+# NOTE: Workaround issues when ansible-galaxy silently fail to install a collection
+for i in $(seq 5); do
+    ansible-galaxy collection install community.general community.crypto ansible.posix
+    INSTALLED=$(ansible-galaxy collection list)
+    (echo $INSTALLED | grep -q community.general) && (echo $INSTALLED | grep -q community.crypto) && (echo $INSTALLED | grep -q ansible.posix) && break
+    echo "Failed to install collection: $INSTALLED"
+    sleep 1
+done
 
 echo "Clone ansible microshift role on localhost"
 ansible-playbook \

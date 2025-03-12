@@ -15,7 +15,6 @@
     run: playbooks/main.yaml
     abstract: true
     timeout: 5200
-    attempts: 1
     irrelevant-files: &irrelevant-files
       - ".*.md$"
       - "doc/.*"
@@ -42,7 +41,6 @@
     pre-run: *pre-run
     post-run: *post-run
     timeout: 7200
-    attempts: 1
     run: playbooks/main.yaml
     abstract: true
     irrelevant-files: *irrelevant-files
@@ -54,7 +52,6 @@
     pre-run: *pre-run
     post-run: *post-run
     timeout: 5200
-    attempts: 1
     run: playbooks/main.yaml
     abstract: true
     irrelevant-files: *irrelevant-files
@@ -66,7 +63,6 @@
     pre-run: *pre-run
     post-run: *post-run
     timeout: 5200
-    attempts: 1
     run: playbooks/main.yaml
     abstract: true
     irrelevant-files: *irrelevant-files
@@ -198,7 +194,6 @@
 - job:
     name: sf-operator-minikube
     parent: minikube-env
-    attempts: 1
     run:
       - playbooks/run-deploy.yaml
       - playbooks/run-tests.yaml
