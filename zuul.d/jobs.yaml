@@ -14,7 +14,7 @@
       - playbooks/post.yaml
     run: playbooks/main.yaml
     abstract: true
-    timeout: 5200
+    timeout: 7200
     irrelevant-files: &irrelevant-files
       - ".*.md$"
       - "doc/.*"
@@ -51,7 +51,7 @@
     parent: sf-operator-microshift-multinode
     pre-run: *pre-run
     post-run: *post-run
-    timeout: 5200
+    timeout: 7200
     run: playbooks/main.yaml
     abstract: true
     irrelevant-files: *irrelevant-files
@@ -62,7 +62,7 @@
     parent: sf-operator-microshift-multinode-rhel
     pre-run: *pre-run
     post-run: *post-run
-    timeout: 5200
+    timeout: 7200
     run: playbooks/main.yaml
     abstract: true
     irrelevant-files: *irrelevant-files
