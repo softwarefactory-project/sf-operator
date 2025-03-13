@@ -5,57 +5,25 @@
 
 # Base CI job
 - job:
-    name: sf-operator
-    parent: sf-operator-microshift
+    name: sf-operator-rhel
+    parent: sf-operator-microshift-rhel
     pre-run: &pre-run
       - playbooks/health-check/dstat-pre.yaml
     post-run: &post-run
       - playbooks/health-check/dstat-post.yaml
-      - playbooks/post.yaml
+    timeout: 7200
     run: playbooks/main.yaml
     abstract: true
-    timeout: 7200
     irrelevant-files: &irrelevant-files
       - ".*.md$"
       - "doc/.*"
       - ".github/.*"
     vars: &vars
       logreduce_optin: true
-      # microshift deployment
-      disk_file_sparsed: true
-      disk_file_size: 40G
-      create_pv: false
-      setup_olm: true
       # post tasks artifacts directory
       output_logs_dir: ~/zuul-output/logs
-      # disable dnsmasq configuration
-      configure_dnsmasq: false
-      ramdisk: true
-      ramdisk_size: 1g
       inject_dev_ssh_keys: true
       deploy_legacy_way: false
-
-- job:
-    name: sf-operator-rhel
-    parent: sf-operator-microshift-rhel
-    pre-run: *pre-run
-    post-run: *post-run
-    timeout: 7200
-    run: playbooks/main.yaml
-    abstract: true
-    irrelevant-files: *irrelevant-files
-    vars: *vars
-
-- job:
-    name: sf-operator-multinode
-    parent: sf-operator-microshift-multinode
-    pre-run: *pre-run
-    post-run: *post-run
-    timeout: 7200
-    run: playbooks/main.yaml
-    abstract: true
-    irrelevant-files: *irrelevant-files
-    vars: *vars
 
 - job:
     name: sf-operator-multinode-rhel
@@ -100,29 +68,37 @@
       - name: final_registry_secret
         secret: zuul_quay_sf
 
-# Deploy sf-operator on microshift
+# Linting jobs
 - job:
-    name: sf-operator-olm
-    description: Validates a sf-operator deployment via OLM
-    parent: sf-operator
+    name: sf-operator-ansible-lint
+    description: Lint Ansible playbooks located in playbooks directory
+    timeout: 900
+    pre-run: playbooks/ansible-dependencies.yaml
+    parent: ansible-lint
     vars:
-      mode: "olm"
+      # NOTE(dpawlik): We don't need to add roles dir, due there is a symlink
+      # done in playbooks that is related to roles dir.
+      ansible_lint_playbooks_dir: playbooks
+      ansible_lint_roles_dir: roles
+      ansible_lint_check_all: false
+    nodeset:
+      nodes:
+        - name: controller
+          label: cloud-centos-9-small
 
 - job:
-    name: sf-operator-upgrade
-    description: Validates a sf-operator upgrade via OLM
-    parent: sf-operator
-    run: playbooks/upgrade.yaml
+    name: sf-operator-vuln-check
+    parent: golang-go
+    run: playbooks/run-golang-vuln.yaml
     vars:
-      mode: "olm"
+      go_command: "install golang.org/x/vuln/cmd/govulncheck@latest"
+      go_version: 1.22.12
+    nodeset:
+      nodes:
+        - name: controller
+          label: cloud-centos-9
 
-- job:
-    name: sf-operator-standalone
-    description: Validates a sf-operator standalone deployment in multinode
-    parent: sf-operator-multinode
-    vars:
-      mode: "standalone"
-
+# sf-operator on microshift jobs
 - job:
     name: sf-operator-olm-rhel
     description: Validates a sf-operator deployment via OLM on RHEL
@@ -145,39 +121,7 @@
     vars:
       mode: "standalone"
 
-- job:
-    name: sf-operator-ansible-lint
-    description: Lint Ansible playbooks located in playbooks directory
-    timeout: 900
-    pre-run: playbooks/ansible-dependencies.yaml
-    parent: ansible-lint
-    vars:
-      # NOTE(dpawlik): We don't need to add roles dir, due there is a symlink
-      # done in playbooks that is related to roles dir.
-      ansible_lint_playbooks_dir: playbooks
-      ansible_lint_roles_dir: roles
-      ansible_lint_check_all: false
-    nodeset:
-      nodes:
-        - name: controller
-          label: cloud-centos-9-small
-
-- job:
-    name: sf-operator-golang-env
-    parent: golang-go
-    vars:
-      go_command: "install golang.org/x/vuln/cmd/govulncheck@latest"
-      go_version: 1.22.12
-    nodeset:
-      nodes:
-        - name: controller
-          label: cloud-centos-9
-
-- job:
-    name: sf-operator-vuln-check
-    parent: sf-operator-golang-env
-    run: playbooks/run-golang-vuln.yaml
-
+# minikube sf-operator jobs
 - job:
     name: minikube-env
     abstract: true
