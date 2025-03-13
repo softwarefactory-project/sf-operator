@@ -52,15 +52,24 @@ if ! command -v ansible-playbook >/dev/null 2>&1; then
     esac
 fi
 
+if ! command -v git >/dev/null 2>&1; then
+    sudo dnf install -y git
+fi
+
 # NOTE: To avoid an error in "stanity-check" task, we will do modification
 # on the file that is not tracked.
+echo "Making copy of example inventory, then edit the file..."
 cp tools/microshift/example-inventory.yaml tools/microshift/inventory.yaml
 sed -i "s/ANSIBLE_USER/$ANSIBLE_USER/g" tools/microshift/inventory.yaml
 sed -i "s/ANSIBLE_HOST/$ANSIBLE_HOST/g" tools/microshift/inventory.yaml
 
+echo "Installing Ansible galaxy collection"
 # NOTE: Workaround issues when ansible-galaxy silently fail to install a collection
-for i in $(seq 5); do
-    ansible-galaxy collection install community.general community.crypto ansible.posix
+for i in $(seq 10); do
+    ansible-galaxy collection install --timeout=15 -vv \
+        git+https://github.com/ansible-collections/community.general \
+        git+https://github.com/ansible-collections/community.crypto \
+        git+https://github.com/ansible-collections/ansible.posix
     INSTALLED=$(ansible-galaxy collection list)
     (echo $INSTALLED | grep -q community.general) && (echo $INSTALLED | grep -q community.crypto) && (echo $INSTALLED | grep -q ansible.posix) && break
     echo "Failed to install collection: $INSTALLED"
@@ -68,6 +77,7 @@ for i in $(seq 5); do
 done
 
 echo "Clone ansible microshift role on localhost"
+export ANSIBLE_LOG_PATH=ansible-clone-microshift-role.log
 ansible-playbook \
     -i localhost \
     -e "hostname=localhost" \
@@ -78,12 +88,14 @@ echo "Deploy and configure MicroShift on host $ANSIBLE_HOST..."
 # on deploying ansible-microshift-role, it is ignoring default values from
 # the role that triggered the role. In other words, default values from
 # setup-microshfit role are ignored by ansible-microshift-role.
+export ANSIBLE_LOG_PATH=ansible-do-microshift.log
 ansible-playbook \
     -i tools/microshift/inventory.yaml \
     -e "@tools/microshift/roles/setup-microshift/defaults/main.yaml" \
     -e "@${PULL_SECRET_FILE_PATH}" \
     tools/microshift/do-microshift.yaml || fail "MicroShift deployment and configuration failed!"
 
+echo "Deploying Microshift done! Pulling KUBECONFIG to ~/.kube/microshift-config..."
 # take the config now to local env
 mkdir -p ~/.kube
 ansible controller \
