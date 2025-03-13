@@ -1,11 +1,11 @@
 ---
-- name: "Sync sf-operator to {{ microshift_host }}:{{ src_dir }} instance"
+- name: "Sync sf-operator to {{ microshift_host }}:{{ zuul.project.src_dir }} instance"
   when: remote_os_host
   ansible.builtin.command: >
     rsync
     -e 'ssh -o StrictHostKeyChecking=no'
     -av {{ zuul.project.src_dir }}/
-    {{ microshift_host }}:{{ src_dir }}
+    {{ microshift_host }}:{{ zuul.project.src_dir }}
     --exclude=.git
     --delete
   tags:
@@ -15,7 +15,7 @@
   delegate_to: "{{ os_host }}"
   community.general.make:
     target: "{{ inner_item }}"
-    chdir: "{{ src_dir }}"
+    chdir: "{{ zuul.project.src_dir }}"
   loop_control:
     loop_var: inner_item
   loop:
@@ -40,17 +40,17 @@
       become: true
       community.general.make:
         target: operator-build
-        chdir: "{{ src_dir }}"
+        chdir: "{{ zuul.project.src_dir }}"
 
     - name: Create the operator OLM bundle
       community.general.make:
         target: bundle
-        chdir: "{{ src_dir }}"
+        chdir: "{{ zuul.project.src_dir }}"
 
     - name: Build the operator OLM bundle image
       community.general.make:
         target: bundle-build
-        chdir: "{{ src_dir }}"
+        chdir: "{{ zuul.project.src_dir }}"
         params:
           BUNDLE_IMG: "{{ ci_bundle_img }}"
 

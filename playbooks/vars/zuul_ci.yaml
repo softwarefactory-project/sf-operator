@@ -2,5 +2,4 @@
 install_requirements: true
 os_host: controller
 remote_os_host: false
-src_dir: "{{ zuul.project.src_dir }}"
 zuul: {"project":{"src_dir": ansible_user_dir + "/src/softwarefactory-project.io/software-factory/sf-operator"}}
