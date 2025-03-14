@@ -190,12 +190,6 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 			ReadOnly:  true,
 		},
 		{
-			Name:      "ca-cert",
-			MountPath: "/etc/pki/ca-trust/source/anchors/ca.crt",
-			ReadOnly:  true,
-			SubPath:   "ca.crt",
-		},
-		{
 			Name:      "zuul-ca",
 			MountPath: "/etc/pki/ca-trust/extracted",
 		},
@@ -306,7 +300,6 @@ func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []ap
 	r.EnsureConfigMap("zuul-logging", r.computeLoggingConfig())
 
 	volumes := []apiv1.Volume{
-		base.MkVolumeSecret("ca-cert"),
 		base.MkVolumeSecret("zuul-config"),
 		base.MkVolumeSecret("zookeeper-client-tls"),
 		base.MkVolumeCM("zuul-logging-config", "zuul-logging-config-map"),
@@ -453,7 +446,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		"statsd-image":               base.StatsdExporterImage(),
 		"node-exporter-image":        base.NodeExporterImage(),
 		"statsd_mapping":             utils.Checksum([]byte(zuulStatsdMappingConfig)),
-		"serial":                     "11",
+		"serial":                     "12",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
 		"zuul-extra":                 utils.Checksum([]byte(sshConfig)),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
@@ -576,7 +569,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 getZuulImage("zuul-executor"),
-		"serial":                     "9",
+		"serial":                     "10",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
@@ -663,7 +656,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 getZuulImage(service),
-		"serial":                     "7",
+		"serial":                     "8",
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-merger"))),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
@@ -732,7 +725,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 getZuulImage("zuul-web"),
-		"serial":                     "8",
+		"serial":                     "9",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
