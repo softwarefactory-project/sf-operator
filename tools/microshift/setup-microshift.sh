@@ -37,20 +37,7 @@ if [ -z "$ANSIBLE_CONFIG" ]; then
     export ANSIBLE_CONFIG="$(realpath tools/microshift/ansible.cfg)"
 fi
 
-if ! command -v ansible-playbook >/dev/null 2>&1; then
-    # Detect distribution
-    DIST=$(awk -F= '/^ID=/ {print $2}' /etc/os-release | tr -d '"' | tr '[:upper:]' '[:lower:]')
-
-    case "$DIST" in
-        "rhel")
-            echo "Installing ansible-core on RHEL..."
-            sudo dnf install -y ansible-core || fail "Failed to install ansible-core"
-            ;;
-        *)
-            fail "Unsupported distribution: $DIST"
-            ;;
-    esac
-fi
+./tools/setup-ansible.sh
 
 if ! command -v git >/dev/null 2>&1; then
     sudo dnf install -y git
