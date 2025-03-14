@@ -613,6 +613,16 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		ze.Spec.Template.ObjectMeta.Annotations["io.kubernetes.cri-o.userns-mode"] = "auto"
 		ze.Spec.Template.Spec.HostUsers = ptr.To[bool](false)
 		ze.Spec.Template.Spec.Containers[0].SecurityContext.ProcMount = ptr.To[apiv1.ProcMountType](apiv1.UnmaskedProcMount)
+
+		// The default seccomp profile doesn't allow nested namespace creation:
+		//   bwrap: No permissions to creating new namespace, likely because the kernel does not allow non-privileged user namespaces.
+		// Zuul fails with:
+		//   Exception: bwrap execution validation failed. You can use `zuul-bwrap /tmp id` to investigate manually.
+		// To try, run:
+		//   kubectl --namespace sf exec zuul-executor-0 -- bwrap --ro-bind /lib /lib --ro-bind /usr /usr --symlink /usr/lib64 /lib64 --proc /proc --dev /dev --tmpfs /tmp --unshare-all --new-session ps afx
+		// FIXME: find the right SeccompProfile that can be used for bwrap
+		ze.Spec.Template.Spec.Containers[0].SecurityContext.SeccompProfile = nil
+		ze.Spec.Template.Spec.SecurityContext.SeccompProfile = nil
 	}
 
 	nodeExporterSidecar := monitoring.MkNodeExporterSideCarContainer(
