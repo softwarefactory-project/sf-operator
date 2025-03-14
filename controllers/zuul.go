@@ -603,12 +603,17 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	}
 	// NOTE(dpawlik): Zuul Executor needs to privileged pod, due error in the console log:
 	// "bwrap: Can't bind mount /oldroot/etc/resolv.conf on /newroot/etc/resolv.conf: Permission denied""
-	ze.Spec.Template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(true, r.isOpenShift)
+	ze.Spec.Template.Spec.Containers[0].SecurityContext = base.MkSecurityContext(!r.hasProcMount, r.isOpenShift)
 	zeuid := int64(1000)
 	if !r.isOpenShift {
 		zeuid = int64(65534)
 	}
 	ze.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To[int64](zeuid)
+	if r.hasProcMount {
+		ze.Spec.Template.ObjectMeta.Annotations["io.kubernetes.cri-o.userns-mode"] = "auto"
+		ze.Spec.Template.Spec.HostUsers = ptr.To[bool](false)
+		ze.Spec.Template.Spec.Containers[0].SecurityContext.ProcMount = ptr.To[apiv1.ProcMountType](apiv1.UnmaskedProcMount)
+	}
 
 	nodeExporterSidecar := monitoring.MkNodeExporterSideCarContainer(
 		"zuul-executor",
