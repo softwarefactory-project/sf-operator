@@ -19,10 +19,8 @@ deployments, beyond what can be defined in a custom resource manifest.
     - [wipe sf](#wipe-sf)
   - [Init](#init)
   - [Nodepool](#nodepool)
-    - [configure providers-secrets](#configure-providers-secrets)
     - [create openshiftpods-namespace](#create-openshiftpods-namespace)
     - [get builder-ssh-key](#get-builder-ssh-key)
-    - [get providers-secrets](#get-providers-secrets)
   1. [Operator](#operator)
   1. [SF](#sf)
     1. [backup](#backup)
@@ -323,24 +321,6 @@ Flags:
 
 The `nodepool` subcommand can be used to interact with the Nodepool component of a Software Factory deployment.
 
-#### configure providers-secrets
-
-Set or update Nodepool's providers secrets (OpenStack's clouds.yaml and Kubernetes/OpenShift's kube.config).
-
-!!! warning
-    At least one of the `--kube` or `--clouds` flags must be provided.
-
-```sh
-sf-operator [GLOBAL FLAGS] nodepool configure providers-secrets [--kube /path/to/kube.config --clouds /path/to/clouds.yaml]
-```
-
-Flags:
-
-| Argument | Type | Description | Optional | Default |
-|----------|------|-------|----|----|
-| --kube | string | The file from which to read nodepool's kube.config | yes | - |
-| --clouds | string | The file from which to read nodepool's clouds.yaml | yes | - |
-
 #### create openshiftpods-namespace
 
 Create and set up a dedicated namespace on a cluster, so that nodepool can spawn pods with the [openshiftpods](https://zuul-ci.org/docs/nodepool/latest/openshift-pods.html) driver.
@@ -377,25 +357,6 @@ Flags:
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 | --pubkey | string | The destination file where to save the builder's public key | yes | - |
-
-#### get providers-secrets
-
-Get the currently set providers secrets (OpenStack's clouds.yaml and Kubernetes/OpenShift's kube.config) and optionally
-write the secrets to a local file.
-
-!!! danger
-    The local files will be overwritten with the downloaded contents without warning!
-
-```sh
-sf-operator [GLOBAL FLAGS] nodepool get providers-secrets [--kube /path/to/kube.config --clouds /path/to/clouds.yaml]
-```
-
-Flags:
-
-| Argument | Type | Description | Optional | Default |
-|----------|------|-------|----|----|
-| --kube | string | The destination file where to save nodepool's kube.config | yes | - |
-| --clouds | string | The destination file where to save nodepool's clouds.yaml | yes | - |
 
 ### Operator
 

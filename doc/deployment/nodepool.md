@@ -43,10 +43,8 @@ unstable but the ultimate source of truth for documentation about its properties
 Currently the SF Operator supports OpenStack (`clouds.yaml`) and Kubernetes (`kube.config`) configuration files. These files are used by Nodepool to manage resources on its providers.
 They are managed by the SF Operator in a secret called `nodepool-providers-secrets`.
 
-To push your configuration file(s) to Nodepool, run sf-operator's [`nodepool configure providers-secrets` subcommand](../reference/cli/index.md#configure-providers-secrets):
-
 ```sh
-sf-operator nodepool configure providers-secrets --kube /path/to/kube.config --clouds /path/to/clouds.yaml
+kubectl create secret generic nodepool-providers-secrets --from-file=cloud.yaml=<path-to>/clouds.yaml --from-file=kube.config=<path-to>/kube.config --dry-run=client -o yaml | kubectl apply -f -
 ```
 
 Then wait until your deployment becomes ready again:
@@ -56,11 +54,6 @@ kubectl get sf -n sf -w
 ```
 
 When your deployment is ready, the provider secrets have been updated in Nodepool.
-
-!!! warning
-    You can also fetch the currently used configurations with the [`nodepool get providers-secrets` subcommand](./../reference/cli/index.md#get-providers-secrets),
-    which will copy the configuration files from Nodepool into the files defined in the CLI's configuration. **Be careful not to erase
-    important data!**
 
 ## Get the builder's SSH public key
 
