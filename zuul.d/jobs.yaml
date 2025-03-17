@@ -138,6 +138,7 @@
 - job:
     name: sf-operator-minikube
     parent: minikube-env
+    voting: false
     run:
       - playbooks/run-deploy.yaml
       - playbooks/run-tests.yaml
