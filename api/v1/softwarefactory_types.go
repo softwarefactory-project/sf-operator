@@ -60,10 +60,7 @@ type StorageDefaultSpec struct {
 }
 
 type ConfigRepositoryLocationSpec struct {
-	// Base URL to use to perform git-related actions on the config repository. For example, if hosted on GitHub, the Base URL would be `https://github.com/<username>/`
-	// +kubebuilder:validation:Pattern:=`^https?:\/\/.+$`
-	BaseURL string `json:"base-url"`
-	// The name of the `config` repository. This value is appended to `base-url` to clone the repository
+	// The name of the `config` repository. This value is appended to the `base-url` of the connection to clone the repository
 	// +kubebuilder:validation:MinLength:=1
 	Name string `json:"name"`
 	// The branch of the `config` repository. This value is set to the load-branch.

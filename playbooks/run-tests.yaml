@@ -2,6 +2,23 @@
 - hosts: "{{ hostname | default('controller') }}"
   environment:
     OPENSHIFT_USER: false
+  vars:
+    project_dir: "{{ zuul.project.src_dir | default('..') }}"
+  pre_tasks:
+    - name: Grab load balancer IP
+      command: awk '/ gerrit./ { print $1 }' /etc/hosts
+      register: _etc_host_ip
+    - name: Set hostAliases - edit playbooks/files/ yaml files
+      ansible.builtin.include_role:
+        name: create-hostaliases-cr
+      vars:
+        iplb_ip_address: "{{ _etc_host_ip.stdout }}"
+      loop:
+        - "{{ project_dir }}/playbooks/files/ext-ze.yaml"
+        - "{{ project_dir }}/playbooks/files/sf.yaml"
+        - "{{ project_dir }}/playbooks/files/sf-operator-cli.yaml"
+      loop_control:
+        loop_var: yaml_file
   roles:
     - setup-variables
     - setup-nodepool-ns

@@ -591,8 +591,7 @@ func (r *SFController) getStorageConfOrDefault(storageSpec sfv1.StorageSpec) bas
 
 // isConfigRepoSet checks if config repository is set in the CR
 func (r *SFController) isConfigRepoSet() bool {
-	return r.cr.Spec.ConfigRepositoryLocation.BaseURL != "" &&
-		r.cr.Spec.ConfigRepositoryLocation.Name != "" &&
+	return r.cr.Spec.ConfigRepositoryLocation.Name != "" &&
 		r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName != ""
 }
 

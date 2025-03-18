@@ -195,7 +195,6 @@ To host the config repository on this Gerrit instance, add the following to your
 [...]
 spec:
   config-location:
-    base-url: "http://gerrit-httpd/"
     name: config
     zuul-connection-name: gerrit
 ```

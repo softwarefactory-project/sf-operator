@@ -60,8 +60,7 @@ _Appears in:_
 
 | Field | Description | Default Value |
 | --- | --- | --- |
-| `base-url` _string_ | Base URL to use to perform git-related actions on the config repository. For example, if hosted on GitHub, the Base URL would be `https://github.com/<username>/` | -|
-| `name` _string_ | The name of the `config` repository. This value is appended to `base-url` to clone the repository | -|
+| `name` _string_ | The name of the `config` repository. This value is appended to the `base-url` of the connection to clone the repository | -|
 | `branch` _string_ | The branch of the `config` repository. This value is set to the load-branch. | -|
 | `zuul-connection-name` _string_ | Name of the Zuul connection through which Zuul can handle git events on the config repository | -|
 | `k8s-api-url` _string_ | Public URL of the k8s cluster API. This is useful when running zuul executors outside of the cluster. This is mainly used for config-update secret generation | -|

@@ -344,7 +344,7 @@ func (r *SFController) getTenantsEnvs() []apiv1.EnvVar {
 		}
 		return []apiv1.EnvVar{
 			base.MkEnvVar("CONFIG_REPO_SET", "TRUE"),
-			base.MkEnvVar("CONFIG_REPO_BASE_URL", strings.TrimSuffix(r.cr.Spec.ConfigRepositoryLocation.BaseURL, "/")),
+			base.MkEnvVar("CONFIG_REPO_BASE_URL", strings.TrimSuffix(r.configBaseURL, "/")),
 			base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigRepositoryLocation.Name),
 			base.MkEnvVar("CONFIG_REPO_CONNECTION_NAME", r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName),
 			base.MkEnvVar("CONFIG_REPO_BRANCH", branch),
@@ -455,7 +455,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 
 	if r.isConfigRepoSet() {
 		annotations["config-repo-info-hash"] = r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName + ":" +
-			r.cr.Spec.ConfigRepositoryLocation.BaseURL +
+			r.configBaseURL +
 			r.cr.Spec.ConfigRepositoryLocation.Name +
 			r.cr.Spec.ConfigRepositoryLocation.Branch
 	}
