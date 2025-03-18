@@ -11,6 +11,7 @@
       - playbooks/health-check/dstat-pre.yaml
     post-run: &post-run
       - playbooks/health-check/dstat-post.yaml
+      - playbooks/post.yaml
     timeout: 7200
     run: playbooks/main.yaml
     abstract: true
