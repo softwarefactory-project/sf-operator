@@ -14,16 +14,7 @@ fi
 
 HOST=$1
 
-if ! which ansible-playbook 2>/dev/null
-then
-        DIST=$(awk '/^ID=/' /etc/os-release | sed 's/^ID=//' | tr '[:upper:]' '[:lower:]' | tr -d '[:punct:]')
-        if [[ "${DIST}" == "centos" ]] || [[ "${DIST}" == "fedora" ]]
-        then
-                sudo dnf install -y ansible-core
-        else
-                fail "Distribution ${DIST} not yet supported"
-        fi
-fi
+./tools/setup-ansible.sh
 
 ansible-playbook -e "hostname=${HOST}" -e "create_ramdisk=false" ./playbooks/install-minikube.yaml
 [ $? -ne 0 ] && fail "Installation of Minikube failed"
