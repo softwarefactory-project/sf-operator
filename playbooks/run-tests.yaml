@@ -3,7 +3,7 @@
   environment:
     OPENSHIFT_USER: false
   vars:
-    project_dir: "{{ zuul.project.src_dir | default('..') }}"
+    project_dir: "{% if zuul.project.src_dir is defined %}~/{{ zuul.project.src_dir }}{% else %}..{% endif %}"
   pre_tasks:
     - name: Grab load balancer IP
       command: awk '/ gerrit./ { print $1 }' /etc/hosts
