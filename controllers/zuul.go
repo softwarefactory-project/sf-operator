@@ -1127,7 +1127,9 @@ func (r *SFController) AddOIDCAuthenticator(cfg *ini.File, authenticator sfv1.Zu
 	cfg.Section(section).NewKey("realm", authenticator.Realm)
 	cfg.Section(section).NewKey("client_id", authenticator.ClientID)
 	cfg.Section(section).NewKey("issuer_id", authenticator.IssuerID)
-	if authenticator.UIDClaim != "sub" {
+	if authenticator.UIDClaim == "" {
+		cfg.Section(section).NewKey("uid_claim", "sub")
+	} else {
 		cfg.Section(section).NewKey("uid_claim", authenticator.UIDClaim)
 	}
 	if authenticator.MaxValidityTime != 0 {
@@ -1136,7 +1138,9 @@ func (r *SFController) AddOIDCAuthenticator(cfg *ini.File, authenticator sfv1.Zu
 	if authenticator.Skew != 0 {
 		cfg.Section(section).NewKey("skew", strconv.Itoa(int(authenticator.Skew)))
 	}
-	if authenticator.Scope != "openid profile" {
+	if authenticator.Scope == "" {
+		cfg.Section(section).NewKey("scope", "openid profile")
+	} else {
 		cfg.Section(section).NewKey("scope", authenticator.Scope)
 	}
 	if authenticator.Authority != "" {
