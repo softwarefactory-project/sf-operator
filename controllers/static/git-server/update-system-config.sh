@@ -257,7 +257,7 @@ cat << EOF > roles/setup-k8s-config/tasks/main.yaml
 
 - name: setup config internal certificate authority trust
   command: kubectl config set-cluster local --certificate-authority="{{ ansible_env.HOME }}/.kube/ca.crt"
-  when: "'${KUBERNETES_PUBLIC_API_URL}' == ''"
+  when: "'${KUBERNETES_PUBLIC_API_URL}' == '' or '${KUBERNETES_PUBLIC_API_URL}' == 'https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}'"
 EOF
 
 git add zuul.d playbooks roles

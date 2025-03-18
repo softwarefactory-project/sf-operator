@@ -274,15 +274,16 @@ func (r *SFController) DeployGitServer() bool {
 		"serial":        "3",
 	}
 
-	if r.isConfigRepoSet() {
-		annotations["config-repo-name"] = r.cr.Spec.ConfigRepositoryLocation.Name
-		annotations["config-zuul-connection-name"] = r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName
-	}
-
 	logserverHost := "logserver"
 	if r.cr.Spec.ConfigRepositoryLocation.LogserverHost != "" {
 		logserverHost = r.cr.Spec.ConfigRepositoryLocation.LogserverHost
-		annotations["logserver_host"] = logserverHost
+	}
+
+	if r.isConfigRepoSet() {
+		annotations["config-repo-name"] = r.cr.Spec.ConfigRepositoryLocation.Name
+		annotations["config-zuul-connection-name"] = r.cr.Spec.ConfigRepositoryLocation.ZuulConnectionName
+		annotations["config-cluster-api-url"] = r.cr.Spec.ConfigRepositoryLocation.ClusterAPIURL
+		annotations["config-logserver-host"] = logserverHost
 	}
 
 	// Create the statefulset
@@ -333,6 +334,7 @@ func (r *SFController) DeployGitServer() bool {
 	initContainer.Env = []apiv1.EnvVar{
 		base.MkEnvVar("FQDN", r.cr.Spec.FQDN),
 		base.MkEnvVar("ZUUL_LOGSERVER_HOST", logserverHost),
+		base.MkEnvVar("KUBERNETES_PUBLIC_API_URL", r.cr.Spec.ConfigRepositoryLocation.ClusterAPIURL),
 	}
 	initContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
