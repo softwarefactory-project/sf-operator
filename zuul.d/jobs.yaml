@@ -131,6 +131,8 @@
       - playbooks/prepare-minikube.yaml
       - playbooks/install-golang.yaml
     post-run: playbooks/get-minikube-logs.yaml
+    vars:
+      create_ramdisk: True
     nodeset:
       nodes:
         - name: controller

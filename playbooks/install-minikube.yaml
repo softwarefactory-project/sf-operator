@@ -11,7 +11,7 @@
   tasks:
     # This block is for slow machine, e.g. in SF CI, it is recommened to setup etcd data in RAM
     - name: Create ramdisk
-      when: create_ramdisk | default(true)
+      when: create_ramdisk is defined and create_ramdisk == True
       block:
         - name: Create etcd ramdisk folder
           become: true
