@@ -7,6 +7,8 @@ Type=oneshot
 SyslogIdentifier=minikube
 User={{ ansible_user_id }}
 ExecStart=/bin/minikube start
+ExecStartPost=/bin/sh -c "sudo iptables -t nat -A PREROUTING -i {{ default_itf.stdout }} -p tcp -m tcp --dport 443 -m comment --comment 'PREROUTING rule for https' -j DNAT --to-destination {{ deployment_ip.stdout }}:443"
+ExecStartPost=/bin/sh -c "sudo iptables -A FORWARD -d {{ deployment_ip.stdout }}/32 -p tcp -m tcp --dport 443 -m comment --comment 'Forward rule for https' -j ACCEPT"
 
 [Install]
 WantedBy=multi-user.target

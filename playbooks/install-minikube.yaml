@@ -67,6 +67,19 @@
           --disable-metrics=true
           {{ ramdisk_command | default('') }}
 
+    - name: Get minikube deployment ip
+      command: minikube ip
+      register: deployment_ip
+
+    - name: Get default interface
+      shell: ip route show default | awk '{print $5}'
+      register: default_itf
+
+    - name: Stop minikube after init to install service file and load fw rules
+      command: minikube stop
+      register: _minikube_stop
+      failed_when: _minikube_stop.rc not in [0, 125]
+
     - name: Install minikube service
       template:
         src: minikube.service.j2
@@ -77,6 +90,7 @@
       ansible.builtin.systemd_service:
         name: minikube
         enabled: true
+        state: started
         daemon_reload: yes
       become: true
 
