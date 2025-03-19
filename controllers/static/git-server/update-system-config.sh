@@ -211,18 +211,13 @@ cat << EOF > roles/add-k8s-hosts/tasks/main.yaml
     ansible_kubectl_pod: "zuul-scheduler-0"
 
 - name: Fetch nodepool-launcher Pod info
-  # https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_info_module.html
-  kubernetes.core.k8s_info:
-    kind: Pod
-    label_selectors:
-      - "run = nodepool-launcher"
-    namespace: "{{ k8s_config['namespace'] }}"
+  command: "kubectl get pod -o=custom-columns=NAME:.metadata.name --no-headers --selector=run=nodepool-launcher"
   register: nodepool_launcher_info
 
 - ansible.builtin.add_host:
     name: "nodepool-launcher"
     ansible_connection: kubectl
-    ansible_kubectl_pod: "{{ nodepool_launcher_info.resources[0].metadata.name }}"
+    ansible_kubectl_pod: "{{ nodepool_launcher_info.stdout }}"
     ansible_kubectl_container: launcher
 
 - ansible.builtin.add_host:
@@ -250,14 +245,10 @@ cat << EOF > roles/setup-k8s-config/tasks/main.yaml
   command: "{{ item }}"
   no_log: true
   loop:
-    - "kubectl config set-cluster local --server='{{ k8s_config['server'] }}'"
+    - "kubectl config set-cluster local --server='{{ k8s_config['server'] }}' --certificate-authority={{ ansible_env.HOME }}/.kube/ca.crt"
     - "kubectl config set-credentials local-token --token={{ k8s_config['token'] }}"
     - "kubectl config set-context local-context --cluster=local --user=local-token --namespace={{ k8s_config['namespace'] }}"
     - "kubectl config use-context local-context"
-
-- name: setup config internal certificate authority trust
-  command: kubectl config set-cluster local --certificate-authority="{{ ansible_env.HOME }}/.kube/ca.crt"
-  when: "'${KUBERNETES_PUBLIC_API_URL}' == '' or '${KUBERNETES_PUBLIC_API_URL}' == 'https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}'"
 EOF
 
 git add zuul.d playbooks roles
