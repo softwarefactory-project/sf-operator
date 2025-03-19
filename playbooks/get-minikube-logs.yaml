@@ -4,6 +4,7 @@
       shell: |
         mkdir -p ~/zuul-output/logs/
         minikube logs > ~/zuul-output/logs/minikube.logs
+        sudo dmesg > ~/zuul-output/logs/dmesg.txt
 
     # Fetch k8s resources for the sf namespace
     - ansible.builtin.include_role:

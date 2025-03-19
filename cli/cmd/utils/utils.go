@@ -681,6 +681,7 @@ func EnsureSelfSignCert(env *ENV) {
 			Subject: pkix.Name{
 				Organization: []string{"Acme Co"},
 			},
+			DNSNames:              []string{"gerrit.sfop.me", "sfop.me"},
 			BasicConstraintsValid: true,
 		}
 		derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
@@ -711,7 +712,7 @@ func EnsureSelfSignCert(env *ENV) {
 
 func ReadIngressIP(env *ENV, name string) string {
 	attempt := 1
-	maxTries := 20
+	maxTries := 25
 	for {
 		var ingress networkv1.Ingress
 		if GetMOrDie(env, name, &ingress) {
@@ -726,7 +727,7 @@ func ReadIngressIP(env *ENV, name string) string {
 		}
 		ctrl.Log.Info(fmt.Sprintf("Waiting for %s ... [attempt %d/%d]", name, attempt, maxTries))
 		attempt += 1
-		time.Sleep(5 * time.Second)
+		time.Sleep(7 * time.Second)
 	}
 }
 
