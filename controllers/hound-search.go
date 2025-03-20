@@ -101,7 +101,7 @@ func (r *SFController) DeployHoundSearch() bool {
 		"config-scripts":             utils.Checksum([]byte(houndSearchRender + houndSearchInit + houndSearchConfig)),
 	}
 	limits := v1.LimitsSpec{
-		CPU:    resource.MustParse("2000m"),
+		CPU:    resource.MustParse("500m"),
 		Memory: resource.MustParse("2Gi"),
 	}
 	if r.cr.Spec.Codesearch.Limits != nil {

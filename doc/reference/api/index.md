@@ -45,7 +45,7 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `storage` _[StorageSpec](#storagespec)_ |  | -|
-| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 | `enabled` _boolean_ | If set to false, the service won't be deployed | {true}|
 
 
@@ -242,7 +242,7 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `memory` _[Quantity](https://pkg.go.dev/k8s.io/apimachinery@v0.28.2/pkg/api/resource#Quantity)_ |  | {2Gi}|
-| `cpu` _[Quantity](https://pkg.go.dev/k8s.io/apimachinery@v0.28.2/pkg/api/resource#Quantity)_ |  | {2000m}|
+| `cpu` _[Quantity](https://pkg.go.dev/k8s.io/apimachinery@v0.28.2/pkg/api/resource#Quantity)_ |  | {500m}|
 
 
 #### LogLevel
@@ -290,7 +290,7 @@ _Appears in:_
 | --- | --- | --- |
 | `dbStorage` _[StorageSpec](#storagespec)_ | Storage parameters related to mariaDB's data | -|
 | `logStorage` _[StorageSpec](#storagespec)_ | Storage parameters related to the database's logging | -|
-| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 
 
 #### NodepoolBuilderSpec
@@ -306,7 +306,7 @@ _Appears in:_
 | --- | --- | --- |
 | `storage` _[StorageSpec](#storagespec)_ | Storage related settings | -|
 | `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the nodepool launcher process. Valid values are: "INFO" (default), "WARN", "DEBUG". | INFO|
-| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 
 
 #### NodepoolLauncherSpec
@@ -321,7 +321,7 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the nodepool launcher service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
-| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 
 
 #### NodepoolSpec
@@ -527,7 +527,7 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `storage` _[StorageSpec](#storagespec)_ |  | -|
-| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 
 
 #### ZuulExecutorSpec
@@ -545,7 +545,7 @@ _Appears in:_
 | `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-executor service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
 | `enabled` _boolean_ | If set to false, the zuul-executor deployment won't be applied | {true}|
 | `standalone` _[StandaloneZuulExecutorSpec](#standalonezuulexecutorspec)_ | When set the Control plane is not deployed. The standalone executor must be able to connect to the control plane | -|
-| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 | `diskLimitPerJob` _integer_ | the [disk_limit_per_job](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.disk_limit_per_job) | {250}|
 
 
@@ -567,7 +567,7 @@ _Appears in:_
 | `gitTimeout` _integer_ | the [git_timeout](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-merger.git_timeout) parameter | -|
 | `storage` _[StorageSpec](#storagespec)_ | Storage-related settings | -|
 | `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the nodepool launcher service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
-| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 
 
 #### ZuulOIDCAuthenticatorSpec
@@ -609,7 +609,7 @@ _Appears in:_
 | `storage` _[StorageSpec](#storagespec)_ | Storage-related settings | -|
 | `statsdTarget` _string_ | The address to forward statsd metrics to (optional), in the form "host:port" | -|
 | `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-scheduler service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
-| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 | `DefaultHoldExpiration` _integer_ | the [DefaultHoldExpiration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scheduler.default_hold_expiration) | -|
 | `MaxHoldExpiration` _integer_ | the [MaxHoldExpiration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scheduler.max_hold_expiration) | -|
 
@@ -652,6 +652,6 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-web launcher service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
-| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:2000m memory:2Gi]}|
+| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 
 

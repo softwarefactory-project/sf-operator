@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+- The default CPU limits have been reduced from 2000m to 500m to enable rollout on smaller cluster.
+
 ### Deprecated
 ### Removed
 ### Fixed
