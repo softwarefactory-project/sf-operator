@@ -62,8 +62,10 @@
           --embed-certs
           --container-runtime=cri-o
           --addons ingress,ingress-dns
-          --cpus {{ ansible_processor_vcpus }}
-          --memory {{ ansible_memory_mb['real']['total'] }}
+          --cpus no-limit
+          --memory no-limit
+          --delete-on-failure=true
+          --disable-metrics=true
           {{ ramdisk_command | default('') }}
       command: "{{ start_cmd }}"
 
