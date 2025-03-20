@@ -75,12 +75,12 @@ You can use these keys to define labels in your Fluent Bit pipeline.
 
 ## Example: setting up a simple Fluent Bit + Loki stack for log collection
 
-The `tools/loki` folder in the sf-operator repository has everything needed to deploy a minimal
+The `hack/loki` folder in the sf-operator repository has everything needed to deploy a minimal
 Loki instance and configure log forwarding to this instance:
 
-* [Loki manifest](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/tools/loki/test-loki.yaml)
-* [Fluent Bit manifest](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/tools/loki/test-fluentbit.yaml)
-* (Optional) [Grafana deployment with preconfigured monitoring and logging datasources](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/tools/loki/test-grafana.yaml)
+* [Loki manifest](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/hack/loki/test-loki.yaml)
+* [Fluent Bit manifest](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/hack/loki/test-fluentbit.yaml)
+* (Optional) [Grafana deployment with preconfigured monitoring and logging datasources](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/hack/loki/test-grafana.yaml)
 
 !!! danger
     These manifests are intended for testing purposes only and shouldn't be used in production.
@@ -96,7 +96,7 @@ kubectl apply -f test-loki.yaml -n sf
 or
 
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/tools/loki/test-loki.yaml -n sf
+kubectl apply -f https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/hack/loki/test-loki.yaml -n sf
 ```
 
 3. Create a Fluent Bit instance:
@@ -108,7 +108,7 @@ kubectl apply -f test-fluentbit.yaml -n sf
 or
 
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/tools/loki/test-fluentbit.yaml -n sf
+kubectl apply -f https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/hack/loki/test-fluentbit.yaml -n sf
 ```
 
 Fluent Bit will be configured with an HTTP input, and forward logs to stdout (so you can see them in the logs of the Fluent Bit pod) and to the Loki instance you created above.

@@ -68,7 +68,7 @@ go run main.go --config playbooks/files/sf-operator-cli.yaml dev run-tests stand
 To fetch the test suite artifacts (service logs, operator logs, etc) locally, run:
 
 ```sh
-./tools/fetch-artifacts.sh
+./hack/fetch-artifacts.sh
 ```
 
 The artifacts will be available in the `/tmp/sf-operator-artifacts/` directory.

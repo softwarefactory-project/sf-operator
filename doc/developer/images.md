@@ -175,7 +175,7 @@ cd <path/to/zuul> && git fetch --all && git checkout <tag>
 
 ```sh
 cd <path/to/sf-operator>
-python tools/zuuldoc2statsdmapper.py -i <path/to/zuul>/doc/source/monitoring.rst controllers/static/zuul/statsd_mapping.yaml
+python hack/zuuldoc2statsdmapper.py -i <path/to/zuul>/doc/source/monitoring.rst controllers/static/zuul/statsd_mapping.yaml
 ```
 
 3. Validate that the generated configuration can run with statsd-exporter (make sure the container version matches the one in
@@ -200,7 +200,7 @@ cd <path/to/nodepool> && git fetch --all && git checkout <tag>
 
 ```sh
 cd <path/to/sf-operator>
-python tools/zuuldoc2statsdmapper.py -i <path/to/nodepool>/doc/source/operation.rst controllers/static/nodepool/statsd_mapping.yaml.tmpl
+python hack/zuuldoc2statsdmapper.py -i <path/to/nodepool>/doc/source/operation.rst controllers/static/nodepool/statsd_mapping.yaml.tmpl
 ```
 
 3. Validate that the generated configuration can run with statsd-exporter (make sure the container version matches the one in

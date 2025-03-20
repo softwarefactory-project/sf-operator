@@ -34,10 +34,10 @@ fi
 
 if [ -z "$ANSIBLE_CONFIG" ]; then
     echo "No ansible config found, exporting ANSIBLE_CONFIG"
-    export ANSIBLE_CONFIG="$(realpath tools/microshift/ansible.cfg)"
+    export ANSIBLE_CONFIG="$(realpath hack/microshift/ansible.cfg)"
 fi
 
-./tools/setup-ansible.sh
+./hack/setup-ansible.sh
 
 if ! command -v git >/dev/null 2>&1; then
     sudo dnf install -y git
@@ -46,9 +46,9 @@ fi
 # NOTE: To avoid an error in "stanity-check" task, we will do modification
 # on the file that is not tracked.
 echo "Making copy of example inventory, then edit the file..."
-cp tools/microshift/example-inventory.yaml tools/microshift/inventory.yaml
-sed -i "s/ANSIBLE_USER/$ANSIBLE_USER/g" tools/microshift/inventory.yaml
-sed -i "s/ANSIBLE_HOST/$ANSIBLE_HOST/g" tools/microshift/inventory.yaml
+cp hack/microshift/example-inventory.yaml hack/microshift/inventory.yaml
+sed -i "s/ANSIBLE_USER/$ANSIBLE_USER/g" hack/microshift/inventory.yaml
+sed -i "s/ANSIBLE_HOST/$ANSIBLE_HOST/g" hack/microshift/inventory.yaml
 
 echo "Installing Ansible galaxy collection"
 # NOTE: Workaround issues when ansible-galaxy silently fail to install a collection
@@ -68,7 +68,7 @@ export ANSIBLE_LOG_PATH=ansible-clone-microshift-role.log
 ansible-playbook \
     -i localhost \
     -e "hostname=localhost" \
-    tools/microshift/ansible-microshift-role.yaml || fail "Failed to clone ansible-microshift-role!"
+    hack/microshift/ansible-microshift-role.yaml || fail "Failed to clone ansible-microshift-role!"
 
 echo "Deploy and configure MicroShift on host $ANSIBLE_HOST..."
 # NOTE: We include the setup-microshift/defaults/main.yaml variables, due
@@ -77,15 +77,15 @@ echo "Deploy and configure MicroShift on host $ANSIBLE_HOST..."
 # setup-microshfit role are ignored by ansible-microshift-role.
 export ANSIBLE_LOG_PATH=ansible-do-microshift.log
 ansible-playbook \
-    -i tools/microshift/inventory.yaml \
-    -e "@tools/microshift/roles/setup-microshift/defaults/main.yaml" \
+    -i hack/microshift/inventory.yaml \
+    -e "@hack/microshift/roles/setup-microshift/defaults/main.yaml" \
     -e "@${PULL_SECRET_FILE_PATH}" \
-    tools/microshift/do-microshift.yaml || fail "MicroShift deployment and configuration failed!"
+    hack/microshift/do-microshift.yaml || fail "MicroShift deployment and configuration failed!"
 
 echo "Deploying Microshift done! Pulling KUBECONFIG to ~/.kube/microshift-config..."
 # take the config now to local env
 mkdir -p ~/.kube
 ansible controller \
-    -i tools/microshift/inventory.yaml \
+    -i hack/microshift/inventory.yaml \
     -m "ansible.builtin.fetch" \
     -a '{"src": "~/.kube/microshift-config", "dest":"~/.kube/microshift-config", "flat":"true"}'
