@@ -4,11 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [in development]
 
-### Component Updates
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
 
-- zuul-* : bumped to 11.3.0
+## [v0.0.56] - 2025-03-20
 
-Updated components will trigger pod rerolls at upgrade.
+This release also marks the migration of sf-operator's CI to https://gateway-cloud-softwarefactory.apps.ocp.cloud.ci.centos.org
 
 ### Added
 
@@ -16,6 +20,7 @@ Updated components will trigger pod rerolls at upgrade.
 
 ### Changed
 
+- zuul-* : bumped to 11.3.0. Updated components will trigger pod rerolls at upgrade.
 - Persistent Volume automatic expansion is no longer performed when the StorageClass does not support it.
 
 ### Deprecated
