@@ -181,7 +181,7 @@ func ensureNodepoolRole(env *cliutils.ENV) {
 		role.Rules = []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
-				Resources: []string{"pods", "pods/exec", "services", "persistentvolumeclaims", "configmaps", "secrets"},
+				Resources: []string{"pods", "pods/exec", "pods/portforward", "services", "persistentvolumeclaims", "configmaps", "secrets"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{

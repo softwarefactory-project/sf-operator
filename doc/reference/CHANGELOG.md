@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 ### Removed
 ### Fixed
 
+- The nodepool-sa created using the `nodepool create openshiftpods-namespace` command now allows the creation of port-forward so that Zuul build running on OpenShift can succeed.
+
 ## [v0.0.56] - 2025-03-20
 
 This release also marks the migration of sf-operator's CI to https://gateway-cloud-softwarefactory.apps.ocp.cloud.ci.centos.org
