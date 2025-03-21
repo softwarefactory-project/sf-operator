@@ -8,29 +8,21 @@
     minikube_package: https://github.com/kubernetes/minikube/releases/download/v1.35.0/minikube-linux-amd64
     kicbase_version: v0.0.46 # keep in sync with the minikube release
     etcd_ramdisk_path: /dev/shm/etcd
+    do_create_ramdisk: "{{ create_ramdisk is defined and create_ramdisk == True }}"
+    ramdisk_command: |
+      {% if do_create_ramdisk %}--mount --mount-string="{{ etcd_ramdisk_path }}:/var/lib/minikube/etcd"
+      {% endif %}
   tasks:
-    # This block is for slow machine, e.g. in SF CI, it is recommened to setup etcd data in RAM
-    - name: Create ramdisk
-      when: create_ramdisk is defined and create_ramdisk == True
-      block:
-        - name: Create etcd ramdisk folder
-          become: true
-          ansible.builtin.file:
-            path: "{{ etcd_ramdisk_path }}"
-            state: directory
-            mode: 0700
-            owner: root
-            group: root
-
-        - name: Set etcd ramdisk SELinux context
-          become: true
-          ansible.builtin.command: restorecon -F "{{ etcd_ramdisk_path }}"
-
-        - name: Set fact for ramdisk mount
-          ansible.builtin.set_fact:
-            ramdisk_command: >-
-              --mount
-              --mount-string="{{ etcd_ramdisk_path }}:/var/lib/minikube/etcd"
+    # This task is for slow machine, e.g. in SF CI, it is recommened to setup etcd data in RAM
+    - name: Create ramdisk folder
+      when: do_create_ramdisk
+      become: true
+      ansible.builtin.file:
+        path: "{{ etcd_ramdisk_path }}"
+        state: directory
+        mode: 0700
+        owner: root
+        group: root
 
     - name: Installing packages
       become: true
@@ -65,7 +57,7 @@
           --memory no-limit
           --delete-on-failure=true
           --disable-metrics=true
-          {{ ramdisk_command | default('') }}
+          {{ ramdisk_command }}
 
     - name: Install minikube service
       template:
