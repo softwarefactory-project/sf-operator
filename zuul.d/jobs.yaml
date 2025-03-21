@@ -26,17 +26,6 @@
       inject_dev_ssh_keys: true
       deploy_legacy_way: false
 
-- job:
-    name: sf-operator-multinode-rhel
-    parent: sf-operator-microshift-multinode-rhel
-    pre-run: *pre-run
-    post-run: *post-run
-    timeout: 7200
-    run: playbooks/main.yaml
-    abstract: true
-    irrelevant-files: *irrelevant-files
-    vars: *vars
-
 - secret:
     name: zuul_quay_sf
     data:
@@ -114,13 +103,6 @@
     run: playbooks/upgrade.yaml
     vars:
       mode: "olm"
-
-- job:
-    name: sf-operator-standalone-rhel
-    description: Validates a sf-operator standalone deployment in multinode on RHEL
-    parent: sf-operator-multinode-rhel
-    vars:
-      mode: "standalone"
 
 # minikube sf-operator jobs
 - job:
