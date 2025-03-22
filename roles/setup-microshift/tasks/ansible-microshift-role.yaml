@@ -1,7 +1,0 @@
----
-# NOTE: To avoid cloning main branch, where we define in defaults
-# the commit SHA-1 for ansible-microshift-role project, let's do it
-# as it was earlier.
-- ansible.builtin.include_role:
-    name: "roles/setup-env"
-    tasks_from: clone-microshift-role

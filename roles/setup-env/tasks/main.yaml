@@ -3,21 +3,8 @@
   become: true
   when: install_requirements
   block:
-    - name: Upgrade all packages
-      ansible.builtin.package:
-        name: "*"
-        state: latest
-
-    - name: Check if kubeconfig exists
-      ansible.builtin.stat:
-        path: ~/.kube/config
-      register: _kubeconfig
-      become: false
-
-    - name: Ensure kubeconfig has fqdn
-      ansible.builtin.command: sed 's/localhost/{{ microshift_fqdn }}/' -i ~/.kube/config
-      when: _kubeconfig.stat.exists
-      become: false
+    - name: Install go
+      ansible.builtin.include_role: name=install-golang
 
     - name: Install packages
       ansible.builtin.package:
@@ -31,27 +18,6 @@
           - python3-cryptography
           - zip
           - unzip
-
-    # NOTE: Tasks are required on multinode-deployment to get kubectl binary
-    # NOTE: The command needs to be executed via shell/command module
-    # not rhsm_repository modue, because it will raise an error on
-    # Centos deployment.
-    - name: Install openshift-client
-      block:
-        - name: Enable RHOCP subscription using command
-          become: true
-          ansible.builtin.command: |
-            subscription-manager repos --enable rhocp-{{ microshift_version }}-for-rhel-9-{{ ansible_architecture }}-rpms
-
-        - name: Install openshift-clients
-          become: true
-          ansible.builtin.package:
-            name: openshift-clients
-            state: present
-
-    - name: Install python3-pip
-      ansible.builtin.package:
-        name:
           - python3-pip
           - python3-setuptools
 
@@ -62,28 +28,3 @@
           - kubernetes
           - oauthlib>=3.2.2
           - websocket-client
-
-# FIXME: Install golang package when 1.21 is available
-# ERROR on `go build` for sf-operator:
-# go: go.mod requires go >= 1.22.0 (running go 1.21.13; GOTOOLCHAIN=local)
-- name: Configure TEMPORARY solution for Golang 1.22
-  block:
-    - name: Check golang version
-      ansible.builtin.package_facts:
-
-    - name: Install minimum version when Go binary is old
-      when:
-        - "'golang' in ansible_facts.packages"
-        - "ansible_facts.packages['golang'][0]['version'] is version('1.22.0', 'lt')"
-      block:
-        - name: Remove golang
-          become: true
-          ansible.builtin.package:
-            name: golang
-            state: absent
-
-    - ansible.builtin.include_role:
-        name: "roles/install-golang"
-
-- name: Print golang version
-  ansible.builtin.command: go version

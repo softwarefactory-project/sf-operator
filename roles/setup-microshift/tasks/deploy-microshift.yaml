@@ -1,4 +1,0 @@
----
-- name: Run ansible-microshift-role
-  ansible.builtin.include_role:
-    name: "{{ microshift_role_path }}"

@@ -1,0 +1,8 @@
+microshift_ip: "{{ hostvars.controller.ansible_host | default(ansible_default_ipv4.address) }}"
+fqdn: microshift.dev
+sf_fqdn: sfop.me
+disk_file_sparsed: true
+disk_file_size: 30G
+setup_olm: true
+enable_ramdisk: true
+ramdisk_size: 1G

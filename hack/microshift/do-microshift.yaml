@@ -1,5 +1,62 @@
 ---
 - hosts: "{{ hostname | default('controller') }}"
   gather_facts: true
-  roles:
-    - setup-microshift
+  tasks:
+    - name: Run ansible-microshift-role
+      ansible.builtin.include_role:
+        name: "{{ microshift_role_path }}"
+
+    - name: Create namespaces
+      ansible.builtin.shell: kubectl get namespace {{ item }} || kubectl create namespace {{ item }}
+      loop:
+        - sf
+        - nodepool
+        - ext-ze
+
+    - name: Set service accounts privileges
+      ansible.builtin.command: oc adm policy add-scc-to-user privileged system:serviceaccount:{{ item.namespace }}:{{ item.serviceaccount }}
+      loop:
+        - namespace: operators
+          serviceaccount: default
+        - namespace: sf
+          serviceaccount: default
+        - namespace: ext-ze
+          serviceaccount: default
+        - namespace: operators
+          serviceaccount: prometheus-operator
+
+    - name: Set default kubectl context to sf namespace
+      ansible.builtin.command: kubectl config set-context microshift --namespace=sf
+
+    - name: Ensure prometheus operator is installed
+      block:
+        - name: Apply prometheus-operator subscription
+          ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/olm-deps/prometheus/prometheus-subscription.yaml
+        - name: Wait for pod to be ready
+          ansible.builtin.command: >
+            kubectl wait --for=condition=Ready --timeout 5s pods
+            -l app.kubernetes.io/name=prometheus-operator -n operators
+          register: ready_po
+          until:
+            - '"condition met" in ready_po.stdout'
+            - ready_po.rc == 0
+          retries: 60
+          delay: 5
+
+    # Configure additional domains like: gerrit.sfop.me
+    - name: Get Ingress IP Address
+      ansible.builtin.command: /usr/local/bin/recognize-iplb-ip-address.sh
+      register: _lb_ip
+      changed_when: true
+
+    - name: Set the LB or Router IP address as default address for FQDN
+      when: _lb_ip.stdout | length > 0
+      ansible.builtin.set_fact:
+        microshift_frontend_address: "{{ _lb_ip.stdout }}"
+
+    - name: Populate /etc/hosts
+      become: true
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        block: |
+          {{ microshift_frontend_address | default(microshift_ip) }} {{ fqdn }} {{ sf_fqdn }} gerrit.{{ sf_fqdn }}
