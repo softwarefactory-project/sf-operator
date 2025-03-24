@@ -14,7 +14,7 @@ fi
 
 HOST=$1
 
-./tools/setup-ansible.sh
+./hack/setup-ansible.sh
 
 ansible-playbook -e "hostname=${HOST}" -e "create_ramdisk=false" ./playbooks/install-minikube.yaml
 [ $? -ne 0 ] && fail "Installation of Minikube failed"

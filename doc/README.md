@@ -23,7 +23,7 @@ Run the following commands:
 ```ShellSession
 git clone https://softwarefactory-project.io/r/software-factory/sf-operator
 cd sf-operator
-./tools/deploy.sh
+./hack/deploy.sh
 ```
 
 > This procedure is expected to work out of the box on a fresh system, please create a [bug report][bugreport] if it ever fails.

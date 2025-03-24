@@ -6,7 +6,7 @@ from pathlib import Path
 
 """
 Usage:
-    python tools/upgrade_zuul_version.py --rel-num 1 --zuul-version 11.2.0 \
+    python hack/upgrade_zuul_version.py --rel-num 1 --zuul-version 11.2.0 \
     --hash 9f118634ca4150b850966a38194af24c943f2aae \
     --container-repo "/path/to/containers/" \
     --sf-operator-repo "/path/to/sf-operator/"

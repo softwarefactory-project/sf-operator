@@ -82,10 +82,10 @@ openshift_pull_secret: |
 cd sf-operator
 
 # run in sf-operator directory
-tools/microshift/setup-microshift.sh localhost
+hack/microshift/setup-microshift.sh localhost
 
 # or with remote host: 10.0.0.1 and remote username: cloud-user
-tools/microshift/setup-microshift.sh 10.0.0.1 cloud-user
+hack/microshift/setup-microshift.sh 10.0.0.1 cloud-user
 ```
 
 Once the deployment has ended successfully, you are now ready to deploy and hack SF-Operator, congratulations!

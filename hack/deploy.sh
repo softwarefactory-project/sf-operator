@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # This is the main user interface to deploy the sf-operator on localhost.
-# usage: ./tools/deploy.sh
+# usage: ./hack/deploy.sh
 
 # Host preparation
 type -p kubectl > /dev/null || {
@@ -14,7 +14,7 @@ type -p kubectl > /dev/null || {
 }
 timeout 5s kubectl get pods 2>/dev/null >/dev/null > /dev/null || {
     echo "[+] Deploying minikube"
-    ./tools/setup-minikube.sh localhost
+    ./hack/setup-minikube.sh localhost
 }
 go version > /dev/null || {
     echo "[+] Installing go"

@@ -5,7 +5,7 @@
 
 COMMAND=${COMMAND:-"sleep 300"}
 SF_OPERATOR_DIR=$(readlink -f "$(pwd)")
-GERRIT_ADMIN_API_KEY=$("${SF_OPERATOR_DIR}/tools/get-secret.sh" gerrit-admin-api-key)
+GERRIT_ADMIN_API_KEY=$("${SF_OPERATOR_DIR}/hack/get-secret.sh" gerrit-admin-api-key)
 TMP_DIR=$(mktemp -d)
 
 if ! command -v pip3; then

@@ -93,7 +93,7 @@ build: setenv generate fmt vet sc build-api-doc ## Build manager binary.
 
 .PHONY: build-api-doc
 build-api-doc: # Build the API documentation.
-	./tools/build-api-doc.sh
+	./hack/build-api-doc.sh
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.

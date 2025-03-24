@@ -39,9 +39,9 @@ sf_operator.egg-info
 
 /_site/
 /deploy/
-/tools/microshift/ansible-microshift-role/
-/tools/microshift/microshift-config
-/tools/microshift/my-inventory.yaml
+/hack/microshift/ansible-microshift-role/
+/hack/microshift/microshift-config
+/hack/microshift/my-inventory.yaml
 /sf-operator-catalog
 sf-operator-catalog.Dockerfile
 .vscode
