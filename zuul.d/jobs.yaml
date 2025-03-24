@@ -123,6 +123,7 @@
 - job:
     name: sf-operator-minikube
     parent: minikube-env
+    irrelevant-files: *irrelevant-files
     run:
       - playbooks/run-deploy.yaml
       - playbooks/run-tests.yaml
