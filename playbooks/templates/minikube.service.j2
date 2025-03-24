@@ -1,0 +1,12 @@
+[Unit]
+Description=minikube service
+After=network.target
+
+[Service]
+Type=oneshot
+SyslogIdentifier=minikube
+User={{ ansible_user_id }}
+ExecStart=/bin/minikube start
+
+[Install]
+WantedBy=multi-user.target
