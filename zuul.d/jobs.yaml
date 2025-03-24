@@ -24,7 +24,6 @@
       # post tasks artifacts directory
       output_logs_dir: ~/zuul-output/logs
       inject_dev_ssh_keys: true
-      deploy_legacy_way: false
 
 - secret:
     name: zuul_quay_sf
