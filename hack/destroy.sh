@@ -12,6 +12,9 @@ then
   rm -Rf deploy
   minikube delete || true
   sudo rm -Rf /dev/shm/etcd
+  sudo systemctl stop minikube || true
+  sudo systemctl disable minikube || true
+  sudo rm -rf /etc/systemd/system/minikube.service
   echo "If hack/deploy.sh doesn't work, delete further the cache by running:"
   echo "sudo rm -Rf ~/.minikube /var/lib/containers/storage/volumes/minikube"
 fi
