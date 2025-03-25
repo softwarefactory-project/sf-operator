@@ -60,8 +60,8 @@ images:
       container: quay.io/prometheus/statsd-exporter
       version: v0.27.1
     - name: fluentbit
-      container: cr.fluentbit.io/fluent/fluent-bit
+      container: ghcr.io/fluent/fluent-bit
       version: "3.1.9"
     - name: fluentbit-debug
-      container: cr.fluentbit.io/fluent/fluent-bit
+      container: ghcr.io/fluent/fluent-bit
       version: "3.1.9-debug"
