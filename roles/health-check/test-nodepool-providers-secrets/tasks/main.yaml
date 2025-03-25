@@ -19,6 +19,7 @@
           server: 5
           port: 5
           floating-ip: 5
+          image.images: 5
       metrics:
         statsd:
           prefix: nodepool.openstack
