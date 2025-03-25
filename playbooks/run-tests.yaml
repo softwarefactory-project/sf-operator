@@ -43,9 +43,9 @@
     - health-check/enable-log-forward
     - health-check/scale-resources
     - health-check/zuul-connections
+    - health-check/zuul-authenticators
 
     # FIXME: add more health-check
-    # - health-check/zuul-authenticators
     # - health-check/config-update-zuul
     # - health-check/check-logjuicer
     # - health-check/zuul-demo-tenant-workflow
