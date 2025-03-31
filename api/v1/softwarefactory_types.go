@@ -286,7 +286,7 @@ type ZuulExecutorSpec struct {
 	Standalone *StandaloneZuulExecutorSpec `json:"standalone,omitempty"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
 	Limits *LimitsSpec `json:"limits"`
 	// the [disk_limit_per_job](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.disk_limit_per_job)
 	// +kubebuilder:default:=250
@@ -305,7 +305,7 @@ type ZuulWebSpec struct {
 	LogLevel LogLevel `json:"logLevel,omitempty"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
 	Limits *LimitsSpec `json:"limits"`
 }
 
@@ -325,7 +325,7 @@ type ZuulSchedulerSpec struct {
 	LogLevel LogLevel `json:"logLevel,omitempty"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
 	Limits *LimitsSpec `json:"limits"`
 	// the [DefaultHoldExpiration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-scheduler.default_hold_expiration)
 	// +optional
@@ -366,7 +366,7 @@ type ZuulMergerSpec struct {
 	LogLevel LogLevel `json:"logLevel,omitempty"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
 	Limits *LimitsSpec `json:"limits"`
 }
 
@@ -494,7 +494,7 @@ type NodepoolLauncherSpec struct {
 	LogLevel LogLevel `json:"logLevel,omitempty"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
 	Limits *LimitsSpec `json:"limits"`
 }
 
@@ -509,7 +509,7 @@ type NodepoolBuilderSpec struct {
 	LogLevel LogLevel `json:"logLevel,omitempty"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
 	Limits *LimitsSpec `json:"limits"`
 }
 
@@ -526,7 +526,7 @@ type ZookeeperSpec struct {
 	Storage StorageSpec `json:"storage"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
 	Limits *LimitsSpec `json:"limits"`
 }
 
@@ -534,7 +534,7 @@ type CodesearchSpec struct {
 	Storage StorageSpec `json:"storage"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
 	Limits *LimitsSpec `json:"limits"`
 	// +kubebuilder:default:=true
 	// +optional
@@ -545,7 +545,7 @@ type CodesearchSpec struct {
 type LimitsSpec struct {
 	// +kubebuilder:default:="2Gi"
 	Memory resource.Quantity `json:"memory"`
-	// +kubebuilder:default:="2000m"
+	// +kubebuilder:default:="500m"
 	CPU resource.Quantity `json:"cpu"`
 }
 
@@ -556,7 +556,7 @@ type MariaDBSpec struct {
 	LogStorage StorageSpec `json:"logStorage"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={"memory": "2Gi", "cpu": "2000m"}
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
 	Limits *LimitsSpec `json:"limits"`
 }
 

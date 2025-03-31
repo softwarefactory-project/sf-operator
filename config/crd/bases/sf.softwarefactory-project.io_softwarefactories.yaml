@@ -82,7 +82,7 @@ spec:
                     type: boolean
                   limits:
                     default:
-                      cpu: 2000m
+                      cpu: 500m
                       memory: 2Gi
                     description: Memory/CPU Limit
                     properties:
@@ -90,7 +90,7 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
-                        default: 2000m
+                        default: 500m
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       memory:
@@ -271,7 +271,7 @@ spec:
                     type: object
                   limits:
                     default:
-                      cpu: 2000m
+                      cpu: 500m
                       memory: 2Gi
                     description: Memory/CPU Limit
                     properties:
@@ -279,7 +279,7 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
-                        default: 2000m
+                        default: 500m
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       memory:
@@ -325,7 +325,7 @@ spec:
                     properties:
                       limits:
                         default:
-                          cpu: 2000m
+                          cpu: 500m
                           memory: 2Gi
                         description: Memory/CPU Limit
                         properties:
@@ -333,7 +333,7 @@ spec:
                             anyOf:
                             - type: integer
                             - type: string
-                            default: 2000m
+                            default: 500m
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           memory:
@@ -385,7 +385,7 @@ spec:
                     properties:
                       limits:
                         default:
-                          cpu: 2000m
+                          cpu: 500m
                           memory: 2Gi
                         description: Memory/CPU Limit
                         properties:
@@ -393,7 +393,7 @@ spec:
                             anyOf:
                             - type: integer
                             - type: string
-                            default: 2000m
+                            default: 500m
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           memory:
@@ -452,7 +452,7 @@ spec:
                 properties:
                   limits:
                     default:
-                      cpu: 2000m
+                      cpu: 500m
                       memory: 2Gi
                     description: Memory/CPU Limit
                     properties:
@@ -460,7 +460,7 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
-                        default: 2000m
+                        default: 500m
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       memory:
@@ -544,7 +544,7 @@ spec:
                         type: boolean
                       limits:
                         default:
-                          cpu: 2000m
+                          cpu: 500m
                           memory: 2Gi
                         description: Memory/CPU Limit
                         properties:
@@ -552,7 +552,7 @@ spec:
                             anyOf:
                             - type: integer
                             - type: string
-                            default: 2000m
+                            default: 500m
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           memory:
@@ -827,7 +827,7 @@ spec:
                         type: string
                       limits:
                         default:
-                          cpu: 2000m
+                          cpu: 500m
                           memory: 2Gi
                         description: Memory/CPU Limit
                         properties:
@@ -835,7 +835,7 @@ spec:
                             anyOf:
                             - type: integer
                             - type: string
-                            default: 2000m
+                            default: 500m
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           memory:
@@ -1020,7 +1020,7 @@ spec:
                         type: integer
                       limits:
                         default:
-                          cpu: 2000m
+                          cpu: 500m
                           memory: 2Gi
                         description: Memory/CPU Limit
                         properties:
@@ -1028,7 +1028,7 @@ spec:
                             anyOf:
                             - type: integer
                             - type: string
-                            default: 2000m
+                            default: 500m
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           memory:
@@ -1123,7 +1123,7 @@ spec:
                     properties:
                       limits:
                         default:
-                          cpu: 2000m
+                          cpu: 500m
                           memory: 2Gi
                         description: Memory/CPU Limit
                         properties:
@@ -1131,7 +1131,7 @@ spec:
                             anyOf:
                             - type: integer
                             - type: string
-                            default: 2000m
+                            default: 500m
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           memory:

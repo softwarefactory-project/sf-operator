@@ -102,7 +102,7 @@ func SetContainerLimitsHighProfile(container *apiv1.Container) {
 		resource.MustParse("128Mi"),
 		resource.MustParse("2Gi"),
 		resource.MustParse("100m"),
-		resource.MustParse("2000m"))
+		resource.MustParse("500m"))
 }
 
 func UpdateContainerLimit(limits *v1.LimitsSpec, container *apiv1.Container) string {
