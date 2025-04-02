@@ -70,7 +70,65 @@
   args:
     chdir: "{{ zuul.project.src_dir }}"
 
-# 6. We re-enable the config location and other settings
+# 6. Run a zk delete-state
+# Attempt to avoid the random "Zuul encountered a syntax error while parsing its\nconfiguration in the repo system-config on branch master.  The\nproblem was:\n\n  Decryption failed\n\nThe problem appears in the the \"base\" job stanza:" ...
+- name: Get the zuul-scheduler image version
+  ansible.builtin.command: cat {{ zuul.project.src_dir }}/controllers/libs/base/static/images.yaml
+  register: images_raw
+
+- set_fact:
+    images_data: "{{ images_raw.stdout | from_yaml }}"
+
+- set_fact:
+    version: "{{ images_data['images'] | selectattr('name', 'equalto', 'zuul-scheduler') | map(attribute='version') | first }}"
+
+- name: Delete the Zuul ZK state with a k8s Job
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: batch/v1
+      kind: Job
+      metadata:
+        name: run-zk-delete-state
+        namespace: sf
+      spec:
+        template:
+          spec:
+            volumes:
+              - name: zuul-config
+                secret:
+                  defaultMode: 420
+                  secretName: zuul-config
+              - name: zookeeper-client-tls
+                secret:
+                  defaultMode: 420
+                  secretName: zookeeper-client-tls
+            containers:
+              - name: zk-delete-state
+                image: quay.io/software-factory/zuul-scheduler:{{ version }}
+                command: ["sh", "-c", "echo 'yes' | zuul-admin delete-state"]
+                volumeMounts:
+                  - mountPath: /etc/zuul
+                    name: zuul-config
+                    readOnly: true
+                  - mountPath: /tls/client
+                    name: zookeeper-client-tls
+                    readOnly: true
+            restartPolicy: Never
+        backoffLimit: 3
+
+- name: Wait for Job Completion
+  retries: 30
+  delay: 10
+  until: job_status.resources[0].status.succeeded is defined
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    name: run-zk-delete-state
+    namespace: sf
+  register: job_status
+
+# 7. We re-enable the config location and other settings
 - name: Apply the Software Factory deployment (standalone)
   ansible.builtin.include_role:
     name: run-operator-standalone
@@ -83,7 +141,7 @@
     name: apply-custom-resources
   when: "{{ mode == 'olm' }}"
 
-# 7. We ensure we recovered the Zuul SQL Database content
+# 8. We ensure we recovered the Zuul SQL Database content
 - name: Fetch the last build ID reported by Zuul web (after restore)
   ansible.builtin.uri:
     url: "https://{{ zuul_endpoint }}/api/tenant/internal/buildsets?skip=0&limit=1"
@@ -101,7 +159,7 @@
     that:
       - _last_buildset.json[0].uuid == last_buildset.json[0].uuid
 
-# 8. We run a zuul job workflow to ensure no failure
+# 9. We run a zuul job workflow to ensure no failure
 - name: Run a Zuul job workflow in order to validate the restored system
   ansible.builtin.include_role:
     name: health-check/config-update-zuul
