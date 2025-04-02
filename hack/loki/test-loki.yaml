@@ -82,7 +82,7 @@ spec:
         app: demo-logging
     spec:
       containers:
-      - image: grafana/loki:2.9.2
+      - image: docker.io/grafana/loki:2.9.2
         name: loki
         resources: {}
         args:
