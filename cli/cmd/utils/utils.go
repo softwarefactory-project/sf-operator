@@ -683,6 +683,8 @@ func EnsureSelfSignCert(env *ENV) {
 			},
 			DNSNames:              []string{"gerrit.sfop.me", "sfop.me"},
 			BasicConstraintsValid: true,
+			NotBefore:             time.Now(),
+			NotAfter:              time.Now().AddDate(100, 0, 0),
 		}
 		derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
 		if err != nil {
