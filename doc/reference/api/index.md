@@ -121,6 +121,7 @@ _Appears in:_
 | `sshkey` _string_ | The name of a Kubernetes secret holding the Gerrit user's SSH key. The secret's data must have a key called "priv". | -|
 | `git-over-ssh` _boolean_ | Set to true to force git operations over SSH even if the password attribute is set. Equivalent to the [git_over_ssh](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.git_over_ssh) parameter. | -|
 | `verifyssl` _boolean_ | Disable SSL certificate verification with the Gerrit instance when set to false. Equivalent to the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.verify_ssl) parameter. | -|
+| `stream-events` _boolean_ | Undocumented option; if set to False this connection won't stream events; instead it will poll for merged patches every minute or so. | -|
 
 
 #### GitConnection
