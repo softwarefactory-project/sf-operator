@@ -110,6 +110,18 @@ func ZookeeperImage() string {
 	return getImage("zookeeper")
 }
 
+func ZuulCapacityImage() string {
+	return getImage("zuul-capacity")
+}
+
+func ZuulWeederImage() string {
+	return getImage("zuul-weeder")
+}
+
+func LogJuicerImage() string {
+	return getImage("logjuicer")
+}
+
 func HTTPDImage() string {
 	return getImage("httpd")
 }

@@ -46,6 +46,18 @@ images:
       container: quay.io/software-factory/mariadb
       version: 11.4-ubi9-1
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/mariadb.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
+    - name: zuul-capacity
+      container: ghcr.io/softwarefactory-project/zuul-capacity
+      version: latest
+      source: https://github.com/softwarefactory-project/zuul-capacity/blob/main/flake.nix#L21
+    - name: zuul-weeder
+      container: ghcr.io/softwarefactory-project/zuul-weeder
+      version: latest
+      source: https://github.com/softwarefactory-project/zuul-weeder/blob/master/flake.nix#L59
+    - name: logjuicer
+      container: ghcr.io/logjuicer/logjuicer
+      version: latest
+      source: https://github.com/logjuicer/logjuicer/blob/main/flake.nix#L145
     - name: busybox
       container: quay.io/software-factory/sf-op-busybox
       version: 1.5-3
