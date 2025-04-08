@@ -51,9 +51,9 @@ images:
       version: latest
       source: https://github.com/softwarefactory-project/zuul-capacity/blob/main/flake.nix#L21
     - name: zuul-weeder
-      container: ghcr.io/softwarefactory-project/zuul-weeder
-      version: latest
-      source: https://github.com/softwarefactory-project/zuul-weeder/blob/master/flake.nix#L59
+      container: quay.io/software-factory/zuul-weeder
+      version: 0.1.3-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-weeder.container?id=f48f7a8f2128da1cd13756940991c953d4a4e5de
     - name: logjuicer
       container: ghcr.io/logjuicer/logjuicer
       version: latest
