@@ -458,7 +458,7 @@ func GetRequireCheckByDriver(driver string, connection string) (PipelineRequire,
 			},
 		}
 	default:
-		return require, fmt.Errorf("Check Pipeline Require: Driver of type \"" + driver + "\" is not supported")
+		return require, fmt.Errorf("check Pipeline Require: Driver of type \"%s\" is not supported", driver)
 	}
 
 	return require, nil
@@ -495,7 +495,7 @@ func GetRequireGateByDriver(driver string, connection string) (PipelineRequire, 
 			},
 		}
 	default:
-		return require, fmt.Errorf("Gate Pipeline Require: Driver of type \"" + driver + "\" is not supported")
+		return require, fmt.Errorf("gate Pipeline Require: Driver of type \"%s\" is not supported", driver)
 	}
 
 	return require, nil
@@ -543,7 +543,7 @@ func GetTriggerCheckByDriver(driver string, connection string) (PipelineGenericT
 			},
 		}
 	default:
-		return trigger, fmt.Errorf("Check Pipeline Trigger: Driver of type \"" + driver + "\" is not supported")
+		return trigger, fmt.Errorf("check Pipeline Trigger: Driver of type \"%s\" is not supported", driver)
 	}
 
 	return trigger, nil
@@ -603,7 +603,7 @@ func GetTriggerGateByDriver(driver string, connection string) (PipelineGenericTr
 			},
 		}
 	default:
-		return trigger, fmt.Errorf("Gate Pipeline Trigger: Driver of type \"" + driver + "\" is not supported")
+		return trigger, fmt.Errorf("gate Pipeline Trigger: Driver of type \"%s\" is not supported", driver)
 	}
 
 	return trigger, nil
@@ -640,7 +640,7 @@ func GetTriggerPostByDriver(driver string, connection string) (PipelineGenericTr
 			},
 		}
 	default:
-		return trigger, fmt.Errorf("Post Pipeline Trigger: Driver of type \"" + driver + "\" is not supported")
+		return trigger, fmt.Errorf("post Pipeline Trigger: Driver of type \"%s\" is not supported", driver)
 	}
 
 	return trigger, nil
@@ -724,7 +724,7 @@ func GetReportersCheckByDriver(driver string, connection string) ([]PipelineRepo
 		reporters = append(reporters, PipelineReporter{},
 			PipelineReporter{},
 			PipelineReporter{})
-		return reporters, fmt.Errorf("Check Pipeline Reporters: Driver of type \"" + driver + "\" is not supported")
+		return reporters, fmt.Errorf("check Pipeline Reporters: Driver of type \"%s\" is not supported", driver)
 
 	}
 
@@ -811,7 +811,7 @@ func GetReportersGateByDriver(driver string, connection string) ([]PipelineRepor
 		reporters = append(reporters, PipelineReporter{},
 			PipelineReporter{},
 			PipelineReporter{})
-		return reporters, fmt.Errorf("Gate Pipeline Reporters: Driver of type \"" + driver + "\" is not supported")
+		return reporters, fmt.Errorf("gate Pipeline Reporters: Driver of type \"%s\" is not supported", driver)
 	}
 
 	return reporters, nil

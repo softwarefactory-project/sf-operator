@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - The default CPU limits have been reduced from 2000m to 500m to enable rollout on smaller cluster.
+- go version in go.mod is bumped to 1.24. Backward compatibility with earlier version is not guaranted.
 
 ### Deprecated
 ### Removed

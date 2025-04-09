@@ -79,7 +79,7 @@ func ParseString(text string, data any) (string, error) {
 	// Create Template object
 	templateBody, err := template.New("StringtoParse").Parse(text)
 	if err != nil {
-		return "", fmt.Errorf("Text not in the right format: " + text)
+		return "", fmt.Errorf("text not in the right format: %s", text)
 	}
 
 	// Parsing Template

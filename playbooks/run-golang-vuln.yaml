@@ -1,29 +1,15 @@
 ---
 - hosts: "{{ hostname | default('controller') }}"
   tasks:
-    - name: Update rpm packages to last version
-      become: true
-      ansible.builtin.package:
-        name: "*"
-        state: latest
-
-    - name: Add golang to PATH
-      ansible.builtin.copy:
-        dest: /etc/profile.d/golang-path.sh
-        content: "export PATH=$PATH:/usr/local/go/bin/"
-        mode: "0644"
-      become: true
+    - name: Install golang
+      ansible.builtin.include_role:
+        name: install-golang
 
     - name: Installing golang vulnerability tool
       ansible.builtin.command:
         cmd: go install golang.org/x/vuln/cmd/govulncheck@latest
-      environment:
-        GOPATH: /usr/local/go/
-      become: true
-      become_flags: "-i"
 
     - name: Running golang vulnerability test
-      ansible.builtin.command:
-        cmd: govulncheck -show verbose ./...
+      ansible.builtin.shell:
+        cmd: ~/go/bin/govulncheck -show verbose ./...
         chdir: "{{ zuul.project.src_dir }}"
-      no_log: false

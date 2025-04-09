@@ -77,11 +77,7 @@
 
 - job:
     name: sf-operator-vuln-check
-    parent: golang-go
     run: playbooks/run-golang-vuln.yaml
-    vars:
-      go_command: "install golang.org/x/vuln/cmd/govulncheck@latest"
-      go_version: 1.22.12
     nodeset:
       nodes:
         - name: controller
