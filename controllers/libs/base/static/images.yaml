@@ -47,9 +47,9 @@ images:
       version: 11.4-ubi9-1
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/mariadb.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: zuul-capacity
-      container: ghcr.io/softwarefactory-project/zuul-capacity
-      version: latest
-      source: https://github.com/softwarefactory-project/zuul-capacity/blob/main/flake.nix#L21
+      container: quay.io/software-factory/zuul-capacity
+      version: 0.4.0-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-weeder.container?id=44d2e8b50b4c67ea3c2908cf5fa240c8735a1c82
     - name: zuul-weeder
       container: quay.io/software-factory/zuul-weeder
       version: 0.1.3-1
