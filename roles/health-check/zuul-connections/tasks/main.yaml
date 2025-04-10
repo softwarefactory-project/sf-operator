@@ -24,12 +24,39 @@
     dummy_elasticsearchconns:
       - name: dummy-elasticsearch-conn
         uri: http://test:9200
+        basicAuthSecret: es-basicauth
     dummy_pagureconns:
       - name: dummy-pagure-conn
         secrets: pagureconnectionsecret
     dummy_smtpconns:
       - name: dummy-smtp-conn
         server: smtp.domain.com
+        secrets: smtp-secret
+
+- name: Create SMTP Connection Secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: smtp-secret
+        namespace: sf
+      data:
+        password: "{{ 'smtp-password' | b64encode }}"
+
+- name: Create ElasticSearch Connection Secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: es-basicauth
+        namespace: sf
+      data:
+        username: "{{ 'es-username' | b64encode }}"
+        password: "{{ 'es-password' | b64encode }}"
 
 - name: Create Gerrit Connection Secret
   kubernetes.core.k8s:
@@ -134,6 +161,14 @@
       ansible.builtin.shell: |
         kubectl exec zuul-scheduler-0 -- grep "dummy-elasticsearch-conn" /etc/zuul/zuul.conf
         kubectl exec zuul-scheduler-0 -- grep "dummy-smtp-conn" /etc/zuul/zuul.conf
+
+    - name: Ensure ElasticSearch URI is configured with basic auth
+      ansible.builtin.shell: |
+        kubectl exec zuul-scheduler-0 -- grep "http://es-username:es-password@test:9200" /etc/zuul/zuul.conf
+
+    - name: Ensure SMTP password is present
+      ansible.builtin.shell: |
+        kubectl exec zuul-scheduler-0 -- grep "smtp-password" /etc/zuul/zuul.conf
 
     - name: Ensure the new Zuul dummy gerrit secret exist in the scheduler's zuul.conf
       ansible.builtin.shell: |

@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- zuul: add `BasicAuthSecret` parameter for elasticsearch connections. This parameter
+  allows defining basic auth settings (username and password) and store them in a secret
+  rather than in plain text in the software factort manifest.
+
 ### Changed
 
 - The default CPU limits have been reduced from 2000m to 500m to enable rollout on smaller cluster.
@@ -13,6 +17,10 @@ All notable changes to this project will be documented in this file.
 - zuul-* : bumped to 11.3.0-20250414-1 (using ubi9 latest images)
 
 ### Deprecated
+
+- zuul: the `Password` parameter in SMTP connections is deprecated and will be removed
+  in a future version. Use instead `Secrets` to point to a secret holding the password.
+
 ### Removed
 ### Fixed
 
