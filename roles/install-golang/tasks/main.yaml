@@ -5,17 +5,21 @@
   changed_when: false
 
 - name: Install Go
+  become: true
   when: _go_version.rc or go_version not in _go_version.stdout
   block:
+    - name: Ensure a clean install
+      ansible.builtin.file:
+        path: /usr/local/go
+        state: absent
+
     - name: Extract Go archive
-      become: true
       ansible.builtin.unarchive:
         src: https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz
         dest: /usr/local
         remote_src: true
 
     - name: Create symlinks for Go binary
-      become: true
       ansible.builtin.file:
         src: "/usr/local/go/bin/{{ item }}"
         dest: "/usr/bin/{{ item }}"
