@@ -112,8 +112,8 @@ func SetupLogForwarding(serviceName string, forwarderSpec *v1.FluentBitForwarder
 	}
 }
 
-func CreateFluentBitSideCarContainer(serviceName string, extraLabels []FluentBitLabel, volumeMounts []apiv1.VolumeMount, debug bool, openshiftUser bool) (apiv1.Container, apiv1.Volume) {
-	var img = base.FluentBitImage(debug)
+func CreateFluentBitSideCarContainer(serviceName string, extraLabels []FluentBitLabel, volumeMounts []apiv1.VolumeMount, openshiftUser bool) (apiv1.Container, apiv1.Volume) {
+	var img = base.FluentBitImage()
 	container := base.MkContainer("fluentbit", img, openshiftUser)
 	container.Env = CreateForwarderEnvVars(serviceName, extraLabels)
 	ports := []apiv1.ContainerPort{
