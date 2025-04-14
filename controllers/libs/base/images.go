@@ -6,10 +6,10 @@ package base
 
 import (
 	_ "embed"
-	"sort"
-
 	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v2"
+	"sort"
+	"strings"
 )
 
 //go:embed static/images.yaml
@@ -45,12 +45,13 @@ func getImage(name string) string {
 	panic("Unknown container image: " + name)
 }
 
-func GetSelfManagedImages() []Image {
+// GetQuayImages is used to detect which images can benefit a scan via the built-in Clair Scecurity scanner on quay.io
+func GetQuayImages() []Image {
 	imagesByName := make(map[string]Image)
 	ret := []Image{}
 	images := loadImages()
 	for _, image := range images.Images {
-		if image.Source != "" {
+		if strings.Contains(image.Container, "quay.io") {
 			imagesByName[image.Name] = image
 		}
 	}
@@ -87,11 +88,11 @@ func NodepoolLauncherImage() string {
 }
 
 func BusyboxImage() string {
-	return getImage("busybox")
+	return getImage("sf-op-busybox")
 }
 
 func GitServerImage() string {
-	return getImage("git-server")
+	return getImage("git-deamon")
 }
 
 func SSHDImage() string {
@@ -135,5 +136,5 @@ func StatsdExporterImage() string {
 }
 
 func FluentBitImage() string {
-	return getImage("fluentbit")
+	return getImage("fluent-bit")
 }
