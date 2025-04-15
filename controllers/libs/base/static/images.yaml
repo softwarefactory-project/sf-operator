@@ -30,7 +30,7 @@ images:
       container: quay.io/software-factory/zookeeper
       version: 3.8.4-2
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zookeeper.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
-    - name: git-server
+    - name: git-deamon
       container: quay.io/software-factory/git-deamon
       version: 2.39.3-1
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/git-daemon.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
@@ -58,7 +58,7 @@ images:
       container: ghcr.io/logjuicer/logjuicer
       version: latest
       source: https://github.com/logjuicer/logjuicer/blob/main/flake.nix#L145
-    - name: busybox
+    - name: sf-op-busybox
       container: quay.io/software-factory/sf-op-busybox
       version: 1.5-3
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sf-op-busybox.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
@@ -66,11 +66,11 @@ images:
       container: registry.access.redhat.com/ubi8/httpd-24
       version: 1-335.1724231549
     - name: node-exporter
-      container: quay.io/prometheus/node-exporter
+      container: quay.io/prometheus/node-exporter-linux-amd64
       version: v1.8.2
     - name: statsd-exporter
-      container: quay.io/prometheus/statsd-exporter
+      container: quay.io/prometheus/statsd-exporter-linux-amd64
       version: v0.27.1
-    - name: fluentbit
+    - name: fluent-bit
       container: quay.io/software-factory/fluent-bit
       version: 3.2.10

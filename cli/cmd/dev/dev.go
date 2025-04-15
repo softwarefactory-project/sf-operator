@@ -377,7 +377,7 @@ func devCloneAsAdmin(kmd *cobra.Command, args []string) {
 
 func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 
-	const quaySFBaseURL = "https://quay.io/api/v1/repository/software-factory/"
+	const quayBaseURL = "https://quay.io/api/v1/repository/"
 
 	type Vuln struct {
 		Severity string
@@ -412,37 +412,55 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 		Tags map[string]Tag
 	}
 
-	getImageDigest := func(image base.Image) string {
+	getContainerPath := func(image base.Image) string {
+		index := strings.Index(image.Container, "/")
+		if index == -1 {
+			println("Unable to extract the container path", image.Container)
+			os.Exit(1)
+		}
+		return image.Container[index+1:]
+	}
 
-		url := quaySFBaseURL + image.Name
+	getImageDigest := func(image base.Image) string {
+		container := getContainerPath(image)
+		url := quayBaseURL + container
 		resp, _ := http.Get(url)
 		target := Image{}
 		json.NewDecoder(resp.Body).Decode(&target)
 
-		return target.Tags[image.Version].ManifestDigest
-
+		tag, exists := target.Tags[image.Version]
+		if !exists {
+			println("Unable to find the image by name on software-factory organization on quay.io")
+			os.Exit(1)
+		}
+		return tag.ManifestDigest
 	}
 
 	getImageReport := func(image base.Image) {
-
 		digest := getImageDigest(image)
-		manifest := image.Name + "/manifest/" + digest
-		url := quaySFBaseURL + manifest + "/security"
+		container := getContainerPath(image)
+		manifest := container + "/manifest/" + digest
+		url := quayBaseURL + manifest + "/security"
 		resp, _ := http.Get(url)
 		target := Scan{}
 		json.NewDecoder(resp.Body).Decode(&target)
 
 		println("\nScan result for: " + image.Name)
+		found := 0
 		for _, feature := range target.Data.Layer.Features {
 			for _, vuln := range feature.Vulnerabilities {
 				if vuln.Severity == "High" || vuln.Severity == "Critical" {
 					fmt.Printf("- %s [%s] %s\n", feature.Name, vuln.Severity, vuln.Name)
+					found += 1
 				}
 			}
 		}
+		if found == 0 {
+			println("No Critical or High issues found")
+		}
 	}
 
-	for _, image := range base.GetSelfManagedImages() {
+	for _, image := range base.GetQuayImages() {
 		getImageReport(image)
 	}
 
