@@ -58,11 +58,7 @@ func createZKLogForwarderSidecar(r *SFController, annotations map[string]string)
 			MountPath: "/fluent-bit/etc/",
 		},
 	}
-	var fluentbitDebug = false
-	if r.cr.Spec.FluentBitLogForwarding.Debug != nil {
-		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
-	}
-	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("zookeeper", []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug, r.isOpenShift)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("zookeeper", []logging.FluentBitLabel{}, volumeMounts, r.isOpenShift)
 	annotations["zk-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["zk-fluent-bit-image"] = sidecar.Image
 	return []apiv1.Volume{volume, storageEmptyDir}, sidecar

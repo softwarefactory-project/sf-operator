@@ -134,11 +134,6 @@ func StatsdExporterImage() string {
 	return getImage("statsd-exporter")
 }
 
-func FluentBitImage(debug bool) string {
-	if debug {
-		return getImage("fluentbit-debug")
-
-	} else {
-		return getImage("fluentbit")
-	}
+func FluentBitImage() string {
+	return getImage("fluentbit")
 }

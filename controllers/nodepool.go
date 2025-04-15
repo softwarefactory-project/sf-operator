@@ -120,12 +120,8 @@ func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string
 			MountPath: "/fluent-bit/etc/",
 		},
 	}
-	var fluentbitDebug = false
-	if r.cr.Spec.FluentBitLogForwarding.Debug != nil {
-		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
-	}
 	builderFluentBitLabels := append(nodepoolFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: BuilderIdent})
-	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts, fluentbitDebug, r.isOpenShift)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts, r.isOpenShift)
 	annotations["dib-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["dib-fluent-bit-parser"] = utils.Checksum([]byte(fbForwarderConfig["parsers.conf"]))
 	annotations["dib-fluent-bit-image"] = sidecar.Image

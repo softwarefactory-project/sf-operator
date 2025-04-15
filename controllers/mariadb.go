@@ -70,11 +70,7 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 			MountPath: "/fluent-bit/etc/",
 		},
 	}
-	var fluentbitDebug = false
-	if r.cr.Spec.FluentBitLogForwarding.Debug != nil {
-		fluentbitDebug = *r.cr.Spec.FluentBitLogForwarding.Debug
-	}
-	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer(MariaDBIdent, []logging.FluentBitLabel{}, volumeMounts, fluentbitDebug, r.isOpenShift)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer(MariaDBIdent, []logging.FluentBitLabel{}, volumeMounts, r.isOpenShift)
 	annotations["mariadb-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["mariadb-fluent-bit-image"] = sidecar.Image
 	return []apiv1.Volume{volume, storageEmptyDir}, sidecar
