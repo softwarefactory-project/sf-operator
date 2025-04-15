@@ -33,6 +33,7 @@ import (
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -379,6 +380,7 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 
 	const quayBaseURL = "https://quay.io/api/v1/repository/"
 
+	// Quay.io data struct
 	type Vuln struct {
 		Severity string
 		Link     string
@@ -411,6 +413,24 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 		Name string
 		Tags map[string]Tag
 	}
+	// -- end -- Quay.io data struct
+
+	// Final data struct
+	type ImageAdvisories struct {
+		image         string
+		hash          string
+		url           string
+		highCount     int
+		criticalCount int
+		advisories    []Vuln
+	}
+
+	type SFOPImagesAdvisories struct {
+		imagesAdvisories []ImageAdvisories
+		highCount        int
+		criticalCount    int
+	}
+	// - end Final data struct
 
 	getContainerPath := func(image base.Image) string {
 		index := strings.Index(image.Container, "/")
@@ -436,7 +456,7 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 		return tag.ManifestDigest
 	}
 
-	getImageReport := func(image base.Image) {
+	getImageAdvisories := func(image base.Image) ImageAdvisories {
 		digest := getImageDigest(image)
 		container := getContainerPath(image)
 		manifest := container + "/manifest/" + digest
@@ -445,24 +465,79 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 		target := Scan{}
 		json.NewDecoder(resp.Body).Decode(&target)
 
-		println("\nScan result for: " + image.Name)
-		found := 0
+		println("Fetching scanning result for: " + image.Container)
+		advs := ImageAdvisories{
+			image:         image.Container,
+			hash:          digest,
+			highCount:     0,
+			criticalCount: 0,
+			url:           fmt.Sprintf("https://quay.io/repository/%s/manifest/%s?tab=vulnerabilities", container, digest),
+			advisories:    []Vuln{},
+		}
 		for _, feature := range target.Data.Layer.Features {
 			for _, vuln := range feature.Vulnerabilities {
 				if vuln.Severity == "High" || vuln.Severity == "Critical" {
-					fmt.Printf("- %s [%s] %s\n", feature.Name, vuln.Severity, vuln.Name)
-					found += 1
+					advs.advisories = append(advs.advisories, vuln)
 				}
 			}
 		}
-		if found == 0 {
-			println("No Critical or High issues found")
+		for _, vuln := range advs.advisories {
+			if vuln.Severity == "High" {
+				advs.highCount += 1
+			}
+			if vuln.Severity == "Critical" {
+				advs.criticalCount += 1
+			}
+		}
+		return advs
+	}
+
+	displayAdvisories := func(advs SFOPImagesAdvisories) {
+		for _, imageAdvisories := range advs.imagesAdvisories {
+			fmt.Printf(
+				"\nContainer Image: %s (Critical: %d, High: %d)\n",
+				imageAdvisories.image, imageAdvisories.criticalCount, imageAdvisories.highCount)
+			println(imageAdvisories.url)
 		}
 	}
 
-	for _, image := range base.GetQuayImages() {
-		getImageReport(image)
+	writePromAdvisories := func(advs SFOPImagesAdvisories) {
+		filepath, _ := utils.GetEnvVarValue("PROM_TEXT_FILE")
+		if filepath != "" {
+			output := ""
+			for _, imageAdvisories := range advs.imagesAdvisories {
+				output += fmt.Sprintf(
+					"sf_operator_image_advisories{image=\"%s\",severity=\"high\"} %d\n",
+					imageAdvisories.image, imageAdvisories.highCount)
+				output += fmt.Sprintf(
+					"sf_operator_image_advisories{image=\"%s\",severity=\"critical\"} %d\n",
+					imageAdvisories.image, imageAdvisories.criticalCount)
+			}
+			output += fmt.Sprintf(
+				"sf_operator_advisories{severity=\"high\"} %d\n", advs.highCount)
+			output += fmt.Sprintf(
+				"sf_operator_advisories{severity=\"critical\"} %d\n", advs.criticalCount)
+			os.WriteFile(filepath, []byte(output), 0644)
+			println()
+			println(output)
+		}
 	}
+
+	sfopAdvisories := SFOPImagesAdvisories{
+		imagesAdvisories: []ImageAdvisories{},
+		highCount:        0,
+		criticalCount:    0,
+	}
+
+	for _, image := range base.GetQuayImages() {
+		imageAdvisories := getImageAdvisories(image)
+		sfopAdvisories.imagesAdvisories = append(sfopAdvisories.imagesAdvisories, imageAdvisories)
+		sfopAdvisories.highCount += imageAdvisories.highCount
+		sfopAdvisories.criticalCount += imageAdvisories.criticalCount
+	}
+
+	displayAdvisories(sfopAdvisories)
+	writePromAdvisories(sfopAdvisories)
 
 }
 
