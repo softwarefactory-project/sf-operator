@@ -32,8 +32,8 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zookeeper.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
     - name: git-deamon
       container: quay.io/software-factory/git-deamon
-      version: 2.39.3-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/git-daemon.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
+      version: 2.39.3-20250414-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/git-daemon.container?id=bdd443b19fd9f9933aa364ccd8b6bbe429c2d3cf
     - name: sshd
       container: quay.io/software-factory/sshd
       version: 0.2-1
