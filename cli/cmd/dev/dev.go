@@ -385,6 +385,7 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 		Severity string
 		Link     string
 		Name     string
+		FixedBy  string
 	}
 
 	type Feature struct {
@@ -422,6 +423,7 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 		url           string
 		highCount     int
 		criticalCount int
+		fixableCount  int
 		advisories    []Vuln
 	}
 
@@ -429,6 +431,7 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 		imagesAdvisories []ImageAdvisories
 		highCount        int
 		criticalCount    int
+		fixableCount     int
 	}
 	// - end Final data struct
 
@@ -471,6 +474,7 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 			hash:          digest,
 			highCount:     0,
 			criticalCount: 0,
+			fixableCount:  0,
 			url:           fmt.Sprintf("https://quay.io/repository/%s/manifest/%s?tab=vulnerabilities", container, digest),
 			advisories:    []Vuln{},
 		}
@@ -484,9 +488,15 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 		for _, vuln := range advs.advisories {
 			if vuln.Severity == "High" {
 				advs.highCount += 1
+				if len(vuln.FixedBy) > 0 {
+					advs.fixableCount += 1
+				}
 			}
 			if vuln.Severity == "Critical" {
 				advs.criticalCount += 1
+				if len(vuln.FixedBy) > 0 {
+					advs.fixableCount += 1
+				}
 			}
 		}
 		return advs
@@ -495,8 +505,9 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 	displayAdvisories := func(advs SFOPImagesAdvisories) {
 		for _, imageAdvisories := range advs.imagesAdvisories {
 			fmt.Printf(
-				"\nContainer Image: %s (Critical: %d, High: %d)\n",
-				imageAdvisories.image, imageAdvisories.criticalCount, imageAdvisories.highCount)
+				"\nContainer Image: %s (Criticals: %d, Highs: %d), (Fixables: %d)\n",
+				imageAdvisories.image, imageAdvisories.criticalCount,
+				imageAdvisories.highCount, imageAdvisories.fixableCount)
 			println(imageAdvisories.url)
 		}
 	}
@@ -512,11 +523,16 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 				output += fmt.Sprintf(
 					"sf_operator_image_advisories{image=\"%s\",severity=\"critical\"} %d\n",
 					imageAdvisories.image, imageAdvisories.criticalCount)
+				output += fmt.Sprintf(
+					"sf_operator_image_advisories_fixables{image=\"%s\"} %d\n",
+					imageAdvisories.image, imageAdvisories.fixableCount)
 			}
 			output += fmt.Sprintf(
 				"sf_operator_advisories{severity=\"high\"} %d\n", advs.highCount)
 			output += fmt.Sprintf(
 				"sf_operator_advisories{severity=\"critical\"} %d\n", advs.criticalCount)
+			output += fmt.Sprintf(
+				"sf_operator_advisories_fixable{} %d\n", advs.fixableCount)
 			os.WriteFile(filepath, []byte(output), 0644)
 			println()
 			println(output)
@@ -527,6 +543,7 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 		imagesAdvisories: []ImageAdvisories{},
 		highCount:        0,
 		criticalCount:    0,
+		fixableCount:     0,
 	}
 
 	for _, image := range base.GetQuayImages() {
@@ -534,6 +551,7 @@ func getImagesSecurityIssues(kmd *cobra.Command, args []string) {
 		sfopAdvisories.imagesAdvisories = append(sfopAdvisories.imagesAdvisories, imageAdvisories)
 		sfopAdvisories.highCount += imageAdvisories.highCount
 		sfopAdvisories.criticalCount += imageAdvisories.criticalCount
+		sfopAdvisories.fixableCount += imageAdvisories.fixableCount
 	}
 
 	displayAdvisories(sfopAdvisories)
