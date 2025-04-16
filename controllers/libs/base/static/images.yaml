@@ -67,10 +67,10 @@ images:
       version: 1-349.1741813453
     - name: node-exporter
       container: quay.io/prometheus/node-exporter-linux-amd64
-      version: v1.8.2
+      version: v1.9.1
     - name: statsd-exporter
       container: quay.io/prometheus/statsd-exporter-linux-amd64
-      version: v0.27.1
+      version: v0.28.0
     - name: fluent-bit
       container: quay.io/software-factory/fluent-bit
       version: 3.2.10
