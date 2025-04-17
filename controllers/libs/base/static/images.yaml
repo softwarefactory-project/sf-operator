@@ -60,8 +60,8 @@ images:
       source: https://github.com/logjuicer/logjuicer/blob/main/flake.nix#L145
     - name: sf-op-busybox
       container: quay.io/software-factory/sf-op-busybox
-      version: 1.5-3
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sf-op-busybox.container?id=6237d8d71af9101d8ed6be6609982eed2f237985
+      version: 1.5-20250414-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sf-op-busybox.container?id=4f847ac24167d9e8b5a357883f30a3bf7d63d1f0
     - name: httpd
       container: quay.io/software-factory/httpd-24
       version: 1-349.1741813453
