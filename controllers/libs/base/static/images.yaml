@@ -36,8 +36,8 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/git-daemon.container?id=bdd443b19fd9f9933aa364ccd8b6bbe429c2d3cf
     - name: sshd
       container: quay.io/software-factory/sshd
-      version: 0.2-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sshd.container?id=52046991001c8eedfa6401e75bbd66728e944aef
+      version: 0.2-20250414-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sshd.container?id=4a72dd30c839de3dccea194613d9afe2e810020e
     - name: purgelogs
       container: quay.io/software-factory/purgelogs
       version: 0.2.3-20250414-1
