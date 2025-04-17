@@ -4,20 +4,20 @@
 images:
     - name: zuul-scheduler
       container: quay.io/software-factory/zuul-scheduler
-      version: 11.3.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=430f6c8ada9f3d8efd0eb6608cb493b08022f145
+      version: 11.3.0-20250414-2
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=87bfb90e7820983729ee78be8c29a4053fed36d2
     - name: zuul-executor
       container: quay.io/software-factory/zuul-executor
-      version: 11.3.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=430f6c8ada9f3d8efd0eb6608cb493b08022f145
+      version: 11.3.0-20250414-2
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=87bfb90e7820983729ee78be8c29a4053fed36d2
     - name: zuul-merger
       container: quay.io/software-factory/zuul-merger
-      version: 11.3.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=430f6c8ada9f3d8efd0eb6608cb493b08022f145
+      version: 11.3.0-20250414-2
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=87bfb90e7820983729ee78be8c29a4053fed36d2
     - name: zuul-web
       container: quay.io/software-factory/zuul-web
-      version: 11.3.0-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=430f6c8ada9f3d8efd0eb6608cb493b08022f145
+      version: 11.3.0-20250414-2
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=87bfb90e7820983729ee78be8c29a4053fed36d2
     - name: nodepool-launcher
       container: quay.io/software-factory/nodepool-launcher
       version: 11.0.0-2
