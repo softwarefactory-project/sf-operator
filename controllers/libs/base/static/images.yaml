@@ -52,8 +52,8 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-weeder.container?id=416646852f48f01fb93221dc5abcf1a37aa82f4b
     - name: zuul-weeder
       container: quay.io/software-factory/zuul-weeder
-      version: 0.1.3-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-weeder.container?id=f48f7a8f2128da1cd13756940991c953d4a4e5de
+      version: 0.1.3-20250414-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-weeder.container?id=99d9ac2a1f4cf035d5cf39505e80d65aaab37761
     - name: logjuicer
       container: ghcr.io/logjuicer/logjuicer
       version: latest
