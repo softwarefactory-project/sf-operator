@@ -1073,7 +1073,7 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 			return nil
 		}
 		cfgINI.Section("database").NewKey("dburi", fmt.Sprintf(
-			"mysql+pymysql://%s:%s@%s/%s", dbSettings.Data["username"], dbSettings.Data["password"], dbSettings.Data["host"], dbSettings.Data["database"]))
+			"mariadb+pymysql://%s:%s@%s/%s", dbSettings.Data["username"], dbSettings.Data["password"], dbSettings.Data["host"], dbSettings.Data["database"]))
 	}
 
 	// Set Zookeeper hosts

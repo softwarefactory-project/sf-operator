@@ -489,6 +489,16 @@ mappings:
     executor: "$1"
   match: zuul.executor.*.pct_used_ram_cgroup
   name: zuul_executor_pct_used_ram_cgroup
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.max_process
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.max_process
+  name: zuul_executor_max_process
+- help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.executor.<executor>.cur_process
+  labels:
+    executor: "$1"
+  match: zuul.executor.*.cur_process
+  name: zuul_executor_cur_process
 - help: Description at https://zuul-ci.org/docs/zuul/latest/monitoring.html#stat-zuul.nodepool.requests
   match: zuul.nodepool.requests
   name: zuul_nodepool_requests

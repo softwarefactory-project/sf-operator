@@ -14,7 +14,7 @@ All notable changes to this project will be documented in this file.
 
 - The default CPU limits have been reduced from 2000m to 500m to enable rollout on smaller cluster.
 - go version in go.mod is bumped to 1.24. Backward compatibility with earlier version is not guaranted.
-- zuul-* : bumped to 11.3.0-20250414-1 (using ubi9 latest images)
+- zuul-* : bumped to 12.0.0-20250414-1 (using ubi9 latest images)
 
 ### Deprecated
 
