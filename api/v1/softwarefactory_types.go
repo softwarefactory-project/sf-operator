@@ -155,6 +155,8 @@ type GerritConnection struct {
 	GitOverSSH bool `json:"git-over-ssh,omitempty"`
 	// Disable SSL certificate verification with the Gerrit instance when set to false. Equivalent to the [verify_ssl](https://zuul-ci.org/docs/zuul/latest/drivers/gerrit.html#attr-%3Cgerrit%20ssh%20connection%3E.verify_ssl) parameter.
 	VerifySSL *bool `json:"verifyssl,omitempty"`
+	// Undocumented option; if set to False this connection won't stream events; instead it will poll for merged patches every minute or so.
+	StreamEvents *bool `json:"stream-events,omitempty"`
 }
 
 // Describes a Zuul connection using the [pagure driver](https://zuul-ci.org/docs/zuul/latest/drivers/pagure.html#connection-configuration).

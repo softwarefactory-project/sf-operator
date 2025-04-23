@@ -1203,6 +1203,9 @@ func (r *SFController) AddGerritConnection(cfg *ini.File, conn sfv1.GerritConnec
 	if conn.GitOverSSH {
 		cfg.Section(section).NewKey("git_over_ssh", "true")
 	}
+	if conn.StreamEvents != nil && !*conn.StreamEvents {
+		cfg.Section(section).NewKey("stream_events", "false")
+	}
 }
 
 // addKeyToSection add a tuple to the Section if the fieldValue is not empty
