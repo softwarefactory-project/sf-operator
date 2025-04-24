@@ -82,6 +82,7 @@ _Appears in:_
 | `uri` _string_ | [uri](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.uri) | -|
 | `useSSL` _boolean_ | [useSSL](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.use_ssl) | -|
 | `verifyCerts` _boolean_ | [verifyCerts](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.verify_certs) | -|
+| `basicAuthSecret` _string_ | If the connection requires basic authentication, the name of the secret containing the following keys: * username * password | -|
 
 
 #### FluentBitForwarderSpec
@@ -379,8 +380,9 @@ _Appears in:_
 | `defaultFrom` _string_ | [default_from](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_from) | -|
 | `defaultTo` _string_ | [default_to](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.default_to) | -|
 | `user` _string_ | [user](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.user) | -|
-| `password` _string_ | [password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password) | -|
+| `password` _string_ | DEPRECATED use `Secrets` instead to securely store this value [password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password) | -|
 | `tls` _boolean_ | [use_starttls](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.use_starttls) | -|
+| `secrets` _string_ | Name of the secret which contains the following keys: the [password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password) | -|
 
 
 #### Secret

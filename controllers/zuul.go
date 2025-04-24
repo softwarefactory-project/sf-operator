@@ -7,6 +7,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 	ini "gopkg.in/ini.v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -1331,10 +1333,37 @@ func AddGitConnection(cfg *ini.File, name string, baseurl string, poolDelay int3
 
 func (r *SFController) AddElasticSearchConnection(cfg *ini.File, conn sfv1.ElasticSearchConnection) {
 	section := "connection " + conn.Name
+	scheme := ""
+	uri := conn.URI
+	// crude clear-text basic auth check
+	if match, _ := regexp.MatchString("http[s]?://[^:]+:.+@.+", uri); match {
+		utils.LogI(fmt.Sprintf("It looks like elasticsearch connection %s has basic auth secrets stored in clear text. Use the 'basicAuthSecret' property instead", conn.Name))
+	}
+	if strings.HasPrefix(uri, "https://") {
+		scheme = "https://"
+		// TODO might not work with unicode URLs
+		uri = uri[len("https://"):]
+	}
+	if strings.HasPrefix(uri, "http://") {
+		scheme = "http://"
+		// TODO might not work with unicode URLs
+		uri = uri[len("http://"):]
+	}
+	if conn.BasicAuthSecret != nil {
+		password, passwordErr := r.GetSecretDataFromKey(*conn.BasicAuthSecret, "password")
+		// TODO we may also want to handle missing values in the secret
+		if errors.IsNotFound(passwordErr) {
+			utils.LogE(passwordErr, fmt.Sprintf("elasticsearch connection %s refers to a non-existing secret: %s ", conn.Name, *conn.BasicAuthSecret))
+		}
+		username, _ := r.GetSecretDataFromKey(*conn.BasicAuthSecret, "username")
+		uri = string(username) + ":" + string(password) + "@" + uri
+	}
+	uri = scheme + uri
+
 	cfg.NewSection(section)
 	cfg.Section(section).NewKey("driver", "elasticsearch")
 	cfg.Section(section).NewKey("ca_certs", "/etc/ssl/certs/ca-bundle.crt")
-	cfg.Section(section).NewKey("uri", conn.URI)
+	cfg.Section(section).NewKey("uri", uri)
 	// Optional fields (set as omitempty in ElasticSearchConnection struct definition)
 	if conn.UseSSL != nil && !*conn.UseSSL {
 		cfg.Section(section).NewKey("use_ssl", "false")
@@ -1362,8 +1391,17 @@ func (r *SFController) AddSMTPConnection(cfg *ini.File, conn sfv1.SMTPConnection
 	if conn.User != "" {
 		cfg.Section(section).NewKey("user", conn.User)
 	}
-	if conn.Password != "" {
-		cfg.Section(section).NewKey("password", conn.Password)
+	if conn.Secrets != nil {
+		password, passwordErr := r.GetSecretDataFromKey(*conn.Secrets, "password")
+		if errors.IsNotFound(passwordErr) {
+			utils.LogE(passwordErr, fmt.Sprintf("SMTP connection %s refers to a non-existing secret: %s ", conn.Name, *conn.Secrets))
+		}
+		cfg.Section(section).NewKey("password", string(password))
+	} else {
+		if conn.Password != "" {
+			utils.LogI("Deprecation Warning: SMTPConnection's Password field will disappear in a future version. Use Secrets instead")
+			cfg.Section(section).NewKey("password", conn.Password)
+		}
 	}
 	if conn.TLS != nil && !*conn.TLS {
 		cfg.Section(section).NewKey("use_starttls", "false")

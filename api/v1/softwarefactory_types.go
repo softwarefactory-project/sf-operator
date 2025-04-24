@@ -207,10 +207,13 @@ type SMTPConnection struct {
 	DefaultTo string `json:"defaultTo,omitempty"`
 	// [user](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.user)
 	User string `json:"user,omitempty"`
-	// [password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password)
+	// DEPRECATED use `Secrets` instead to securely store this value [password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password)
 	Password string `json:"password,omitempty"`
 	// [use_starttls](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.use_starttls)
 	TLS *bool `json:"tls,omitempty"`
+	// Name of the secret which contains the following keys:
+	// the [password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password)
+	Secrets *string `json:"secrets,omitempty"`
 }
 
 // Describes a Zuul connection using the [ElasticSearch driver](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#connection-configuration).
@@ -224,6 +227,10 @@ type ElasticSearchConnection struct {
 	UseSSL *bool `json:"useSSL,omitempty"`
 	// [verifyCerts](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#attr-%3CElasticsearch%20connection%3E.verify_certs)
 	VerifyCerts *bool `json:"verifyCerts,omitempty"`
+	// If the connection requires basic authentication, the name of the secret containing the following keys:
+	// * username
+	// * password
+	BasicAuthSecret *string `json:"basicAuthSecret,omitempty"`
 }
 
 // The description of an OpenIDConnect authenticator, see [Zuul's authentication documentation](https://zuul-ci.org/docs/zuul/latest/configuration.html#authentication)

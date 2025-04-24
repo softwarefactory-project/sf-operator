@@ -511,6 +511,12 @@ spec:
                         Describes a Zuul connection using the [ElasticSearch driver](https://zuul-ci.org/docs/zuul/latest/drivers/elasticsearch.html#connection-configuration).
                         When an optional parameter is not specified then Zuul's defaults apply
                       properties:
+                        basicAuthSecret:
+                          description: |-
+                            If the connection requires basic authentication, the name of the secret containing the following keys:
+                            * username
+                            * password
+                          type: string
                         name:
                           description: How the connection will be named in Zuul's
                             configuration and appear in zuul-web
@@ -1104,11 +1110,17 @@ spec:
                             configuration and appear in zuul-web
                           type: string
                         password:
-                          description: '[password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password)'
+                          description: DEPRECATED use `Secrets` instead to securely
+                            store this value [password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password)
                           type: string
                         port:
                           description: '[port](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.port)'
                           type: integer
+                        secrets:
+                          description: |-
+                            Name of the secret which contains the following keys:
+                            the [password](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.password)
+                          type: string
                         server:
                           description: '[server](https://zuul-ci.org/docs/zuul/latest/drivers/smtp.html#attr-%3Csmtp%20connection%3E.server)'
                           type: string
