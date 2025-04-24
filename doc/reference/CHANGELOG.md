@@ -5,16 +5,27 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+
+## [v0.0.57] - 2025-04-24
+
+### Added
 
 - zuul: add `BasicAuthSecret` parameter for elasticsearch connections. This parameter
   allows defining basic auth settings (username and password) and store them in a secret
-  rather than in plain text in the software factort manifest.
+  rather than in plain text in the software factory manifest.
 
 ### Changed
 
+- Most containers were bumped or modified to use [ubi9:latest](https://www.redhat.com/en/blog/introducing-red-hat-universal-base-image)
+  as their base image; except for **git-daemon** (using ubi8) and **logjuicer** (migration still in progress).
+  Incidentally, **upgrading to this version will trigger a restart of every pod in a Software Factory deployment**.
 - The default CPU limits have been reduced from 2000m to 500m to enable rollout on smaller cluster.
-- go version in go.mod is bumped to 1.24. Backward compatibility with earlier version is not guaranted.
-- zuul-* : bumped to 12.0.0-20250414-1 (using ubi9 latest images)
+- go version in go.mod is bumped to 1.24. Backward compatibility with earlier version is not guaranteed.
+- zuul-* : bumped to 12.0.0
 
 ### Deprecated
 
