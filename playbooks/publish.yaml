@@ -1,4 +1,5 @@
 ---
 - hosts: "{{ hostname | default('controller') }}"
   roles:
+    - install-golang
     - publish-operator-quay
