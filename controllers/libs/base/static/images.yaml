@@ -49,7 +49,7 @@ images:
     - name: zuul-capacity
       container: quay.io/software-factory/zuul-capacity
       version: 0.4.0-20250414-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-weeder.container?id=416646852f48f01fb93221dc5abcf1a37aa82f4b
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-capacity.container?id=416646852f48f01fb93221dc5abcf1a37aa82f4b
     - name: zuul-weeder
       container: quay.io/software-factory/zuul-weeder
       version: 0.1.3-20250414-1
