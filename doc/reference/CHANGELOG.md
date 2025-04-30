@@ -6,9 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+- logjuicer service is based on a ubi9 base image
+
 ### Deprecated
 ### Removed
 ### Fixed
+
+- Ensure the trailing '/' when accessing https://<domain>/logjuicer. The web app was failing without the trailing slash.
 
 ## [v0.0.57] - 2025-04-24
 
