@@ -28,8 +28,8 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-builder.container?id=d5870b848a64e7d1c906ecd8a04527d823fd5b66
     - name: zookeeper
       container: quay.io/software-factory/zookeeper
-      version: 3.8.4-20250414-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zookeeper.container?id=04d5a58cc450a8757f9c5b0f3adc43a20a62f62a
+      version: 3.9.3-20250414-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zookeeper.container?id=721e3f1418f1a3d8f41a8af717e41f6a7f726a55
     - name: git-deamon
       container: quay.io/software-factory/git-deamon
       version: 2.39.3-20250414-1
@@ -64,7 +64,7 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sf-op-busybox.container?id=4f847ac24167d9e8b5a357883f30a3bf7d63d1f0
     - name: httpd
       container: quay.io/software-factory/httpd-24
-      version: 1-349.1741813453
+      version: 1-350
     - name: node-exporter
       container: quay.io/prometheus/node-exporter-linux-amd64
       version: v1.9.1
