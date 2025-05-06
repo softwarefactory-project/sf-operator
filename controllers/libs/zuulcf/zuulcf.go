@@ -489,7 +489,7 @@ func GetRequireGateByDriver(driver string, connection string) (PipelineRequire, 
 				Gitlab: PipelineGitLabRequirement{
 					Approved: true,
 					Labels: []string{
-						"gateit",
+						"workflow",
 					},
 				},
 			},
@@ -596,7 +596,7 @@ func GetTriggerGateByDriver(driver string, connection string) (PipelineGenericTr
 							GitGLMergeRequests(Labeled),
 						},
 						Labels: []string{
-							"gateit",
+							"workflow",
 						},
 					},
 				},

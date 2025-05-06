@@ -165,8 +165,8 @@ an API Token and WebHook token](https://zuul-ci.org/docs/zuul/latest/drivers/git
     The WebHook URL to configure on the project or on the project's group setting must
     be `https://<fqdn>/zuul/api/connection/<zuul-connection-name>/payload`
 
-The `gate` pipeline defined for the `config` repository workflow relies in the `gateit` label for the pipeline
-trigger rule. Thus, a GitLab label named `gateit` must be defined in the `Settings` the `config` repository.
+The `gate` pipeline defined for the `config` repository workflow relies in the `workflow` label for the pipeline
+trigger rule. Thus, a GitLab label named `workflow` must be defined in the `Settings` the `config` repository.
 
 #### Configuring the Gitlab Zuul connection
 

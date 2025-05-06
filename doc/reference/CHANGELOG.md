@@ -15,6 +15,9 @@ All notable changes to this project will be documented in this file.
 - zookeeper: bumped to 3.9.3
 - httpd-24: bumped to registry.access.redhat.com/ubi8/httpd-24:1-350
 - weeder: update ubi9-python-39 container
+- Unifying zuul label: workflow label
+  This change modifies zuul label to run gate pipelines from gateit to
+  workflow.
 
 ### Deprecated
 ### Removed
