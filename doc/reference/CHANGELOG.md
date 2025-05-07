@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - logjuicer service is based on a ubi9 base image
 - zookeeper: bumped to 3.9.3
 - httpd-24: bumped to registry.access.redhat.com/ubi8/httpd-24:1-350
+- weeder: update ubi9-python-39 container
 
 ### Deprecated
 ### Removed
