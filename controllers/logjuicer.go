@@ -33,22 +33,33 @@ func (r *SFController) AddCorporateCA(spec *apiv1.PodSpec) string {
 
 func (r *SFController) EnsureLogJuicer() bool {
 	const (
-		ident = "logjuicer"
-		port  = 3000
+		ident         = "logjuicer"
+		port          = 3000
+		pvcName       = "logjuicer-pvc"
+		logJuicerData = "logjuicer-data"
 	)
 
+	// Ensure PVC exists
+	pvc := base.MkPVC(pvcName, r.ns, base.StorageConfig{
+		Size: utils.Qty1Gi(),
+	}, apiv1.ReadWriteOnce)
+	r.GetOrCreate(&pvc)
+
+	// Create Service
 	srv := base.MkService(ident, r.ns, ident, []int32{port}, ident, r.cr.Spec.ExtraLabels)
 	r.GetOrCreate(&srv)
 
+	// Create Deployment
 	dep := base.MkDeployment(ident, r.ns, base.LogJuicerImage(), r.cr.Spec.ExtraLabels, r.isOpenShift)
 	dep.Spec.Template.Spec.Containers[0].ImagePullPolicy = "Always"
+
+	// Use PVC for logjuicer-data volume
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		// TODO: make this persistent
-		base.MkEmptyDirVolume("logjuicer-data"),
+		base.MkVolumePVC(logJuicerData, pvcName),
 	}
 	dep.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
 		{
-			Name:      "logjuicer-data",
+			Name:      logJuicerData,
 			MountPath: "/data",
 		},
 	}
@@ -65,6 +76,7 @@ func (r *SFController) EnsureLogJuicer() bool {
 	}
 	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
+	// Reconcile deployment
 	current := appsv1.Deployment{}
 	if r.GetM(ident, &current) {
 		if utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &dep.Spec.Template.ObjectMeta.Annotations) {
