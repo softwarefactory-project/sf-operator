@@ -8,5 +8,4 @@
 python3 -m pip --version >/dev/null 2>/dev/null || sudo dnf install -y python3-pip
 python3 -c "import kubernetes" >/dev/null 2>/dev/null || python3 -m pip install kubernetes
 ansible-galaxy collection install community.kubernetes ansible.posix
-export OPENSHIFT_USER=false
 ansible-playbook -e "hostname=localhost" ./playbooks/run-tests.yaml

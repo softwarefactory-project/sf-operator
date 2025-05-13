@@ -1,7 +1,5 @@
 ---
 - hosts: "{{ hostname | default('controller') }}"
-  environment:
-    OPENSHIFT_USER: "true"
   roles:
     - setup-variables
     - setup-env
