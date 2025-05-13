@@ -48,20 +48,20 @@ func TestAPIs(t *testing.T) {
 
 func TestDuplicateConn(t *testing.T) {
 	var cr sfv1.SoftwareFactory
-	if HasDuplicate(GetUserDefinedConnections(&cr)) != "" {
+	if conns, err := GetUserDefinedConnections(&cr); err != nil || HasDuplicate(conns) != "" {
 		t.Errorf("CR does not have dup")
 	}
 	cr.Spec.Zuul.GitConns = []sfv1.GitConnection{
 		sfv1.GitConnection{
-			Name: "opendev.org",
+			Name: "test",
 		},
 	}
 	cr.Spec.Zuul.GerritConns = []sfv1.GerritConnection{
 		sfv1.GerritConnection{
-			Name: "opendev.org",
+			Name: "test",
 		},
 	}
-	if HasDuplicate(GetUserDefinedConnections(&cr)) != "opendev.org" {
+	if conns, err := GetUserDefinedConnections(&cr); err != nil || HasDuplicate(conns) != "test" {
 		t.Errorf("CR have dup")
 	}
 }

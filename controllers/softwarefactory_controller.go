@@ -194,30 +194,51 @@ func resolveConfigBaseURL(cr sfv1.SoftwareFactory) string {
 	return ""
 }
 
-func GetUserDefinedConnections(cr *sfv1.SoftwareFactory) []string {
+func GetUserDefinedConnections(cr *sfv1.SoftwareFactory) ([]string, error) {
 	var conns []string
 	for _, conn := range cr.Spec.Zuul.GerritConns {
+		if conn.Name == "opendev.org" && conn.Hostname != "review.opendev.org" {
+			return conns, errors.New("opendev.org gerrit connection must be for review.opendev.org")
+		}
 		conns = append(conns, conn.Name)
 	}
 	for _, conn := range cr.Spec.Zuul.GitHubConns {
+		if conn.Name == "opendev.org" {
+			return conns, errors.New("opendev.org must be a gerrit or git connection")
+		}
 		conns = append(conns, conn.Name)
 	}
 	for _, conn := range cr.Spec.Zuul.GitLabConns {
+		if conn.Name == "opendev.org" {
+			return conns, errors.New("opendev.org must be a gerrit or git connection")
+		}
 		conns = append(conns, conn.Name)
 	}
 	for _, conn := range cr.Spec.Zuul.GitConns {
+		if conn.Name == "opendev.org" && conn.Baseurl != "https://opendev.org" {
+			return conns, errors.New("opendev.org git connection must be for https://opendev.org")
+		}
 		conns = append(conns, conn.Name)
 	}
 	for _, conn := range cr.Spec.Zuul.PagureConns {
+		if conn.Name == "opendev.org" {
+			return conns, errors.New("opendev.org must be a gerrit or git connection")
+		}
 		conns = append(conns, conn.Name)
 	}
 	for _, conn := range cr.Spec.Zuul.ElasticSearchConns {
+		if conn.Name == "opendev.org" {
+			return conns, errors.New("opendev.org must be a gerrit or git connection")
+		}
 		conns = append(conns, conn.Name)
 	}
 	for _, conn := range cr.Spec.Zuul.SMTPConns {
+		if conn.Name == "opendev.org" {
+			return conns, errors.New("opendev.org must be a gerrit or git connection")
+		}
 		conns = append(conns, conn.Name)
 	}
-	return conns
+	return conns, nil
 }
 
 func (r *SFController) IsCodesearchEnabled() bool {
@@ -495,7 +516,11 @@ func HasDuplicate(conns []string) string {
 func (r *SoftwareFactoryReconciler) mkSFController(
 	ctx context.Context, ns string, owner client.Object, cr sfv1.SoftwareFactory,
 	standalone bool) SFController {
-	conns := GetUserDefinedConnections(&cr)
+	conns, err := GetUserDefinedConnections(&cr)
+	if err != nil {
+		ctrl.Log.Error(err, "Invalid Zuul connections")
+		os.Exit(1)
+	}
 	if dup := HasDuplicate(conns); dup != "" {
 		fmt.Fprintf(os.Stderr, "Duplicate zuul connection: %s", dup)
 		os.Exit(1)
