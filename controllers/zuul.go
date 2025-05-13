@@ -1418,8 +1418,10 @@ func (r *SFController) AddDefaultConnections(cfg *ini.File, gitServerURL string)
 	// Internal git-server for system config
 	AddGitConnection(cfg, "git-server", gitServerURL, 0)
 
-	// Git connection to opendev.org
-	AddGitConnection(cfg, "opendev.org", "https://opendev.org/", 0)
+	if r.needOpendev {
+		// Git connection to opendev.org
+		AddGitConnection(cfg, "opendev.org", "https://opendev.org/", 0)
+	}
 }
 
 func LoadConfigINI(zuulConf string) *ini.File {

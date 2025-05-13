@@ -63,6 +63,7 @@ type SFController struct {
 	isOpenShift   bool
 	hasProcMount  bool
 	configBaseURL string
+	needOpendev   bool
 }
 
 func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
@@ -468,6 +469,7 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 		isOpenShift:   CheckOpenShift(),
 		hasProcMount:  os.Getenv("HAS_PROC_MOUNT") == "true",
 		configBaseURL: resolveConfigBaseURL(cr),
+		needOpendev:   !slices.Contains(conns, "opendev.org"),
 	}
 }
 
