@@ -21,8 +21,6 @@ func (r *SFController) AddCorporateCA(spec *apiv1.PodSpec) string {
 				MountPath: "/certs",
 			})
 			spec.Containers[0].Env = append(spec.Containers[0].Env, base.MkEnvVar("LOGJUICER_CA_EXTRA", "/certs/"+fileName))
-			// TODO: remove the next line after merging https://github.com/logjuicer/logjuicer/pull/144
-			spec.Containers[0].Env = append(spec.Containers[0].Env, base.MkEnvVar("LOGJUICER_CA_BUNDLE", "/certs/"+fileName))
 			break
 		}
 		return string(corporateCM.ResourceVersion)
