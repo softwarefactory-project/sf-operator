@@ -15,6 +15,7 @@ import (
 )
 
 const houndSearchIdent = "hound-search"
+const houndSearchData = "hound-search-data"
 const houndSearchImage = "quay.io/software-factory/hound:0.5.1-3"
 
 func MkHoundSearchContainer(corporateCMExists bool, openshiftUser bool) apiv1.Container {
@@ -26,7 +27,7 @@ func MkHoundSearchContainer(corporateCMExists bool, openshiftUser bool) apiv1.Co
 	container.ReadinessProbe = base.MkReadinessHTTPProbe("/healthz", 6080)
 	container.VolumeMounts = []apiv1.VolumeMount{
 		{
-			Name:      "hound-search-data",
+			Name:      houndSearchData,
 			MountPath: "/var/lib/hound",
 		},
 		{
@@ -66,7 +67,12 @@ func (r *SFController) TerminateHoundSearch() {
 			Namespace: r.ns,
 		},
 	})
-	// todo: delete pvc
+	r.DeleteR(&apiv1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      houndSearchData,
+			Namespace: r.ns,
+		},
+	})
 }
 
 func (r *SFController) DeployHoundSearch() bool {
@@ -76,7 +82,7 @@ func (r *SFController) DeployHoundSearch() bool {
 	// Check if Corporate Certificate exists
 	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
 
-	pvc := base.MkPVC("hound-search-data", r.ns, r.getStorageConfOrDefault(r.cr.Spec.Codesearch.Storage), apiv1.ReadWriteOnce)
+	pvc := base.MkPVC(houndSearchData, r.ns, r.getStorageConfOrDefault(r.cr.Spec.Codesearch.Storage), apiv1.ReadWriteOnce)
 	container := MkHoundSearchContainer(corporateCMExists, r.isOpenShift)
 	container.Env = []apiv1.EnvVar{
 		base.MkEnvVar("CONFIG_REPO_BASE_URL", r.configBaseURL),
