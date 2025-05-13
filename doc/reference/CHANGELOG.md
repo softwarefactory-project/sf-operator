@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- zuul: the operator now validates that the user provided connections doesn't have any duplicate names.
+
 ### Changed
 
 - logjuicer service is based on a ubi9 base image
