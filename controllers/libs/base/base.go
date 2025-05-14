@@ -164,6 +164,18 @@ func MkEmptyDirVolume(name string) apiv1.Volume {
 	}
 }
 
+// MkVolumePVC produces a Volume backed by a PersistentVolumeClaim
+func MkVolumePVC(name string, claimName string) apiv1.Volume {
+	return apiv1.Volume{
+		Name: name,
+		VolumeSource: apiv1.VolumeSource{
+			PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+				ClaimName: claimName,
+			},
+		},
+	}
+}
+
 // MkSecretEnvVar produces an EnvVar from a Secret's key.
 // When the 'key' parameter is empty the key name is the Secret name
 func MkSecretEnvVar(env string, secret string, key string) apiv1.EnvVar {

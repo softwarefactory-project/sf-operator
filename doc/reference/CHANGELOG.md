@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - logjuicer service is based on a ubi9 base image
+- logjuicer service uses a persistent volume claim for data storage
 - zookeeper: bumped to 3.9.3
 - httpd-24: bumped to registry.access.redhat.com/ubi8/httpd-24:1-350
 - weeder: update ubi9-python-39 container
