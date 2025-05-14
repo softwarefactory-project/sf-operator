@@ -121,7 +121,7 @@ func (r *SFController) DeployZookeeper() bool {
 		StorageClassName: storageConfig.StorageClassName,
 		ExtraAnnotations: storageConfig.ExtraAnnotations,
 	}
-	zk := r.mkHeadlessSatefulSet(
+	zk := r.mkHeadlessStatefulSet(
 		ZookeeperIdent, base.ZookeeperImage(), storageConfig, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	// We overwrite the VolumeClaimTemplates set by MkHeadlessStatefulSet to keep the previous volume name
 	// Previously the default PVC created by MkHeadlessStatefulSet was not used by Zookeeper (not mounted). So to avoid having two Volumes

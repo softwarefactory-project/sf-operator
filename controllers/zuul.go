@@ -578,7 +578,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	}
 	// TODO Add the zk-port-forward-kube-config secret resource version in the annotation if enabled
 
-	ze := r.mkHeadlessSatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+	ze := r.mkHeadlessStatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	zuulContainer := r.mkZuulContainer("zuul-executor", corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Executor.Limits, &zuulContainer)
 	ze.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
@@ -674,7 +674,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
-	zm := r.mkHeadlessSatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+	zm := r.mkHeadlessStatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	zuulContainer := r.mkZuulContainer(service, corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Merger.Limits, &zuulContainer)
 	zm.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}

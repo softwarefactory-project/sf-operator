@@ -126,13 +126,6 @@ func (r *SFUtilContext) UpdateR(obj client.Object) bool {
 	return true
 }
 
-// PatchR patches a resource.
-func (r *SFUtilContext) PatchR(obj client.Object, patch client.Patch) {
-	if err := r.Client.Patch(r.ctx, obj, patch); err != nil {
-		panic(err.Error())
-	}
-}
-
 // GetOrCreate does not change an existing object, update needs to be used manually.
 // In the case the object already exists then the function return True
 func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
@@ -327,10 +320,6 @@ func (r *SFUtilContext) EnsureLocalCA(dnsNames []string) {
 	r.GetOrCreate(&certificateSecret2)
 }
 
-//----------------------------------------------------------------------------
-// --- TODO clean functions below / remove useless code ---
-//----------------------------------------------------------------------------
-
 // mkStatefulSet Create a default statefulset.
 func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, accessMode apiv1.PersistentVolumeAccessMode, extraLabels map[string]string, openshiftUser bool, nameSuffix ...string) appsv1.StatefulSet {
 	serviceName := name
@@ -343,8 +332,8 @@ func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig b
 	return base.MkStatefulset(name, r.ns, 1, serviceName, container, pvc, extraLabels)
 }
 
-// mkHeadlessSatefulSet Create a default headless statefulset.
-func (r *SFUtilContext) mkHeadlessSatefulSet(
+// mkHeadlessStatefulSet Create a default headless statefulset.
+func (r *SFUtilContext) mkHeadlessStatefulSet(
 	name string, image string, storageConfig base.StorageConfig,
 	accessMode apiv1.PersistentVolumeAccessMode, extraLabels map[string]string, openshiftUser bool) appsv1.StatefulSet {
 	return r.mkStatefulSet(name, image, storageConfig, accessMode, extraLabels, openshiftUser, "headless")
@@ -380,7 +369,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 			}
 		}
 		// All containers in Ready state
-		return true && base.IsStatefulSetRolloutDone(dep)
+		return base.IsStatefulSetRolloutDone(dep)
 	}
 	// No Replica available
 	return false
