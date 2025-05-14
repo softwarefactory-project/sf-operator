@@ -59,12 +59,13 @@ This tenant's config project (`my-tenant-config-repo` in the example above) defi
 
 While the tenant's config project could be setup manually, we also provide a `cli` command to scaffold its content.
 
-!!! note 
+!!! note
     The [zuul/zuul-jobs](https://zuul-ci.org/docs/zuul-jobs/latest/) project should always be part of a new tenant. The `SF boostrap-tenant` command expects that
     this repository is part of the tenant.
 
 !!! info
-    The `opendev.org` connection is preconfigured on any Software-Factory deployment.
+    The `opendev.org` connection is preconfigured on any Software-Factory deployment if it is not user defined in
+    SoftwareFactory Spec Zuul connections.
 
 ### Bootstrap a config-project
 
