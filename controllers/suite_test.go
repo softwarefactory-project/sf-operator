@@ -46,6 +46,26 @@ func TestAPIs(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
+func TestDuplicateConn(t *testing.T) {
+	var cr sfv1.SoftwareFactory
+	if HasDuplicate(GetUserDefinedConnections(&cr)) != "" {
+		t.Errorf("CR does not have dup")
+	}
+	cr.Spec.Zuul.GitConns = []sfv1.GitConnection{
+		sfv1.GitConnection{
+			Name: "opendev.org",
+		},
+	}
+	cr.Spec.Zuul.GerritConns = []sfv1.GerritConnection{
+		sfv1.GerritConnection{
+			Name: "opendev.org",
+		},
+	}
+	if HasDuplicate(GetUserDefinedConnections(&cr)) != "opendev.org" {
+		t.Errorf("CR have dup")
+	}
+}
+
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 

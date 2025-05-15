@@ -191,6 +191,32 @@ func resolveConfigBaseURL(cr sfv1.SoftwareFactory) string {
 	return ""
 }
 
+func GetUserDefinedConnections(cr *sfv1.SoftwareFactory) []string {
+	var conns []string
+	for _, conn := range cr.Spec.Zuul.GerritConns {
+		conns = append(conns, conn.Name)
+	}
+	for _, conn := range cr.Spec.Zuul.GitHubConns {
+		conns = append(conns, conn.Name)
+	}
+	for _, conn := range cr.Spec.Zuul.GitLabConns {
+		conns = append(conns, conn.Name)
+	}
+	for _, conn := range cr.Spec.Zuul.GitConns {
+		conns = append(conns, conn.Name)
+	}
+	for _, conn := range cr.Spec.Zuul.PagureConns {
+		conns = append(conns, conn.Name)
+	}
+	for _, conn := range cr.Spec.Zuul.ElasticSearchConns {
+		conns = append(conns, conn.Name)
+	}
+	for _, conn := range cr.Spec.Zuul.SMTPConns {
+		conns = append(conns, conn.Name)
+	}
+	return conns
+}
+
 func (r *SFController) IsCodesearchEnabled() bool {
 	return r.cr.Spec.Codesearch.Enabled == nil || *r.cr.Spec.Codesearch.Enabled
 }
@@ -406,9 +432,27 @@ func CheckOpenShift() bool {
 	return openshiftUser
 }
 
+func HasDuplicate(conns []string) string {
+	for i, conn := range conns {
+		if slices.Contains(conns[i+1:], conn) {
+			return conn
+		}
+	}
+	return ""
+}
+
 func (r *SoftwareFactoryReconciler) mkSFController(
 	ctx context.Context, ns string, owner client.Object, cr sfv1.SoftwareFactory,
 	standalone bool) SFController {
+	conns := GetUserDefinedConnections(&cr)
+	if dup := HasDuplicate(conns); dup != "" {
+		fmt.Fprintf(os.Stderr, "Duplicate zuul connection: %s", dup)
+		os.Exit(1)
+	}
+	if slices.Contains(conns, "git-server") {
+		fmt.Fprintf(os.Stderr, "The git-server connection name is reserved, please rename it")
+		os.Exit(1)
+	}
 	return SFController{
 		SFUtilContext: SFUtilContext{
 			Client:     r.Client,
