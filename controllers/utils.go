@@ -666,8 +666,8 @@ func (r *SFUtilContext) ensureStatefulset(sts appsv1.StatefulSet) (*appsv1.State
 
 // CorporateCAConfigMapExists check if the ConfigMap named "corporate-ca-certs" exists
 func (r *SFUtilContext) CorporateCAConfigMapExists() (apiv1.ConfigMap, bool) {
-	cm, corporateCA := r.GetConfigMap(CorporateCACerts)
-	return cm, corporateCA == nil
+	cm, err := r.GetConfigMap(CorporateCACerts)
+	return cm, err == nil
 }
 
 func AppendCorporateCACertsVolumeMount(volumeMounts []apiv1.VolumeMount, volumeName string) []apiv1.VolumeMount {
