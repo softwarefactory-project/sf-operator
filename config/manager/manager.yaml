@@ -38,9 +38,6 @@ spec:
           name: manager
           securityContext:
             allowPrivilegeEscalation: false
-          env:
-            - name: OPENSHIFT_USER
-              value: "true"
           livenessProbe:
             httpGet:
               path: /healthz

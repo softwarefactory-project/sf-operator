@@ -21,9 +21,6 @@ go version > /dev/null || {
     ansible-playbook -e "hostname=localhost" ./playbooks/install-golang.yaml
 }
 
-# Operator deployment
-export OPENSHIFT_USER=false
-
 echo "[+] Deploying sf-operator"
 go run ./main.go deploy ./playbooks/files/sf-minimal.yaml
 

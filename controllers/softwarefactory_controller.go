@@ -37,6 +37,8 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+
+	discovery "k8s.io/client-go/discovery"
 )
 
 type SoftwareFactoryReconciler struct {
@@ -423,14 +425,62 @@ func (r *SFController) DebugService(debugService string) {
 	}
 }
 
-func CheckOpenShift() bool {
-	env := os.Getenv("OPENSHIFT_USER")
-	openshiftUser, err := strconv.ParseBool(env)
+type K8sDist int
+
+const (
+	Kubernetes K8sDist = iota
+	Openshift
+)
+
+func KubernetesDistribution() K8sDist {
+
+	// Get Config
+	kubeConfig := ctrl.GetConfigOrDie()
+
+	// Create a DiscoveryClient for a given config
+	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(kubeConfig)
+
+	// Get Api Resources Groups
+	apiList, err := discoveryClient.ServerGroups()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "The OPENSHIFT_USER environment variable must be set to true/false, it was set to '%s'\n", env)
+		fmt.Fprintf(os.Stderr, "command was not able to find the cluster server groups.\nCheck if the provided kubeconfig file is right.")
 		os.Exit(1)
 	}
-	return openshiftUser
+
+	// Iterate list for config.openshift.io
+	apiGroups := apiList.Groups
+	for _, element := range apiGroups {
+		if element.Name == "route.openshift.io" {
+			return Openshift
+		}
+	}
+	return Kubernetes
+}
+
+func CheckOpenShift() bool {
+
+	// Check if environment variable exists
+	env := os.Getenv("OPENSHIFT_USER")
+
+	if env != "" {
+		openshiftUser, err := strconv.ParseBool(env)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "The OPENSHIFT_USER environment variable must be set to true/false, it was set to '%s'\n", env)
+			os.Exit(1)
+		}
+		return openshiftUser
+	}
+
+	// Discovering Kubernetes Distribution
+	fmt.Fprintf(os.Stdout, "OPENSHIFT_USER environment variable is not set, discovering Kubernetes Distribution\n")
+
+	var flavour = KubernetesDistribution()
+	switch flavour {
+	case Openshift:
+		return true
+	default:
+		return false
+	}
 }
 
 func HasDuplicate(conns []string) string {
