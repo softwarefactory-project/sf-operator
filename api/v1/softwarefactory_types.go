@@ -303,6 +303,9 @@ type ZuulExecutorSpec struct {
 	// +kubebuilder:default:=250
 	// +kubebuilder:validation:Minimum:=-1
 	DiskLimitPerJob int `json:"diskLimitPerJob,omitempty"`
+	// +kubebuilder:default:=7200
+	// +kubebuilder:validation:Minimum:=1
+	TerminationGracePeriodSeconds int64 `json:"TerminationGracePeriodSeconds,omitempty"`
 }
 
 type ZuulWebSpec struct {

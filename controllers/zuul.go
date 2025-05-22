@@ -638,6 +638,13 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	ze.Spec.Template.Spec.Containers[1].SecurityContext.RunAsUser = ptr.To[int64](1000)
 	ze.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
+	// Setup max graceful period
+	period := r.cr.Spec.Zuul.Executor.TerminationGracePeriodSeconds
+	if period == 0 {
+		period = 7200
+	}
+	ze.Spec.Template.Spec.TerminationGracePeriodSeconds = ptr.To[int64](period)
+
 	// Mount a local directory in place of the Zuul source from the container image
 	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
 		enableZuulLocalSource(&ze.Spec.Template, path, false, r.isOpenShift)
