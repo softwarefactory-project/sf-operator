@@ -493,13 +493,15 @@ func CheckOpenShift() bool {
 	}
 
 	// Discovering Kubernetes Distribution
-	fmt.Fprintf(os.Stdout, "OPENSHIFT_USER environment variable is not set, discovering Kubernetes Distribution\n")
+	utils.LogI("OPENSHIFT_USER environment variable is not set, discovering Kubernetes Distribution\n")
 
 	var flavour = KubernetesDistribution()
 	switch flavour {
 	case Openshift:
+		utils.LogI("Kubernetes Distribution found: Openshift\n")
 		return true
 	default:
+		utils.LogI("Kubernetes Distribution found: Kubernetes\n")
 		return false
 	}
 }
