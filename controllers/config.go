@@ -9,6 +9,7 @@ import (
 	_ "embed"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -91,7 +92,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 	var secret apiv1.Secret
 	secretName := "config-update-secrets"
 	if !r.GetM(secretName, &secret) {
-		utils.LogI("Creating the config-update service account secret")
+		logging.LogI("Creating the config-update service account secret")
 		secret = apiv1.Secret{
 			Type: "kubernetes.io/service-account-token",
 			ObjectMeta: metav1.ObjectMeta{
@@ -129,13 +130,13 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 	}
 
 	if !found {
-		utils.LogI("Creating base secret job")
+		logging.LogI("Creating base secret job")
 		r.CreateR(r.RunCommand(jobName, []string{"config-create-zuul-secrets"}, extraCmdVars))
 		return false
 	} else if job.Status.Succeeded >= 1 {
 		return true
 	} else {
-		utils.LogI("Waiting for base secret job result")
+		logging.LogI("Waiting for base secret job result")
 		return false
 	}
 }
@@ -213,7 +214,7 @@ func (r *SFController) SetupConfigJob() bool {
 		// This ensures that the zuul-scheduler loaded the provisionned Zuul config
 		// for the 'internal' tenant
 		if needReconfigureTenant {
-			utils.LogI("Running tenant-reconfigure for the 'internal' tenant")
+			logging.LogI("Running tenant-reconfigure for the 'internal' tenant")
 			if r.runZuulInternalTenantReconfigure() {
 				// Create an empty ConfigMap to keep note the reconfigure has been already done
 				zsInternalTenantReconfigure.ObjectMeta = metav1.ObjectMeta{

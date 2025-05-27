@@ -60,7 +60,7 @@ import (
 	opv1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
-	ctrlutils "github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 
 	"k8s.io/client-go/kubernetes"
 
@@ -167,10 +167,10 @@ func GetCLIContext(command *cobra.Command) (SoftwareFactoryConfigContext, error)
 	if configPath != "" {
 		ctxName, cliContext, err = getContextFromFile(command)
 		if err != nil {
-			ctrlutils.LogE(err, "Could not load config file")
+			logging.LogE(err, "Could not load config file")
 			os.Exit(1)
 		} else {
-			ctrlutils.LogD("Using configuration context " + ctxName)
+			logging.LogD("Using configuration context " + ctxName)
 		}
 	}
 	// Override with defaults
@@ -217,12 +217,12 @@ func GetCLIContext(command *cobra.Command) (SoftwareFactoryConfigContext, error)
 	if cliContext.Dev.SFOperatorRepositoryPath == "" {
 		defaultSFOperatorRepositoryPath, getwdErr := os.Getwd()
 		if getwdErr != nil {
-			ctrlutils.LogE(getwdErr,
+			logging.LogE(getwdErr,
 				"sf-operator-repository-path is not set in `dev` section of the configuration file and unable to determine the current working directory")
 			os.Exit(1)
 		}
 		cliContext.Dev.SFOperatorRepositoryPath = defaultSFOperatorRepositoryPath
-		ctrlutils.LogD("Using current working directory for sf-operator-repository-path: " + cliContext.Dev.SFOperatorRepositoryPath)
+		logging.LogD("Using current working directory for sf-operator-repository-path: " + cliContext.Dev.SFOperatorRepositoryPath)
 	}
 	return cliContext, nil
 }
@@ -267,7 +267,7 @@ func CreateKubernetesClient(contextName string) (client.Client, error) {
 func CreateKubernetesClientOrDie(contextName string) client.Client {
 	cli, err := CreateKubernetesClient(contextName)
 	if err != nil {
-		ctrlutils.LogE(err, "Error creating Kubernetes client")
+		logging.LogE(err, "Error creating Kubernetes client")
 		os.Exit(1)
 	}
 	return cli
@@ -277,7 +277,7 @@ func GetCLIENV(kmd *cobra.Command) (string, ENV) {
 
 	cliCtx, err := GetCLIContext(kmd)
 	if err != nil {
-		ctrlutils.LogE(err, "Error initializing CLI:")
+		logging.LogE(err, "Error initializing CLI:")
 		os.Exit(1)
 	}
 
@@ -311,7 +311,7 @@ func DeleteOrDie(env *ENV, obj client.Object, opts ...client.DeleteOption) bool 
 		return false
 	} else if err != nil {
 		msg := fmt.Sprintf("Error while deleting %s \"%s\"", reflect.TypeOf(obj).Name(), obj.GetName())
-		ctrlutils.LogE(err, msg)
+		logging.LogE(err, msg)
 		os.Exit(1)
 	}
 	return true
@@ -323,7 +323,7 @@ func GetMOrDie(env *ENV, name string, obj client.Object) bool {
 		return false
 	} else if err != nil {
 		msg := fmt.Sprintf("Error while fetching %s \"%s\"", reflect.TypeOf(obj).Name(), name)
-		ctrlutils.LogE(err, msg)
+		logging.LogE(err, msg)
 		os.Exit(1)
 	}
 	return true
@@ -331,33 +331,33 @@ func GetMOrDie(env *ENV, name string, obj client.Object) bool {
 
 func UpdateROrDie(env *ENV, obj client.Object) {
 	var msg = fmt.Sprintf("Updating %s \"%s\" in %s", reflect.TypeOf(obj).Name(), obj.GetName(), env.Ns)
-	ctrlutils.LogI(msg)
+	logging.LogI(msg)
 	if err := env.Cli.Update(env.Ctx, obj); err != nil {
 		msg = fmt.Sprintf("Error while updating %s \"%s\"", reflect.TypeOf(obj).Name(), obj.GetName())
-		ctrlutils.LogE(err, msg)
+		logging.LogE(err, msg)
 		os.Exit(1)
 	}
 	msg = fmt.Sprintf("%s \"%s\" updated", reflect.TypeOf(obj).Name(), obj.GetName())
-	ctrlutils.LogI(msg)
+	logging.LogI(msg)
 }
 
 func CreateROrDie(env *ENV, obj client.Object) {
 	var msg = fmt.Sprintf("Creating %s \"%s\" in %s", reflect.TypeOf(obj).Name(), obj.GetName(), env.Ns)
-	ctrlutils.LogI(msg)
+	logging.LogI(msg)
 	obj.SetNamespace(env.Ns)
 	if err := env.Cli.Create(env.Ctx, obj); err != nil {
 		msg = fmt.Sprintf("Error while creating %s \"%s\"", reflect.TypeOf(obj).Name(), obj.GetName())
-		ctrlutils.LogE(err, msg)
+		logging.LogE(err, msg)
 		os.Exit(1)
 	}
 	msg = fmt.Sprintf("%s \"%s\" created", reflect.TypeOf(obj).Name(), obj.GetName())
-	ctrlutils.LogI(msg)
+	logging.LogI(msg)
 }
 
 func DeleteAllOfOrDie(env *ENV, obj client.Object, opts ...client.DeleteAllOfOption) {
 	if err := env.Cli.DeleteAllOf(env.Ctx, obj, opts...); err != nil {
 		var msg = "Error while deleting"
-		ctrlutils.LogE(err, msg)
+		logging.LogE(err, msg)
 		os.Exit(1)
 	}
 }
@@ -365,7 +365,7 @@ func DeleteAllOfOrDie(env *ENV, obj client.Object, opts ...client.DeleteAllOfOpt
 func GetCLIctxOrDie(kmd *cobra.Command, args []string, allowedArgs []string) SoftwareFactoryConfigContext {
 	cliCtx, err := GetCLIContext(kmd)
 	if err != nil {
-		ctrlutils.LogE(err, "Error initializing:")
+		logging.LogE(err, "Error initializing:")
 		os.Exit(1)
 	}
 	if len(allowedArgs) == 0 {
@@ -374,7 +374,7 @@ func GetCLIctxOrDie(kmd *cobra.Command, args []string, allowedArgs []string) Sof
 	} else {
 		argumentError := errors.New("argument must be in: " + strings.Join(allowedArgs, ", "))
 		if len(args) != 1 {
-			ctrlutils.LogE(argumentError, "Need one argument")
+			logging.LogE(argumentError, "Need one argument")
 			os.Exit(1)
 		}
 		for _, a := range allowedArgs {
@@ -382,7 +382,7 @@ func GetCLIctxOrDie(kmd *cobra.Command, args []string, allowedArgs []string) Sof
 				return cliCtx
 			}
 		}
-		ctrlutils.LogE(argumentError, "Unknown argument "+args[0])
+		logging.LogE(argumentError, "Unknown argument "+args[0])
 		os.Exit(1)
 	}
 	return SoftwareFactoryConfigContext{}
@@ -408,8 +408,8 @@ func RunCmdWithEnvOrDie(environ []string, cmd string, args ...string) string {
 	kmd.Env = append(os.Environ(), environ...)
 	out, err := kmd.CombinedOutput()
 	if err != nil {
-		ctrlutils.LogE(err, "Could not run command '"+cmd+"'")
-		ctrlutils.LogI("Captured output:\n" + string(out))
+		logging.LogE(err, "Could not run command '"+cmd+"'")
+		logging.LogI("Captured output:\n" + string(out))
 		os.Exit(1)
 	}
 	return string(out)
@@ -425,7 +425,7 @@ func EnsureNamespaceOrDie(env *ENV, name string) {
 		ns.Name = name
 		CreateROrDie(env, &ns)
 	} else if err != nil {
-		ctrlutils.LogE(err, "Error checking namespace "+name)
+		logging.LogE(err, "Error checking namespace "+name)
 		os.Exit(1)
 	}
 }
@@ -440,7 +440,7 @@ func EnsureServiceAccountOrDie(env *ENV, name string) {
 func WriteContentToFile(filePath string, content []byte, mode fs.FileMode) {
 	err := os.WriteFile(filePath, content, mode)
 	if err != nil {
-		ctrlutils.LogE(err, "Can not write a file "+filePath)
+		logging.LogE(err, "Can not write a file "+filePath)
 		os.Exit(1)
 	}
 }
@@ -453,7 +453,7 @@ func VarListToMap(varsList []string) map[string]string {
 		tokens := strings.Split(v, "=")
 
 		if len(tokens) != 2 {
-			ctrlutils.LogE(errors.New("parse error"), "parsed value `"+v+"` needs to be defined as 'foo=bar'")
+			logging.LogE(errors.New("parse error"), "parsed value `"+v+"` needs to be defined as 'foo=bar'")
 			os.Exit(1)
 		}
 		vars[tokens[0]] = tokens[1]
@@ -464,7 +464,7 @@ func VarListToMap(varsList []string) map[string]string {
 func CreateDirectory(dirPath string, mode fs.FileMode) {
 	err := os.MkdirAll(dirPath, mode)
 	if err != nil {
-		ctrlutils.LogE(err, "Can not create directory "+dirPath)
+		logging.LogE(err, "Can not create directory "+dirPath)
 		os.Exit(1)
 	}
 }
@@ -482,7 +482,7 @@ func GetClientset(kubeContext string) (*rest.Config, *kubernetes.Clientset) {
 	restConfig := controllers.GetConfigContextOrDie(kubeContext)
 	kubeClientset, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		ctrlutils.LogE(err, "Could not instantiate Clientset")
+		logging.LogE(err, "Could not instantiate Clientset")
 		os.Exit(1)
 	}
 	return restConfig, kubeClientset
@@ -510,7 +510,7 @@ func RunRemoteCmd(kubeContext string, namespace string, podName string, containe
 	if err != nil {
 		errMsg := fmt.Sprintf("Command \"%s\" [Pod: %s - Container: %s] failed with the following stderr: %s",
 			strings.Join(cmdArgs, " "), podName, containerName, errorBuffer.String())
-		ctrlutils.LogE(err, errMsg)
+		logging.LogE(err, errMsg)
 		os.Exit(1)
 	}
 	return buffer
@@ -521,10 +521,10 @@ func ReadYAMLToMapOrDie(filePath string) map[string]interface{} {
 	secretContent := make(map[string]interface{})
 	err := yaml.Unmarshal(readFile, &secretContent)
 	if err != nil {
-		ctrlutils.LogE(err, "Problem on reading the file content")
+		logging.LogE(err, "Problem on reading the file content")
 	}
 	if len(secretContent) == 0 {
-		ctrlutils.LogE(errors.New("file is empty"), "The file is empty or it does not exist!")
+		logging.LogE(errors.New("file is empty"), "The file is empty or it does not exist!")
 		os.Exit(1)
 	}
 	return secretContent
@@ -533,7 +533,7 @@ func ReadYAMLToMapOrDie(filePath string) map[string]interface{} {
 func GetKubectlPath() string {
 	kubectlPath, err := exec.LookPath("kubectl")
 	if err != nil {
-		ctrlutils.LogE(errors.New("no kubectl binary"),
+		logging.LogE(errors.New("no kubectl binary"),
 			"No 'kubectl' binary found. Please install the 'kubectl' binary before attempting a restore")
 		os.Exit(1)
 	}
@@ -547,7 +547,7 @@ func ExecuteKubectlClient(ns string, podName string, containerName string, execu
 
 	err := cmd.Run()
 	if err != nil {
-		ctrlutils.LogE(err, "There is an issue on executing command: "+executeCommand)
+		logging.LogE(err, "There is an issue on executing command: "+executeCommand)
 		os.Exit(1)
 	}
 
@@ -556,7 +556,7 @@ func ExecuteKubectlClient(ns string, podName string, containerName string, execu
 func GetKubeConfig() *clientcmdapi.Config {
 	clientCfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 	if err != nil {
-		ctrlutils.LogE(err, "Could not find the kubeconfig")
+		logging.LogE(err, "Could not find the kubeconfig")
 		os.Exit(1)
 	}
 	return clientCfg
@@ -580,7 +580,7 @@ func GetKubeConfigContextByName(contextName string) (*clientcmdapi.Context, stri
 	// Load the context
 	context, err := clientCfg.Contexts[contextName]
 	if !err {
-		ctrlutils.LogD("could not find the context " + contextName)
+		logging.LogD("could not find the context " + contextName)
 	}
 	return context, contextName
 }

@@ -46,6 +46,7 @@ import (
 
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	cutils "github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
 
@@ -526,7 +527,7 @@ func GetAdminRepoURL(env *cliutils.ENV, fqdn string, repoName string) string {
 		os.Exit(1)
 	}
 	apiKey := string(gerritAPIKey.Data["gerrit-admin-api-key"])
-	ctrl.Log.V(5).Info("API Key: " + apiKey)
+	logging.LogTrace("API Key: " + apiKey)
 	repoURL := fmt.Sprintf("https://admin:%s@gerrit.%s/a/%s", apiKey, fqdn, repoName)
 	return repoURL
 }
@@ -544,9 +545,9 @@ func CloneAsAdmin(env *cliutils.ENV, fqdn string, repoName string, dest string, 
 		}
 		args = append(args, "clone", repoURL, dest)
 		output = cliutils.RunCmdOrDie("git", args...)
-		ctrl.Log.V(5).Info("captured output:\n" + output)
+		logging.LogTrace("captured output:\n" + output)
 		output = cliutils.RunCmdOrDie("git", "-C", dest, "remote", "add", "gerrit", repoURL)
-		ctrl.Log.V(5).Info("captured output:\n" + output)
+		logging.LogTrace("captured output:\n" + output)
 	} else {
 		ctrl.Log.Info("Repository exists. Resetting remotes...")
 		for _, o := range []string{
@@ -555,7 +556,7 @@ func CloneAsAdmin(env *cliutils.ENV, fqdn string, repoName string, dest string, 
 			cliutils.RunCmdOrDie("git", "-C", dest, "fetch", "origin"),
 		} {
 			if o != "" {
-				ctrl.Log.V(5).Info("captured output:\n" + o)
+				logging.LogTrace("captured output:\n" + o)
 			}
 		}
 	}
@@ -573,14 +574,14 @@ func CloneAsAdmin(env *cliutils.ENV, fqdn string, repoName string, dest string, 
 	} {
 		output = cliutils.RunCmdOrDie("git", _args...)
 		if output != "" {
-			ctrl.Log.V(5).Info("captured output:\n" + output)
+			logging.LogTrace("captured output:\n" + output)
 		}
 	}
 	if !verify {
 		output = cliutils.RunCmdOrDie("git",
 			"-C", dest, "config", "http.sslverify", "false")
 		if output != "" {
-			ctrl.Log.V(5).Info("captured output:\n" + output)
+			logging.LogTrace("captured output:\n" + output)
 		}
 	}
 }

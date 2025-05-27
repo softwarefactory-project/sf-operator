@@ -9,6 +9,7 @@ import (
 	_ "embed"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -55,7 +56,7 @@ func (r *SFController) DeployHTTPDGateway() bool {
 	current := appsv1.Deployment{}
 	if r.GetM(ident, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			utils.LogI("gateway configuration changed, rollout gateway pods ...")
+			logging.LogI("gateway configuration changed, rollout gateway pods ...")
 			current.Spec = dep.DeepCopy().Spec
 			r.UpdateR(&current)
 			return false

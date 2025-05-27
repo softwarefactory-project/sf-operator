@@ -775,7 +775,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	current := appsv1.Deployment{}
 	if r.GetM("zuul-web", &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			utils.LogI("zuul-web configuration changed, rollout zuul-web pods ...")
+			logging.LogI("zuul-web configuration changed, rollout zuul-web pods ...")
 			current.Spec = zw.DeepCopy().Spec
 			r.UpdateR(&current)
 			return false
@@ -821,7 +821,7 @@ func (r *SFController) EnsureZuulComponents() bool {
 	if r.cr.Spec.Zuul.Executor.Enabled != nil && !*r.cr.Spec.Zuul.Executor.Enabled {
 		zuulExecutor := appsv1.StatefulSet{}
 		if r.GetM("zuul-executor", &zuulExecutor) {
-			utils.LogI("zuul-executor is disabled but running. Deleting the executor ...")
+			logging.LogI("zuul-executor is disabled but running. Deleting the executor ...")
 			r.DeleteR(&zuulExecutor)
 		}
 	}
@@ -952,7 +952,7 @@ func (r *SFController) ensureZuulPromRule() bool {
 		return false
 	} else {
 		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &annotations) {
-			utils.LogI("Zuul default Prometheus rules changed, updating...")
+			logging.LogI("Zuul default Prometheus rules changed, updating...")
 			currentPromRule.Spec = desiredZuulPromRule.Spec
 			currentPromRule.ObjectMeta.Annotations = annotations
 			r.UpdateR(&currentPromRule)
@@ -1069,7 +1069,7 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 		// Set Database DB URI
 		dbSettings := apiv1.Secret{}
 		if !r.GetM(zuulDBConfigSecret, &dbSettings) {
-			utils.LogI("Waiting for db connection secret")
+			logging.LogI("Waiting for db connection secret")
 			return nil
 		}
 		cfgINI.Section("database").NewKey("dburi", fmt.Sprintf(
@@ -1094,7 +1094,7 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 	// Set Keystore secret
 	keystorePass, err := r.getSecretData(ZuulKeystorePasswordName)
 	if err != nil {
-		utils.LogI("Waiting for " + ZuulKeystorePasswordName + " secret")
+		logging.LogI("Waiting for " + ZuulKeystorePasswordName + " secret")
 		return nil
 	}
 	cfgINI.Section("keystore").NewKey("password", string(keystorePass))
@@ -1103,7 +1103,7 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 		// Set CLI auth
 		cliAuthSecret, err := r.getSecretData("zuul-auth-secret")
 		if err != nil {
-			utils.LogI("Waiting for zuul-auth-secret secret")
+			logging.LogI("Waiting for zuul-auth-secret secret")
 			return nil
 		}
 		cfgINI.Section("auth zuul_client").NewKey("secret", string(cliAuthSecret))
@@ -1229,19 +1229,19 @@ func (r *SFController) AddGitHubConnection(cfg *ini.File, conn sfv1.GitHubConnec
 	appKey := "/var/lib/zuul/" + conn.Secrets + "/app_key"
 
 	if appKey == "" || appID == "0" {
-		utils.LogI(fmt.Sprintf("app_key or app_id is not defined, app_key: %s, app_id: %s", appKey, appID))
+		logging.LogI(fmt.Sprintf("app_key or app_id is not defined, app_key: %s, app_id: %s", appKey, appID))
 		appKey = ""
 		appID = ""
 	}
 
 	apiToken, err := r.GetSecretDataFromKey(conn.Secrets, "api_token")
 	if err != nil {
-		utils.LogE(err, "Unable to find 'api_token' in Secret: "+conn.Secrets)
+		logging.LogE(err, "Unable to find 'api_token' in Secret: "+conn.Secrets)
 	}
 
 	webhookToken, err := r.GetSecretDataFromKey(conn.Secrets, "webhook_token")
 	if err != nil {
-		utils.LogE(err, "Unable to find 'webhook_token' in Secret: "+conn.Secrets)
+		logging.LogE(err, "Unable to find 'webhook_token' in Secret: "+conn.Secrets)
 	}
 
 	section := "connection " + conn.Name
@@ -1269,10 +1269,10 @@ func (r *SFController) AddGitLabConnection(cfg *ini.File, conn sfv1.GitLabConnec
 	webHookToken, webHookTokenErr := r.GetSecretDataFromKey(conn.Secrets, "webhook_token")
 
 	if apiTokenErr != nil {
-		utils.LogE(apiTokenErr, "Use empty value for api_token on Gitlab connection due to err, connection name: "+conn.Name)
+		logging.LogE(apiTokenErr, "Use empty value for api_token on Gitlab connection due to err, connection name: "+conn.Name)
 	}
 	if webHookTokenErr != nil {
-		utils.LogE(webHookTokenErr, "Use empty value for webhook_token on Gitlab connection due to err, connection name: "+conn.Name)
+		logging.LogE(webHookTokenErr, "Use empty value for webhook_token on Gitlab connection due to err, connection name: "+conn.Name)
 	}
 
 	section := "connection " + conn.Name
@@ -1337,7 +1337,7 @@ func (r *SFController) AddElasticSearchConnection(cfg *ini.File, conn sfv1.Elast
 	uri := conn.URI
 	// crude clear-text basic auth check
 	if match, _ := regexp.MatchString("http[s]?://[^:]+:.+@.+", uri); match {
-		utils.LogI(fmt.Sprintf("It looks like elasticsearch connection %s has basic auth secrets stored in clear text. Use the 'basicAuthSecret' property instead", conn.Name))
+		logging.LogI(fmt.Sprintf("It looks like elasticsearch connection %s has basic auth secrets stored in clear text. Use the 'basicAuthSecret' property instead", conn.Name))
 	}
 	if strings.HasPrefix(uri, "https://") {
 		scheme = "https://"
@@ -1353,7 +1353,7 @@ func (r *SFController) AddElasticSearchConnection(cfg *ini.File, conn sfv1.Elast
 		password, passwordErr := r.GetSecretDataFromKey(*conn.BasicAuthSecret, "password")
 		// TODO we may also want to handle missing values in the secret
 		if errors.IsNotFound(passwordErr) {
-			utils.LogE(passwordErr, fmt.Sprintf("elasticsearch connection %s refers to a non-existing secret: %s ", conn.Name, *conn.BasicAuthSecret))
+			logging.LogE(passwordErr, fmt.Sprintf("elasticsearch connection %s refers to a non-existing secret: %s ", conn.Name, *conn.BasicAuthSecret))
 		}
 		username, _ := r.GetSecretDataFromKey(*conn.BasicAuthSecret, "username")
 		uri = string(username) + ":" + string(password) + "@" + uri
@@ -1394,12 +1394,12 @@ func (r *SFController) AddSMTPConnection(cfg *ini.File, conn sfv1.SMTPConnection
 	if conn.Secrets != nil {
 		password, passwordErr := r.GetSecretDataFromKey(*conn.Secrets, "password")
 		if errors.IsNotFound(passwordErr) {
-			utils.LogE(passwordErr, fmt.Sprintf("SMTP connection %s refers to a non-existing secret: %s ", conn.Name, *conn.Secrets))
+			logging.LogE(passwordErr, fmt.Sprintf("SMTP connection %s refers to a non-existing secret: %s ", conn.Name, *conn.Secrets))
 		}
 		cfg.Section(section).NewKey("password", string(password))
 	} else {
 		if conn.Password != "" {
-			utils.LogI("Deprecation Warning: SMTPConnection's Password field will disappear in a future version. Use Secrets instead")
+			logging.LogDeprecation("SMTPConnection's Password field will disappear in a future version. Use Secrets instead")
 			cfg.Section(section).NewKey("password", conn.Password)
 		}
 	}

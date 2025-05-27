@@ -22,6 +22,7 @@ import (
 
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -70,9 +71,9 @@ func npCreate(kmd *cobra.Command, args []string) {
 		skipProvidersSecrets, _ := kmd.Flags().GetBool("skip-providers-secrets")
 
 		if nodepoolContext == kubeContext {
-			ctrl.Log.Info("Warning: Nodepool will use the same cluster context as SF")
+			logging.LogW("Nodepool will use the same cluster context as SF")
 			if nodepoolNamespace == ns {
-				ctrl.Log.Info("Warning: Nodepool will manage resources in the same namespace as the Software Factory deployment")
+				logging.LogW("Nodepool will manage resources in the same namespace as the Software Factory deployment")
 			}
 		}
 		CreateNamespaceForNodepool(&sfEnv, nodepoolContext, nodepoolNamespace, skipProvidersSecrets)

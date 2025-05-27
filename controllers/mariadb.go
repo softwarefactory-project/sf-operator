@@ -301,7 +301,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 			Data: nil,
 		}
 		if !r.GetM(zuulDBConfigSecret, &zuulDBSecret) {
-			utils.LogI("Starting DB Post Init")
+			logging.LogI("Starting DB Post Init")
 			zuulDBSecret = r.DBPostInit(zuulDBSecret)
 		}
 	}

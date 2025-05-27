@@ -14,7 +14,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 )
 
 const (
@@ -40,12 +40,12 @@ func X509CA() (*x509.Certificate, *rsa.PrivateKey, *bytes.Buffer, *bytes.Buffer)
 
 	caPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
-		utils.LogE(err, "Unable to generate a private key for the local CA")
+		logging.LogE(err, "Unable to generate a private key for the local CA")
 	}
 
 	caBytes, err := x509.CreateCertificate(rand.Reader, caCert, caCert, &caPrivKey.PublicKey, caPrivKey)
 	if err != nil {
-		utils.LogE(err, "Unable to create local CA certificate")
+		logging.LogE(err, "Unable to create local CA certificate")
 	}
 
 	caPEM := new(bytes.Buffer)
@@ -74,7 +74,7 @@ func generateSerialNumber() (*big.Int, error) {
 func X509Cert(caCert *x509.Certificate, caPrivKey *rsa.PrivateKey, dnsNames []string) (*bytes.Buffer, *bytes.Buffer) {
 	serialNumber, err := generateSerialNumber()
 	if err != nil {
-		utils.LogE(err, "Unable to generate a serial number for X509 certificate")
+		logging.LogE(err, "Unable to generate a serial number for X509 certificate")
 	}
 
 	cert := &x509.Certificate{
@@ -92,11 +92,11 @@ func X509Cert(caCert *x509.Certificate, caPrivKey *rsa.PrivateKey, dnsNames []st
 
 	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
-		utils.LogE(err, "Unable to generate a private key for X509 certificate")
+		logging.LogE(err, "Unable to generate a private key for X509 certificate")
 	}
 	certBytes, err := x509.CreateCertificate(rand.Reader, cert, caCert, &certPrivKey.PublicKey, caPrivKey)
 	if err != nil {
-		utils.LogE(err, "Unable to create X509 certificate")
+		logging.LogE(err, "Unable to create X509 certificate")
 	}
 
 	certPEM := new(bytes.Buffer)

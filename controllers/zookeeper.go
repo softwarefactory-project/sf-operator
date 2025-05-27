@@ -168,7 +168,7 @@ func (r *SFController) DeployZookeeper() bool {
 	// VolumeClaimTemplates cannot be updated on a statefulset. If we are missing the logs PVC we must
 	// recreate from scratch the statefulset. The new statefulset should mount the old PVC again.
 	if len(current.Spec.VolumeClaimTemplates) < 2 {
-		utils.LogI("Zookeeper volume claim templates changed, recreating statefulset ...")
+		logging.LogI("Zookeeper volume claim templates changed, recreating statefulset ...")
 		r.DeleteR(current)
 		return false
 	}

@@ -330,7 +330,7 @@ func (r *SFController) ensureNodepoolPromRule(cloudsYaml map[string]interface{})
 		return false
 	} else {
 		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &annotations) {
-			utils.LogI("Nodepool default Prometheus rules changed, updating...")
+			logging.LogI("Nodepool default Prometheus rules changed, updating...")
 			currentPromRule.Spec = desiredNodepoolPromRule.Spec
 			currentPromRule.ObjectMeta.Annotations = annotations
 			r.UpdateR(&currentPromRule)
@@ -800,7 +800,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	current := appsv1.Deployment{}
 	if r.GetM(LauncherIdent, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			utils.LogI("Nodepool-launcher configuration changed, rollout pods ...")
+			logging.LogI("Nodepool-launcher configuration changed, rollout pods ...")
 			current.Spec = nl.DeepCopy().Spec
 			r.UpdateR(&current)
 			return false

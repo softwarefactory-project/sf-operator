@@ -5,6 +5,7 @@ package controllers
 
 import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -59,7 +60,7 @@ func (r *SFController) EnsureZuulWeeder(checksum string) bool {
 	current := appsv1.Deployment{}
 	if r.GetM(ident, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			utils.LogI("zuul configuration changed, rollout zuul-weeder pods ...")
+			logging.LogI("zuul configuration changed, rollout zuul-weeder pods ...")
 			current.Spec = dep.DeepCopy().Spec
 			r.UpdateR(&current)
 			return false

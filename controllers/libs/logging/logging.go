@@ -16,6 +16,7 @@ import (
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	apiv1 "k8s.io/api/core/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type FluentBitLabel struct {
@@ -132,4 +133,42 @@ func CreateFluentBitSideCarContainer(serviceName string, extraLabels []FluentBit
 	container.Ports = ports
 	container.VolumeMounts = append(volumeMounts, storageVolumeMount)
 	return container, storageEmptyDir
+}
+
+// Simple logging wrappers for consistent operator logs
+
+// LogI logs a message with the INFO log Level
+func LogI(msg string) {
+	ctrl.Log.Info(msg)
+}
+
+// LogW logs a warning message at the default info level.
+func LogW(msg string) {
+	ctrl.Log.Info("Warning: " + msg)
+}
+
+// LogDeprecation logs a deprecation warning message at the default info level.
+func LogDeprecation(msg string) {
+	ctrl.Log.Info("Deprecation Warning: " + msg)
+}
+
+// LogE logs a message with the Error log Level
+func LogE(err error, msg string) {
+	ctrl.Log.Error(err, msg)
+}
+
+// logAtLevel logs a message at a specific verbosity level.
+func logAtLevel(msg string, level int) {
+	ctrl.Log.V(level).Info(msg)
+}
+
+// LogD logs a message with the DEBUG log Level.
+func LogD(msg string) {
+	logAtLevel(msg, 1)
+}
+
+// LogTrace logs a message at the DEBUG log level with high verbosity (5).
+// Use for detailed debugging information that is not needed in standard debug logs.
+func LogTrace(msg string) {
+	logAtLevel(msg, 5)
 }

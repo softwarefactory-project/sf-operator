@@ -22,7 +22,6 @@ import (
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/ini.v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // GetEnvVarValue returns the value of the named env var. Return an empty string when not found.
@@ -39,21 +38,6 @@ func BoolPtr(b bool) *bool    { return &b }
 
 var Execmod int32 = 493 // decimal for 0755 octal
 var Readmod int32 = 292 // decimal for 0444 octal
-
-// LogI logs a message with the INFO log Level
-func LogI(msg string) {
-	ctrl.Log.Info(msg)
-}
-
-// LogD logs a message with the DEBUG log Level
-func LogD(msg string) {
-	ctrl.Log.V(1).Info(msg)
-}
-
-// LogE logs a message with the Error log Level
-func LogE(err error, msg string) {
-	ctrl.Log.Error(err, msg)
-}
 
 // NewUUIDString produce a UUID
 func NewUUIDString() string {

@@ -22,6 +22,7 @@ import (
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
@@ -74,7 +75,7 @@ func (r *SFController) ensureLogserverPodMonitor() bool {
 		return false
 	} else {
 		if !utils.MapEquals(&currentLspm.ObjectMeta.Annotations, &annotations) {
-			utils.LogI("Logserver PodMonitor configuration changed, updating...")
+			logging.LogI("Logserver PodMonitor configuration changed, updating...")
 			currentLspm.Spec = desiredLsPodmonitor.Spec
 			currentLspm.ObjectMeta.Annotations = annotations
 			r.UpdateR(&currentLspm)
@@ -110,7 +111,7 @@ func (r *SFController) ensureLogserverPromRule() bool {
 		return false
 	} else {
 		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &annotations) {
-			utils.LogI("Logserver default Prometheus rules changed, updating...")
+			logging.LogI("Logserver default Prometheus rules changed, updating...")
 			currentPromRule.Spec = desiredLsPromRule.Spec
 			currentPromRule.ObjectMeta.Annotations = annotations
 			r.UpdateR(&currentPromRule)

@@ -35,6 +35,7 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
@@ -108,7 +109,7 @@ func isOperatorReady(services map[string]bool) bool {
 // cleanup ensures removal of legacy resources
 func (r *SFController) cleanup() {
 
-	utils.LogI("Nothing to clean up.")
+	logging.LogI("Nothing to clean up.")
 
 }
 
@@ -273,7 +274,7 @@ func (r *SFController) deployStandaloneExectorStep(services map[string]bool) map
 		"zuul-ssh-key", "zookeeper-client-tls"} {
 		_, err := r.GetSecret(sn)
 		if err != nil {
-			utils.LogE(err, "Unable to find the Secret named "+sn)
+			logging.LogE(err, "Unable to find the Secret named "+sn)
 			return services
 		}
 	}
@@ -412,7 +413,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	r.cleanup()
 
 	if err := r.validateZuulConnectionsSecrets(); err != nil {
-		utils.LogE(err, "Validation of Zuul connections secrets failed")
+		logging.LogE(err, "Validation of Zuul connections secrets failed")
 		// TODO: add error as a new status conditions
 		status := r.cr.Status.DeepCopy()
 		status.Ready = false
@@ -427,7 +428,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 		services = r.deploySFStep(services)
 	}
 
-	utils.LogI(messageInfo(services))
+	logging.LogI(messageInfo(services))
 
 	return sfv1.SoftwareFactoryStatus{
 		Ready:              isOperatorReady(services),
@@ -493,15 +494,15 @@ func CheckOpenShift() bool {
 	}
 
 	// Discovering Kubernetes Distribution
-	utils.LogI("OPENSHIFT_USER environment variable is not set, discovering Kubernetes Distribution\n")
+	logging.LogI("OPENSHIFT_USER environment variable is not set, discovering Kubernetes Distribution\n")
 
 	var flavour = KubernetesDistribution()
 	switch flavour {
 	case Openshift:
-		utils.LogI("Kubernetes Distribution found: Openshift\n")
+		logging.LogI("Kubernetes Distribution found: Openshift\n")
 		return true
 	default:
-		utils.LogI("Kubernetes Distribution found: Kubernetes\n")
+		logging.LogI("Kubernetes Distribution found: Kubernetes\n")
 		return false
 	}
 }
@@ -614,7 +615,7 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 		ctx, client.ObjectKey{Name: controllerCMName, Namespace: ns}, &controllerCM)
 	if err != nil && k8s_errors.IsNotFound(err) {
 		controllerCM.Data = nil
-		utils.LogI("Creating ConfigMap, name: " + controllerCMName)
+		logging.LogI("Creating ConfigMap, name: " + controllerCMName)
 		// Create the fake controller configMap
 		if err := r.Create(ctx, &controllerCM); err != nil {
 			log.Error(err, "Unable to create configMap", "name", controllerCMName)

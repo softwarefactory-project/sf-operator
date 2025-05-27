@@ -35,6 +35,7 @@ import (
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
@@ -79,7 +80,7 @@ func (r *SFUtilContext) setOwnerReference(controlled metav1.Object) error {
 		err = controllerutil.SetControllerReference(r.owner, controlled, r.Scheme)
 	}
 	if err != nil {
-		utils.LogE(err, "Unable to set controller reference, name="+controlled.GetName())
+		logging.LogE(err, "Unable to set controller reference, name="+controlled.GetName())
 
 	}
 	return err
@@ -118,9 +119,9 @@ func (r *SFUtilContext) DeleteR(obj client.Object) {
 // UpdateR updates resource with the owner as the ownerReferences.
 func (r *SFUtilContext) UpdateR(obj client.Object) bool {
 	r.setOwnerReference(obj)
-	utils.LogI("Updating object name:" + obj.GetName())
+	logging.LogI("Updating object name:" + obj.GetName())
 	if err := r.Client.Update(r.ctx, obj); err != nil {
-		utils.LogE(err, "Unable to update the object")
+		logging.LogE(err, "Unable to update the object")
 		return false
 	}
 	return true
@@ -132,7 +133,7 @@ func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
 	name := obj.GetName()
 
 	if !r.GetM(name, obj) {
-		utils.LogI("Creating object, name: " + obj.GetName())
+		logging.LogI("Creating object, name: " + obj.GetName())
 		r.CreateR(obj)
 		return false
 	}
@@ -143,7 +144,7 @@ func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
 // Stdout and Stderr is output on the caller's Stdout
 // The function returns an Error for any issue
 func (r *SFUtilContext) PodExec(pod string, container string, command []string) error {
-	utils.LogI(fmt.Sprintf("Running pod execution pod: %s, command: %s", pod, command))
+	logging.LogI(fmt.Sprintf("Running pod execution pod: %s, command: %s", pod, command))
 	execReq := r.RESTClient.
 		Post().
 		Namespace(r.ns).
@@ -183,7 +184,7 @@ func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string)
 	name := baseName + "-config-map"
 	var cm apiv1.ConfigMap
 	if !r.GetM(name, &cm) {
-		utils.LogI("Creating config map name: " + name)
+		logging.LogI("Creating config map name: " + name)
 		cm = apiv1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns},
 			Data:       data,
@@ -191,7 +192,7 @@ func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string)
 		r.CreateR(&cm)
 	} else {
 		if !reflect.DeepEqual(cm.Data, data) {
-			utils.LogI("Updating configmap, name: " + name)
+			logging.LogI("Updating configmap, name: " + name)
 			cm.Data = data
 			r.UpdateR(&cm)
 		}
@@ -205,11 +206,11 @@ func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
 	var current apiv1.Secret
 	name := secret.GetName()
 	if !r.GetM(name, &current) {
-		utils.LogI("Creating secret, name: " + name)
+		logging.LogI("Creating secret, name: " + name)
 		r.CreateR(secret)
 	} else {
 		if !reflect.DeepEqual(current.Data, secret.Data) {
-			utils.LogI("Updating secret, name: " + name)
+			logging.LogI("Updating secret, name: " + name)
 			current.Data = secret.Data
 			r.UpdateR(&current)
 		}
@@ -223,7 +224,7 @@ func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
 func (r *SFUtilContext) ensureSecretFromFunc(name string, getData func() string) apiv1.Secret {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
-		utils.LogI("Creating secret, name: " + name)
+		logging.LogI("Creating secret, name: " + name)
 		secret = base.MkSecretFromFunc(name, r.ns, getData)
 		r.CreateR(&secret)
 	}
@@ -242,7 +243,7 @@ func (r *SFUtilContext) EnsureSecretUUID(name string) apiv1.Secret {
 func (r *SFUtilContext) EnsureSSHKeySecret(name string) {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
-		utils.LogI("Creating ssh key, name: " + name)
+		logging.LogI("Creating ssh key, name: " + name)
 		secret := base.MkSSHKeySecret(name, r.ns)
 		r.CreateR(&secret)
 	}
@@ -262,12 +263,12 @@ func (r *SFUtilContext) EnsureService(service *apiv1.Service) {
 	}
 	name := service.GetName()
 	if !r.GetM(name, &current) {
-		utils.LogI("Creating service, name: " + name)
+		logging.LogI("Creating service, name: " + name)
 		r.CreateR(service)
 	} else {
 		if !reflect.DeepEqual(current.Spec.Selector, service.Spec.Selector) ||
 			spsAsString(current.Spec.Ports) != spsAsString(service.Spec.Ports) {
-			utils.LogI("Updating service, name: " + name)
+			logging.LogI("Updating service, name: " + name)
 			current.Spec = *service.Spec.DeepCopy()
 			r.UpdateR(&current)
 		}
@@ -351,14 +352,14 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 		}
 		for _, pod := range podList.Items {
 			if pod.Status.Phase != "Running" {
-				utils.LogI(fmt.Sprintf(
+				logging.LogI(fmt.Sprintf(
 					"Waiting for statefulset state: Running, name: %s, status: %v", dep.GetName(), dep.Status))
 				return false
 			}
 			containerStatuses := pod.Status.ContainerStatuses
 			for _, containerStatus := range containerStatuses {
 				if !containerStatus.Ready {
-					utils.LogI(fmt.Sprintf(
+					logging.LogI(fmt.Sprintf(
 						"Waiting for statefulset containers ready, name: %s, status: %v, podStatus: %v; containerStatuses: %v",
 						dep.GetName(),
 						dep.Status,
@@ -380,7 +381,7 @@ func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 	if base.IsDeploymentReady(dep) {
 		return true
 	}
-	utils.LogI("Waiting for deployment, name: " + dep.ObjectMeta.GetName())
+	logging.LogI("Waiting for deployment, name: " + dep.ObjectMeta.GetName())
 	return false
 }
 
@@ -396,7 +397,7 @@ func (r *SFUtilContext) DebugStatefulSet(name string) {
 	// Set sleep command
 	dep.Spec.Template.Spec.Containers[0].Command = []string{"sleep", "infinity"}
 	r.UpdateR(&dep)
-	utils.LogI("Debugging service, name: " + name)
+	logging.LogI("Debugging service, name: " + name)
 }
 
 // GetConfigMap Get ConfigMap by name
@@ -476,7 +477,7 @@ func (r *SFUtilContext) reconcileExpandPVCs(serviceName string, newStorageSpec s
 	selector := client.MatchingLabels{"run": serviceName, "app": "sf"}
 	err := r.Client.List(r.ctx, PVCList, selector, client.InNamespace(r.ns))
 	if err != nil {
-		utils.LogE(err, "Unable to get the list of PVC for service "+serviceName)
+		logging.LogE(err, "Unable to get the list of PVC for service "+serviceName)
 		return false
 	}
 	readyList := []bool{}
@@ -509,10 +510,10 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 
 	foundPVC := &apiv1.PersistentVolumeClaim{}
 	if !r.GetM(pvcName, foundPVC) {
-		utils.LogI("PVC " + pvcName + " not found")
+		logging.LogI("PVC " + pvcName + " not found")
 		return false
 	}
-	utils.LogD("Inspecting volume " + foundPVC.Name)
+	logging.LogD("Inspecting volume " + foundPVC.Name)
 
 	currentQTY := foundPVC.Status.Capacity.Storage()
 	if currentQTY.IsZero() {
@@ -527,18 +528,18 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 		case
 			apiv1.PersistentVolumeClaimResizing,
 			apiv1.PersistentVolumeClaimFileSystemResizePending:
-			utils.LogI("Volume " + pvcName + " resizing in progress, not ready")
+			logging.LogI("Volume " + pvcName + " resizing in progress, not ready")
 			return false
 		}
 	}
 
 	switch newQTY.Cmp(*currentQTY) {
 	case -1:
-		utils.LogE(e.New("volume downsize"), "Cannot downsize volume "+pvcName+". Current size: "+
+		logging.LogE(e.New("volume downsize"), "Cannot downsize volume "+pvcName+". Current size: "+
 			currentQTY.String()+", Expected size: "+newQTY.String())
 		return true
 	case 0:
-		utils.LogD("Volume " + pvcName + " at expected size, nothing to do")
+		logging.LogD("Volume " + pvcName + " at expected size, nothing to do")
 		return true
 	case 1:
 		if !r.canStorageResize(foundPVC.Spec.StorageClassName) {
@@ -546,10 +547,10 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 			if foundPVC.Spec.StorageClassName != nil {
 				scn = *(foundPVC.Spec.StorageClassName)
 			}
-			utils.LogI("Volume expansion is not supported for " + scn)
+			logging.LogI("Volume expansion is not supported for " + scn)
 			return true
 		}
-		utils.LogI("Volume expansion required for  " + pvcName +
+		logging.LogI("Volume expansion required for  " + pvcName +
 			". current size: " + currentQTY.String() + " -> new size: " + newQTY.String())
 		newResources := apiv1.VolumeResourceRequirements{
 			Requests: apiv1.ResourceList{
@@ -558,14 +559,14 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 		}
 		foundPVC.Spec.Resources = newResources
 		if err := r.Client.Update(r.ctx, foundPVC); err != nil {
-			utils.LogE(err, "Updating PVC failed for volume, name: "+pvcName)
+			logging.LogE(err, "Updating PVC failed for volume, name: "+pvcName)
 			return false
 		}
 		// We return false to notify that a volume expansion was just
 		// requested. Technically we could consider the reconcile is
 		// over as most storage classes support hot resizing without
 		// service interruption.
-		utils.LogI("Expansion started for volume " + pvcName)
+		logging.LogI("Expansion started for volume " + pvcName)
 		return false
 	}
 	return true
@@ -603,7 +604,7 @@ func (r *SFController) EnsureDiskUsagePromRule(ruleGroups []monitoringv1.RuleGro
 		return false
 	} else {
 		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &desiredDUPromRule.ObjectMeta.Annotations) {
-			utils.LogI("Default disk usage Prometheus rules changed, updating...")
+			logging.LogI("Default disk usage Prometheus rules changed, updating...")
 			currentPromRule.Spec = desiredDUPromRule.Spec
 			currentPromRule.ObjectMeta.Annotations = desiredDUPromRule.ObjectMeta.Annotations
 			r.UpdateR(&currentPromRule)
@@ -633,7 +634,7 @@ func (r *SFController) EnsureSFPodMonitor(ports []string, selector metav1.LabelS
 		return false
 	} else {
 		if !utils.MapEquals(&currentPodMonitor.ObjectMeta.Annotations, &annotations) {
-			utils.LogI("SF PodMonitor configuration changed, updating...")
+			logging.LogI("SF PodMonitor configuration changed, updating...")
 			currentPodMonitor.Spec = desiredPodMonitor.Spec
 			currentPodMonitor.ObjectMeta.Annotations = annotations
 			r.UpdateR(&currentPodMonitor)
@@ -651,7 +652,7 @@ func (r *SFUtilContext) ensureStatefulset(sts appsv1.StatefulSet) (*appsv1.State
 	name := sts.ObjectMeta.Name
 	if r.GetM(name, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &sts.Spec.Template.ObjectMeta.Annotations) {
-			utils.LogI(name + " configuration changed, rollout pods ...")
+			logging.LogI(name + " configuration changed, rollout pods ...")
 			current.Spec.Template = *sts.Spec.Template.DeepCopy()
 			r.UpdateR(&current)
 			return &current, true

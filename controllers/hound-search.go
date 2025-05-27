@@ -7,6 +7,7 @@ import (
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -128,7 +129,7 @@ func (r *SFController) DeployHoundSearch() bool {
 	}
 
 	if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-		utils.LogI("hound-search configuration changed, rollout pods ...")
+		logging.LogI("hound-search configuration changed, rollout pods ...")
 		current.Spec = sts.DeepCopy().Spec
 		r.UpdateR(current)
 		return false
