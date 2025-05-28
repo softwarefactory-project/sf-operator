@@ -1,0 +1,17 @@
+cabal-version:      3.0
+name:               sf-operator
+version:            0.1
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Tristan Cacqueray
+maintainer:         tdecacqu@redhat.com
+copyright:          2025 Red Hat
+category:           Development
+build-type:         Simple
+
+executable render-dhall-schemas
+    main-is:          RenderSchemas.hs
+    ghc-options:      -Wall
+    build-depends:    base, dhall, dhall-openapi, yaml, containers, text, microlens
+    hs-source-dirs:   hack
+    default-language: GHC2021

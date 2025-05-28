@@ -1,0 +1,1 @@
+{ Type = { cpu : Text, memory : Text }, default = {=} }
