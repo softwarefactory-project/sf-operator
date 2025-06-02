@@ -464,7 +464,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		},
 		{
 			Name:      "nodepool-ca",
-			MountPath: "/etc/pki/ca-trust/extracted",
+			MountPath: TrustedCAExtractedMountPath,
 		},
 		{
 			Name:      "nodepool-tooling-vol",
@@ -548,7 +548,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		},
 		{
 			Name:      "nodepool-ca",
-			MountPath: "/etc/pki/ca-trust/extracted",
+			MountPath: TrustedCAExtractedMountPath,
 		},
 	}
 
@@ -693,7 +693,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		},
 		{
 			Name:      "nodepool-ca",
-			MountPath: "/etc/pki/ca-trust/extracted",
+			MountPath: TrustedCAExtractedMountPath,
 		},
 		{
 			Name:      "nodepool-home",
@@ -745,7 +745,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		},
 		{
 			Name:      "nodepool-ca",
-			MountPath: "/etc/pki/ca-trust/extracted",
+			MountPath: TrustedCAExtractedMountPath,
 		},
 	}
 

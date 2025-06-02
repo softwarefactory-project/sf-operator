@@ -43,9 +43,10 @@ import (
 )
 
 const (
-	CorporateCACerts         = "corporate-ca-certs"
-	UpdateCATrustAnchorsPath = "/usr/share/pki/ca-trust-source/anchors/"
-	UpdateCATrustCommand     = "set -x && update-ca-trust extract -o /etc/pki/ca-trust/extracted"
+	CorporateCACerts            = "corporate-ca-certs"
+	UpdateCATrustAnchorsPath    = "/usr/share/pki/ca-trust-source/anchors/"
+	TrustedCAExtractedMountPath = "/etc/pki/ca-trust/extracted"
+	UpdateCATrustCommand        = "set -x && update-ca-trust extract -o " + TrustedCAExtractedMountPath
 )
 
 //go:embed static/fetch-config-repo.sh

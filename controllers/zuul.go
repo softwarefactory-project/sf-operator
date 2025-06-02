@@ -193,7 +193,7 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 		},
 		{
 			Name:      "zuul-ca",
-			MountPath: "/etc/pki/ca-trust/extracted",
+			MountPath: TrustedCAExtractedMountPath,
 		},
 	}
 	envs := []apiv1.EnvVar{
@@ -512,7 +512,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		},
 		{
 			Name:      "zuul-ca",
-			MountPath: "/etc/pki/ca-trust/extracted",
+			MountPath: TrustedCAExtractedMountPath,
 		},
 	}
 	if corporateCMExists {

@@ -48,7 +48,7 @@ func MkHoundSearchContainer(corporateCMExists bool, openshiftUser bool) apiv1.Co
 		container.VolumeMounts = append(container.VolumeMounts,
 			apiv1.VolumeMount{
 				Name:      "hound-search-ca",
-				MountPath: "/etc/pki/ca-trust/extracted",
+				MountPath: TrustedCAExtractedMountPath,
 			})
 	}
 
