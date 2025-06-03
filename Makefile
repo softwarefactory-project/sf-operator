@@ -290,3 +290,8 @@ endef
 define entries_write_fn
 	$(foreach version,$(AVAILTAGS),$(call entry_fn,$(version),$(prevversion)) $(eval prevversion=$(version)))
 endef
+
+.PHONY: render-dhall-schemas
+render-dhall-schemas:
+	@rm -f schemas/*
+	cabal run

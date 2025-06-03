@@ -1,0 +1,1 @@
+{ Type = { hostnames : List Text, ip : Text }, default = {=} }
