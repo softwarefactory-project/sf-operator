@@ -1,11 +1,7 @@
 { Type =
-    { debug : Optional Bool
-    , forwardInputHost : Optional Text
+    { forwardInputHost : Text
+    , debug : Optional Bool
     , forwardInputPort : Optional Natural
     }
-, default =
-  { debug = None Bool
-  , forwardInputHost = None Text
-  , forwardInputPort = None Natural
-  }
+, default = { debug = None Bool, forwardInputPort = None Natural }
 }

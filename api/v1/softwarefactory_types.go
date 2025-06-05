@@ -39,7 +39,7 @@ type FluentBitForwarderSpec struct {
 	// Run fluent bit sidecars in debug mode. This will output forwarded payloads and additional info in the sidecar's logs. Defaults to false.
 	Debug *bool `json:"debug,omitempty"`
 	// The Host for the Fluent Bit Forward Input to forward logs to.
-	ForwardInputHost string `json:"forwardInputHost,omitempty"`
+	ForwardInputHost string `json:"forwardInputHost"`
 	// The (optional) port of the forward input, defaults to 24224.
 	// +kubebuilder:default:=24224
 	ForwardInputPort int32 `json:"forwardInputPort,omitempty"`
@@ -532,7 +532,7 @@ type NodepoolSpec struct {
 }
 
 type ZookeeperSpec struct {
-	Storage StorageSpec `json:"storage"`
+	Storage StorageSpec `json:"storage,omitempty"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
@@ -540,7 +540,7 @@ type ZookeeperSpec struct {
 }
 
 type CodesearchSpec struct {
-	Storage StorageSpec `json:"storage"`
+	Storage StorageSpec `json:"storage,omitempty"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
@@ -560,9 +560,9 @@ type LimitsSpec struct {
 
 type MariaDBSpec struct {
 	// Storage parameters related to mariaDB's data
-	DBStorage StorageSpec `json:"dbStorage"`
+	DBStorage StorageSpec `json:"dbStorage,omitempty"`
 	// Storage parameters related to the database's logging
-	LogStorage StorageSpec `json:"logStorage"`
+	LogStorage StorageSpec `json:"logStorage,omitempty"`
 	// Memory/CPU Limit
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}

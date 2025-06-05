@@ -72,6 +72,8 @@ spec:
                       to 24224.
                     format: int32
                     type: integer
+                required:
+                - forwardInputHost
                 type: object
               codesearch:
                 description: Codesearch service spec
@@ -123,8 +125,6 @@ spec:
                     required:
                     - size
                     type: object
-                required:
-                - storage
                 type: object
               config-location:
                 description: Config repository spec
@@ -313,9 +313,6 @@ spec:
                     required:
                     - size
                     type: object
-                required:
-                - dbStorage
-                - logStorage
                 type: object
               nodepool:
                 description: Nodepool services spec
@@ -493,8 +490,6 @@ spec:
                     required:
                     - size
                     type: object
-                required:
-                - storage
                 type: object
               zuul:
                 description: Zuul service spec
