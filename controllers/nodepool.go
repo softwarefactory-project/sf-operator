@@ -788,9 +788,8 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	if hasProviderSecret(initialVolumeMounts) {
 		// Append zuul-capacity sidecar
 		nl.Spec.Template.Spec.Containers = append(nl.Spec.Template.Spec.Containers,
-			MkZuulCapacityContainer(r.isOpenShift),
+			MkZuulCapacityContainer(r.isOpenShift, corporateCMExists),
 		)
-
 		// Setup zuul-capacity service
 		zcSrv := base.MkService("zuul-capacity", r.ns, "nodepool-launcher", []int32{9100}, "zuul-capacity", r.cr.Spec.ExtraLabels)
 		r.GetOrCreate(&zcSrv)

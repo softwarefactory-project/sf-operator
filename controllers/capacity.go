@@ -8,7 +8,10 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-func MkZuulCapacityContainer(openshiftUser bool) apiv1.Container {
+func MkZuulCapacityContainer(
+	openshiftUser bool,
+	corporateCMExists bool,
+) apiv1.Container {
 	container := base.MkContainer("zuul-capacity", base.ZuulCapacityImage(), openshiftUser)
 	container.Args = []string{"--port", "9100"}
 	container.Env = []apiv1.EnvVar{
@@ -36,5 +39,16 @@ func MkZuulCapacityContainer(openshiftUser bool) apiv1.Container {
 			ReadOnly:  true,
 		},
 	}
+
+	// Mount existing nodepool-ca volume for CA certs
+	if corporateCMExists {
+		container.VolumeMounts = append(
+			container.VolumeMounts,
+			apiv1.VolumeMount{
+				Name:      "nodepool-ca",
+				MountPath: TrustedCAExtractedMountPath,
+			})
+	}
+
 	return container
 }
