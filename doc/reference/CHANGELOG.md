@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 - Unifying zuul label: workflow label
   This change modifies zuul label to run gate pipelines from gateit to
   workflow.
+- Containers images based on UBI have been updated. Zuul and Nodepool services will be restarted during the upgrade.
 
 ### Deprecated
 ### Removed
