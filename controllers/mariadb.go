@@ -204,7 +204,8 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 	r.EnsureSecret(&configSecret)
 	r.EnsureSecret(&initDBSecret)
 
-	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+	storage := r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage)
+	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), storage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 
 	base.SetContainerLimitsHighProfile(&sts.Spec.Template.Spec.Containers[0])
 	limitstr := base.UpdateContainerLimit(r.cr.Spec.MariaDB.Limits, &sts.Spec.Template.Spec.Containers[0])
@@ -279,7 +280,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current, changed := r.ensureStatefulset(sts)
+	current, changed := r.ensureStatefulset(storage.StorageClassName, sts)
 	if changed {
 		return false
 	}

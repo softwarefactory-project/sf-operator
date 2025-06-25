@@ -159,8 +159,9 @@ func (r *SFController) DeployLogserver() bool {
 	}
 
 	// Create the statefulset
+	storage := BaseGetStorageConfOrDefault(r.cr.Spec.Logserver.Storage, r.cr.Spec.StorageDefault)
 	sts := r.mkStatefulSet(logserverIdent, base.HTTPDImage(),
-		BaseGetStorageConfOrDefault(r.cr.Spec.Logserver.Storage, r.cr.Spec.StorageDefault), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+		storage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 
 	// Setup the main container
 	sts.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
@@ -301,7 +302,7 @@ func (r *SFController) DeployLogserver() bool {
 	}
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current, stsUpdated := r.ensureStatefulset(sts)
+	current, stsUpdated := r.ensureStatefulset(storage.StorageClassName, sts)
 
 	pvcReadiness := r.reconcileExpandPVC(logserverIdent+"-"+logserverIdent+"-0", r.cr.Spec.Logserver.Storage)
 

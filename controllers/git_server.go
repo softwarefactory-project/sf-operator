@@ -287,7 +287,8 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Create the statefulset
-	sts := r.mkStatefulSet(GitServerIdent, base.GitServerImage(), r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+	storage := r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage)
+	sts := r.mkStatefulSet(GitServerIdent, base.GitServerImage(), storage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 	GSVolumeMountsRO := []apiv1.VolumeMount{
 		{
@@ -356,7 +357,7 @@ func (r *SFController) DeployGitServer() bool {
 	sts.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current, changed := r.ensureStatefulset(sts)
+	current, changed := r.ensureStatefulset(storage.StorageClassName, sts)
 	if changed {
 		return false
 	}

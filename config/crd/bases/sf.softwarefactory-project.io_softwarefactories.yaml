@@ -443,6 +443,11 @@ spec:
                     description: Whether you need to add extra annotations to the
                       Persistent Volume Claims
                     type: object
+                  nodeAffinity:
+                    description: Set node affinity to prevent the pod from being scheduled
+                      to a different host when using custom storage class which doesn't
+                      work nicely in that case, e.g. iSCSI
+                    type: boolean
                 type: object
               zookeeper:
                 description: Zookeeper service spec

@@ -559,8 +559,9 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		initContainer.VolumeMounts = AppendCorporateCACertsVolumeMount(initContainer.VolumeMounts, "nodepool-builder-corporate-ca-certs")
 	}
 
+	nbStorage := r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage)
 	nb := r.mkStatefulSet(
-		BuilderIdent, base.NodepoolBuilderImage(), r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage),
+		BuilderIdent, base.NodepoolBuilderImage(), nbStorage,
 		apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 
 	nb.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
@@ -623,7 +624,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		BuilderIdent, r.ns, BuilderIdent+"-0", []int32{buildLogsHttpdPort}, BuilderIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
 
-	current, changed := r.ensureStatefulset(nb)
+	current, changed := r.ensureStatefulset(nbStorage.StorageClassName, nb)
 	if changed {
 		return false
 	}

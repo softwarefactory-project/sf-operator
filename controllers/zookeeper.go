@@ -160,7 +160,7 @@ func (r *SFController) DeployZookeeper() bool {
 
 	zk.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current, changed := r.ensureStatefulset(zk)
+	current, changed := r.ensureStatefulset(storageConfig.StorageClassName, zk)
 	if changed {
 		return false
 	}
