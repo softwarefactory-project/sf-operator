@@ -82,7 +82,7 @@ doc-serve: mkdocs
 	$(LOCALBIN)/mkdocs/bin/mkdocs serve
 
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
+test: manifests generate fmt vet envtest vendor-crds ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
 ##@ Build
@@ -215,6 +215,11 @@ staticcheck:
 	(test -f $(LOCALBIN)/staticcheck && [[ "$(shell $(LOCALBIN)/staticcheck --version)" =~ "$(STATICCHECK_VERSION)" ]] ) || GOBIN=$(LOCALBIN) go install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
 	mkdir -p $(GOBIN)
 	test -L $(GOBIN)/staticcheck || ln -s $(LOCALBIN)/staticcheck $(GOBIN)/staticcheck
+
+.PHONY: vendor-crds
+vendor-crds:
+	@mkdir -p config/crd/vendor/
+	@(test -f config/crd/vendor/monitoring.yaml || curl -Lo config/crd/vendor/monitoring.yaml https://github.com/prometheus-operator/prometheus-operator/releases/download/v0.82.2/stripped-down-crds.yaml)
 
 # Catalog
 CATALOG_DIR=sf-operator-catalog
