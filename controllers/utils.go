@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -341,8 +342,9 @@ func (r *SFUtilContext) mkHeadlessStatefulSet(
 	return r.mkStatefulSet(name, image, storageConfig, accessMode, extraLabels, openshiftUser, "headless")
 }
 
-// IsStatefulSetReady checks if StatefulSet is ready
-func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
+// getPods return the StatefulSet pods and a bool which is true when all the pods are ready.
+func (r *SFUtilContext) getPods(dep *appsv1.StatefulSet) ([]apiv1.Pod, bool) {
+	pods := make([]apiv1.Pod, 0)
 	if dep.Status.ReadyReplicas > 0 {
 		var podList apiv1.PodList
 		matchLabels := dep.Spec.Selector.MatchLabels
@@ -355,7 +357,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 			if pod.Status.Phase != "Running" {
 				logging.LogI(fmt.Sprintf(
 					"Waiting for statefulset state: Running, name: %s, status: %v", dep.GetName(), dep.Status))
-				return false
+				return pods, false
 			}
 			containerStatuses := pod.Status.ContainerStatuses
 			for _, containerStatus := range containerStatuses {
@@ -366,10 +368,19 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 						dep.Status,
 						pod.Status,
 						containerStatuses))
-					return false
+					return pods, false
 				}
 			}
+			pods = append(pods, pod)
 		}
+	}
+	return pods, true
+}
+
+// IsStatefulSetReady checks if StatefulSet is ready
+func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
+	_, ok := r.getPods(dep)
+	if ok {
 		// All containers in Ready state
 		return base.IsStatefulSetRolloutDone(dep)
 	}
@@ -645,19 +656,65 @@ func (r *SFController) EnsureSFPodMonitor(ports []string, selector metav1.LabelS
 	return true
 }
 
+// injectStorageNodeAffinity injects the node affinity setting when the StatefulSet uses a given storageClass.
+// The node affinity is set to ensure that the pods are not scheduled to a different host by setting the current node name as a node selector requirement.
+func (r *SFController) injectStorageNodeAffinity(storageClass *string, sts *appsv1.StatefulSet) bool {
+	storageDefault := r.cr.Spec.StorageDefault
+	if storageDefault.NodeAffinity && storageDefault.ClassName == *storageClass {
+		pods, ok := r.getPods(sts)
+		if !ok {
+			return false
+		} else {
+			nodes := make([]string, 0)
+			for _, pod := range pods {
+				name := pod.Spec.NodeName
+				if !slices.Contains(nodes, name) {
+					nodes = append(nodes, name)
+				}
+			}
+			logging.LogI(fmt.Sprintf("%s: assigning node affinity to %s", sts.ObjectMeta.Name, nodes))
+			sts.Spec.Template.Spec.Affinity = &apiv1.Affinity{
+				NodeAffinity: &apiv1.NodeAffinity{
+					PreferredDuringSchedulingIgnoredDuringExecution: []apiv1.PreferredSchedulingTerm{
+						apiv1.PreferredSchedulingTerm{
+							Preference: apiv1.NodeSelectorTerm{
+								MatchExpressions: []apiv1.NodeSelectorRequirement{
+									apiv1.NodeSelectorRequirement{
+										Key:      "kubernetes.io/hostname",
+										Operator: "In",
+										Values:   nodes,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			return true
+		}
+	} else {
+		return true
+	}
+}
+
 // ensureStatefulSet ensures that a StatefulSet object is as expected.
 // The function takes the expected StatefulSet and returns a tuple with the current object on
 // the cluster and a boolean indicating whether the function performed a create or update on the object.
-func (r *SFUtilContext) ensureStatefulset(storageClass *string, sts appsv1.StatefulSet) (*appsv1.StatefulSet, bool) {
+func (r *SFController) ensureStatefulset(storageClass *string, sts appsv1.StatefulSet) (*appsv1.StatefulSet, bool) {
 	current := appsv1.StatefulSet{}
 	name := sts.ObjectMeta.Name
 	if r.GetM(name, &current) {
 		// TODO: apply node affinity if storageClass match the CR config
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &sts.Spec.Template.ObjectMeta.Annotations) {
-			logging.LogI(name + " configuration changed, rollout pods ...")
 			current.Spec.Template = *sts.Spec.Template.DeepCopy()
-			r.UpdateR(&current)
-			return &current, true
+			if r.injectStorageNodeAffinity(storageClass, &current) {
+				logging.LogI(name + " configuration changed, rollout pods ...")
+				r.UpdateR(&current)
+				return &current, true
+			} else {
+				return &sts, false
+			}
 		}
 	} else {
 		current := sts
