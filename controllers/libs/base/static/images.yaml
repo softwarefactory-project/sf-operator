@@ -40,8 +40,8 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sshd.container?id=4de897ec428fc85d5e5f91ecd3a77738bf8dfa01
     - name: purgelogs
       container: quay.io/software-factory/purgelogs
-      version: 0.2.3-20250602-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/purgelogs.container?id=4de897ec428fc85d5e5f91ecd3a77738bf8dfa01
+      version: 0.2.4-20250602-1
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/purgelogs.container?id=7df515808f44864f93881cf7d2d78c861b75724f
     - name: mariadb
       container: quay.io/software-factory/mariadb
       version: 11.4-ubi9-1

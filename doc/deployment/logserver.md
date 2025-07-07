@@ -12,7 +12,7 @@ Logserver within the Software Factory Operator is deployed as a StatefulSet reso
 |---------|--------------------------|
 | logserver | registry.access.redhat.com/ubi8/httpd-24:1-284.1696531168 |
 | logserver-sshd | quay.io/software-factory/sshd:0.1-3 |
-| purgelogs | quay.io/software-factory/purgelogs:0.2.3-3 |
+| purgelogs | quay.io/software-factory/purgelogs:0.2.4-1 |
 | logserver-nodeexporter | quay.io/prometheus/node-exporter:v1.6.1 |
 
 ## logserver
