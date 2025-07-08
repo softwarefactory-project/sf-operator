@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - zuul: the operator now validates that the user provided connections doesn't have any duplicate names.
+- A new defaultStorage.nodeAffinity attribute that can be set to prevent pod from being scheduled to a different host and avoid issue with storage class that doesn't support that.
 
 ### Changed
 

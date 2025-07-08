@@ -522,7 +522,8 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 
 	zsVolumes := mkZuulVolumes("zuul-scheduler", r, corporateCMExists)
 
-	zs := r.mkStatefulSet("zuul-scheduler", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+	zsStorage := r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage)
+	zs := r.mkStatefulSet("zuul-scheduler", "", zsStorage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	zs.Spec.Template.Spec.Containers = zuulContainers
@@ -544,7 +545,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		enableZuulLocalSource(&zs.Spec.Template, path, true, r.isOpenShift)
 	}
 
-	current, changed := r.ensureStatefulset(zs)
+	current, changed := r.ensureStatefulset(zsStorage.StorageClassName, zs)
 	if changed {
 		return false
 	}
@@ -578,7 +579,8 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	}
 	// TODO Add the zk-port-forward-kube-config secret resource version in the annotation if enabled
 
-	ze := r.mkHeadlessStatefulSet("zuul-executor", "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+	zeStorage := r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage)
+	ze := r.mkHeadlessStatefulSet("zuul-executor", "", zeStorage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	zuulContainer := r.mkZuulContainer("zuul-executor", corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Executor.Limits, &zuulContainer)
 	ze.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
@@ -641,7 +643,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		enableZuulLocalSource(&ze.Spec.Template, path, false, r.isOpenShift)
 	}
 
-	current, changed := r.ensureStatefulset(ze)
+	current, changed := r.ensureStatefulset(zeStorage.StorageClassName, ze)
 	if changed {
 		return false
 	}
@@ -674,7 +676,8 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
 
-	zm := r.mkHeadlessStatefulSet(service, "", r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage), apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+	zmStorage := r.getStorageConfOrDefault(r.cr.Spec.Zuul.Merger.Storage)
+	zm := r.mkHeadlessStatefulSet(service, "", zmStorage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	zuulContainer := r.mkZuulContainer(service, corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Merger.Limits, &zuulContainer)
 	zm.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
@@ -711,7 +714,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		enableZuulLocalSource(&zm.Spec.Template, path, false, r.isOpenShift)
 	}
 
-	current, changed := r.ensureStatefulset(zm)
+	current, changed := r.ensureStatefulset(zmStorage.StorageClassName, zm)
 	if changed {
 		return false
 	}

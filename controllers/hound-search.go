@@ -83,7 +83,8 @@ func (r *SFController) DeployHoundSearch() bool {
 	// Check if Corporate Certificate exists
 	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
 
-	pvc := base.MkPVC(houndSearchData, r.ns, r.getStorageConfOrDefault(r.cr.Spec.Codesearch.Storage), apiv1.ReadWriteOnce)
+	storage := r.getStorageConfOrDefault(r.cr.Spec.Codesearch.Storage)
+	pvc := base.MkPVC(houndSearchData, r.ns, storage, apiv1.ReadWriteOnce)
 	container := MkHoundSearchContainer(corporateCMExists, r.isOpenShift)
 	container.Env = []apiv1.EnvVar{
 		base.MkEnvVar("CONFIG_REPO_BASE_URL", r.configBaseURL),
@@ -122,7 +123,7 @@ func (r *SFController) DeployHoundSearch() bool {
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
-	current, stsUpdated := r.ensureStatefulset(sts)
+	current, stsUpdated := r.ensureStatefulset(storage.StorageClassName, sts)
 
 	if stsUpdated {
 		return false
