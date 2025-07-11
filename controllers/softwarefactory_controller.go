@@ -195,45 +195,45 @@ func resolveConfigBaseURL(cr sfv1.SoftwareFactory) string {
 	return ""
 }
 
-func GetUserDefinedConnections(cr *sfv1.SoftwareFactory) ([]string, error) {
+func GetUserDefinedConnections(zuul *sfv1.ZuulSpec) ([]string, error) {
 	var conns []string
-	for _, conn := range cr.Spec.Zuul.GerritConns {
+	for _, conn := range zuul.GerritConns {
 		if conn.Name == "opendev.org" && conn.Hostname != "review.opendev.org" {
 			return conns, errors.New("opendev.org gerrit connection must be for review.opendev.org")
 		}
 		conns = append(conns, conn.Name)
 	}
-	for _, conn := range cr.Spec.Zuul.GitHubConns {
+	for _, conn := range zuul.GitHubConns {
 		if conn.Name == "opendev.org" {
 			return conns, errors.New("opendev.org must be a gerrit or git connection")
 		}
 		conns = append(conns, conn.Name)
 	}
-	for _, conn := range cr.Spec.Zuul.GitLabConns {
+	for _, conn := range zuul.GitLabConns {
 		if conn.Name == "opendev.org" {
 			return conns, errors.New("opendev.org must be a gerrit or git connection")
 		}
 		conns = append(conns, conn.Name)
 	}
-	for _, conn := range cr.Spec.Zuul.GitConns {
+	for _, conn := range zuul.GitConns {
 		if conn.Name == "opendev.org" && conn.Baseurl != "https://opendev.org" {
 			return conns, errors.New("opendev.org git connection must be for https://opendev.org")
 		}
 		conns = append(conns, conn.Name)
 	}
-	for _, conn := range cr.Spec.Zuul.PagureConns {
+	for _, conn := range zuul.PagureConns {
 		if conn.Name == "opendev.org" {
 			return conns, errors.New("opendev.org must be a gerrit or git connection")
 		}
 		conns = append(conns, conn.Name)
 	}
-	for _, conn := range cr.Spec.Zuul.ElasticSearchConns {
+	for _, conn := range zuul.ElasticSearchConns {
 		if conn.Name == "opendev.org" {
 			return conns, errors.New("opendev.org must be a gerrit or git connection")
 		}
 		conns = append(conns, conn.Name)
 	}
-	for _, conn := range cr.Spec.Zuul.SMTPConns {
+	for _, conn := range zuul.SMTPConns {
 		if conn.Name == "opendev.org" {
 			return conns, errors.New("opendev.org must be a gerrit or git connection")
 		}
@@ -519,7 +519,7 @@ func HasDuplicate(conns []string) string {
 func (r *SoftwareFactoryReconciler) mkSFController(
 	ctx context.Context, ns string, owner client.Object, cr sfv1.SoftwareFactory,
 	standalone bool) SFController {
-	conns, err := GetUserDefinedConnections(&cr)
+	conns, err := GetUserDefinedConnections(&cr.Spec.Zuul)
 	if err != nil {
 		ctrl.Log.Error(err, "Invalid Zuul connections")
 		os.Exit(1)

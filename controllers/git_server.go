@@ -8,6 +8,7 @@ package controllers
 import (
 	_ "embed"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -33,12 +34,14 @@ var preInitScriptTemplate string
 
 // This function creates dummy connections to be used during the config-check
 func makeZuulConnectionConfig(spec *sfv1.ZuulSpec) string {
+	connectionNames, _ := GetUserDefinedConnections(spec)
+	if !slices.Contains(connectionNames, "opendev.org") {
+		connectionNames = append(connectionNames, "opendev.org")
+	}
+	if !slices.Contains(connectionNames, "git-server") {
+		connectionNames = append(connectionNames, "git-server")
+	}
 	var sb strings.Builder
-	connectionNames := sfv1.GetGerritConnectionsName(spec)
-	connectionNames = append(connectionNames, sfv1.GetGitHubConnectionsName(spec)...)
-	connectionNames = append(connectionNames, sfv1.GetGitLabConnectionsName(spec)...)
-	connectionNames = append(connectionNames, sfv1.GetGitConnectionsName(spec)...)
-	connectionNames = append(connectionNames, sfv1.GetPagureConnectionsName(spec)...)
 	sb.WriteString("\n")
 	for _, name := range connectionNames {
 		sb.WriteString(fmt.Sprintf("[connection %s]\n", name))

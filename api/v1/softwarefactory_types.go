@@ -413,32 +413,6 @@ type ZuulSpec struct {
 	Merger ZuulMergerSpec `json:"merger,omitempty"`
 }
 
-func GetGerritConnectionsName(spec *ZuulSpec) []string {
-	var res []string
-	res = append(res, "git-server")
-	res = append(res, "opendev.org")
-	for _, conn := range spec.GerritConns {
-		res = append(res, conn.Name)
-	}
-	return res
-}
-
-func GetGitHubConnectionsName(spec *ZuulSpec) []string {
-	var res []string
-	for _, conn := range spec.GitHubConns {
-		res = append(res, conn.Name)
-	}
-	return res
-}
-
-func GetGitConnectionsName(spec *ZuulSpec) []string {
-	var res []string
-	for _, conn := range spec.GitConns {
-		res = append(res, conn.Name)
-	}
-	return res
-}
-
 func GetGitHubConnectionsSecretName(spec *ZuulSpec) []string {
 	var res []string
 	for _, conn := range spec.GitHubConns {
@@ -447,26 +421,10 @@ func GetGitHubConnectionsSecretName(spec *ZuulSpec) []string {
 	return res
 }
 
-func GetGitLabConnectionsName(spec *ZuulSpec) []string {
-	var res []string
-	for _, conn := range spec.GitLabConns {
-		res = append(res, conn.Name)
-	}
-	return res
-}
-
 func GetGitLabConnectionsSecretName(spec *ZuulSpec) []string {
 	var res []string
 	for _, conn := range spec.GitLabConns {
 		res = append(res, conn.Secrets)
-	}
-	return res
-}
-
-func GetPagureConnectionsName(spec *ZuulSpec) []string {
-	var res []string
-	for _, conn := range spec.PagureConns {
-		res = append(res, conn.Name)
 	}
 	return res
 }

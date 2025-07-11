@@ -55,7 +55,7 @@ func TestAPIs(t *testing.T) {
 
 func TestDuplicateConn(t *testing.T) {
 	var cr sfv1.SoftwareFactory
-	if conns, err := GetUserDefinedConnections(&cr); err != nil || HasDuplicate(conns) != "" {
+	if conns, err := GetUserDefinedConnections(&cr.Spec.Zuul); err != nil || HasDuplicate(conns) != "" {
 		t.Errorf("CR does not have dup")
 	}
 	cr.Spec.Zuul.GitConns = []sfv1.GitConnection{
@@ -68,7 +68,7 @@ func TestDuplicateConn(t *testing.T) {
 			Name: "test",
 		},
 	}
-	if conns, err := GetUserDefinedConnections(&cr); err != nil || HasDuplicate(conns) != "test" {
+	if conns, err := GetUserDefinedConnections(&cr.Spec.Zuul); err != nil || HasDuplicate(conns) != "test" {
 		t.Errorf("CR have dup")
 	}
 }
