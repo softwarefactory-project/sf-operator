@@ -1,7 +1,6 @@
 { Type =
     { name : Text
     , secrets : Text
-    , apiTokenName : Optional Text
     , baseUrl : Optional Text
     , canonicalHostname : Optional Text
     , cloneUrl : Optional Text
@@ -10,8 +9,7 @@
     , server : Optional Text
     }
 , default =
-  { apiTokenName = None Text
-  , baseUrl = None Text
+  { baseUrl = None Text
   , canonicalHostname = None Text
   , cloneUrl = None Text
   , disableConnectionPool = None Bool

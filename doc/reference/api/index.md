@@ -176,7 +176,6 @@ _Appears in:_
 | `canonicalHostname` _string_ | the [canonicalHostname](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.canonical_hostname) | -|
 | `baseUrl` _string_ | the (baseUrl)[https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.baseurl) | -|
 | `secrets` _string_ | Name of the secret which containes the following keys: the [api_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token) the [api_token_name](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name) the [webhook_token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.webhook_token) | -|
-| `apiTokenName` _string_ | the [apiTokenName](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name) | -|
 | `cloneUrl` _string_ | the [cloneUrl](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.cloneurl) | -|
 | `keepAlive` _integer_ | the [keepAlive](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.keepalive) | -|
 | `disableConnectionPool` _boolean_ | the [disableConnectionPool](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.disable_connection_pool) | -|

@@ -23,6 +23,9 @@ All notable changes to this project will be documented in this file.
 
 ### Deprecated
 ### Removed
+
+- The gitlab api token name setting is removed as it is not necessary. The value is always set to Zuul, according to https://gitlab.com/gitlab-org/gitlab/-/issues/212953
+
 ### Fixed
 
 - Ensure the trailing '/' when accessing https://<domain>/logjuicer. The web app was failing without the trailing slash.
