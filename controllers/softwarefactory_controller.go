@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/strings/slices"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -315,26 +316,44 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 
 	// The git server service is needed to store system jobs (config-check and config-update)
 	services["GitServer"] = r.DeployGitServer()
-	if services["GitServer"] {
-		monitoredPorts = append(monitoredPorts, sfmonitoring.GetTruncatedPortName(GitServerIdent, sfmonitoring.NodeExporterPortNameSuffix))
-		selectorRunList = append(selectorRunList, GitServerIdent)
-	}
-
 	services["MariaDB"] = r.DeployMariadb()
-	if services["MariaDB"] {
-		monitoredPorts = append(monitoredPorts, sfmonitoring.GetTruncatedPortName(MariaDBIdent, sfmonitoring.NodeExporterPortNameSuffix))
-		selectorRunList = append(selectorRunList, MariaDBIdent)
+
+	if !services["GitServer"] || !services["MariaDB"] {
+		logging.LogI("Waiting for GitServer and MariaDB to be ready...")
+		return services
+	}
+	monitoredPorts = append(monitoredPorts,
+		sfmonitoring.GetTruncatedPortName(GitServerIdent, sfmonitoring.NodeExporterPortNameSuffix),
+		sfmonitoring.GetTruncatedPortName(MariaDBIdent, sfmonitoring.NodeExporterPortNameSuffix),
+	)
+	selectorRunList = append(selectorRunList, GitServerIdent, MariaDBIdent)
+
+	// --- New Orchestration Logic for ZooKeeper and Zuul ---
+	// 1. Get current ZooKeeper state from the cluster
+	var currentZk appsv1.StatefulSet
+	isZkDeployed := r.GetM(ZookeeperIdent, &currentZk)
+
+	// 2. Deploy Zuul if ZooKeeper is running
+	if isZkDeployed && r.IsStatefulSetReady(&currentZk) {
+		services["Zuul"] = r.DeployZuul()
+		if !services["Zuul"] {
+			return services
+		}
 	}
 
+	// 3. Ensure ZooKeeper is fully deployed
 	services["Zookeeper"] = r.DeployZookeeper()
+
 	if services["Zookeeper"] {
 		monitoredPorts = append(monitoredPorts, sfmonitoring.GetTruncatedPortName(ZookeeperIdent, sfmonitoring.NodeExporterPortNameSuffix))
 		selectorRunList = append(selectorRunList, ZookeeperIdent)
 	}
 
-	if services["MariaDB"] && services["Zookeeper"] && services["GitServer"] {
+	// 4. Ensure Zuul is deployed
+	if services["Zookeeper"] && !services["Zuul"] {
 		services["Zuul"] = r.DeployZuul()
 	}
+	// --- End of New Orchestration Logic ---
 
 	services["Logserver"] = r.DeployLogserver()
 
