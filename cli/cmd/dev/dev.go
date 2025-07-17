@@ -274,6 +274,7 @@ func cleanClusterServiceVersion(env *cliutils.ENV) {
 }
 
 func cleanSFInstance(env *cliutils.ENV, ns string) {
+	cliutils.DeleteSTS(env, ns, "zuul-executor")
 	var sf sfv1.SoftwareFactory
 	sfDeleteOpts := []client.DeleteAllOfOption{
 		client.InNamespace(ns),
