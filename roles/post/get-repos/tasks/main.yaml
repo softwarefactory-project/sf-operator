@@ -13,3 +13,4 @@
     src: "{{ zuul.project.src_dir }}/deploy/"
     dest: "{{ dest_dir }}"
     remote_src: yes
+  ignore_errors: true

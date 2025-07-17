@@ -9,6 +9,7 @@
     kubectl port-forward service/git-server 9418 -n sf
   async: 60
   poll: 0
+  ignore_errors: true
 
 - name: Clone system-config
   ansible.builtin.git:
@@ -18,3 +19,4 @@
   retries: "{{ retries }}"
   delay: "{{ delay }}"
   until: "clone is not failed"
+  ignore_errors: true

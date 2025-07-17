@@ -12,6 +12,7 @@
 - name: Get nodes information
   ansible.builtin.shell: |
     kubectl describe nodes > {{ output_dir }}/nodes.txt
+  ignore_errors: true
 
 - name: Create CRDs directory
   ansible.builtin.file:
@@ -25,6 +26,7 @@
       mkdir -p {{ output_dir }}/CRDs/$(dirname $item)
       oc describe $item > {{ output_dir }}/CRDs/${item}.txt
     done
+  ignore_errors: true
 
 - name: Describe resources
   ansible.builtin.shell: |

@@ -12,10 +12,12 @@
 - name: Get all resources
   ansible.builtin.shell: |
     kubectl {{ namespace_opt }} get all > {{ dest_dir }}/resources-all.txt
+  ignore_errors: true
 
 - name: Get events
   ansible.builtin.shell: |
     kubectl {{ namespace_opt }} get events --output custom-columns="DATE:metadata.creationTimestamp,TYPE:type,REASON:reason,OBJECT KIND:involvedObject.kind,OBJECT NAME:involvedObject.name,MESSAGE:message" --sort-by=".metadata.creationTimestamp" > {{ dest_dir }}/events.txt
+  ignore_errors: true
 
 - name: Describe namespace resources
   ansible.builtin.shell: |
@@ -75,3 +77,4 @@
           kubectl {{ namespace_opt }} logs {{ logs_arguments }} $pod -c $container > {{ dest_dir }}/${pod}-${container}-logs.txt
         done
       done
+    ignore_errors: true

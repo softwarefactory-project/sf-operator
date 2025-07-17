@@ -18,7 +18,9 @@
     - microshift
     - microshift-etcd
     - microshift-ovs-init
+  ignore_errors: true
 
 - name: Change owner and group for the log dir
   become: true
   ansible.builtin.command: chown -R {{ ansible_user }}:{{ ansible_user }} {{ _output_dir_realpath.stdout }}
+  ignore_errors: true
