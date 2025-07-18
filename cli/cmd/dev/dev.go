@@ -282,6 +282,34 @@ func cleanSFInstance(env *cliutils.ENV, ns string) {
 	if err := env.Cli.DeleteAllOf(env.Ctx, &sf, sfDeleteOpts...); err != nil {
 		ctrl.Log.Info("SoftwareFactory resource not found")
 	}
+
+	// From the executor log:
+	//
+	//  2025-07-18T04:50:51.938034569-04:00 stderr F + update-ca-trust extract -o /etc/pki/ca-trust/extracted
+	//  2025-07-18T04:50:55.232506347-04:00 stderr F + git config --global --add safe.directory '*'
+	//  2025-07-18T04:50:55.238653324-04:00 stderr F + /usr/local/bin/zuul-executor -f -d
+	//  2025-07-18T04:50:59.553480759-04:00 stdout F 2025-07-18 08:50:59,553 DEBUG zuul.Executor: Configured logging: 12.0.0
+	//
+	// From the job-output log:
+	//
+	//  2025-07-18 08:50:45.749629 | TASK [health-check/test-backup-restore : Wipe Software Factory deployment]
+	//  2025-07-18 04:50:46.496900 | controller | 2025-07-18T04:50:46-04:00	INFO	OPENSHIFT_USER environment variable is not set, discovering Kubernetes Distribution
+	//  2025-07-18 04:50:46.496977 | controller |
+	//  2025-07-18 04:50:46.511305 | controller | 2025-07-18T04:50:46-04:00	INFO	Kubernetes Distribution found: Openshift
+	//  2025-07-18 04:50:46.511368 | controller |
+	//  2025-07-18 04:50:46.521044 | controller | 2025-07-18T04:50:46-04:00	INFO	Statefulset is gone...	{"name": "zuul-executor"}
+	//  2025-07-18 04:51:05.613936 | controller | 2025-07-18T04:51:05-04:00	INFO	Pod is gone...	{"name": "zuul-executor-0"}
+	//  2025-07-18 04:51:05.629274 | controller | 2025-07-18T04:51:05-04:00	INFO	standalone mode configmap not found
+	//  2025-07-18 04:51:05.629318 | controller | 2025-07-18T04:51:05-04:00	INFO	Removing dangling persistent volume claims if any...
+	//
+	// Apparently, the DeleteAllOf may not fully delete the executor, so let's try to make sure the executor is fully killed again:
+	cliutils.DeleteSTS(env, ns, "zuul-executor")
+
+	// And just to be sure, let's delete everything again, one more time
+	if err := env.Cli.DeleteAllOf(env.Ctx, &sf, sfDeleteOpts...); err != nil {
+		ctrl.Log.Info("SoftwareFactory resource not found")
+	}
+
 	var cm apiv1.ConfigMap
 	cm.SetName("sf-standalone-owner")
 	cm.SetNamespace(ns)
