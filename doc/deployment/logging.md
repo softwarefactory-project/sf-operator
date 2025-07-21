@@ -1,12 +1,12 @@
 # Logging
 
-This document describes different ways to handle log collection and aggregation for the services deployed with the SF-Operator.
+This document describes different ways of handling log collection and aggregation for the services deployed with the SF-Operator.
 
 
 1. [Using kubectl](#using-kubectl)
 1. [Native Cluster Logging](#native-cluster-logging)
-1. [Operator-managed Log Forwarding](#operator-managed-log-forwarding)
-1. [Example: forwarding logs to Loki](#example-forwarding-logs-to-loki)
+1. [Operator-Managed Log Forwarding](#operator-managed-log-forwarding)
+1. [Example: Forwarding Logs to Loki](#example-forwarding-logs-to-loki)
 
 ## Using kubectl
 
@@ -17,7 +17,7 @@ kubectl logs --tail=10 zuul-web-65b84c9f87-sp4fm
 ```
 
 The major downside of this approach is that logs from terminated containers cannot be queried with `kubectl`.
-If you need to check logs from init containers, crashed containers, batch jobs or even
+If you need to check logs from init containers, crashed containers, batch jobs, or even
 just containers that were destroyed after a configuration change, you will need to rely on
 another tool.
 
@@ -32,13 +32,12 @@ Please refer to your cluster's documentation to find out what existing logging s
 
 ## Log Forwarding to a Fluent Bit collector
 
-Native Cluster Logging solutions **should always** be your first choice for managing the logs of
-Zuul and Nodepool. This is almost always the best solution in terms of cluster resource usage,
-and the most straightforward to implement as an application deployer.
+Native cluster logging solutions **should always** be your first choice for managing the logs of
+Zuul and Nodepool. This is almost always the best solution in terms of cluster resource usage and the most straightforward to implement as an application deployer.
 
 If **however** no such solution is available, or if the default solution does not suit your
 needs, the SF-Operator can set up Zuul and Nodepool to forward application logs to a
-[Fluent Bit](https://fluentbit.io/) collector. The collector must be configured to expose an
+[Fluent Bit](https://fluentbit.io/) collector. The collector must be configured to expose a
 [forward input](https://docs.fluentbit.io/manual/pipeline/inputs/forward) that your deployment
 will be able to reach.
 
@@ -61,29 +60,29 @@ The log JSON payload that is sent to your Fluent Bit collector is enriched with 
 
 | key | description or value |
 |--------|------------------|
-| labels_run    | the "run" label in the pod's metadata; ie the name of the microservice emitting the log line |
-| labels_app    | the "app" label, it is always set to "sf" |
+| labels_run    | the "run" label in the pod's metadata; i.e., the name of the microservice emitting the log line |
+| labels_app    | the "app" label, which is always set to "sf" |
 | podip     | [DEPRECATED] the IP address of the pod |
 | namespace | the namespace where the pod is running |
 | nodename | [DEPRECATED] the node where the pod is running |
 | podname | [DEPRECATED] the name of the pod where the service is running |
 | log    | the actual log line collected |
-| component | the name of the component running the microservice; typically "zuul" or "nodepool" |
+| component | the name of the component running the microservice, typically "zuul" or "nodepool" |
 | container | the name of the container emitting the logs |
 
 You can use these keys to define labels in your Fluent Bit pipeline.
 
-## Example: setting up a simple Fluent Bit + Loki stack for log collection
+## Example: Setting up a simple Fluent Bit + Loki stack for log collection
 
 The `hack/loki` folder in the sf-operator repository has everything needed to deploy a minimal
 Loki instance and configure log forwarding to this instance:
 
 * [Loki manifest](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/hack/loki/test-loki.yaml)
 * [Fluent Bit manifest](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/hack/loki/test-fluentbit.yaml)
-* (Optional) [Grafana deployment with preconfigured monitoring and logging datasources](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/hack/loki/test-grafana.yaml)
+* (Optional) [Grafana deployment with preconfigured monitoring and logging data sources](https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/hack/loki/test-grafana.yaml)
 
 !!! danger
-    These manifests are intended for testing purposes only and shouldn't be used in production.
+    These manifests are intended for testing purposes only and should not be used in production.
 
 1. Download the files listed above.
 
@@ -111,9 +110,9 @@ or
 kubectl apply -f https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/hack/loki/test-fluentbit.yaml -n sf
 ```
 
-Fluent Bit will be configured with an HTTP input, and forward logs to stdout (so you can see them in the logs of the Fluent Bit pod) and to the Loki instance you created above.
+Fluent Bit will be configured with an HTTP input and will forward logs to stdout (so you can see them in the logs of the Fluent Bit pod) and to the Loki instance you created above.
 
-A service is also created so that the HTTP input endpoint is available on the sf namespace.
+A service is also created so that the HTTP input endpoint is available on the `sf` namespace.
 
 4. Enable log forwarding in your Software Factory deployment's spec. Run:
 
@@ -132,7 +131,7 @@ spec:
 ```
 
 
-5. (Optional) Spin an instance of Grafana to query logs:
+5. (Optional) Spin up an instance of Grafana to query logs:
 
 ```sh
 sed -e 's|sfop.me|YOUR_FQDN|g' test-grafana.yaml | kubectl apply -f - -n sf

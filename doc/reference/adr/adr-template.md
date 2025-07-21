@@ -8,26 +8,26 @@ date: {YYYY-MM-DD when the decision was last updated}
 ## Context and Problem Statement
 
 {Describe the context and problem statement, e.g., in free form using two to three sentences or in the form of an illustrative story.
- You may want to articulate the problem in form of a question and add links to collaboration boards or issue management systems.}
+ You may want to articulate the problem in the form of a question and add links to collaboration boards or issue management systems.}
 
 ## Considered Options
 
 * {title of option 1}
 * {title of option 2}
 * {title of option 3}
-* … <!-- numbers of options can vary -->
+* … <!-- the number of options can vary -->
 
 ## Decision Outcome
 
 Chosen option: "{title of option 1}", because
-{justification. e.g., only option, which meets k.o. criterion decision driver | which resolves force {force} | … | comes out best (see below)}.
+{justification. e.g., it is the only option that meets the k.o. criterion decision driver | which resolves force {force} | … | it comes out best (see below)}.
 
 <!-- This is an optional element. Feel free to remove. -->
 ### Consequences
 
 * Good, because {positive consequence, e.g., improvement of one or more desired qualities, …}
 * Bad, because {negative consequence, e.g., compromising one or more desired qualities, …}
-* … <!-- numbers of consequences can vary -->
+* … <!-- the number of consequences can vary -->
 
 
 <!-- This is an optional element. Feel free to remove. -->
@@ -40,10 +40,10 @@ Chosen option: "{title of option 1}", because
 
 * Good, because {argument a}
 * Good, because {argument b}
-<!-- use "neutral" if the given argument weights neither for good nor bad -->
+<!-- use "neutral" if the given argument weighs neither for good nor bad -->
 * Neutral, because {argument c}
 * Bad, because {argument d}
-* … <!-- numbers of pros and cons can vary -->
+* … <!-- the number of pros and cons can vary -->
 
 ### {title of other option}
 
@@ -60,6 +60,6 @@ Chosen option: "{title of option 1}", because
 
 {You might want to provide additional evidence/confidence for the decision outcome here and/or
  document the team agreement on the decision and/or
- define when this decision when and how the decision should be realized and if/when it should be re-visited and/or
+ define when and how this decision should be realized and if/when it should be revisited and/or
  how the decision is validated.
  Links to other decisions and resources might appear here as well.}

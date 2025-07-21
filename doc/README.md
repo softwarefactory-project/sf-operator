@@ -58,7 +58,7 @@ The next steps are:
 - Create a Zuul tenant in the provided project config.
 - Manage the project config through the config-update pipelines by hosting the configuration on your developer platform.
 
-The next sections introduces the SF architecture and the installation options.
+The next sections introduce the SF architecture and the installation options.
 
 ## Architecture Overview
 
@@ -72,7 +72,7 @@ Software Factory is composed of the following services:
 - LogJuicer, for build analysis.
 - Weeder, for inspecting whole tenant config.
 
-Internally, SF leverage the following services:
+Internally, SF leverages the following services:
 
 - ZooKeeper, for the Zuul state.
 - MariaDB, for storing the build results.
@@ -91,7 +91,7 @@ SF-Operator supports OpenShift and Kubernetes, and it is tested with the followi
 - MicroShift for OpenShift
 - Minikube for Kubernetes
 
-Beside the Getting Started process, here are the available installation modes:
+Besides the Getting Started process, here are the available installation modes:
 
 - Run the SF-Operator in standalone mode (recommended).
 - Install the CRD and deploy the SF-Operator on the cluster to manage the SF resources with kubectl.
@@ -126,7 +126,7 @@ oc login --token=SECRET --server=https://openshift.me:6443
 go run ./main.go deploy ./my-sf.yaml
 ```
 
-Checkout the other documentations:
+Check out the other documentation:
 
 * [Deploying Zuul and dependencies with SF-Operator](deployment/getting_started)
 * [Developing the SF-Operator](developer/getting_started)
@@ -193,7 +193,7 @@ The current project status is: **Beta**
 * [Deployment documentation](https://softwarefactory-project.github.io/sf-operator/deployment/): this documentation covers the essentials for people or teams who intend to deploy and manage Zuul and its dependencies through the SF-Operator.
 * [Developer documentation](https://softwarefactory-project.github.io/sf-operator/developer/): this documentation describes how to set up a development and testing environment to develop the SF-Operator.
 * [End User documentation](https://softwarefactory-project.github.io/sf-operator/user/): for users of a Software Factory instance. This documentation mostly describes the `Software Factory's config repository` usage (configuration-as-code).
-* [CLI refererence](https://softwarefactory-project.github.io/sf-operator/reference/cli/)
+* [CLI reference](https://softwarefactory-project.github.io/sf-operator/reference/cli/)
 
 ## Getting Help
 
@@ -207,7 +207,7 @@ Should you have any questions or feedback concerning the SF-Operator, you can:
 
 Refer to [CONTRIBUTING.md](https://softwarefactory-project.github.io/sf-operator/developer/CONTRIBUTING/).
 
-## Licence
+## License
 
 Sf-operator is distributed under the [Apache License](https://www.apache.org/licenses/LICENSE-2.0.txt).
 

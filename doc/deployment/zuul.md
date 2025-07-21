@@ -2,7 +2,7 @@
 
 Here you will find information about managing the Zuul service when deployed with the SF Operator.
 It does not replace [Zuul's documentation](https://zuul-ci.org/docs/zuul/latest/),
-but addresses specificities and idiosyncrasies induced by deploying Zuul with the SF Operator.
+but addresses specificities and idiosyncrasies of deploying Zuul with the SF Operator.
 
 
 1. [Architecture](#architecture)
@@ -56,18 +56,17 @@ Zuul is deployed by SF-Operator as micro-services:
 
 ## Resource limits
 
-For each component the main container's resource limits can be changed via the `SoftwareFactory` Custom Resource.
+For each component, the main container's resource limits can be changed via the `SoftwareFactory` Custom Resource.
 
 ## Services configuration
 
-Configuring the Zuul micro-services is done through the SoftwareFactory deployment's manifest. Many configuration parameters are exposed by The [SoftwareFactory Custom Resource spec](../deployment/crds.md#softwarefactory).
+Configuring the Zuul micro-services is done through the SoftwareFactory deployment's manifest. Many configuration parameters are exposed by the [SoftwareFactory Custom Resource spec](../deployment/crds.md#softwarefactory).
 
-The spec is constantly evolving during alpha development, and should be considered
-unstable but the ultimate source of truth for documentation about its properties.
+The spec is constantly evolving during alpha development and should be considered unstable, but it is the ultimate source of truth for documentation about its properties.
 
 ## Tenant configuration
 
-Zuul's tenant configuration is stored in the [config repository](./config_repository.md). Edit `./zuul/main.yaml` to add, edit or delete tenants and projects on your
+Zuul's tenant configuration is stored in the [config repository](./config_repository.md). Edit `./zuul/main.yaml` to add, edit, or delete tenants and projects on your
 deployment; then commit your changes for review and CI validation.
 
 ## Delegating temporary administrative powers on a tenant
@@ -99,7 +98,7 @@ You can [generate a configuration file for zuul-client](../reference/cli/index.m
 
 ## Zuul-Admin
 
-The `zuul-admin` command line utility is available on `zuul-scheduler` pods.
+The `zuul-admin` command-line utility is available on `zuul-scheduler` pods.
 
 Open a shell on any available `zuul-scheduler` pod, for example `zuul-scheduler-0`:
 
@@ -111,13 +110,13 @@ Then from that shell, run the `zuul-admin` command.
 
 ## Scaling Zuul
 
-Zuul Executor and Zuul Merger services can be scaled whenever sf-operator deployment
-no more fits the demand of the CI jobs.
-The scale is done with Kubernetes scale cli command:
+Zuul Executor and Zuul Merger services can be scaled whenever the sf-operator deployment
+no longer fits the demand of the CI jobs.
+The scaling is done with the Kubernetes scale CLI command:
 ```bash
 kubectl scale <resource kind> <resource name> --replicas=<number of replicas>
 
 # Example to scale Zuul Executor
 kubectl scale sts zuul-executor --replicas=3
 ```
-The scale will take no more that one minute.
+The scaling will take no more than one minute.

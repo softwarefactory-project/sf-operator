@@ -1,6 +1,6 @@
 # Getting Started
 
-This section covers the basics to get started with the development on the SF-Operator's code base.
+This section covers the basics to get started with development on the SF-Operator's codebase.
 
 
 1. [Requirements](#requirements)
@@ -33,7 +33,7 @@ The following tools are not mandatory, but they will make your life much easier:
 ### OpenShift
 
 You need an OpenShift cluster or equivalent on which to run the operator and deploy resources.
-The requirements for the cluster are [the ones listed in the operator section of this documentation](../operator/getting_started.md#prerequisites). We recommend however using a dedicated MicroShift instance, as it is much more flexible for hacking, and also the environment used to test and develop SF-Operator.
+The requirements for the cluster are [the ones listed in the operator section of this documentation](../operator/getting_started.md#prerequisites). We recommend, however, using a dedicated MicroShift instance, as it is much more flexible for hacking and is also the environment used to test and develop the SF-Operator.
 
 You can read about [how to deploy a MicroShift instance here](./microshift.md).
 
@@ -70,26 +70,26 @@ go run main.go --config /path/to/sfcli.yaml dev create demo-env
 [This command](./../reference/cli/index.md#create-demo-env) performs the following tasks:
 
 - ensure the deployment of a test Gerrit instance
-- ensure the checkout of the `config`, `demo-tenant-config` and `demo-project` git repositories in the directory of your choosing (defaults to `deploy`)
+- ensure the checkout of the `config`, `demo-tenant-config`, and `demo-project` git repositories in the directory of your choosing (defaults to `deploy`)
 - ensure the configuration of a test openshiftpods provider for nodepool
 - ensure a Route called "sf-gateway" to target the "gateway" Service
 
-The context is now ready to run the sf-operator using the `manager` or the `standalone` modes.
+The context is now ready to run the sf-operator using the `manager` or `standalone` modes.
 
 ## Run the operator
 
 To iterate on the development of the `sf-operator` you can either start the operator using:
 
-- the `manager` mode: the is the default running mode of the operator.
-  The `SoftwareFactory's` 's`CRD` must be installed into the cluster, and the operator watches
+- the `manager` mode: this is the default running mode of the operator.
+  The `SoftwareFactory` CRD must be installed in the cluster, and the operator watches
   for a `CR` to reconcile the state in the namespace.
 - the `standalone` mode: does not require the installation of the `CRD`. The `controller-runtime`'s
-  client is used to perform a `SofwareFactory` deployment based on `yaml` definition passed
-  as parameter.
+  client is used to perform a `SoftwareFactory` deployment based on a `yaml` definition passed
+  as a parameter.
 
 === "manager mode"
 
-    First, apply the `SoftwareFactory`'s `CR`:
+    First, apply the `SoftwareFactory` `CR`:
 
     ```sh
     kubectl apply -n sf -f playbooks/files/sf.yaml
@@ -102,12 +102,12 @@ To iterate on the development of the `sf-operator` you can either start the oper
     ```
 
     !!! note
-        The command does not return and wait for events to run the reconcile.
+        The command does not return and waits for events to run the reconcile.
 
-    You can kill and restart this process every time you modify the code base
+    You can kill and restart this process every time you modify the codebase
     to see your changes applied to the deployed resources.
 
-    Any change on the applied `SofwareFactory`'s `CR` will re-trigger the reconcile.
+    Any change to the applied `SoftwareFactory` `CR` will re-trigger the reconcile.
 
 === "standalone mode"
 
@@ -120,7 +120,7 @@ To iterate on the development of the `sf-operator` you can either start the oper
     !!! note
         The command returns when the expected state is applied.
 
-    Each change to the `CR`, passed as parameter, will require a new run of the command to `reconcile` the change.
+    Each change to the `CR` passed as a parameter will require a new run of the command to `reconcile` the change.
 
 ## Access the services web UI
 

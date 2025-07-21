@@ -9,18 +9,20 @@ All notable changes to this project will be documented in this file.
 - zuul: the operator now validates that the user provided connections doesn't have any duplicate names.
 - A new defaultStorage.nodeAffinity attribute that can be set to prevent pod from being scheduled to a different host and avoid issue with storage class that doesn't support that.
 - zuul: increased the default executor TerminationGracePeriodSeconds to 2 hours and added a new CR attribute to configure the value through Zuul.Executor.TerminationGracePeriodSeconds.
+- The operator now validates that the user-provided connections do not have any duplicate names.
+- A new `defaultStorage.nodeAffinity` attribute that can be set to prevent a pod from being scheduled to a different host and avoid issues with a storage class that does not support that.
 
 ### Changed
 
-- logjuicer service is based on a ubi9 base image
-- logjuicer service uses a persistent volume claim for data storage
+- The logjuicer service is based on a ubi9 base image
+- The logjuicer service uses a persistent volume claim for data storage
 - zookeeper: bumped to 3.9.3
 - httpd-24: bumped to registry.access.redhat.com/ubi8/httpd-24:1-350
 - weeder: update ubi9-python-39 container
-- Unifying zuul label: workflow label
-  This change modifies zuul label to run gate pipelines from gateit to
-  workflow.
-- Containers images based on UBI have been updated. Zuul and Nodepool services will be restarted during the upgrade.
+- Unifying Zuul label: workflow label
+  This change modifies the Zuul label to run gate pipelines from `gateit` to
+  `workflow`.
+- Container images based on UBI have been updated. Zuul and Nodepool services will be restarted during the upgrade.
 
 ### Deprecated
 ### Removed
@@ -29,44 +31,44 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Ensure the trailing '/' when accessing https://<domain>/logjuicer. The web app was failing without the trailing slash.
-- zuul: when the user provides a connection named opendev.org, the operator no longer adds its own git connection and use the one provided by the user for accessing zuul-jobs.
+- Ensure the trailing '/' when accessing `https://<domain>/logjuicer`. The web app was failing without the trailing slash.
+- zuul: when the user provides a connection named `opendev.org`, the operator no longer adds its own Git connection and uses the one provided by the user for accessing zuul-jobs.
 - zuul-capacity: the corporate CA certificate is now part of the CA trust chain if provided.
 
 ## [v0.0.57] - 2025-04-24
 
 ### Added
 
-- zuul: add `BasicAuthSecret` parameter for elasticsearch connections. This parameter
-  allows defining basic auth settings (username and password) and store them in a secret
-  rather than in plain text in the software factory manifest.
+- zuul: add the `BasicAuthSecret` parameter for Elasticsearch connections. This parameter
+  allows defining basic auth settings (username and password) and storing them in a secret
+  rather than in plain text in the Software Factory manifest.
 
 ### Changed
 
 - Most containers were bumped or modified to use [ubi9:latest](https://www.redhat.com/en/blog/introducing-red-hat-universal-base-image)
-  as their base image; except for **git-daemon** (using ubi8) and **logjuicer** (migration still in progress).
+  as their base image, except for **git-daemon** (using ubi8) and **logjuicer** (migration still in progress).
   Incidentally, **upgrading to this version will trigger a restart of every pod in a Software Factory deployment**.
-- The default CPU limits have been reduced from 2000m to 500m to enable rollout on smaller cluster.
-- go version in go.mod is bumped to 1.24. Backward compatibility with earlier version is not guaranteed.
+- The default CPU limits have been reduced from 2000m to 500m to enable rollout on a smaller cluster.
+- The Go version in go.mod is bumped to 1.24. Backward compatibility with earlier versions is not guaranteed.
 - zuul-* : bumped to 12.0.0
 
 ### Deprecated
 
 - zuul: the `Password` parameter in SMTP connections is deprecated and will be removed
-  in a future version. Use instead `Secrets` to point to a secret holding the password.
+  in a future version. Use `Secrets` instead to point to a secret holding the password.
 
 ### Removed
 ### Fixed
 
-- The nodepool-sa created using the `nodepool create openshiftpods-namespace` command now allows the creation of port-forward so that Zuul build running on OpenShift can succeed.
+- The `nodepool-sa` created using the `nodepool create openshiftpods-namespace` command now allows the creation of a port-forward so that a Zuul build running on OpenShift can succeed.
 
 ## [v0.0.56] - 2025-03-20
 
-This release also marks the migration of sf-operator's CI to https://gateway-cloud-softwarefactory.apps.ocp.cloud.ci.centos.org
+This release also marks the migration of the sf-operator's CI to https://gateway-cloud-softwarefactory.apps.ocp.cloud.ci.centos.org
 
 ### Added
 
-- A new HAS_PROC_MOUNT environment variable is supported to deploy zuul-executor without a privilege context, providing the Kubernetes API supports the ProcMountType feature gate.
+- A new `HAS_PROC_MOUNT` environment variable is supported to deploy zuul-executor without a privileged context, providing the Kubernetes API supports the `ProcMountType` feature gate.
 
 ### Changed
 
@@ -77,8 +79,8 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 ### Removed
 
 - cert-manager: dependency removal complete. If you deployed a Software Factory with sf-operator prior to version
-  v0.0.55 please upgrade to [v0.0.55](#v0055---2025-03-03) first to ensure proper removal of dangling cert-manager-related resources.
-- The spec config-location "base-url" attribute is no longer required.
+  v0.0.55, please upgrade to [v0.0.55](#v0055---2025-03-03) first to ensure the proper removal of dangling cert-manager-related resources.
+- The spec `config-location` "base-url" attribute is no longer required.
 
 ### Fixed
 
@@ -89,12 +91,12 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 ### Added
 ### Changed
 
-- The local certificate infrastructure (certificate authority and certificates) used by Zookeeper, Zuul and Zuul-Weeder
-  is managed by the golang `crypto` library instead of by the cert-manager API. The associated
-  cert-manager resources will be removed, and the existing certificate infrastructure will be replaced by a newly-generated
-  one at upgrade time, **which will trigger a restart of the Zookeeper, Zuul, Nodepool and Zuul-Weeder components to update their
+- The local certificate infrastructure (certificate authority and certificates) used by ZooKeeper, Zuul, and Zuul-Weeder
+  is managed by the Golang `crypto` library instead of by the cert-manager API. The associated
+  cert-manager resources will be removed, and the existing certificate infrastructure will be replaced by a newly generated
+  one at upgrade time, **which will trigger a restart of the ZooKeeper, Zuul, Nodepool, and Zuul-Weeder components to update their
   respective configurations**.
-  The remaining dependency to the cert-manager operator will be removed in the next release of sf-operator.
+  The remaining dependency on the cert-manager operator will be removed in the next release of the sf-operator.
 
 ### Deprecated
 ### Removed
@@ -104,38 +106,38 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 
 ### Added
 
-- A new OPENSHIFT_USER environment variable is required to configure the operator to setup OpenShift attributes.
+- A new `OPENSHIFT_USER` environment variable is required to configure the operator to set up OpenShift attributes.
 
 ### Changed
 
-- storage: topolvm-provisioner is no longer the default storageClassName; if storageClassName parameters
+- storage: `topolvm-provisioner` is no longer the default `storageClassName`; if `storageClassName` parameters
   are not set, use the cluster's default storage class for persistent volumes.
 
 ### Fixed
 
-- OpenShift detection logic required the permission to list crds, this has been changed to use a new OPENSHIFT_USER environment variable.
+- The OpenShift detection logic required the permission to list CRDs; this has been changed to use a new `OPENSHIFT_USER` environment variable.
 
 ## [v0.0.53] - 2025-02-19
 
 ### Added
 
-- hostAliases: add custom defined hostAliases - https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/#adding-additional-entries-with-hostaliases
+- hostAliases: add custom-defined hostAliases - https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/#adding-additional-entries-with-hostaliases
 
 ### Changed
 
-- codesearch - re-enable the probe by using the correct endpoint "/healthz"
+- codesearch - re-enable the probe by using the correct endpoint `/healthz`
 - codesearch - Set 4 indexers instead of 2 by default
 
 ## [v0.0.52] - 2025-02-18
 
 ### Added
 
-- codesearch: Support for custom Memory and CPU limits
+- codesearch: Support for custom memory and CPU limits
 
 ### Changed
 
 - codesearch: improved the config-update tasks
-- codesearch: temporary remove the healthcheck probe as the service returns 503 when indexing, at startup.
+- codesearch: temporarily remove the healthcheck probe, as the service returns 503 when indexing at startup.
 
 ## [v0.0.51] - 2025-02-14
 
@@ -145,21 +147,21 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 
 ### Changed
 
-- zuul-weeder: updated the image to support job.role attribute
+- zuul-weeder: updated the image to support the `job.role` attribute
 
 ## [v0.0.50] - 2024-12-13
 
 ### Changed
 
-- zuul-web: add new version (PS/13) of the upstream patch "improving UX when authn session expired" https://review.opendev.org/c/zuul/zuul/+/936440
+- zuul-web: add a new version (PS/13) of the upstream patch "improving UX when authn session expired" https://review.opendev.org/c/zuul/zuul/+/936440
 - zuul: update version to 11.2.0 https://zuul-ci.org/docs/zuul/latest/releasenotes.html#relnotes-11-2-0
 
 ## [v0.0.49] - 2024-12-04
 
 ### Changed
 
-- zuul-capacity default port is changed to 9100
-- zuul-web: add upstream patch "improving UX when authn session expired" https://review.opendev.org/c/zuul/zuul/+/936440
+- The zuul-capacity default port is changed to 9100
+- zuul-web: add the upstream patch "improving UX when authn session expired" https://review.opendev.org/c/zuul/zuul/+/936440
 
 ## [v0.0.48] - 2024-11-26
 
@@ -179,12 +181,12 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
   * nodepool_builder_image_provider_upload_state
   * nodepool_provider_pool_addressable_requests
 
-- development - Document the process to update a container
+- development - Document the process of updating a container
 
 ### Changed
 
-- security: bumped cert-manager go dependency to v1.15.4
-- nodepool: update version to 11.0.0
+- security: bumped the cert-manager Go dependency to v1.15.4
+- nodepool: update version to 10.0.0
 
 ### Deprecated
 ### Removed
@@ -202,7 +204,7 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 
 ### Added
 
-- zuul - add admin-rule for internal tenant
+- zuul - add admin-rule for the internal tenant
 - zuul-capacity - a service to collect cloud provider usage metrics
 
 ## [v0.0.45] - 2024-10-18
@@ -214,13 +216,13 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 
 ### Changed
 
-- zuul - Increased Zuul Scheduler and Zuul Web Startup Probes Time
+- zuul - Increased the Zuul Scheduler and Zuul Web Startup Probes Time
 
 ### Fixed
 
-- log forwarding - nodepool and zuul logs were being stamped with a low precision (to the second), making verbose
-  deployments hard to exploit. Logs forwarded with the python-fluent-logger library use the "nanosecond_precision" setting.
-- logserver not restarted when zuul-ssh-key change
+- log forwarding - Nodepool and Zuul logs were being stamped with low precision (to the second), making verbose
+  deployments hard to exploit. Logs forwarded with the `python-fluent-logger` library use the `nanosecond_precision` setting.
+- logserver not restarted when `zuul-ssh-key` changes
 
 ### Security
 
@@ -229,20 +231,20 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 ### Added
 
 - log forwarding - Added support for the [forward input](https://docs.fluentbit.io/manual/pipeline/inputs/forward).
-- log forwarding - improved fluent bit sidecar containers' resilience to OOM killing and backpressure issues.
+- log forwarding - improved Fluent Bit sidecar containers' resilience to OOM killing and backpressure issues.
 
 ### Removed
 ### Changed
 
 
-- log forwarding - The HTTP input is **deprecated** and support for it will be removed at a later point.
-- log forwarding - The predefined labels `podip`, `nodename` and `podname` are **deprecated**.
-  They are not supported in the Forward input for the Zuul and Nodepool components, and will
+- log forwarding - The HTTP input is **deprecated**, and support for it will be removed at a later point.
+- log forwarding - The predefined labels `podip`, `nodename`, and `podname` are **deprecated**.
+  They are not supported in the Forward input for the Zuul and Nodepool components and will
   be removed for all components at a later point.
 
 ### Fixed
 
-- SF bootstrap-tenant command - fix the base pre-run playbook for container based job (wrong condition check)
+- SF bootstrap-tenant command - fix the base pre-run playbook for a container-based job (wrong condition check)
 
 ### Security
 
@@ -250,16 +252,16 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 
 ### Added
 
-- crd/zuul-executor - support for disk_limit_per_job
+- crd/zuul-executor - support for `disk_limit_per_job`
 
 ### Removed
 ### Changed
 
-- zookeeper - increase certificate validity duration to 30 years
+- zookeeper - increase the certificate validity duration to 30 years
 
 ### Fixed
 
-- zookeeper - certificates duration bump of version v0.0.42 was partially handled due to a missing removal of the corresponding `Secrets` resources.
+- zookeeper - the certificate duration bump of version v0.0.42 was partially handled due to a missing removal of the corresponding `Secrets` resources.
 
 ### Security
 
@@ -268,30 +270,30 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 ### Changed
 
 - Zuul version has been bumped to 11.1.0 (https://zuul-ci.org/docs/zuul/latest/releasenotes.html#relnotes-11-1-0)
-- zookeeper - increase certificate validity duration to 25 years to avoid renewal burden
+- zookeeper - increase the certificate validity duration to 25 years to avoid the renewal burden
 - logjuicer: install corporate-ca-certs to support external SF.
 
 ### Security
 
-- httpd-gateway: bump to latest container image (https://catalog.redhat.com/software/containers/ubi8/httpd-24/6065b844aee24f523c207943)
+- httpd-gateway: bump to the latest container image (https://catalog.redhat.com/software/containers/ubi8/httpd-24/6065b844aee24f523c207943)
 
 ## [v0.0.41] - 2024-09-11
 
 ### Added
 
 - zuul: add corporate certs to zuul-web
-- crd: add new `branch` for the config location.
+- crd: add a new `branch` for the config location.
 
 ### Removed
 ### Changed
 
-- zuul-scheduler: zuul-statsd sidecar use default container Limit profile
-- zuul-scheduler: statds-exporter bump version to 0.27.1
+- zuul-scheduler: the zuul-statsd sidecar uses the default container Limit profile
+- zuul-scheduler: statsd-exporter bump version to 0.27.1
 
 ### Fixed
 
-- weeder: ensure the service is restarted after backup restore to load the new ZK certs.
-- backup: add the logserver sshd host key `Secret` into the backup/restore process.
+- weeder: ensure that the service is restarted after a backup restore to load the new ZK certs.
+- backup: add the logserver sshd host key `Secret` to the backup/restore process.
 
 ### Security
 
@@ -299,55 +301,55 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 
 ### Added
 
-- support for storage (PVC) resize of zuul-executor, zuul-merger and mariadb.
+- support for storage (PVC) resize of zuul-executor, zuul-merger, and MariaDB.
 
 ## [v0.0.39] - 2024-09-04
 
 ### Added
 
-- weeder: add zuul-weeder service to inspect the global config, available at $fqdn/weeder/
-- logjuicer: add log analysis service to debug build failure, available at $fqdn/logjuicer/
+- weeder: add the zuul-weeder service to inspect the global config, available at `$fqdn/weeder/`
+- logjuicer: add a log analysis service to debug build failures, available at `$fqdn/logjuicer/`
 
 ### Fixed
 
-- Restrict trigger rules for main branches for gitlab and gerrit
-- restore - logserver-sshd container not using the restored key for the authorized key
+- Restrict trigger rules for main branches for GitLab and Gerrit
+- restore - the logserver-sshd container is not using the restored key for the authorized key
 
 ## [v0.0.38] - 2024-08-26
 
 ### Added
 
-- add capability to set extra annotations and extra Labels for all resources
-- add capability to disable usage of Prometheus resources
-- crd: capability disable Prometheus related resources like `PodMonitor` to enable `SoftwareFactory` deployment without
+- add the capability to set extra annotations and extra labels for all resources
+- add the capability to disable the usage of Prometheus resources
+- crd: capability to disable Prometheus-related resources like `PodMonitor` to enable a `SoftwareFactory` deployment without the
   Prometheus Operator installed on the cluster.
 
 ### Changed
 
-- crd: add new `storageDefault` to set default `storageClassName` and `extraAnnotations`
+- crd: add a new `storageDefault` to set the default `storageClassName` and `extraAnnotations`
 - crd: add new `extraLabels`
 
 ### Removed
 
-- remove restartPolicy from init container
+- remove `restartPolicy` from the init container
 
 ## [v0.0.37] - 2024-08-19
 
 ### Added
 
-- zuul: support of the SMTP connection
-- zuul: added pinned log INFO level for "zuul.GerritConnection.ssh" logger as too verbose in DEBUG level
+- zuul: support for the SMTP connection
+- zuul: added a pinned log INFO level for the "zuul.GerritConnection.ssh" logger, as it is too verbose in the DEBUG level
 
 ### Fixed
 
-- zuul: fix services not rollout after log level change
+- zuul: fix services not rolling out after a log level change
 
 ## [v0.0.36] - 2024-08-14
 
 ### Added
 
-- zuul: ensure ca_certs setting is set by default to system CA bundle for elasticsearch connections
-- sf-operator-vuln-check: update system packages to last version
+- zuul: ensure that the `ca_certs` setting is set by default to the system CA bundle for Elasticsearch connections
+- sf-operator-vuln-check: update system packages to the latest version
 
 ## [v0.0.35] - 2024-08-13
 
@@ -358,11 +360,11 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 
 ### Changed
 
-- prometheus integration: Bumped version of statsd-exporter and node-exporter
+- Prometheus integration: Bumped the version of statsd-exporter and node-exporter
 
 ### Fixed
 
-- Fail to deploy Zuul when multiple connections use the same Secret name (Gerrit and Github)
+- Fail to deploy Zuul when multiple connections use the same secret name (Gerrit and GitHub)
 
 ## [v0.0.34] - 2024-07-24
 
@@ -378,7 +380,7 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 
 ### Added
 
-- Capability to simply run privileged zuul-client command from any zuul pods without providing an auth token
+- Capability to simply run a privileged zuul-client command from any Zuul pods without providing an auth token
 
 ### Changed
 
@@ -389,25 +391,25 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 ### Added
 
 - CLI - add the 'debug' flag to set the LogLevel to DEBUG
-- Log Forwarding - add preset label "labels_app" by default, its value is "sf"
-- doc - how to set the Route for a deployment of Sofware Factory services
+- Log Forwarding - add the preset label "labels_app" by default; its value is "sf"
+- doc - how to set the Route for a deployment of Software Factory services
 
 ### Removed
 
-- Route resource and TLS related handling and CLI facilities has been removed
+- Route resource and TLS-related handling and CLI facilities have been removed
 
 ### Fixed
 
-- zuul-merger: CRD logLevel parameter not handled correctly
+- zuul-merger: the CRD `logLevel` parameter is not handled correctly
 
 ### Security
 
-- Update of components base container images to addess several base OS security issues
+- Update of the component's base container images to address several base OS security issues
 
 ## [v0.0.31] - 2024-06-06
 ### Fixed
 
-- MariaDB: Statefull update to 10.6
+- MariaDB: Stateful update to 10.6
 
 ## [v0.0.30] - 2024-06-06
 ### Changed
@@ -418,33 +420,33 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 ## [v0.0.29] - 2024-06-03
 ### Added
 
-- Default containers resources (requests and limits)
-- A Limits Spec in the CRD for Zookeeper, MariaDB, Nodepool and Zuul components
+- Default container resources (requests and limits)
+- A Limits Spec in the CRD for the ZooKeeper, MariaDB, Nodepool, and Zuul components
 
 ### Changed
 
-- Zuul: remove sqlalchemy logging handler as too verbose in INFO level
+- Zuul: remove the SQLAlchemy logging handler, as it is too verbose in the INFO level
 - Zuul: version bumped to 10.1.0
 
 ## [v0.0.28] - 2024-05-03
 ### Added
 
 - CLI: restore command and documentation.
-- Dev CLI - Add command "go run main.go dev getImagesSecurityIssues" to ease getting a small report of HIGH
-  and CRITICAL Security issues reported by quay.io on container images used by the sf-operator.
+- Dev CLI - Add the command "go run main.go dev getImagesSecurityIssues" to ease getting a small report of HIGH
+  and CRITICAL security issues reported by quay.io on container images used by the sf-operator.
 
 ### Changed
 
-- Zookeeper version bumped to 3.8.4
-- The Operator handles only one Route resource as a 'gateway' pod dispatches incoming connections.
+- ZooKeeper version bumped to 3.8.4
+- The Operator handles only one Route resource, as a 'gateway' pod dispatches incoming connections.
 
 ### Removed
 
-- The LogsServer CRD and controller. As there is no identified need for a proper CRD and Controller.
+- The LogsServer CRD and controller, as there is no identified need for a proper CRD and controller.
 
 ### Security
 
-- UBI9/Zookeeper image rebuid to address reported security issues
+- UBI9/ZooKeeper image rebuild to address reported security issues
 
 ## [v0.0.27] - 2024-03-27
 
@@ -453,14 +455,14 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 ### Added
 
 - "Debug" toggle for fluent bit sidecars
-- A support for running zuul-executor component external to the cluster (see ADR#014).
+- Support for running the zuul-executor component external to the cluster (see ADR#014).
 - The standalone deployment mode exits 1 when the reconcile is not possible after 300 seconds
-- A bundled YAML file containing information about container images used by the operator `controllers/libs/base/static/images.yaml`
+- A bundled YAML file containing information about container images used by the operator: `controllers/libs/base/static/images.yaml`
 
 ### Changed
 
-- zookeeper: update liveness and readyness probes to only check SSL access and remove superfluous Service resource called
-  zookeeper-headless.
+- zookeeper: update liveness and readiness probes to only check SSL access and remove the superfluous Service resource called
+  `zookeeper-headless`.
 - nodepool: update version to 10.0.0
 - zuul: update version to 10.0.0
 - CLI: simplified `SF backup` options to streamline the backup process.
@@ -469,7 +471,7 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 ### Removed
 ### Fixed
 
-- nodepool-builder: fixed the log path configuration when using the fluent bit log forwarder, resulting in much less file access errors appearing in fluent bit logs.
+- nodepool-builder: fixed the log path configuration when using the Fluent Bit log forwarder, resulting in much fewer file access errors appearing in Fluent Bit logs.
 
 ### Security
 
@@ -488,4 +490,4 @@ This release also marks the migration of sf-operator's CI to https://gateway-clo
 ## [alpha] - not released
 
 - Initial alpha version. Please consult the commit log for detailed information.
-- From now on all changes will be referenced into this changelog.
+- From now on, all changes will be referenced in this changelog.

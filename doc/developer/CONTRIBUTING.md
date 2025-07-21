@@ -13,13 +13,13 @@ published on [quay.io](https://quay.io/organization/software-factory).
 
 Use the [git-review workflow](https://softwarefactory-project.io/docs/user/contribute.html#create-a-new-code-review) to interact with these projects.
 
-Repositories with the same name on GitHub are mirrors from **softwarefactory-project.io**, no pull request will be accepted there.
+Repositories with the same name on GitHub are mirrors from **softwarefactory-project.io**, and no pull requests will be accepted there.
 
 The MicroShift deployment Ansible role is hosted on [GitHub](https://github.com/openstack-k8s-operators/ansible-microshift-role). Pull Requests are welcome there.
 
 ## Architectural Decision Records (ADRs)
 
-Any large contribution aiming to modify or implement a functionality must be first validated by the community with
+Any large contribution aiming to modify or implement a functionality must first be validated by the community with
 an *[Architectural Decision Record](https://adr.github.io/) (ADR)*.
 
 For new ADRs, please use the template below as a boilerplate:
@@ -36,7 +36,7 @@ Before submitting a change or a patch chain for review, please consider the foll
 
 1. Are the commit messages clear and explanatory?
 1. Do the changes need to be documented in the changelog?
-1. Do the changes cover any required modification of the existing documentation? (see [guidelines](#documentation-guidelines) below)
+1. Do the changes cover any required modifications of the existing documentation? (see [guidelines](#documentation-guidelines) below)
 1. Are the changes tested? We do not require unit testing but do expect functional testing coverage.
 
 ## Documentation guidelines
@@ -55,4 +55,4 @@ Running `make` or `make build` or `make build-api-doc` will update the API docum
 
 ### CLI Documentation
 
-For now the CLI documentation must be updated by hand.
+For now, the CLI documentation must be updated by hand.

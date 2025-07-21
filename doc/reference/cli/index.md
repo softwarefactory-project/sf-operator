@@ -28,8 +28,7 @@ deployments, beyond what can be defined in a custom resource manifest.
     1. [configure TLS](#configure-tls)
     1. [restore](#restore)
   1. [Zuul](#zuul)
-    - [create auth-token](#create-aut
-	h-token)
+    - [create auth-token](#create-auth-token)
     - [create client-config](#create-client-config)
   1. [Deploy](#deploy-sf)
 
@@ -255,9 +254,9 @@ Flags:
 
 #### getImagesSecurityIssues
 
-To get a report of Security Issues reported by quay.io for container images used by the
-sf-operator run: `dev getImagesSecurityIssues`. This command helps to decide if we need to
-rebuild container images to benefit last security fixes from the base OS.
+To get a report of security issues reported by quay.io for container images used by the
+sf-operator, run: `dev getImagesSecurityIssues`. This command helps to decide if we need to
+rebuild container images to benefit from the latest security fixes from the base OS.
 
 ```sh
 sf-operator dev getImagesSecurityIssues
@@ -343,9 +342,9 @@ Flags:
 #### get builder-ssh-key
 
 The Nodepool builder component should be used with at least one `image-builder` companion machine.
-It must have the capablility to connect via SSH to the builder machine(s). In order to do so, you need
+It must have the capability to connect via SSH to the builder machine(s). In order to do so, you need
 to install the builder's SSH public key as an authorized key on the builder machine(s). This subcommand
-fetches that key and can save it to a speficied file path.
+fetches that key and can save it to a specified file path.
 
 ```sh
 sf-operator [GLOBAL FLAGS] nodepool get builder-ssh-key [--pubkey /path/to/key]
@@ -391,25 +390,25 @@ Flags:
 
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
-| --backup_dir | string | The path to the backup directory | no | - |
+| --backup_dir | string | The path to the backup directory. | no | - |
 
-The backup is composed of:
+The backup is composed of the following:
 
 - some relevant `Secrets` located in the deployment's namespace
 - the Zuul's SQL database
 - the Zuul's project's keys as exported by [zuul-admin export-keys](https://zuul-ci.org/docs/zuul/latest/client.html#export-keys)
 
-The backup directory content could be compressed and stored safely in a backup system.
+The backup directory content can be compressed and stored safely in a backup system.
 
 #### bootstrap-tenant
 
-Initialize a Zuul tenant's config repository with boilerplate code that define standard pipelines:
+Initialize a Zuul tenant's config repository with boilerplate code that defines standard pipelines:
 
 * "check" for pre-commit validation
 * "gate" for approved commits gating
 * "post for post-commit actions
 
-it also includes a boilerplate job and pre-run playbook.
+It also includes a boilerplate job and pre-run playbook.
 
 ```sh
 sf-operator SF bootstrap-tenant /path/to/tenant-config-repo [FLAGS]
@@ -442,7 +441,7 @@ Flags:
 #### restore
 
 !!! warning
-    The command requires to to have `kubectl` binary installed in the system
+    The command requires you to have the `kubectl` binary installed on the system
 
 The `restore` subcommand lets you restore a backup created with the `backup` command.
 

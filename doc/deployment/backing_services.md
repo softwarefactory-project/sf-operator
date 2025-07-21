@@ -15,7 +15,7 @@ thus decided to integrate "barebones" deployments of the backing services requir
 
 The pros are:
 
-* A deployer does not need to worry about provisioning a database or setting up a Zookeeper cluster
+* A deployer does not need to worry about provisioning a database or setting up a ZooKeeper cluster
 prior to deploying SF.
 
 The cons are:
@@ -41,7 +41,7 @@ ZooKeeper is deployed as a single-pod statefulset.
 
 ### Certificates
 
-Zuul and Nodepool services authenticate to Zookeeper using a X509 client certificate. `sf-operator` manages a local Certificate Infrastructure (self-signed Certificate Authority, server and clients certificates). Those certificates are set with a long validity period (30 years) and an operator might want to rotate those certificates for security reason. To do so:
+Zuul and Nodepool services authenticate to ZooKeeper using an X509 client certificate. `sf-operator` manages a local Certificate Infrastructure (self-signed Certificate Authority, server and clients certificates). Those certificates are set with a long validity period (30 years) and an operator might want to rotate those certificates for security reasons. To do so:
 
 Delete `secret` resources named:
 
@@ -49,7 +49,7 @@ Delete `secret` resources named:
 - zookeeper-client-tls
 - ca-cert
 
-Rollout the following `Statefulset` and `Deployment` resources:
+Roll out the following `Statefulset` and `Deployment` resources:
 
 - zookeeper
 - zuul-scheduler
