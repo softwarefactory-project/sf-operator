@@ -64,7 +64,8 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/sf-op-busybox.container?id=4de897ec428fc85d5e5f91ecd3a77738bf8dfa01
     - name: httpd
       container: quay.io/software-factory/httpd-24
-      version: 1-350
+      version: 1-1752580650
+      source: https://softwarefactory-project.io/cgit/containers/commit/images-sf/master/containers/rendered/httpd.container?id=335089623f1152c559b392975941c376c288d932
     - name: node-exporter
       container: quay.io/prometheus/node-exporter-linux-amd64
       version: v1.9.1
