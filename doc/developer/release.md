@@ -42,12 +42,4 @@ git push gerrit v0.0.20
 
 # Release Automation
 
-A CD job named [sf-operator-publish-olm-bundle-image](https://microshift.softwarefactory-project.io/zuul/t/local/builds?job_name=sf-operator-publish-olm-bundle-image&skip=0) runs in the `release` pipeline.
-The `release` pipeline is triggered when a git tag is created on the `sf-operator` repository.
-This job builds and pushes the following assets to Quay.io:
-
-- [A bundle image](https://quay.io/repository/software-factory/sf-operator-bundle?tab=tags)
-- [A catalog image](https://quay.io/repository/software-factory/sf-operator-catalog?tab=tags)
-- [An operator image](https://quay.io/repository/software-factory/sf-operator?tab=tags)
-
-Clusters where the operator is installed through OLM will upgrade automatically to the latest released version.
+The release process is currently manual. This section will be updated once the automation is in place.
