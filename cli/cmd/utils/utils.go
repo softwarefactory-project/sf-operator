@@ -37,6 +37,7 @@ import (
 	"strings"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -303,6 +304,57 @@ func GetM(env *ENV, name string, obj client.Object) (bool, error) {
 	} else {
 		return true, nil
 	}
+}
+
+func DeleteSTS(env *ENV, ns string, name string) {
+	sts := appsv1.StatefulSet{}
+	sts.SetName(name)
+	sts.SetNamespace(ns)
+	if err := env.Cli.Delete(context.Background(), &sts); err != nil {
+		ctrl.Log.Error(err, "StatefulSet deletion failed")
+	}
+	for retry := 1; retry < 20; retry++ {
+		exists, _ := GetM(env, name, &appsv1.StatefulSet{})
+		if !exists {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	ctrl.Log.Info("Statefulset is gone...", "name", name)
+
+	// Somehow, the pod are still running, here is from the job-output.txt:
+	//
+	// 2025-07-17 15:36:31.665139 | TASK [health-check/test-backup-restore : Wipe Software Factory deployment]
+	// 2025-07-17 11:36:32.410628 | controller | 2025-07-17T11:36:32-04:00	INFO	OPENSHIFT_USER environment variable is not set, discovering Kubernetes Distribution
+	// 2025-07-17 11:36:32.410707 | controller |
+	// 2025-07-17 11:36:32.425925 | controller | 2025-07-17T11:36:32-04:00	INFO	Kubernetes Distribution found: Openshift
+	// 2025-07-17 11:36:32.425957 | controller |
+	// 2025-07-17 11:36:32.438748 | controller | 2025-07-17T11:36:32-04:00	INFO	Statefulset is gone...	{"name": "zuul-executor"}
+	// 2025-07-17 11:36:32.478254 | controller | 2025-07-17T11:36:32-04:00	INFO	standalone mode configmap not found
+	// 2025-07-17 11:36:32.478319 | controller | 2025-07-17T11:36:32-04:00	INFO	Removing dangling persistent volume claims if any...
+	// 2025-07-17 15:36:32.706453 | controller | ok: Runtime: 0:00:00.637556
+	//
+	// But here is from the zuul-executor pod logs
+	//
+	// 2025-07-17T11:36:32.456856116-04:00 stdout F 2025-07-17 15:36:32,456 INFO zuul.ExecutorServer: Stopping graceful
+	// 2025-07-17T11:36:32.462737594-04:00 stdout F 2025-07-17 15:36:32,457 DEBUG zuul.ExecutorServer: Pausing
+	// 2025-07-17T11:36:32.521943906-04:00 stdout F 2025-07-17 15:36:32,521 INFO zuul.ExecutorServer: Unregistering due to paused
+	// 2025-07-17T11:36:58.904059007-04:00 stdout F 2025-07-17 15:36:58,903 DEBUG zuul.zk.base.ZooKeeperClient: ZooKeeper connection (session: 0x0): SUSPENDED
+	// 2025-07-17T11:36:58.904317054-04:00 stderr F Traceback (most recent call last):
+	// 2025-07-17T11:36:58.904640132-04:00 stderr F   File "/usr/local/bin/zuul-executor", line 10, in <module>
+	// 2025-07-17T11:36:58.905395812-04:00 stderr F     sys.exit(main())
+	// 2025-07-17T11:36:58.905784754-04:00 stderr F              ^^^^^^
+	//
+	// So let's wait for pod terminaison...
+	podName := name + "-0"
+	for retry := 1; retry < 20; retry++ {
+		exists, _ := GetM(env, podName, &apiv1.Pod{})
+		if !exists {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	ctrl.Log.Info("Pod is gone...", "name", podName)
 }
 
 func DeleteOrDie(env *ENV, obj client.Object, opts ...client.DeleteOption) bool {
