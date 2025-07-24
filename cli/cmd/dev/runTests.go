@@ -165,3 +165,77 @@ func SetupDemoConfigRepo(reposPath, zuulDriver, zuulConnection string, updateDem
 		PushRepoIfNeeded(configRepoPath)
 	}
 }
+
+func SetupDemoProjectRepo(reposPath string) {
+	var (
+		demoProjectRepoPath = filepath.Join(reposPath, "demo-project")
+	)
+	ctrl.Log.Info("Initialize demo-project's pipelines and jobs... ")
+	// Create the job
+	baseParent := "base"
+	job := zuulcf.JobConfig{
+		{
+			Job: zuulcf.JobBody{
+				Name:   "demo-job",
+				Parent: &baseParent,
+				Run: []interface{}{
+					"playbooks/run.yaml",
+				},
+			},
+		},
+	}
+	jobData, _ := yaml.Marshal(job)
+	// Create the project pipeline
+	project := zuulcf.ProjectConfig{
+		{
+			Project: zuulcf.ZuulProjectBody{
+				Pipeline: zuulcf.ZuulProjectPipelineMap{
+					"check": zuulcf.ZuulProjectPipeline{
+						Jobs: []string{
+							"demo-job",
+						},
+					},
+				},
+			},
+		},
+	}
+	projectData, _ := yaml.Marshal(project)
+
+	// Write the files
+	zuulDir := filepath.Join(demoProjectRepoPath, ".zuul.d")
+	if err := os.MkdirAll(zuulDir, 0755); err != nil {
+		ctrl.Log.Error(err, "Could not create .zuul.d dir in demo-project repo")
+		os.Exit(1)
+	}
+	jobFile := filepath.Join(zuulDir, "jobs.yaml")
+	if err := os.WriteFile(jobFile, jobData, 0644); err != nil {
+		ctrl.Log.Error(err, "Could not write job configuration to file")
+		os.Exit(1)
+	}
+	projectFile := filepath.Join(zuulDir, "project.yaml")
+	if err := os.WriteFile(projectFile, projectData, 0644); err != nil {
+		ctrl.Log.Error(err, "Could not write project configuration to file")
+		os.Exit(1)
+	}
+
+	// Create the playbook
+	playbookDir := filepath.Join(demoProjectRepoPath, "playbooks")
+	if err := os.MkdirAll(playbookDir, 0755); err != nil {
+		ctrl.Log.Error(err, "Could not create playbooks dir in demo-project repo")
+		os.Exit(1)
+	}
+	playbookFile := filepath.Join(playbookDir, "run.yaml")
+	playbookContent := `
+- hosts: localhost
+  tasks:
+    - name: Sleep for 60 seconds
+      ansible.builtin.command: sleep 60
+`
+	if err := os.WriteFile(playbookFile, []byte(playbookContent), 0644); err != nil {
+		ctrl.Log.Error(err, "Could not write playbook to file")
+		os.Exit(1)
+	}
+
+	cliutils.RunCmdOrDie("git", "-C", demoProjectRepoPath, "add", ".zuul.d/", "playbooks/")
+	PushRepoIfNeeded(demoProjectRepoPath)
+}
