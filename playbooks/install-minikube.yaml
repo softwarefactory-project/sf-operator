@@ -5,8 +5,7 @@
     # Kubernetes Version used by Minikube
     # https://kubernetes.io/releases/version-skew-policy/
     kubernetes_version: v1.32
-    minikube_package: https://github.com/kubernetes/minikube/releases/download/v1.35.0/minikube-linux-amd64
-    kicbase_version: v0.0.46 # keep in sync with the minikube release
+    minikube_package: https://github.com/kubernetes/minikube/releases/download/v1.36.0/minikube-linux-amd64
     etcd_ramdisk_path: /dev/shm/etcd
     do_create_ramdisk: "{{ create_ramdisk is defined and create_ramdisk == True }}"
     ramdisk_command: |
@@ -40,12 +39,6 @@
         mode: "0755"
         status_code: [200, 304]
 
-    # This try to work-around the minikube start error described below, for which we believe the podman pull is somehow interrupted midway when running in Zuul.
-    # By pulling in advance, it seems like we avoid the container storage issue
-    - name: Pull the minikube image
-      command: "podman pull gcr.io/k8s-minikube/kicbase:{{ kicbase_version }}"
-      become: true
-
     - name: Start minikube
       command: >-
           minikube start
@@ -66,25 +59,6 @@
     - name: Get default interface
       shell: ip route show default | awk '{print $5}'
       register: default_itf
-
-    - name: Stop minikube after init to install service file and load fw rules
-      command: minikube stop
-      register: _minikube_stop
-      failed_when: _minikube_stop.rc not in [0, 125]
-
-    - name: Install minikube service
-      template:
-        src: minikube.service.j2
-        dest: /etc/systemd/system/minikube.service
-      become: true
-
-    - name: Enable minikube service
-      ansible.builtin.systemd_service:
-        name: minikube
-        enabled: true
-        state: started
-        daemon_reload: yes
-      become: true
 
     - name: Test minikube
       ansible.builtin.command:
