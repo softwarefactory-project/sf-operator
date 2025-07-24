@@ -21,9 +21,6 @@ go version > /dev/null || {
     ansible-playbook -e "hostname=localhost" ./playbooks/install-golang.yaml
 }
 
-echo "[+] Deploying sf-operator"
-go run ./main.go deploy ./playbooks/files/sf-minimal.yaml
-
 # TODO: add a SF_OPERATOR_DEMO environment variable to skip gerrit deployment
 grep -q " gerrit\." /etc/hosts > /dev/null || {
     echo "[+] Setting up gerrit"
@@ -31,5 +28,8 @@ grep -q " gerrit\." /etc/hosts > /dev/null || {
     go run main.go --config playbooks/files/sf-operator-cli.yaml dev create demo-env --repos-path deploy
     sudo chown root /etc/hosts
 }
+
+echo "[+] Deploying sf-operator"
+go run ./main.go deploy ./playbooks/files/sf.yaml
 
 # FIXME: print the gateway URL and explain the next steps.

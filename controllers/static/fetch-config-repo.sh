@@ -6,9 +6,9 @@ set -ex
 REF=$1
 
 if [[ "$CONFIG_REPO_BASE_URL" =~ https://gerrit.sfop.me.* ]]; then
-    # FIXME: use internal CA to secure that connection when it is available.
-    # Until then, we know for sure that this domain can't be verified
-    export GIT_SSL_NO_VERIFY=true
+    # This url is not easily reachable from within pods thus into that
+    # specific context we can use the Service address.
+    CONFIG_REPO_BASE_URL="http://gerrit-httpd:8080"
 fi
 
 # Clone or fetch config repository

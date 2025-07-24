@@ -47,7 +47,6 @@
                   hostnames:
                     - "gerrit.{{ fqdn }}"
                     - "{{ fqdn }}"
-                    - "dashboards.{{ fqdn }}"
                 - ip: "{{ ansible_default_ipv4.address }}"
                   hostnames:
                     - "{{ microshift_fqdn }}"

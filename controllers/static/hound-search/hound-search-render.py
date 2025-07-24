@@ -32,6 +32,9 @@ test_zuul_conf = """
 [merger]
 [connection opendev.org]
 driver              = gerrit
+baseurl             = https://review.opendev.org
+[connection gerrit]
+driver              = gerrit
 baseurl             = https://gerrit.sfop.me
 [connection gitlab.com]
 driver              = gitlab
@@ -79,6 +82,9 @@ test_zuul_yaml = """
                     load-branch: main
             untrusted-projects:
                 - zuul/zuul-jobs
+        gerrit:
+            untrusted-projects:
+                - demo-project-local
 """
 
 
@@ -86,7 +92,9 @@ def get_git_urls(conn, repo):
     """Create the hound URLs from the zuul connection and repo config."""
     base_url = conn["baseurl"]
     if conn["driver"] == "gerrit":
-        uri = base_url + f"/{repo}"
+        uri = f"{base_url}/{repo}"
+        if base_url.rstrip('/') == "https://gerrit.sfop.me":
+            uri = f"http://gerrit-httpd:8080/{repo}"
         gitweb = (
             base_url
             + f"/plugins/gitiles/{repo}/+/{{rev}}/"
@@ -191,21 +199,31 @@ def do_test():
                 },
             },
             "zuul/sandbox-config": {
-                "url": "https://gerrit.sfop.me/zuul/sandbox-config",
+                "url": "https://review.opendev.org/zuul/sandbox-config",
                 "ms-between-poll": 43200000,
                 "url-pattern": {
-                    "base-url": "https://gerrit.sfop.me/plugins/gitiles/" +
-                                "zuul/sandbox-config/+/refs/head/{rev}/" +
+                    "base-url": "https://review.opendev.org/plugins/gitiles/" +
+                                "zuul/sandbox-config/+/{rev}/" +
                                 "{path}{anchor}",
                     "anchor": "#{line}",
                 },
             },
             "zuul/zuul-jobs": {
-                "url": "https://gerrit.sfop.me/zuul/zuul-jobs",
+                "url": "https://review.opendev.org/zuul/zuul-jobs",
+                "ms-between-poll": 43200000,
+                "url-pattern": {
+                    "base-url": "https://review.opendev.org/plugins/gitiles/" +
+                                "zuul/zuul-jobs/+/{rev}/" +
+                                "{path}{anchor}",
+                    "anchor": "#{line}",
+                },
+            },
+            "demo-project-local": {
+                "url": "http://gerrit-httpd:8080/demo-project-local",
                 "ms-between-poll": 43200000,
                 "url-pattern": {
                     "base-url": "https://gerrit.sfop.me/plugins/gitiles/" +
-                                "zuul/zuul-jobs/+/refs/head/{rev}/" +
+                                "demo-project-local/+/{rev}/" +
                                 "{path}{anchor}",
                     "anchor": "#{line}",
                 },
