@@ -60,7 +60,4 @@ Rollout the following `Statefulset` and `Deployment` resources:
 - nodepool-builder
 - nodepool-launcher
 
-Then make sure to trigger the `Reconcile` loop of the `sf-operator` either by:
-
-- if using the `standalone` deployment mode, running the `standalone` command
-- if using the `OLM` deployment mode, the `Reconcile` will happen automatically
+Then make sure to trigger the `Reconcile` loop of the `sf-operator` by running the `standalone` command.

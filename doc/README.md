@@ -72,7 +72,6 @@ Beside the Getting Started process, here are the available installation modes:
 
 - Run the SF-Operator in standalone mode (recommended).
 - Install the CRD and deploy the SF-Operator on the cluster to manage the SF resources with kubectl.
-- Install the OLM catalog to manage the SF-Operator installation through the web console.
 
 For example, here is a standard configuration resource (CR), adapted from the getting started one, which is available in [sf.yaml](./playbooks/files/sf.yaml):
 
@@ -107,7 +106,6 @@ go run ./main.go deploy ./my-sf.yaml
 Checkout the other documentations:
 
 * [Deploying Zuul and dependencies with SF-Operator](deployment/getting_started)
-* [Installing the Operator (OLM)](operator/getting_started/)
 * [Developing the SF-Operator](developer/getting_started)
 
 ## About
@@ -121,7 +119,6 @@ SF-Operator is built mostly in Go upon the [Operator Framework](https://operator
 Furthermore, SF-Operator takes advantage of some of the specificities of OpenShift as a container orchestration platform:
 
 * Improved ingress management with OpenShift's Route Custom Resources
-* Integration with OLM for streamlined operator and operands' lifecycle management
 * If [enabled in OpenShift](https://docs.openshift.com/container-platform/4.13/monitoring/enabling-monitoring-for-user-defined-projects.html#enabling-monitoring-for-user-defined-projects), SF-Operator comes with default monitoring and alerting configurations that can be used out of the box. The default alerting rules are honed from years of maintaining and running several large Zuul deployments at scale for [Fedora](https://fedora.softwarefactory-project.io/zuul/status), [Ansible](https://ansible.softwarefactory-project.io/zuul/status) and [RDO](https://review.rdoproject.org/zuul/status).
 * If [enabled](https://docs.openshift.com/container-platform/4.13/logging/cluster-logging.html), OpenShift provides application logs aggregation with its logging subsystem out of the box.
 
