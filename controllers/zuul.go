@@ -1290,7 +1290,7 @@ func (r *SFController) AddGitLabConnection(cfg *ini.File, conn sfv1.GitLabConnec
 		"cloneurl":                conn.CloneURL,
 		"keepalive":               fmt.Sprint(conn.KeepAlive),
 		"disable_connection_pool": fmt.Sprint(conn.DisableConnectionPool),
-		"api_token_name":          conn.APITokenName,
+		"api_token_name":          "zuul",
 	} {
 		addKeyToSection(cfg.Section(section), key, value)
 	}

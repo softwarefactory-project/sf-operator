@@ -768,9 +768,6 @@ spec:
                     items:
                       description: Describes a Zuul connection using the [gitlab driver](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#gitlab).
                       properties:
-                        apiTokenName:
-                          description: the [apiTokenName](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.api_token_name)
-                          type: string
                         baseUrl:
                           description: the (baseUrl)[https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#attr-%3Cgitlab%20connection%3E.baseurl)
                           type: string
