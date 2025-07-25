@@ -31,6 +31,21 @@
           - podman
           - bind-utils
 
+    - name: Ensure [containers] section exists in containers.conf
+      become: true
+      ansible.builtin.lineinfile:
+        path: /etc/containers/containers.conf
+        line: '[containers]'
+        create: yes
+
+    - name: Set pids_limit in containers.conf
+      become: true
+      ansible.builtin.lineinfile:
+        path: /etc/containers/containers.conf
+        insertafter: '^\s*\[containers\]'
+        regexp: '^\s*pids_limit\s*='
+        line: 'pids_limit = 0'
+
     - name: Installing Minikube
       become: true
       ansible.builtin.uri:
