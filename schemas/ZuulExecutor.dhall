@@ -1,5 +1,6 @@
 { Type =
-    { diskLimitPerJob : Optional Integer
+    { TerminationGracePeriodSeconds : Natural
+    , diskLimitPerJob : Optional Integer
     , enabled : Optional Bool
     , limits : Optional (./Limits.dhall).Type
     , logLevel : Optional Text

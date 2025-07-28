@@ -698,6 +698,13 @@ func (r *SFController) injectStorageNodeAffinity(storageClass *string, sts *apps
 	}
 }
 
+func getGracePeriod(sts appsv1.StatefulSet) int64 {
+	if sts.Spec.Template.Spec.TerminationGracePeriodSeconds != nil {
+		return *sts.Spec.Template.Spec.TerminationGracePeriodSeconds
+	}
+	return 30
+}
+
 // ensureStatefulSet ensures that a StatefulSet object is as expected.
 // The function takes the expected StatefulSet and returns a tuple with the current object on
 // the cluster and a boolean indicating whether the function performed a create or update on the object.
@@ -705,8 +712,7 @@ func (r *SFController) ensureStatefulset(storageClass *string, sts appsv1.Statef
 	current := appsv1.StatefulSet{}
 	name := sts.ObjectMeta.Name
 	if r.GetM(name, &current) {
-		// TODO: apply node affinity if storageClass match the CR config
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &sts.Spec.Template.ObjectMeta.Annotations) {
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &sts.Spec.Template.ObjectMeta.Annotations) || getGracePeriod(current) != getGracePeriod(sts) {
 			current.Spec.Template = *sts.Spec.Template.DeepCopy()
 			if r.injectStorageNodeAffinity(storageClass, &current) {
 				logging.LogI(name + " configuration changed, rollout pods ...")
