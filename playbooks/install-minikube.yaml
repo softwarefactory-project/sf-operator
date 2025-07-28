@@ -31,20 +31,15 @@
           - podman
           - bind-utils
 
-    - name: Ensure [containers] section exists in containers.conf
-      become: true
-      ansible.builtin.lineinfile:
-        path: /etc/containers/containers.conf
-        line: '[containers]'
-        create: yes
-
+    # Workaround for https://github.com/kubernetes/minikube/issues/19820
     - name: Set pids_limit in containers.conf
       become: true
-      ansible.builtin.lineinfile:
-        path: /etc/containers/containers.conf
-        insertafter: '^\s*\[containers\]'
-        regexp: '^\s*pids_limit\s*='
-        line: 'pids_limit = 0'
+      ansible.builtin.copy:
+        dest: /etc/containers/containers.conf
+        content: |
+          [containers]
+          pids_limit = 0
+        backup: yes
 
     - name: Installing Minikube
       become: true
