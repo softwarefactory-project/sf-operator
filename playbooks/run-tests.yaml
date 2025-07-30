@@ -27,9 +27,10 @@
     - health-check/scale-resources
     - health-check/zuul-connections
     - health-check/zuul-authenticators
+    - health-check/config-update-zuul
 
     # FIXME: add more health-check
-    # - health-check/config-update-zuul
+
     # - health-check/check-logjuicer
     # - health-check/zuul-demo-tenant-workflow
     # - health-check/test-nodepool-providers-secrets
