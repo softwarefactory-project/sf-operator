@@ -22,70 +22,12 @@
         name: config
         zuul-connection-name: gerrit
         k8s-api-url: "https://10.43.0.1:443"
-        logserver-host: microshift.dev
+        logserver-host: logserver.sf
       zuul:
         executor:
           enabled: false
 
-- name: Expose a Zookeeper Service as a LoadBalancer (reachable on microshift.dev)
-  kubernetes.core.k8s:
-    state: present
-    namespace: sf
-    definition:
-      apiVersion: v1
-      kind: Service
-      metadata:
-        name: zookeeper-lb
-      spec:
-        ports:
-          - name: zookeeper-2281
-            port: 2281
-            protocol: TCP
-            targetPort: 2281
-        selector:
-          statefulset.kubernetes.io/pod-name: zookeeper-0
-        type: LoadBalancer
-
-- name: Expose a Git-Server Service as a LoadBalancer (reachable on microshift.dev)
-  kubernetes.core.k8s:
-    state: present
-    namespace: sf
-    definition:
-      apiVersion: v1
-      kind: Service
-      metadata:
-        name: git-server-ro-lb
-      spec:
-        ports:
-          - name: git-server-port-9418
-            port: 9418
-            protocol: TCP
-            targetPort: 9418
-        selector:
-          statefulset.kubernetes.io/pod-name: git-server-0
-        type: LoadBalancer
-
-- name: Expose a logserver sshd Service as a LoadBalancer (reachable on microshift.dev)
-  kubernetes.core.k8s:
-    state: present
-    namespace: sf
-    definition:
-      apiVersion: v1
-      kind: Service
-      metadata:
-        name: logserver-lb
-      spec:
-        ports:
-          - name: logserver-2222
-            port: 2222
-            protocol: TCP
-            targetPort: 2222
-        selector:
-          statefulset.kubernetes.io/pod-name: logserver-0
-        type: LoadBalancer
-
 ### Deploy the external zuul-executor in the adjacent namespace
-
 - name: "Sync expected secrets resources from the control plan ns to ext-ze ns"
   ansible.builtin.shell: |
     kubectl get secrets {{ item }} -o json | jq --arg name {{ item }} '. + {metadata: {name: $name}}' | kubectl apply -n ext-ze -f -
