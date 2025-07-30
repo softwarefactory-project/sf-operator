@@ -68,7 +68,7 @@ var _ = Describe("Zuul controller", func() {
 			}, 10*time.Second, time.Second).Should(Succeed())
 
 			By("Checking if zuul-config was created with user provided gerrit connection to opendev.")
-			r.cr.Spec.Zuul.GerritConns = []sfv1.GerritConnection{sfv1.GerritConnection{
+			r.cr.Spec.Zuul.GerritConns = []sfv1.GerritConnection{{
 				Name:     "opendev.org",
 				Hostname: "review.opendev.org",
 			}}
