@@ -45,48 +45,72 @@ func TestLogFunctions(t *testing.T) {
 	sink := &testSink{}
 	ctrl.SetLogger(logr.New(sink))
 
-	// Test LogD with no level argument (should default to 1)
-	LogD("debug message")
-	if sink.lastMsg != "debug message" || sink.level != 1 {
-		t.Fatalf("LogD failed: got msg=%q level=%d",
-			sink.lastMsg, sink.level)
-	}
-
-	// Test LogW (warning message)
-	LogW("something might be wrong")
-	expectedW := "Warning: something might be wrong"
-	if sink.lastMsg != expectedW || sink.level != 0 {
-		t.Fatalf("LogW failed: got msg=%q level=%d",
-			sink.lastMsg, sink.level)
-	}
-
-	// Test LogDeprecation (deprecation warning)
-	LogDeprecation("this will be removed soon")
-	expectedDep := "Deprecation Warning: this will be removed soon"
-	if sink.lastMsg != expectedDep || sink.level != 0 {
-		t.Fatalf("LogDeprecation failed: got msg=%q level=%d",
-			sink.lastMsg, sink.level)
-	}
-
-	// LogTrace logs a message at the TRACE (high verbosity) log level (5).
-	LogTrace("debug default")
-	if sink.lastMsg != "debug default" || sink.level != 5 {
-		t.Fatalf("LogTrace failed: got msg=%q level=%d",
-			sink.lastMsg, sink.level)
-	}
-
-	// Test LogI (info level 0)
-	LogI("info message")
-	if sink.lastMsg != "info message" || sink.level != 0 {
-		t.Fatalf("LogI failed: got msg=%q level=%d",
-			sink.lastMsg, sink.level)
-	}
-
-	// Test LogE (error logging with error argument)
 	testErr := errors.New("test error")
-	LogE(testErr, "error message")
-	if sink.lastMsg != "error message" || sink.lastErr != testErr {
-		t.Fatalf("LogE failed: got msg=%q err=%v",
-			sink.lastMsg, sink.lastErr)
+
+	testCases := []struct {
+		name          string
+		logFunc       func()
+		expectedMsg   string
+		expectedLevel int
+		expectedErr   error
+	}{
+		{
+			name:          "LogD with default level",
+			logFunc:       func() { LogD("debug message") },
+			expectedMsg:   "debug message",
+			expectedLevel: 1,
+		},
+		{
+			name:          "LogW for warning",
+			logFunc:       func() { LogW("something might be wrong") },
+			expectedMsg:   "Warning: something might be wrong",
+			expectedLevel: 0,
+		},
+		{
+			name:          "LogDeprecation for deprecation warning",
+			logFunc:       func() { LogDeprecation("this will be removed soon") },
+			expectedMsg:   "Deprecation Warning: this will be removed soon",
+			expectedLevel: 0,
+		},
+		{
+			name:          "LogTrace for high verbosity",
+			logFunc:       func() { LogTrace("debug default") },
+			expectedMsg:   "debug default",
+			expectedLevel: 5,
+		},
+		{
+			name:          "LogI for info level",
+			logFunc:       func() { LogI("info message") },
+			expectedMsg:   "info message",
+			expectedLevel: 0,
+		},
+		{
+			name:        "LogE for error",
+			logFunc:     func() { LogE(testErr, "error message") },
+			expectedMsg: "error message",
+			expectedErr: testErr,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Reset sink state for each test case
+			sink.lastMsg = ""
+			sink.level = 0
+			sink.lastErr = nil
+
+			tc.logFunc()
+
+			if sink.lastMsg != tc.expectedMsg {
+				t.Errorf("Expected message %q, got %q", tc.expectedMsg, sink.lastMsg)
+			}
+			if sink.lastErr != tc.expectedErr {
+				t.Errorf("Expected error %v, got %v", tc.expectedErr, sink.lastErr)
+			}
+			// Only check level for non-error logs
+			if tc.expectedErr == nil && sink.level != tc.expectedLevel {
+				t.Errorf("Expected level %d, got %d", tc.expectedLevel, sink.level)
+			}
+		})
 	}
 }
