@@ -120,7 +120,7 @@ func devRunTests(kmd *cobra.Command, args []string) {
 			Cli:         client,
 			Ctx:         ctx,
 			Ns:          ns,
-			IsOpenShift: controllers.CheckOpenShift(),
+			IsOpenShift: controllers.CheckOpenShift(restConfig),
 		}
 		reposPath := cliCtx.Dev.Tests.DemoReposPath
 		if reposPath == "" {
@@ -163,6 +163,7 @@ func devCreate(kmd *cobra.Command, args []string) {
 	target := args[0]
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
+	restConfig := controllers.GetConfigContextOrDie(kubeContext)
 	fqdn := cliCtx.FQDN
 	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
 	ctx := context.TODO()
@@ -171,7 +172,7 @@ func devCreate(kmd *cobra.Command, args []string) {
 		Cli:         client,
 		Ctx:         ctx,
 		Ns:          ns,
-		IsOpenShift: controllers.CheckOpenShift(),
+		IsOpenShift: controllers.CheckOpenShift(restConfig),
 	}
 
 	// The Gerrit container ip address is unknown and poting to 127.0.0.1
@@ -397,6 +398,7 @@ func devWipe(kmd *cobra.Command, args []string) {
 	target := args[0]
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
+	restConfig := controllers.GetConfigContextOrDie(kubeContext)
 	rmData, _ := kmd.Flags().GetBool("rm-data")
 	rmOp, _ := kmd.Flags().GetBool("rm-operator")
 	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
@@ -405,7 +407,7 @@ func devWipe(kmd *cobra.Command, args []string) {
 		Cli:         client,
 		Ctx:         ctx,
 		Ns:          ns,
-		IsOpenShift: controllers.CheckOpenShift(),
+		IsOpenShift: controllers.CheckOpenShift(restConfig),
 	}
 	if target == "gerrit" {
 		gerrit.WipeGerrit(&env, rmData)
@@ -437,6 +439,7 @@ func devCloneAsAdmin(kmd *cobra.Command, args []string) {
 	}
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
+	restConfig := controllers.GetConfigContextOrDie(kubeContext)
 	fqdn := cliCtx.FQDN
 	verify, _ := kmd.Flags().GetBool("verify")
 	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
@@ -445,7 +448,7 @@ func devCloneAsAdmin(kmd *cobra.Command, args []string) {
 		Cli:         client,
 		Ctx:         ctx,
 		Ns:          ns,
-		IsOpenShift: controllers.CheckOpenShift(),
+		IsOpenShift: controllers.CheckOpenShift(restConfig),
 	}
 	gerrit.CloneAsAdmin(&env, fqdn, repoName, dest, verify)
 }

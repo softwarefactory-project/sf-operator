@@ -56,13 +56,14 @@ func npCreate(kmd *cobra.Command, args []string) {
 	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, npCreateAllowedArgs)
 	ns := cliCtx.Namespace
 	kubeContext := cliCtx.KubeContext
+	restConfig := controllers.GetConfigContextOrDie(kubeContext)
 	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
 	ctx := context.TODO()
 	sfEnv := cliutils.ENV{
 		Cli:         client,
 		Ctx:         ctx,
 		Ns:          ns,
-		IsOpenShift: controllers.CheckOpenShift(),
+		IsOpenShift: controllers.CheckOpenShift(restConfig),
 	}
 	if args[0] == "openshiftpods-namespace" {
 		nodepoolContext, _ := kmd.Flags().GetString("nodepool-context")
@@ -87,12 +88,13 @@ func npCreate(kmd *cobra.Command, args []string) {
 
 func CreateNamespaceForNodepool(sfEnv *cliutils.ENV, nodepoolContext, nodepoolNamespace string, skipProvidersSecrets bool) {
 	client := cliutils.CreateKubernetesClientOrDie(nodepoolContext)
+	restConfig := controllers.GetConfigContextOrDie(nodepoolContext)
 	ctx := context.TODO()
 	nodepoolEnv := cliutils.ENV{
 		Cli:         client,
 		Ctx:         ctx,
 		Ns:          nodepoolNamespace,
-		IsOpenShift: controllers.CheckOpenShift(),
+		IsOpenShift: controllers.CheckOpenShift(restConfig),
 	}
 
 	cliutils.EnsureNamespaceOrDie(&nodepoolEnv, nodepoolNamespace)
