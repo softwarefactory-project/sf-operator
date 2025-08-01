@@ -295,134 +295,126 @@ func (r *SFController) deployStandaloneExectorStep(services map[string]bool) map
 	return services
 }
 
-func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
-	DURuleGroups := []monitoringv1.RuleGroup{
-		sfmonitoring.MkDiskUsageRuleGroup(r.ns, "sf"),
-	}
+func (r *SFController) setupMonitoring() ([]string, []string) {
 	monitoredPorts := []string{}
 	selectorRunList := []string{}
-
-	services["Zuul"] = false
-
-	// Setup the Certificate Authority for Zookeeper/Zuul/Nodepool usage
-	dnsNames := r.MkClientDNSNames(ZookeeperIdent)
-	r.EnsureLocalCA(dnsNames)
-
-	// Ensure SF Admin ssh key pair
-	r.DeployZuulSecrets()
-
-	// Setup custom tools used by zuul and code-search
-	r.EnsureToolingVolume()
-
-	// The git server service is needed to store system jobs (config-check and config-update)
-	services["GitServer"] = r.DeployGitServer()
-	services["MariaDB"] = r.DeployMariadb()
-
-	if !services["GitServer"] || !services["MariaDB"] {
-		logging.LogI("Waiting for GitServer and MariaDB to be ready...")
-		return services
-	}
 	monitoredPorts = append(monitoredPorts,
 		sfmonitoring.GetTruncatedPortName(GitServerIdent, sfmonitoring.NodeExporterPortNameSuffix),
 		sfmonitoring.GetTruncatedPortName(MariaDBIdent, sfmonitoring.NodeExporterPortNameSuffix),
+		sfmonitoring.GetTruncatedPortName(ZookeeperIdent, sfmonitoring.NodeExporterPortNameSuffix),
+		sfmonitoring.GetTruncatedPortName(BuilderIdent, sfmonitoring.NodeExporterPortNameSuffix),
+		NodepoolStatsdExporterPortName,
+		sfmonitoring.GetTruncatedPortName("zuul-scheduler", sfmonitoring.NodeExporterPortNameSuffix),
+		sfmonitoring.GetTruncatedPortName("zuul-merger", sfmonitoring.NodeExporterPortNameSuffix),
+		sfmonitoring.GetTruncatedPortName("zuul-web", sfmonitoring.NodeExporterPortNameSuffix),
+		ZuulPrometheusPortName,
+		ZuulStatsdExporterPortName,
 	)
-	selectorRunList = append(selectorRunList, GitServerIdent, MariaDBIdent)
 
-	// --- New Orchestration Logic for ZooKeeper and Zuul ---
-	// 1. Get current ZooKeeper state from the cluster
+	selectorRunList = append(selectorRunList, LauncherIdent, BuilderIdent, "zuul-scheduler", "zuul-merger", "zuul-web", GitServerIdent, MariaDBIdent, ZookeeperIdent)
+
+	if r.IsExecutorEnabled() {
+		monitoredPorts = append(monitoredPorts,
+			sfmonitoring.GetTruncatedPortName("zuul-executor", sfmonitoring.NodeExporterPortNameSuffix))
+		selectorRunList = append(selectorRunList, "zuul-executor")
+	}
+
+	return monitoredPorts, selectorRunList
+}
+
+func (r *SFController) deployZKAndZuulAndNodepool(services map[string]bool) map[string]bool {
+	// 1. Handle Zuul and Nodepool deployment if Zookeeper is up and running
+	// ---------------------------------------------------------------------
 	var currentZk appsv1.StatefulSet
 	isZkDeployed := r.GetM(ZookeeperIdent, &currentZk)
-
-	// 2. Deploy Zuul if ZooKeeper is running
 	if isZkDeployed && r.IsStatefulSetReady(&currentZk) {
+		services["Zookeeper"] = true
+		logging.LogI("Handling Zuul and Nodepool deployment while Zookeeper is up ...")
+		nodepool := r.DeployNodepool()
+		services["NodePoolLauncher"] = nodepool[LauncherIdent]
+		services["NodePoolBuilder"] = nodepool[BuilderIdent]
+		if !services["GitServer"] || !services["MariaDB"] {
+			logging.LogI("Waiting for GitServer and MariaDB services to be ready before deploying Zuul ...")
+			return services
+		}
 		services["Zuul"] = r.DeployZuul()
-		if !services["Zuul"] {
+		if !services["Zuul"] || !services["NodePoolLauncher"] || !services["NodePoolBuilder"] {
 			return services
 		}
 	}
 
-	// 3. Ensure ZooKeeper is fully deployed
+	// 2. Ensure Zookeeper is up and running
+	// -------------------------------------
+	// The Zookeeper service is needed by Zuul and Nodepool to synchronize
 	services["Zookeeper"] = r.DeployZookeeper()
-
-	if services["Zookeeper"] {
-		monitoredPorts = append(monitoredPorts, sfmonitoring.GetTruncatedPortName(ZookeeperIdent, sfmonitoring.NodeExporterPortNameSuffix))
-		selectorRunList = append(selectorRunList, ZookeeperIdent)
+	if !services["Zookeeper"] {
+		logging.LogI("Waiting for Zookeeper service to be ready ...")
+		return services
 	}
 
-	// 4. Ensure Zuul is deployed
-	if services["Zookeeper"] && !services["Zuul"] {
+	// 3. Ensure Zuul and Nodepool services
+	// ------------------------------------
+	if !services["Zuul"] {
 		services["Zuul"] = r.DeployZuul()
 	}
-	// --- End of New Orchestration Logic ---
-
-	services["Logserver"] = r.DeployLogserver()
-
-	if services["Zookeeper"] {
+	if !services["NodePoolLauncher"] || !services["NodePoolBuilder"] {
 		nodepool := r.DeployNodepool()
 		services["NodePoolLauncher"] = nodepool[LauncherIdent]
 		services["NodePoolBuilder"] = nodepool[BuilderIdent]
-		if services["NodePoolLauncher"] && services["NodePoolBuilder"] {
-			monitoredPorts = append(
-				monitoredPorts,
-				sfmonitoring.GetTruncatedPortName(BuilderIdent, sfmonitoring.NodeExporterPortNameSuffix),
-				NodepoolStatsdExporterPortName,
-			)
-			selectorRunList = append(selectorRunList, LauncherIdent, BuilderIdent)
-		}
 	}
+	return services
+}
 
-	if services["Zuul"] {
-		monitoredPorts = append(
-			monitoredPorts,
-			sfmonitoring.GetTruncatedPortName("zuul-scheduler", sfmonitoring.NodeExporterPortNameSuffix),
-			sfmonitoring.GetTruncatedPortName("zuul-merger", sfmonitoring.NodeExporterPortNameSuffix),
-			sfmonitoring.GetTruncatedPortName("zuul-web", sfmonitoring.NodeExporterPortNameSuffix),
-			ZuulPrometheusPortName,
-			ZuulStatsdExporterPortName,
-		)
-		selectorRunList = append(selectorRunList, "zuul-scheduler", "zuul-merger", "zuul-web")
+func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 
-		if r.IsExecutorEnabled() {
-			monitoredPorts = append(
-				monitoredPorts,
-				sfmonitoring.GetTruncatedPortName("zuul-executor", sfmonitoring.NodeExporterPortNameSuffix))
-			selectorRunList = append(selectorRunList, "zuul-executor")
-		}
+	// 1. Ensure some content resources
+	// --------------------------------
+	// Setup the Certificate Authority for Zookeeper/Zuul/Nodepool usage
+	dnsNames := r.MkClientDNSNames(ZookeeperIdent)
+	r.EnsureLocalCA(dnsNames)
+	// Ensure SF Admin ssh key pair
+	r.DeployZuulSecrets()
+	// Setup custom tools used by zuul and code-search
+	r.EnsureToolingVolume()
 
-		services["Config"] = r.SetupConfigJob()
-		if services["Config"] {
-			conds.RefreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
-		}
-	}
-
+	// 2. Deploy backing and companion services
+	// ----------------------------------------
+	// The git server service is needed to store system jobs
+	services["GitServer"] = r.DeployGitServer()
+	// The MariaDB service is needed by Zuul to store build results metadata
+	services["MariaDB"] = r.DeployMariadb()
+	// The Logserver service is needed by Zuul to store build artifacts
+	services["Logserver"] = r.DeployLogserver()
+	// The gateway is on redirect incoming HTTP request to backing services
+	services["Gateway"] = r.DeployHTTPDGateway()
+	// The Hound service provides a codesearch service
 	if r.IsCodesearchEnabled() {
 		services["HoundSearch"] = r.DeployHoundSearch()
 	} else {
 		r.TerminateHoundSearch()
 	}
-
-	services["Gateway"] = r.DeployHTTPDGateway()
-
-	podMonitorSelector := metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"app": "sf",
-		},
-		MatchExpressions: []metav1.LabelSelectorRequirement{
-			{
-				Key:      "run",
-				Operator: metav1.LabelSelectorOpIn,
-				Values:   selectorRunList,
-			},
-		},
-	}
-	// TODO? we could add this to the readiness computation.
-	if !r.cr.Spec.PrometheusMonitorsDisabled {
-		r.EnsureSFPodMonitor(monitoredPorts, podMonitorSelector)
-		r.EnsureDiskUsagePromRule(DURuleGroups)
-	}
-
+	// The Logjuicer is a log analysis service suitable for Zuul
 	// TODO: make this configurable
 	services["LogJuicer"] = r.EnsureLogJuicer()
+
+	// 3. Deploy Zuul, Nodepool and Zookeeper
+	// --------------------------------------
+	services = r.deployZKAndZuulAndNodepool(services)
+
+	// 4. Wait for Zuul and LogServer to be up
+	// ---------------------------------------
+	if !services["Zuul"] || !services["Logserver"] {
+		// Force Config status to false to force the main loop to call this function
+		services["Config"] = false
+		return services
+	}
+
+	// 5. Zuul and the LogServer are up and running, then we can ensure that the config jobs are setup
+	// -----------------------------------------------------------------------------------------------
+	services["Config"] = r.SetupConfigJob()
+	if services["Config"] {
+		conds.RefreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
+	}
 
 	return services
 }
@@ -449,8 +441,32 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 
 	logging.LogI(messageInfo(services))
 
+	isReady := isOperatorReady(services)
+
+	// TODO? we could add this to the readiness computation.
+	if !r.cr.Spec.PrometheusMonitorsDisabled && isReady {
+		DURuleGroups := []monitoringv1.RuleGroup{
+			sfmonitoring.MkDiskUsageRuleGroup(r.ns, "sf"),
+		}
+		monitoredPorts, selectorRunList := r.setupMonitoring()
+		podMonitorSelector := metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app": "sf",
+			},
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      "run",
+					Operator: metav1.LabelSelectorOpIn,
+					Values:   selectorRunList,
+				},
+			},
+		}
+		r.EnsureSFPodMonitor(monitoredPorts, podMonitorSelector)
+		r.EnsureDiskUsagePromRule(DURuleGroups)
+	}
+
 	return sfv1.SoftwareFactoryStatus{
-		Ready:              isOperatorReady(services),
+		Ready:              isReady,
 		ObservedGeneration: r.cr.Generation,
 		ReconciledBy:       conds.GetOperatorConditionName(),
 		Conditions:         r.cr.Status.Conditions,
