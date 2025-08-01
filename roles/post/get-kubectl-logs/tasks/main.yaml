@@ -1,13 +1,49 @@
+- name: Set proper facts
+  ansible.builtin.set_fact:
+    logs_dir: "{{ ansible_user_dir }}/zuul-output/logs"
+
 - name: Get pod logs
-  vars:
-    out_dir: "{{ ansible_user_dir }}/zuul-output/logs/pods-logs"
   shell: |
-    mkdir -p {{ out_dir }}
+    mkdir -p {{ logs_dir }}/pods-logs
     for ns in $(kubectl get ns -o=custom-columns=NAME:.metadata.name --no-headers); do
       for pod in $(kubectl --namespace ${ns} get pod -o=custom-columns=NAME:.metadata.name --no-headers); do
         for cname in $(kubectl --namespace ${ns} get pod ${pod} -o jsonpath='{.spec.containers[*].name}'); do
-          kubectl --namespace ${ns} logs --container=${cname} ${pod} &> {{ out_dir }}/${ns}--${pod}--${cname}.txt
+          kubectl --namespace ${ns} logs --container=${cname} ${pod} &> {{ logs_dir }}/pods-logs/${ns}--${pod}--${cname}.txt
         done
       done
     done
-  failed_when: false
+
+- name: Describe namespace resources
+  ansible.builtin.shell: |
+    mkdir -p {{ logs_dir }}/items-describe
+    for ns in $(kubectl get ns -o=custom-columns=NAME:.metadata.name --no-headers); do
+      for item in $(kubectl --namespace ${ns} get {{ item }} -o name); do
+        kubectl --namespace ${ns} describe $item > {{ logs_dir }}/items-describe/${ns}--{{ item }}--$(basename ${item}).txt
+      done
+    done
+  loop:
+    - pods
+    - deployments
+    - statefulsets
+    - services
+    - secrets
+    - configmaps
+    - jobs
+    - pvc
+    - ingress
+
+- name: Get events
+  ansible.builtin.shell: |
+    mkdir -p {{ logs_dir }}/events
+    for ns in $(kubectl get ns -o=custom-columns=NAME:.metadata.name --no-headers); do
+      kubectl --namespace ${ns} get events --output custom-columns="DATE:metadata.creationTimestamp,TYPE:type,REASON:reason,OBJECT KIND:involvedObject.kind,OBJECT NAME:involvedObject.name,MESSAGE:message" --sort-by=".metadata.creationTimestamp" > {{ logs_dir }}/events/${ns}.txt
+    done
+
+- name: Fetch decoded secrets
+  ansible.builtin.shell: |
+    mkdir -p {{ logs_dir }}/decoded-secrets
+    for ns in $(kubectl get ns -o=custom-columns=NAME:.metadata.name --no-headers); do
+      for item in $(kubectl --namespace ${ns} get secret -o name); do
+        kubectl --namespace ${ns} get ${item} -o json | jq -r ".data | map_values(@base64d)" > {{ logs_dir }}/decoded-secrets/${ns}--$(basename $item)
+      done
+    done
