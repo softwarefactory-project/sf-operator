@@ -8,7 +8,7 @@ spec:
     gerritconns:
       - name: gerrit
         username: zuul
-        hostname: microshift.dev
+        hostname: gerrit-sshd.sf
         puburl: "https://gerrit.sfop.me"
         verifyssl: false
     executor:

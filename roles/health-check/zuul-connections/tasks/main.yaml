@@ -115,7 +115,7 @@
     {% if mode == 'olm' %}
     kubectl get sf my-sf -o jsonpath='{.spec.zuul.gerritconns}'
     {% else %}
-    echo '[{"name": "gerrit", "username": "zuul", "hostname": "microshift.dev", "puburl": "https://gerrit.sfop.me"}]'
+    echo '[{"name": "gerrit", "username": "zuul", "hostname": "gerrit-sshd.sf", "puburl": "https://gerrit.sfop.me"}]'
     {% endif %}
   register: gerritconns
 

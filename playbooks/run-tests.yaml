@@ -5,21 +5,6 @@
   vars:
     project_dir: "{% if zuul.project.src_dir is defined %}~/{{ zuul.project.src_dir }}{% else %}..{% endif %}"
   pre_tasks:
-    - name: Grab load balancer IP
-      command: awk '/ gerrit./ { print $1 }' /etc/hosts
-      register: _etc_host_ip
-    - name: Set hostAliases - edit playbooks/files/ yaml files
-      ansible.builtin.include_role:
-        name: create-hostaliases-cr
-      vars:
-        iplb_ip_address: "{{ _etc_host_ip.stdout }}"
-      loop:
-        - "{{ project_dir }}/playbooks/files/ext-ze.yaml"
-        - "{{ project_dir }}/playbooks/files/sf.yaml"
-        - "{{ project_dir }}/playbooks/files/sf-operator-cli.yaml"
-      loop_control:
-        loop_var: yaml_file
-
     - name: Install test dependencies
       become: true
       ansible.builtin.package:
