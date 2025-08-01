@@ -28,7 +28,30 @@ cd sf-operator
 
 > This procedure is expected to work out of the box on a fresh system, please create a [bug report][bugreport] if it ever fails.
 
-You now have the Software Factory services running at the default `https://sfop.me` domain. The next steps are:
+You now have the Software Factory services running at the default `https://sfop.me` domain.
+
+The local Zuul is connected to a Gerrit instance running at `https://gerrit.sfop.me`. You can test the integration by creating a change in the `demo-project` and watch Zuul run a job.
+
+First, you need to install the `git-review` plugin:
+
+```ShellSession
+sudo dnf install -y git-review
+```
+
+Then, create a test change:
+
+```ShellSession
+cd deploy/demo-project
+git checkout -b demo
+echo "Hello world" > README.md
+git add README.md
+git commit -m "My first review"
+git review
+```
+
+The change will be submitted to the Gerrit server. You can then visit the Zuul status page at `https://sfop.me` to see the `demo-job` running for your change.
+
+The next steps are:
 
 - Configure the custom resource (CR) to change the FQDN, add Zuul connections and Nodepool providers.
 - Configure public access to the SF services using a Route or Ingress.
