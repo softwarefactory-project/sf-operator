@@ -83,7 +83,7 @@ doc-serve: mkdocs
 
 .PHONY: test
 test: manifests generate fmt vet envtest vendor-crds ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
+	CGO_ENABLED=1 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -race ./... -coverprofile cover.out
 
 ##@ Build
 
