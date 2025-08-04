@@ -56,26 +56,6 @@
     namespace: ext-ze
     cr_name: my-ext-ze
 
-- name: Expose a Zuul Executor Finger service as a LoadBalancer (reachable on microshift.dev)
-  kubernetes.core.k8s:
-    state: present
-    namespace: ext-ze
-    definition:
-      apiVersion: v1
-      kind: Service
-      metadata:
-        name: zuul-executor-headless-hp
-      spec:
-        ports:
-          - name: zuul-executor-7900
-            port: 7900
-            protocol: TCP
-            targetPort: 7900
-        selector:
-          app: sf
-          run: zuul-executor
-        type: LoadBalancer
-
 ### Real proof that external executor is running as expected
 
 - name: "Run the 'config-update-zuul' test case"

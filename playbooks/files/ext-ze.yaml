@@ -16,4 +16,4 @@ spec:
       standalone:
         controlPlanePublicZKHostname: zookeeper.sf
         controlPlanePublicGSHostname: git-server.sf
-        publicHostname: microshift.dev
+        publicHostname: zuul-executor-headless.ext-ze
