@@ -113,7 +113,7 @@ func (g *GerritCMDContext) ensureJobCompletedOrDie(job batchv1.Job) {
 	if !cliutils.GetMOrDie(g.env, job.Name, &curJob) {
 		cliutils.CreateROrDie(g.env, &job)
 	}
-	for i := 0; i < 60; i++ {
+	for range 60 {
 		if curJob.Status.Succeeded >= 1 {
 			return
 		}
