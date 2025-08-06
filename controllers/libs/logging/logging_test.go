@@ -32,12 +32,12 @@ func (s *testSink) Error(err error, msg string, keysAndValues ...interface{}) {
 }
 
 func (s *testSink) WithName(name string) logr.LogSink {
-	// Devuelve una nueva instancia o la misma con nombre guardado (para simplificar)
+	// Returns a new instance or the same with the name saved
 	return &testSink{name: name}
 }
 
 func (s *testSink) WithValues(keysAndValues ...interface{}) logr.LogSink {
-	// Ignoramos para test, solo retornamos la misma instancia
+	// Not needed for these tests, just return the same instance
 	return s
 }
 
