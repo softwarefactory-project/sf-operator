@@ -56,7 +56,7 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-weeder.container?id=4de897ec428fc85d5e5f91ecd3a77738bf8dfa01
     - name: logjuicer
       container: quay.io/software-factory/logjuicer
-      version: a0f57ad6c69c71d5a61c6c239d817e72a99acaa4-20250602-3
+      version: "0.15.0-20250602-1"
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/logjuicer.container?id=4de897ec428fc85d5e5f91ecd3a77738bf8dfa01
     - name: sf-op-busybox
       container: quay.io/software-factory/sf-op-busybox
