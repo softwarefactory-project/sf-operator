@@ -133,20 +133,32 @@ func restoreZuul(backupDir string, kubeContext string, env cliutils.ENV) {
 }
 
 func clearComponents(env cliutils.ENV) {
-	ctrl.Log.Info("Removing components requiering a complete restart ...")
+	ctrl.Log.Info("Removing components requiring a complete restart ...")
 
-	cliutils.DeleteSTS(&env, env.Ns, "zuul-executor")
+	// --- Scale down Zuul STS components
+	components := []string{"zuul-executor", "zuul-merger", "zuul-scheduler"}
+	ctrl.Log.Info("Scaling down StatefulSets before deletion...")
+	for _, comp := range components {
+		if err := cliutils.ScaleDownSTSAndWait(&env, env.Ns, comp); err != nil {
+			ctrl.Log.Error(err, "Could not scale down StatefulSet, continuing...", "name", comp)
+		}
+	}
 
+	// --- Stop all STS now
 	for _, stsName := range []string{
-		"zuul-scheduler", "zuul-merger",
+		"zuul-executor", "zuul-merger", "zuul-scheduler",
 		"nodepool-builder", "zookeeper", "logserver"} {
 		cliutils.DeleteOrDie(&env, &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      stsName,
 				Namespace: env.Ns,
 			},
-		})
+		},
+		)
+
 	}
+
+	// --- Stop deployments
 	for _, depName := range []string{"zuul-web", "zuul-weeder", "nodepool-launcher"} {
 		cliutils.DeleteOrDie(&env, &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{

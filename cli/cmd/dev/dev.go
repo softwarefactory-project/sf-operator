@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
@@ -35,6 +36,8 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	apiv1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
@@ -275,47 +278,88 @@ func cleanClusterServiceVersion(env *cliutils.ENV) {
 }
 
 func cleanSFInstance(env *cliutils.ENV, ns string) {
-	cliutils.DeleteSTS(env, ns, "zuul-executor")
-	var sf sfv1.SoftwareFactory
-	sfDeleteOpts := []client.DeleteAllOfOption{
-		client.InNamespace(ns),
-	}
-	if err := env.Cli.DeleteAllOf(env.Ctx, &sf, sfDeleteOpts...); err != nil {
-		ctrl.Log.Info("SoftwareFactory resource not found")
+	// --- Scale down Zuul STS components
+	components := []string{"zuul-executor", "zuul-merger", "zuul-scheduler"}
+	ctrl.Log.Info("Scaling down StatefulSets before deletion...")
+	for _, comp := range components {
+		if err := cliutils.ScaleDownSTSAndWait(env, ns, comp); err != nil {
+			ctrl.Log.Error(err, "Could not scale down StatefulSet, continuing...", "name", comp)
+		}
 	}
 
-	// From the executor log:
-	//
-	//  2025-07-18T04:50:51.938034569-04:00 stderr F + update-ca-trust extract -o /etc/pki/ca-trust/extracted
-	//  2025-07-18T04:50:55.232506347-04:00 stderr F + git config --global --add safe.directory '*'
-	//  2025-07-18T04:50:55.238653324-04:00 stderr F + /usr/local/bin/zuul-executor -f -d
-	//  2025-07-18T04:50:59.553480759-04:00 stdout F 2025-07-18 08:50:59,553 DEBUG zuul.Executor: Configured logging: 12.0.0
-	//
-	// From the job-output log:
-	//
-	//  2025-07-18 08:50:45.749629 | TASK [health-check/test-backup-restore : Wipe Software Factory deployment]
-	//  2025-07-18 04:50:46.496900 | controller | 2025-07-18T04:50:46-04:00	INFO	OPENSHIFT_USER environment variable is not set, discovering Kubernetes Distribution
-	//  2025-07-18 04:50:46.496977 | controller |
-	//  2025-07-18 04:50:46.511305 | controller | 2025-07-18T04:50:46-04:00	INFO	Kubernetes Distribution found: Openshift
-	//  2025-07-18 04:50:46.511368 | controller |
-	//  2025-07-18 04:50:46.521044 | controller | 2025-07-18T04:50:46-04:00	INFO	Statefulset is gone...	{"name": "zuul-executor"}
-	//  2025-07-18 04:51:05.613936 | controller | 2025-07-18T04:51:05-04:00	INFO	Pod is gone...	{"name": "zuul-executor-0"}
-	//  2025-07-18 04:51:05.629274 | controller | 2025-07-18T04:51:05-04:00	INFO	standalone mode configmap not found
-	//  2025-07-18 04:51:05.629318 | controller | 2025-07-18T04:51:05-04:00	INFO	Removing dangling persistent volume claims if any...
-	//
-	// Apparently, the DeleteAllOf may not fully delete the executor, so let's try to make sure the executor is fully killed again:
-	cliutils.DeleteSTS(env, ns, "zuul-executor")
-
-	// And just to be sure, let's delete everything again, one more time
-	if err := env.Cli.DeleteAllOf(env.Ctx, &sf, sfDeleteOpts...); err != nil {
-		ctrl.Log.Info("SoftwareFactory resource not found")
+	// --- Detection and Deletion Logic ---
+	var sfList sfv1.SoftwareFactoryList
+	if err := env.Cli.List(env.Ctx, &sfList, client.InNamespace(ns)); err != nil {
+		ctrl.Log.Error(err, "API error when checking for SoftwareFactory resource")
 	}
 
 	var cm apiv1.ConfigMap
-	cm.SetName("sf-standalone-owner")
-	cm.SetNamespace(ns)
-	if !cliutils.DeleteOrDie(env, &cm) {
-		ctrl.Log.Info("standalone mode configmap not found")
+	cmKey := client.ObjectKey{Namespace: ns, Name: "sf-standalone-owner"}
+	cmErr := env.Cli.Get(env.Ctx, cmKey, &cm)
+
+	const maxRetries = 60
+	const retryInterval = 2 * time.Second
+
+	if len(sfList.Items) > 0 {
+		// --- Operator Mode Deletion ---
+		ctrl.Log.Info("Operator mode detected. Deleting SoftwareFactory resource(s) with foreground propagation.")
+		var sf sfv1.SoftwareFactory
+		sfDeleteOpts := []client.DeleteAllOfOption{
+			client.InNamespace(ns),
+			client.PropagationPolicy(metav1.DeletePropagationForeground),
+		}
+		if err := env.Cli.DeleteAllOf(env.Ctx, &sf, sfDeleteOpts...); err != nil {
+			ctrl.Log.Error(err, "Failed to initiate deletion of SoftwareFactory resources")
+			return
+		}
+
+		// Wait for SoftwareFactory resources to be fully deleted
+		ctrl.Log.Info("Waiting for SoftwareFactory resources to be fully deleted...")
+		deleted := false
+		for i := 0; i < maxRetries; i++ {
+			var currentSfList sfv1.SoftwareFactoryList
+			env.Cli.List(env.Ctx, &currentSfList, client.InNamespace(ns))
+			if len(currentSfList.Items) == 0 {
+				ctrl.Log.Info("SoftwareFactory resources successfully deleted.")
+				deleted = true
+				break
+			}
+			time.Sleep(retryInterval)
+		}
+		if !deleted {
+			ctrl.Log.Info("Timed out waiting for SoftwareFactory resources to be deleted.")
+		}
+
+	} else if cmErr == nil {
+		// --- Standalone Mode Deletion ---
+		ctrl.Log.Info("Standalone mode detected. Deleting owner ConfigMap with foreground propagation.")
+		deleteOpts := &client.DeleteOptions{
+			PropagationPolicy: &[]metav1.DeletionPropagation{metav1.DeletePropagationForeground}[0],
+		}
+		if err := env.Cli.Delete(env.Ctx, &cm, deleteOpts); err != nil {
+			ctrl.Log.Error(err, "Failed to initiate deletion of standalone ConfigMap")
+			return
+		}
+
+		// Wait for the ConfigMap to be fully deleted
+		ctrl.Log.Info("Waiting for the owner ConfigMap to be fully deleted...")
+		deleted := false
+		for i := 0; i < maxRetries; i++ {
+			var checkCm apiv1.ConfigMap
+			err := env.Cli.Get(env.Ctx, cmKey, &checkCm)
+			if apierrors.IsNotFound(err) {
+				ctrl.Log.Info("Standalone owner ConfigMap successfully deleted.")
+				deleted = true
+				break
+			}
+			time.Sleep(retryInterval)
+		}
+		if !deleted {
+			ctrl.Log.Info("Timed out waiting for the owner ConfigMap to be deleted.")
+		}
+
+	} else {
+		ctrl.Log.Info("No SoftwareFactory resource or standalone ConfigMap found. Instance is already clean.")
 	}
 }
 

@@ -108,6 +108,7 @@
       - playbooks/prepare-minikube.yaml
       - playbooks/install-test-dependencies.yaml
     post-run: playbooks/get-minikube-logs.yaml
+    timeout: 7200
     vars:
       create_ramdisk: True
     nodeset:

@@ -39,6 +39,8 @@
         - (sf_ready.stdout | from_json).ready == true
       retries: "{{ retries }}"
       delay: "{{ delay }}"
+      # It seems like the output isn't always json parsable by ansible, just ignore and retry in that case
+      ignore_errors: true
 
 - name: "Ensure CR Ready (standalone)"
   when: mode == 'standalone'
