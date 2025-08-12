@@ -11,3 +11,10 @@
         name: post/get-kubectl-logs
       vars:
         namespace: sf
+
+    - ansible.builtin.include_role:
+          name: post/get-logserver-content
+
+    # Fetch repos stored on code review service
+    - ansible.builtin.include_role:
+          name: post/get-repos

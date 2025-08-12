@@ -1,0 +1,30 @@
+---
+- name: Create review
+  ansible.builtin.command: "{{ item }}"
+  args:
+    chdir: "{{ demo_project_path }}"
+  loop:
+    - "git add --all"
+    - "git commit -m '{{ commit_message }}'"
+    - "git review"
+  tags:
+    - skip_ansible_lint
+
+- name: fetch review number
+  block:
+    - name: Get Change-id
+      ansible.builtin.shell: git log -n 1 | awk '/Change-Id/ {print $2}'
+      args:
+        chdir: "{{ demo_project_path }}"
+      register: _change_id
+      tags:
+        - skip_ansible_lint
+    - ansible.builtin.debug:
+        var: _change_id
+        verbosity: 0
+    - name: Get review number
+      ansible.builtin.shell: curl -ks https://{{ gerrit_host }}/changes/{{ _change_id.stdout }} | sed 1d | jq --raw-output "._number"
+      register: review_number
+    - ansible.builtin.debug:
+        var: review_number
+        verbosity: 0
