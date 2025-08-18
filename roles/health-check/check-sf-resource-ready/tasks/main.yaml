@@ -32,15 +32,17 @@
       ansible.builtin.command: kubectl -n {{ namespace }} get sf {{ cr_name }} -o=jsonpath='{.status}'
       register: sf_ready
       until:
+        # First check that we have date to decode
+        - sf_ready.stdout is not none
         - sf_ready.stdout != ""
-        - '"ready" in (sf_ready.stdout | from_json)'
-        - '"observedGeneration" in (sf_ready.stdout | from_json)'
-        - (sf_ready.stdout | from_json).observedGeneration == (cr_generation.stdout | int)
-        - (sf_ready.stdout | from_json).ready == true
+        - sf_ready.stdout | length > 0
+        # Ensure this is valid json
+        - sf_ready.stdout | from_json
+        # Use get instead of direct access to defend against missing keys
+        - (sf_ready.stdout | from_json).get('ready', false) == true
+        - (sf_ready.stdout | from_json).get('observedGeneration', 0) == (cr_generation.stdout | int)
       retries: "{{ retries }}"
       delay: "{{ delay }}"
-      # It seems like the output isn't always json parsable by ansible, just ignore and retry in that case
-      ignore_errors: true
 
 - name: "Ensure CR Ready (standalone)"
   when: mode == 'standalone'
