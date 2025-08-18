@@ -183,6 +183,15 @@ func SetupDemoProjectRepo(reposPath string) {
 				},
 			},
 		},
+		{
+			Job: zuulcf.JobBody{
+				Name:   "publish-job",
+				Parent: &baseParent,
+				Run: []interface{}{
+					"playbooks/run.yaml",
+				},
+			},
+		},
 	}
 	jobData, _ := yaml.Marshal(job)
 	// Create the project pipeline
@@ -193,6 +202,16 @@ func SetupDemoProjectRepo(reposPath string) {
 					"check": zuulcf.ZuulProjectPipeline{
 						Jobs: []string{
 							"demo-job",
+						},
+					},
+					"gate": zuulcf.ZuulProjectPipeline{
+						Jobs: []string{
+							"demo-job",
+						},
+					},
+					"post": zuulcf.ZuulProjectPipeline{
+						Jobs: []string{
+							"publish-job",
 						},
 					},
 				},

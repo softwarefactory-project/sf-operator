@@ -4,7 +4,33 @@
     name: "health-check/check-zuul-tenant"
   vars:
     tenant_name: "demo-tenant"
-#
-# TODO
-# - add file into into demo-tenant-config repo and submit with git-review
-# - submit CR+2/W+1 and ensure the change is merged by Zuul
+
+
+# The demo-project repository is not part of the sf-operator git tree.
+# It is created by the development environment (e.g. hack/deploy.sh) to
+# simulate a real project.
+- name: Update the demo-job to sleep 1 second
+  ansible.builtin.replace:
+    path: "{{ demo_project_path }}/playbooks/run.yaml"
+    regexp: "sleep 60"
+    replace: "sleep 1"
+
+- name: Commit file in the demo-project repo
+  ansible.builtin.command: "{{ item }}"
+  args:
+    chdir: "{{ demo_project_path }}"
+  loop:
+    - "git add playbooks/run.yaml"
+    - "git commit -m 'Update demo-job to sleep 1 second'"
+  tags:
+    - skip_ansible_lint
+
+- name: Submit, merge and verify post-merge job
+  ansible.builtin.include_role:
+    name: "health-check/repo-submit-change"
+  vars:
+    repo_path: "{{ demo_project_path }}"
+    approve: true
+    post_job: true
+    success_job: "publish-job"
+    zuul_tenant: "demo-tenant"
