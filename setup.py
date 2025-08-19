@@ -11,6 +11,6 @@ setup(
     description="Software Factory operator library",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    entry_points={"console_scripts": ["sf_operator=sf_operator.main:main"]},
-    install_requires=['pynotedb', 'managesf']
+    entry_points={"console_scripts": ["sf-operator=sf_operator.main:main"]},
+    install_requires=["pynotedb", "managesf"],
 )
