@@ -166,7 +166,7 @@ func SetupDemoConfigRepo(reposPath, zuulDriver, zuulConnection string, updateDem
 	}
 }
 
-func SetupDemoProjectRepo(reposPath string) {
+func SetupDemoProjectRepo(reposPath string, fqdn string) {
 	var (
 		demoProjectRepoPath = filepath.Join(reposPath, "demo-project")
 	)
@@ -189,6 +189,15 @@ func SetupDemoProjectRepo(reposPath string) {
 				Parent: &baseParent,
 				Run: []interface{}{
 					"playbooks/run.yaml",
+				},
+			},
+		},
+		{
+			Job: zuulcf.JobBody{
+				Name:   "demo-job-check-url",
+				Parent: &baseParent,
+				Run: []interface{}{
+					"playbooks/run-check-url.yaml",
 				},
 			},
 		},
@@ -251,6 +260,26 @@ func SetupDemoProjectRepo(reposPath string) {
       ansible.builtin.command: sleep 60
 `
 	if err := os.WriteFile(playbookFile, []byte(playbookContent), 0644); err != nil {
+		ctrl.Log.Error(err, "Could not write playbook to file")
+		os.Exit(1)
+	}
+
+	playbookCheckURLFile := filepath.Join(playbookDir, "run-check-url.yaml")
+	playbookCheckURLContent := `
+- hosts: localhost
+  tasks:
+    - name: Check file exists on logserver
+      ansible.builtin.uri:
+        # fqdn cannot be resolved within executor pod
+        url: http://logserver:8080/logs/test-url
+        # validate_certs: false
+        return_content: true
+      register: resp
+      until: "'OK' in resp.content"
+      retries: 3600
+      delay: 1
+`
+	if err := os.WriteFile(playbookCheckURLFile, []byte(playbookCheckURLContent), 0644); err != nil {
 		ctrl.Log.Error(err, "Could not write playbook to file")
 		os.Exit(1)
 	}

@@ -82,7 +82,7 @@ func createDemoEnv(env cliutils.ENV, restConfig *rest.Config, fqdn string, repos
 		gerrit.CloneAsAdmin(&env, fqdn, repo, path, false)
 	}
 	SetupDemoConfigRepo(reposPath, "gerrit", "gerrit", !keepDemoTenantDefinition)
-	SetupDemoProjectRepo(reposPath)
+	SetupDemoProjectRepo(reposPath, fqdn)
 	ctrl.Log.Info("Applying CRDs (did you run \"make manifests\" first?)")
 	ApplyCRDs(restConfig, sfOperatorRepoPath)
 }

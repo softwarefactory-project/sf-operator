@@ -1,0 +1,155 @@
+---
+- name: Ensure we are on the default branch
+  ansible.builtin.command: git checkout master
+  args:
+    chdir: "{{ demo_project_path }}"
+
+- name: Create a test branch
+  ansible.builtin.command: git checkout -b test_check_url
+  args:
+    chdir: "{{ demo_project_path }}"
+
+- name: "Replace demo-job with demo-job-check-url"
+  ansible.builtin.replace:
+    path: "{{ demo_project_path }}/.zuul.d/project.yaml"
+    regexp: "demo-job"
+    replace: "demo-job-check-url"
+
+- name: create the review
+  ansible.builtin.include_tasks: create-review.yaml
+  vars:
+    commit_message: "test check url"
+
+- ansible.builtin.set_fact:
+    review_number_300: "{{ review_number.stdout }}"
+
+- name: Wait for job to start
+  ansible.builtin.shell: curl -sk https://{{ zuul_endpoint }}/api/tenant/demo-tenant/status/change/{{ review_number_300 }},1 | jq -r '.[0].jobs[]' | jq -rc 'select(.name == "demo-job-check-url")' | jq -r '.start_time'
+  register: _start_time_300
+  until:
+    - _start_time_300.stdout != ""
+    - "'jq: error' not in _start_time_300.stdout"
+    - "'null' not in _start_time_300.stdout"
+    - "'parse error' not in _start_time_300.stdout"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+
+- name: Scale down executor statefulset to trigger a graceful stop
+  ansible.builtin.command:
+    kubectl -n sf scale statefulsets zuul-executor --replicas=0
+
+- name: Ensure executor component is marked for shutdown in Zuul API
+  ansible.builtin.shell: curl -sk https://{{ zuul_endpoint }}/api/components | jq -r '.executor[0].state'
+  register: _executor_state_300
+  until:
+    - _executor_state_300.stdout != ""
+    - "'paused' in _executor_state_300.stdout or 'stopped' in _executor_state_300.stdout"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+
+# This should say "paused" or "stopped"
+- name: show executor state
+  ansible.builtin.debug:
+    msg: "{{ _executor_state_300.stdout }}"
+
+- name: Get back on default branch
+  ansible.builtin.command: git checkout master
+  args:
+    chdir: "{{ demo_project_path }}"
+
+- name: Create a test branch
+  ansible.builtin.command: git checkout -b test_short_job
+  args:
+    chdir: "{{ demo_project_path }}"
+
+- name: "Update the demo-job to sleep 2 seconds"
+  ansible.builtin.replace:
+    path: "{{ demo_project_path }}/playbooks/run.yaml"
+    regexp: "sleep .*"
+    replace: "sleep 2"
+
+- name: create the review
+  ansible.builtin.include_tasks: create-review.yaml
+  vars:
+    commit_message: "test short job"
+
+- ansible.builtin.set_fact:
+    review_number_2: "{{ review_number.stdout }}"
+
+- name: Ensure new review is queued
+  ansible.builtin.shell: curl -sk "https://{{ zuul_endpoint }}/api/tenant/demo-tenant/status/change/{{ review_number_2 }},1" | jq -r '.[0].jobs[]' | jq -rc 'select(.name == "demo-job")' | jq -r '.start_time'
+  register: _start_time_2
+  until:
+    - _start_time_2.stdout != ""
+    - "'jq: error' not in _start_time_2.stdout"
+    - "'null' == _start_time_2.stdout"
+    - "'parse error' not in _start_time_2.stdout"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+  ignore_errors: true
+
+- name: Create switch file on logserver so that first job can complete
+  ansible.builtin.include_role:
+    name: create-file-on-logserver
+  vars:
+    ls_file_name: test-url
+
+- name: Wait for executor pod to terminate
+  ansible.builtin.shell: |
+    kubectl -n sf get pods
+  register: _pods_300
+  until:
+    - "'zuul-executor' not in _pods_300.stdout"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+
+- name: Ensure first job completed
+  ansible.builtin.shell: |
+    curl -sk https://{{ zuul_endpoint }}/api/tenant/demo-tenant/builds?change={{ review_number_300 }}
+  register: _build_300
+  until:
+    - _build_300.stdout != ""
+    - "'SUCCESS' in _build_300.stdout"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+
+- name: Ensure second job hasn't completed
+  ansible.builtin.shell: |
+    curl -sk https://{{ zuul_endpoint }}/api/tenant/demo-tenant/builds?change={{ review_number_2 }}
+  register: _build_2
+  until:
+    - _build_2.stdout == "[]"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+
+- name: Scale up executor statefulset
+  ansible.builtin.command:
+    kubectl -n sf scale statefulsets zuul-executor --replicas=1
+
+- name: Wait until executor pod is up
+  ansible.builtin.shell: |
+    kubectl -n sf get pods zuul-executor-0
+  register: _pods_2
+  until:
+    - "'Running' in _pods_2.stdout"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+
+- name: Ensure executor component is running
+  ansible.builtin.shell: curl -sk https://{{ zuul_endpoint }}/api/components | jq -r '.executor[0].state'
+  register: _executor_state_2
+  until:
+    - _executor_state_2.stdout != ""
+    - "'running' in _executor_state_2.stdout"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+
+- name: Ensure second review's job completed
+  ansible.builtin.shell: |
+    curl -sk https://{{ zuul_endpoint }}/api/tenant/demo-tenant/builds?change={{ review_number_2 }}
+  register: _build_2_end
+  until:
+    - _build_2_end.stdout != ""
+    - "'SUCCESS' in _build_2_end.stdout"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
