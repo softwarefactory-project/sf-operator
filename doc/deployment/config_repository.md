@@ -17,7 +17,7 @@
 !!! note
     If you are already familiar with the config repository in Software Factory, you can skip this section and go straight to [setting up the repository](#setting-up-the-repository).
 
-In Software Factory, Zuul and Nodepool's configurations are stored in a special git repository called the **config repository**. Zuul is also pre-configured to run the following CI pipelines and jobs against changes on this repository, in a reserved tenant (`internal`):
+In Software Factory, Zuul's and Nodepool's configurations are stored in a special git repository called the **config repository**. Zuul is also pre-configured to run the following CI pipelines and jobs against changes on this repository, in a reserved tenant (`internal`):
 
 | Pipeline | When | Jobs  |
 |-----------|-----|------|
@@ -25,7 +25,7 @@ In Software Factory, Zuul and Nodepool's configurations are stored in a special 
 | **gate**     | A change on the config repository is scheduled for merging, before merging | **config-check** |
 | **post**     | After a change is merged | **config-update** |
 
-The `internal` tenant configuration is stored in a hidden git repository and managed solely by the SF-Operator.
+The `internal` tenant configuration is stored in a hidden Git repository and managed solely by the SF-Operator.
 Below you can find more details about the default jobs running against the config repository:
 
 | Job name | Description |
@@ -51,9 +51,9 @@ As of the current version of the SF-Operator, Gerrit and GitLab are the only sup
 
 #### Prerequisites on Gerrit
 
-1. Make sure the deployment and the Gerrit host can communicate, especially via Gerrit's SSH port (usually TCP/29418).
-2. Make sure you can create accounts on the Gerrit host, or at least set their SSH public key.
-3. Make sure you can create a project on the Gerrit host, or at least modify its configuration.
+1. Make sure that the deployment and the Gerrit host can communicate, especially via Gerrit's SSH port (usually TCP/29418).
+2. Make sure that you can create accounts on the Gerrit host, or at least set their SSH public key.
+3. Make sure that you can create a project on the Gerrit host, or at least modify its configuration.
 
 #### Configuring Gerrit
 
@@ -61,7 +61,7 @@ As of the current version of the SF-Operator, Gerrit and GitLab are the only sup
 
 Zuul needs a bot account on Gerrit with SSH access to be able to subscribe to events and merge changes to the config repository.
 
-The SF-Operator automatically creates an SSH key pair that can be used by such bot accounts, and stores it in a secret called `zuul-ssh-key`.
+The SF-Operator automatically creates an SSH key pair that can be used by such bot accounts and stores it in a secret called `zuul-ssh-key`.
 
 You can create the Zuul bot account on Gerrit with this convenient one-liner (assuming your deployment is installed in the `sf` namespace):
 
@@ -78,7 +78,7 @@ ssh -p29418 <gerrit_host> gerrit set-members --add zuul@example.com "Service Use
 ##### Repository ACLs and Labels
 
 !!! note
-    Access controls and labels management with Gerrit is out of the scope of this documentation. Please refer to
+    Access controls and label management with Gerrit is out of the scope of this documentation. Please refer to
     Gerrit's documentation for further details, for example
     [here](https://gerrit-review.googlesource.com/Documentation/access-control.html) for ACLs
     or [here](https://gerrit-review.googlesource.com/Documentation/config-labels.html) for labels.
@@ -123,7 +123,7 @@ For further information check the [Gerrit section](https://zuul-ci.org/docs/zuul
 
 #### Configuring the Gerrit Zuul connection
 
-In order for Zuul to start listening to Gerrit events, add a `gerritconn` property in your deployed **SoftwareFactory**'s Spec. Edit the spec with:
+In order for Zuul to start listening to Gerrit events, add a `gerritconn` property in your deployed **SoftwareFactory**'s spec. Edit the spec with:
 
 ```sh
 kubectl edit sf my-sf
@@ -145,33 +145,33 @@ spec:
 
 You can check the [CRD's OpenAPI schema](./crds.md) for specification details.
 
-At that step you can continue the setting by [configuring the location of the config repository](#set-the-config-repository-location).
+At that step, you can continue the setting by [configuring the location of the config repository](#set-the-config-repository-location).
 
 ### Hosting on GitLab
 
 Zuul needs:
 
-* an API token to communicate with the GitLab's API
-* a WebHook token in order to authenticate the WebHook's payloads sent by the GitLab instance.
+* an API token to communicate with the GitLab API
+* a webhook token in order to authenticate the webhook payloads sent by the GitLab instance.
 
-It is advised to request a bot account to your GitLab admin, especially if Zuul must act on repositories spread across multiple
-Gitlab project groups. However if all repositories are located inside the same project's group then a simple group's token
+It is advised to request a bot account from your GitLab admin, especially if Zuul must act on repositories spread across multiple
+Gitlab project groups. However if all repositories are located inside the same project's group, then a simple group's token
 is sufficient.
 
-Please refer to the [upstream's Zuul documentation for more information about the GitLab's driver and how to define
-an API Token and WebHook token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#gitlab).
+Please refer to the [upstream Zuul documentation for more information about the GitLab driver and how to define
+an API token and webhook token](https://zuul-ci.org/docs/zuul/latest/drivers/gitlab.html#gitlab).
 
 !!! note
-    The WebHook URL to configure on the project or on the project's group setting must
+    The webhook URL to configure on the project or on the project's group setting must
     be `https://<fqdn>/zuul/api/connection/<zuul-connection-name>/payload`
 
-The `gate` pipeline defined for the `config` repository workflow relies in the `workflow` label for the pipeline
-trigger rule. Thus, a GitLab label named `workflow` must be defined in the `Settings` the `config` repository.
+The `gate` pipeline defined for the `config` repository workflow relies on the `workflow` label for the pipeline
+trigger rule. Thus, a GitLab label named `workflow` must be defined in the `Settings` of the `config` repository.
 
 #### Configuring the Gitlab Zuul connection
 
-To setup the zuul's connection to the GitLab instance, first you need a `Secret` resource (eg. named `gitlab-com-secret`)
-to store the API and WebHook tokens. The `Secret`'s scheme is a follow:
+To set up the Zuul connection to the GitLab instance, you first need a `Secret` resource (eg. named `gitlab-com-secret`)
+to store the API and webhook tokens. The `Secret`'s scheme is as follows:
 
 ```yaml
 kind: Secret
@@ -185,7 +185,7 @@ data:
   webhook_token: <web-hook-token-in-base64>
 ```
 
-This `Secret` resource must be applied to the same `Namespace` than the `SoftwareFactory` resource.
+This `Secret` resource must be applied to the same `Namespace` as the `SoftwareFactory` resource.
 
 Then, edit the SoftwareFactory's CR:
 
@@ -202,11 +202,11 @@ spec:
 [...]
 ```
 
-At that step you can continue the setting by [configuring the location of the config repository](#set-the-config-repository-location).
+At that step, you can continue the setting by [configuring the location of the config repository](#set-the-config-repository-location).
 
 ### Set the config repository location
 
-Specify the config repository location (adapt according to your connection/reposiory name and location):
+Specify the config repository location (adapt according to your connection/repository name and location):
 
 ```sh
 kubectl edit sf my-sf
@@ -226,7 +226,7 @@ kubectl get sf my-sf -o jsonpath='{.status}'
 {"observedGeneration":1,"ready":true}
 ```
 
-Once the resource is ready, the config repository will appear listed in the internal tenant's projects page at `https://<FQDN>/zuul/t/internal/projects` .
+Once the resource is ready, the config repository will appear listed on the internal tenant's projects page at `https://<FQDN>/zuul/t/internal/projects` .
 
 ## Next Steps
 
@@ -234,9 +234,9 @@ You may now want to configure [connection secrets for nodepool providers](./node
 
 ## How to be an administrator in Internal Tenant
 
-As said in the [Concept](#concept) section, SF-Operator manages a hidden git repository which defines and sets the
+As stated in the [Concept](#concept) section, the SF-Operator manages a hidden Git repository that defines and sets the
 `internal` tenant.
 
 This tenant has an `admin-rules` definition, setting the `admin-internal` group as the tenant administrator.
 
-To be an `internal` administrator, just set a [`authorization-rule`](https://zuul-ci.org/docs/zuul/latest/tenants.html#authorization-rule) named `admin-internal` in the config project defined at `Set the config repository location`
+To be an `internal` administrator, just set an [`authorization-rule`](https://zuul-ci.org/docs/zuul/latest/tenants.html#authorization-rule) named `admin-internal` in the config project defined in `Set the config repository location`

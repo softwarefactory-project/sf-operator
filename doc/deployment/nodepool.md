@@ -2,14 +2,14 @@
 
 Here you will find information about managing the Nodepool service when deployed with the SF Operator.
 It does not replace [Nodepool's documentation](https://zuul-ci.org/docs/nodepool/latest/),
-but addresses specificities and idiosyncrasies induced by deploying Nodepool with the SF Operator.
+but addresses specificities and idiosyncrasies of deploying Nodepool with the SF Operator.
 
 
 1. [Architecture](#architecture)
 1. [Services configuration](#services-configuration)
-1. [Setting up providers secrets](#setting-up-providers-secrets)
+1. [Setting up provider secrets](#setting-up-providers-secrets)
 1. [Get the builder's SSH public key](#get-the-builders-ssh-public-key)
-1. [Using the openshifpods driver with your cluster](#using-the-openshiftpods-driver-with-your-cluster)
+1. [Using the openshiftpods driver with your cluster](#using-the-openshiftpods-driver-with-your-cluster)
 1. [Using the Nodepool CLI](#using-the-nodepool-cli)
 1. [Troubleshooting](#troubleshooting)
 
@@ -23,20 +23,19 @@ Nodepool is deployed by SF-Operator as micro-services:
 | nodepool-builder | statefulset | N |
 
 `nodepool-builder` requires access to at least one `image-builder` machine that is to be deployed out-of-band. Due to security limitations,
-it is impossible (or at least very hard) to build Nodepool images on a pod, which is why this process must be delegated remotely to an `image-builder` machine.
+it is impossible (or at least very hard) to build Nodepool images in a pod, which is why this process must be delegated remotely to an `image-builder` machine.
 
 !!! note
     The only requirement for the `image-builder` machine is that the `nodepool-builder` is able to run Ansible tasks via SSH. Please refer to sections [Get the builder's SSH public key](#get-the-builders-ssh-public-key) and [Configuring Nodepool builder](../user/nodepool_config_repository.md#configuring-nodepool-builder).
 
 !!! note
-    There is no assumption about the processes and toolings used to build images on the `image-builder`, except that the workflow must be driven by an Ansible playbook from the `nodepool-builder`.
+    There is no assumption about the processes and tooling used to build images on the `image-builder`, except that the workflow must be driven by an Ansible playbook from the `nodepool-builder`.
 
 ## Services configuration
 
-Configuring the Nodepool micro-services is done through the SoftwareFactory deployment's manifest. Many configuration parameters are exposed by The [SoftwareFactory Custom Resource spec](../deployment/crds.md#softwarefactory).
+Configuring the Nodepool micro-services is done through the SoftwareFactory deployment's manifest. Many configuration parameters are exposed by the [SoftwareFactory Custom Resource spec](../deployment/crds.md#softwarefactory).
 
-The spec is constantly evolving during alpha development, and should be considered
-unstable but the ultimate source of truth for documentation about its properties.
+The spec is constantly evolving during alpha development and should be considered unstable, but it is the ultimate source of truth for documentation about its properties.
 
 ## Setting up providers secrets
 
@@ -58,7 +57,7 @@ When your deployment is ready, the provider secrets have been updated in Nodepoo
 ## Get the builder's SSH public key
 
 The Nodepool builder component should be used with at least one `image-builder` companion machine.
-It must have the capablility to connect via SSH to the builder machine.
+It must have the capability to connect via SSH to the builder machine.
 
 There are two ways to fetch the builder SSH public key: with kubectl, or with the [sf-operator CLI](../reference/cli/index.md).
 
@@ -76,7 +75,7 @@ There are two ways to fetch the builder SSH public key: with kubectl, or with th
 
 ## Accept an image-builder's SSH Host key
 
-Once an account has been created to an `image-builder` host the `nodepool-builder` must trust the SSH Host key before being able to connect. Run the following command to initiate a SSH connection and trust the host key:
+Once an account has been created on an `image-builder` host, the `nodepool-builder` must trust the SSH host key before being able to connect. Run the following command to initiate a SSH connection and trust the host key:
 
 ```sh
 kubectl exec -it nodepool-builder-0 -c nodepool-builder -- ssh nodepool@<image-builder-hostname> hostname
@@ -87,7 +86,7 @@ kubectl exec -it nodepool-builder-0 -c nodepool-builder -- ssh nodepool@<image-b
 Nodepool's [Openshiftpods driver](https://zuul-ci.org/docs/nodepool/latest/openshift-pods.html) enables
 Zuul to request pods from an OpenShift cluster to run jobs.
 
-We recommend using a dedicated namespace with the driver (if you intend to spawn pods in the same OpenShift cluster than the one your deployment lives in).
+We recommend using a dedicated namespace with the driver (if you intend to spawn pods in the same OpenShift cluster as the one your deployment lives in).
 
 The [`sf-operator` CLI](./../reference/cli/index.md#create-openshiftpods-namespace) can automate the creation of such a namespace, and set up the required kube config as a Nodepool secret:
 
@@ -114,7 +113,7 @@ labels will be available in Nodepool.
 
 ## Using the Nodepool CLI
 
-The `nodepool` command line utility is available on `nodepool-launcher` pods.
+The `nodepool` command-line utility is available on `nodepool-launcher` pods.
 
 To get the list of currently running launcher pods:
 
@@ -132,9 +131,9 @@ Then from that shell, run the `nodepool` command.
 
 ## Troubleshooting
 
-### How to connect on a ready node from the launcher pod
+### How to connect to a ready node from the launcher pod
 
-`nodepool list` is used to list all node managed by the launcher and their current status.
+`nodepool list` is used to list all nodes managed by the launcher and their current status.
 
 ```sh
 $ kubectl exec -ti nodepool-launcher-$uuid -c launcher -- nodepool list
@@ -153,4 +152,4 @@ np0000000001
 
 Nodepool exposes some [API endpoints](https://zuul-ci.org/docs/nodepool/latest/operation.html#web-interface).
 
-For instance, to reach the `image-list` endpoint a user can access the following URL: `https://<fqdn>/nodepool/api/image-list`.
+For instance, to reach the `image-list` endpoint, a user can access the following URL: `https://<fqdn>/nodepool/api/image-list`.

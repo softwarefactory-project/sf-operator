@@ -23,7 +23,7 @@ General information about architectural decision records is available at <https:
 1. [Zuul System config](./0002-zuul-system-config.md)
 1. [Config update workflow - base system](./0003-config-update.md)
 1. [Expose main.yaml to Zuul scheduler](./0004-zuul-main.md)
-1. [Command line tool to setup an manage sf-operator deployment](./0005-ops-tooling.md)
+1. [Command-line tool to set up and manage sf-operator deployment](./0005-ops-tooling.md)
 1. [Operator and Operand Metrics Collection](./0006-monitoring.md)
 1. [Edge certificates management](./0007-edge-cert.md)
 1. [Config check and update jobs implementation](./0008-config-jobs.md)

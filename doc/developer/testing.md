@@ -4,9 +4,9 @@ Tests run in the [project's CI](https://zuul.microshift.softwarefactory-project.
 { .annotate }
 
 1. This command is a wrapper on top of `ansible-playbook` to run the same Ansible playbook
-   than the CI. This includes steps to deploy the operator if needed.
+   as the CI. This includes steps to deploy the operator if needed.
 
-The command requires a configuration file that can be intialized with `go run main.go init config`.
+The command requires a configuration file that can be initialized with `go run main.go init config`.
 The path to the configuration file must be specified via the `--config` parameter. A valid file
 for running CI jobs locally is available in `playbooks/files/sf-operator-cli.yaml`.
 
@@ -53,11 +53,11 @@ go run main.go --config playbooks/files/sf-operator-cli.yaml dev run-tests upgra
 
 ### The standalone validation test
 
-The `standalone` tests (1)  (similar to `sf-operator-dev-multinode` in the Zuul CI) performs
+The `standalone` tests (1)  (similar to `sf-operator-dev-multinode` in the Zuul CI) perform
 a standalone deployment and run the validation test suite.
 { .annotate }
 
-1. This is fastest way to run the test suite when iterating on the development of the `sf-operator`.
+1. This is the fastest way to run the test suite when iterating on the development of the `sf-operator`.
 
 ```sh
 go run main.go --config playbooks/files/sf-operator-cli.yaml dev run-tests standalone

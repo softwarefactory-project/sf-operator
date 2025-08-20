@@ -11,7 +11,7 @@ This document lists some methods that can be used to debug the various component
 
 A good way to debug pods is to use the [oc debug](https://docs.openshift.com/container-platform/4.13/cli_reference/openshift_cli/developer-cli-commands.html#oc-debug) command.
 
-The debug command makes an exact copy of the pod passed as argument. It will then start a shell session as any user if specified.
+The debug command makes an exact copy of the pod passed as an argument. It will then start a shell session as any specified user.
 
 ### Examples
 ```
@@ -26,13 +26,13 @@ Delve is a Go debugger. Follow this [documentation](https://github.com/go-delve/
 
 ### Example debugging session
 
-Let's assume an error is occuring in the function `DeployLogserver`, and to be more precise
+Let's assume an error is occurring in the function `DeployLogserver`, and to be more precise,
 when the function `UpdateR` is called within `DeployLogServer`.
 
 To check calls and analyze code:
 
 ```sh
-# in that step, we assume that a SF resource has been created beforehand, and we are doing a re-run
+# in that step, we assume that an SF resource has been created beforehand, and we are doing a re-run
 # of the sf-operator in dev mode.
 dlv debug main.go --namespace sf
 ```
@@ -59,16 +59,16 @@ Short cheat sheet:
 # shows local variables
 locals
 
-# show what "annotations" variable contains
+# show what the "annotations" variable contains
 print annotations
 
 # show current step/code
 list (alias l)
 
-# overwrite variable
+# overwrite a variable
 set annotations = <something>
 
-# call function, eg.:
+# call a function, e.g.:
 call r.Client.Status().Update(ctx, &cr)
 ```
 

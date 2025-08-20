@@ -30,7 +30,7 @@ The zuul executor component(s) require access to the following control plane ser
 - The system-config git server (9418/TCP)
 - The logs server (2222/TCP)
 
-A way to enable ingress on such service is to use a Service Resource of type LoadBalancer:
+A way to enable ingress on such a service is to use a Service Resource of type LoadBalancer:
 
 ```yaml
 ---
@@ -79,7 +79,7 @@ spec:
 
 ## Executor
 
-The `SoftwareFactory`'s CR to deploy only the `zuul-executor` component (on a cluster allowing the `Privileged` SCC) must be as followed:
+The `SoftwareFactory`'s CR to deploy only the `zuul-executor` component (on a cluster allowing the `Privileged` SCC) must be as follows:
 
 ```yaml
 apiVersion: sf.softwarefactory-project.io/v1
@@ -96,7 +96,7 @@ spec:
         publicHostname: <hostname-or-ip-of-executor>
 ```
 
-Some secrets must be synchronized between the control plane's namespace to the zuul-executor namespace. Here is the list
+Some secrets must be synchronized between the control plane's namespace and the zuul-executor namespace. Here is the list
 of secrets that must be synchronized:
 
 - ca-cert
@@ -112,11 +112,11 @@ kubectl --config ~/.kube/control-plan.yaml get secrets ca-cert -o json | \
   kubectl --config ~/.kube/external-ze-01.yaml apply -n ext-ze -f
 ```
 
-Zuul's connection definition must be similar in both Custom Resource, and connection's secrets must be synchronized between
-the control plane's namespace to the zuul-executor namespace.
+Zuul's connection definition must be similar in both Custom Resources, and the connection's secrets must be synchronized between
+the control plane's namespace and the zuul-executor namespace.
 
-The control plan `zuul-web` must be able to access `zuul-executor` component(s) finger port 7900.
-To do so the following service can be defined:
+The control plane `zuul-web` must be able to access the `zuul-executor` component(s) finger port 7900.
+To do so, the following service can be defined:
 
 ```yaml
 apiVersion: v1
