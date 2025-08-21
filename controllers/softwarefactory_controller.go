@@ -16,6 +16,7 @@ import (
 
 	"github.com/fatih/color"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"gopkg.in/yaml.v3"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -657,10 +658,17 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 			Name:      controllerCMName,
 			Namespace: ns,
 		}}
+	controllerAnnotations := map[string]string{
+		"sf-operator-version": utils.GetVersion(),
+		"last-reconcile":      strconv.FormatInt(time.Now().Unix(), 10),
+	}
 	err := r.Client.Get(
 		ctx, client.ObjectKey{Name: controllerCMName, Namespace: ns}, &controllerCM)
 	if err != nil && k8s_errors.IsNotFound(err) {
-		controllerCM.Data = nil
+		marshaledSpec, _ := yaml.Marshal(sf.Spec)
+		controllerCM.Data = map[string]string{
+			"spec": string(marshaledSpec),
+		}
 		logging.LogI("Creating ConfigMap, name: " + controllerCMName)
 		// Create the fake controller configMap
 		if err := r.Create(ctx, &controllerCM); err != nil {
@@ -668,7 +676,6 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 			return err
 		}
 	}
-
 	sfCtrl := r.mkSFController(ctx, ns, &controllerCM, sf, true)
 	attempt := 0
 
@@ -680,6 +687,19 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 		}
 		if status.Ready {
 			log.Info("Standalone reconcile done.")
+			log.Info("Updating controller configmap ...")
+			if err := r.Client.Get(
+				ctx, client.ObjectKey{Name: controllerCMName, Namespace: ns}, &controllerCM); err == nil {
+				controllerCM.ObjectMeta.Annotations = controllerAnnotations
+				if err := r.Update(ctx, &controllerCM); err != nil {
+					log.Error(err, "Unable to update configMap", "name", controllerCMName)
+					return err
+				} else {
+					log.Info("Controller configmap is up to date.")
+				}
+			} else {
+				log.Error(err, "Controller configmap not found")
+			}
 			return nil
 		}
 		log.Info("[attempt #" + strconv.Itoa(attempt) + "] Waiting 5s for the next reconcile call ...")

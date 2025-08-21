@@ -138,6 +138,7 @@ func main() {
 		cmd.MkInitCmd(),
 		cmd.MkSFCmd(),
 		cmd.MkNodepoolCmd(),
+		cmd.MkVersionCmd(),
 		operatorCmd,
 		dev.MkDevCmd(),
 		zuul.MkZuulCmd(),

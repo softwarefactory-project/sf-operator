@@ -40,3 +40,21 @@
     # - health-check/config-update-nodepool-builder
     # - health-check/test-nodepool-launcher-pod
     # - health-check/test-volumestats-sidecar
+
+  tasks:
+    # test versioning
+    - name: Register CLI version
+      register: cli_version
+      ansible.builtin.shell: |
+        set -o pipefail
+        go run main.go version
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
+
+    - name: ensure annotations are present on sf-standalone-owner
+      ansible.builtin.shell: "kubectl -n sf get configmap sf-standalone-owner -o jsonpath='{.metadata.annotations}'"
+      register: cm_annotations
+      failed_when:
+        - "'last_reconciled' not in cm_annotations.stdout"
+        - "'version' not in cm_annotations.stdout"
+        - "cli_version.stdout not in cm_annotations.stdout"

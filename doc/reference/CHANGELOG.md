@@ -7,6 +7,10 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Enable storage (PVC) configuration and resizing for the `logjuicer` component.
+- CLI: add the `version` subcommand, displaying the current version of the executable.
+- standalone mode: the sf-standalone-owner configMap is annotated with the CLI's version that
+  deployed the resource, and the end time of the deployment. The configMap's data
+  is also set to hold the last applied SoftwareFactory spec.
 
 ### Changed
 

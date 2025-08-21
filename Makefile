@@ -18,6 +18,8 @@ CATALOG_IMG ?= $(CATALOG_REPO):latest
 ENVTEST_K8S_VERSION = 1.29.0
 CERT_MANAGER_VERSION = v1.14.6
 
+LDFLAGS = -ldflags="-X github.com/softwarefactory-project/sf-operator/controllers/libs/utils.version=$(VERSION)"
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -93,7 +95,7 @@ setenv:
 
 .PHONY: build
 build: setenv generate fmt vet sc build-api-doc ## Build manager binary.
-	go build -o bin/sf-operator main.go
+	go build $(LDFLAGS) -o bin/sf-operator main.go
 
 .PHONY: build-api-doc
 build-api-doc: # Build the API documentation.
@@ -101,7 +103,7 @@ build-api-doc: # Build the API documentation.
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run main.go
+	go run $(LDFLAGS) main.go
 
 .PHONY: operator-build
 operator-build: ## Build podman image with the manager.

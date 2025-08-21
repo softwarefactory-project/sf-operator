@@ -31,6 +31,7 @@ deployments, beyond what can be defined in a custom resource manifest.
     - [create auth-token](#create-auth-token)
     - [create client-config](#create-client-config)
   1. [Deploy](#deploy-sf)
+  1. [Version](#version)
 
 ## Installing the CLI
 
@@ -508,3 +509,8 @@ a Software Factory manifest as input and deploy all the required services as a o
 ```sh
 sf-operator [GLOBAL FLAGS] deploy /path/to/manifest
 ```
+
+### Version
+
+Return the version of the executable. If run directly without building the executable first (i.e. with `go run ./main.go`),
+this command requires `git` to be installed in the environment. It must also be running from the project's source directory.
