@@ -572,7 +572,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"zuul-image":                 getZuulImage("zuul-executor"),
-		"serial":                     "10",
+		"serial":                     "11",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
@@ -582,6 +582,24 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	zeStorage := r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage)
 	ze := r.mkHeadlessStatefulSet("zuul-executor", "", zeStorage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	zuulContainer := r.mkZuulContainer("zuul-executor", corporateCMExists)
+
+	// Add a preStop hook for a controlled shutdown. When a Pod terminates,
+	// this command runs *before* SIGTERM is sent. The hook and subsequent process
+	// cleanup must complete within the terminationGracePeriodSeconds to avoid a SIGKILL.
+	// As gracefull command returns and the graceful happen in background
+	// then we also sleep inf to let the desired time for the Zuul executor
+	// to shutdown.
+	zuulContainer.Lifecycle = &apiv1.Lifecycle{}
+	zuulContainer.Lifecycle.PreStop = &apiv1.LifecycleHandler{
+		Exec: &apiv1.ExecAction{
+			Command: []string{
+				"sh",
+				"-c",
+				"zuul-executor graceful && sleep inf",
+			},
+		},
+	}
+
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Executor.Limits, &zuulContainer)
 	ze.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
 	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor", r, corporateCMExists)

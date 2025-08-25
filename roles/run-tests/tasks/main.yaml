@@ -26,11 +26,13 @@
     - name: check-zuul-weeder
     - name: enable-log-forward
     - name: scale-resources
+    - name: zuul-components
     - name: zuul-connections
     - name: zuul-authenticators
     - name: config-update-zuul
     - name: check-logjuicer
     - name: zuul-demo-tenant-workflow
+    - name: zuul-executor-ensure-graceful-stop
     - name: test-nodepool-providers-secrets
     - name: config-update-nodepool-launcher
     - name: config-update-nodepool-builder
@@ -41,7 +43,6 @@
       when: "{{ mode == 'olm' }}"
     - name: zuul-client-api
     - name: zuul-client-from-zuul-pod
-    - name: zuul-components
     - name: test-external-ze
     - name: test-log-forwarding
     - name: test-backup-restore

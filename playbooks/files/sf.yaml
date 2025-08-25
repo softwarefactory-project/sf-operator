@@ -16,6 +16,8 @@ spec:
         verifyssl: false
     executor:
       logLevel: DEBUG
+    web:
+      logLevel: DEBUG
   logserver:
     loopDelay: 3600
     retentionDays: 30

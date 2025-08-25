@@ -1,4 +1,16 @@
 ---
+- name: Scale down executor statefulset to ensure 1 replica only
+  ansible.builtin.command:
+    kubectl -n sf scale statefulsets zuul-executor --replicas=1
+
+- name: Wait for only 1 executor running
+  ansible.builtin.shell: curl -sk https://{{ zuul_endpoint }}/api/components | jq -r '.executor | length'
+  register: _executors_count
+  until:
+    - _executors_count.stdout == "1"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+
 - name: Ensure we are on the default branch
   ansible.builtin.command: git checkout master
   args:
@@ -34,6 +46,16 @@
   retries: "{{ zuul_api_retries }}"
   delay: "{{ zuul_api_delay }}"
 
+# We've seen that if the SIGTERM (sent by k8s due to the replicas set to 0) is sent during job preparation git commands may be stopped ... see https://issues.redhat.com/browse/RHOSZUUL-2681. However as of now we use a preStop command for the Zuul executor container thus we can comment the following ...
+
+# - name: Wait for the job to start based on console startup to make sure the job context is settle
+#   ansible.builtin.include_role:
+#     name: health-check/repo-submit-change
+#     tasks_from: ensure-zuul-console-success
+#   vars:
+#     zuul_tenant: demo-tenant
+#     success_job: demo-job-check-url
+
 - name: Scale down executor statefulset to trigger a graceful stop
   ansible.builtin.command:
     kubectl -n sf scale statefulsets zuul-executor --replicas=0
@@ -43,7 +65,7 @@
   register: _executor_state_300
   until:
     - _executor_state_300.stdout != ""
-    - "'paused' in _executor_state_300.stdout or 'stopped' in _executor_state_300.stdout"
+    - "'paused' in _executor_state_300.stdout"
   retries: "{{ zuul_api_retries }}"
   delay: "{{ zuul_api_delay }}"
 
