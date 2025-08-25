@@ -379,21 +379,46 @@ func (r *SFUtilContext) getPods(dep *appsv1.StatefulSet) ([]apiv1.Pod, bool) {
 
 // IsStatefulSetReady checks if StatefulSet is ready
 func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
-	_, ok := r.getPods(dep)
-	if ok {
-		// All containers in Ready state
-		return base.IsStatefulSetRolloutDone(dep)
+	logging.LogI("Waiting for statefulset, name: " + dep.ObjectMeta.GetName())
+	rolloutOk := base.IsStatefulSetRolloutDone(dep)
+	if rolloutOk {
+		_replicas := dep.Spec.Replicas
+		var replicas int32
+		if _replicas == nil {
+			replicas = 1
+		} else {
+			replicas = *_replicas
+		}
+		if replicas > 0 {
+			_, ok := r.getPods(dep)
+			return ok
+		} else {
+			// Nothing left to do
+			return true
+		}
 	}
-	// No Replica available
 	return false
 }
 
-// IsDeploymentReady checks if StatefulSet is ready
+// IsDeploymentReady checks if Deployment is ready
 func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
-	if base.IsDeploymentReady(dep) {
-		return true
-	}
 	logging.LogI("Waiting for deployment, name: " + dep.ObjectMeta.GetName())
+	rolloutOk := base.IsDeploymentRolloutDone(dep)
+	if rolloutOk {
+		_replicas := dep.Spec.Replicas
+		var replicas int32
+		if _replicas == nil {
+			replicas = 1
+		} else {
+			replicas = *_replicas
+		}
+		if replicas > 0 {
+			// At least one replica up is enough
+			return dep.Status.ReadyReplicas > 0
+		} else {
+			return true
+		}
+	}
 	return false
 }
 

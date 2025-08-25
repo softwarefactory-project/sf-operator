@@ -31,6 +31,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Fix readiness check hanging forever if a statefulset's replica count is set to zero prior to running the "deploy" command.
 - Ensure the trailing '/' when accessing `https://<domain>/logjuicer`. The web app was failing without the trailing slash.
 - zuul: when the user provides a connection named `opendev.org`, the operator no longer adds its own Git connection and uses the one provided by the user for accessing zuul-jobs.
 - zuul-capacity: the corporate CA certificate is now part of the CA trust chain if provided.

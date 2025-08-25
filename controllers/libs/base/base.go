@@ -437,10 +437,6 @@ func IsDeploymentRolloutDone(obj *appsv1.Deployment) bool {
 		obj.Status.Replicas == obj.Status.AvailableReplicas
 }
 
-func IsDeploymentReady(dep *appsv1.Deployment) bool {
-	return dep.Status.ReadyReplicas > 0 && IsDeploymentRolloutDone(dep)
-}
-
 func CreateHostAliases(hostAliases []v1.HostAlias) []apiv1.HostAlias {
 	// Add hostAliases
 	// https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/#adding-additional-entries-with-hostaliases
