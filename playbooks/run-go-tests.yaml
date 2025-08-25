@@ -1,0 +1,9 @@
+---
+- name: Run Go tests using Makefile
+  hosts: controller
+  gather_facts: false
+  tasks:
+    - name: Execute 'make test'
+      ansible.builtin.shell:
+        cmd: "make test"
+        chdir: "{{ zuul.project.src_dir }}"

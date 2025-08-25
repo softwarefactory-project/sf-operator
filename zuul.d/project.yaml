@@ -4,6 +4,7 @@
         - sf-operator-minikube
         - sf-operator-vuln-check
         - sf-operator-ansible-lint
+        - sf-operator-go-test
         - sf-operator-olm-rhel
         - sf-operator-upgrade-rhel
     gate:
@@ -11,6 +12,7 @@
         - sf-operator-minikube
         - sf-operator-vuln-check
         - sf-operator-ansible-lint
+        - sf-operator-go-test
         - sf-operator-olm-rhel
         - sf-operator-upgrade-rhel
     release:

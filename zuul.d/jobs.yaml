@@ -83,6 +83,20 @@
         - name: controller
           label: cloud-centos-9
 
+# Go testing job
+- job:
+    name: sf-operator-go-test
+    description: Run Go unit and integration tests via 'make test'
+    pre-run: playbooks/install-golang.yaml
+    timeout: 900
+    irrelevant-files: *irrelevant-files
+    nodeset:
+      nodes:
+        - name: controller
+          label: cloud-centos-9
+    run: playbooks/run-go-tests.yaml
+    voting: false
+
 # sf-operator on microshift jobs
 - job:
     name: sf-operator-olm-rhel
