@@ -18,3 +18,7 @@
     # Fetch repos stored on code review service
     - ansible.builtin.include_role:
           name: post/get-repos
+
+    # Fetch collected logs from loki
+    - ansible.builtin.include_role:
+          name: post/get-loki-logs
