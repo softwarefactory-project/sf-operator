@@ -73,7 +73,7 @@
     nodeset:
       nodes:
         - name: controller
-          label: cloud-centos-9-small
+          label: zuul-worker-f41
 
 - job:
     name: sf-operator-vuln-check
@@ -81,7 +81,7 @@
     nodeset:
       nodes:
         - name: controller
-          label: cloud-centos-9
+          label: zuul-worker-f41
 
 # Go testing job
 - job:
