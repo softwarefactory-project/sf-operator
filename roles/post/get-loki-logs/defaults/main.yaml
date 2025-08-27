@@ -1,4 +1,4 @@
 ---
 output_logs_dir: ~/zuul-output/logs
 output_dir: "{{ output_logs_dir }}/loki-logs"
-line_format_query: !unsafe "line_format \"{{.labels_run}}: {{.log}}\""
+line_format_query: !unsafe "line_format \"{{.labels_run}}: {{.message}}\""
