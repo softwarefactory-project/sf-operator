@@ -4,20 +4,20 @@
 images:
     - name: zuul-scheduler
       container: quay.io/software-factory/zuul-scheduler
-      version: 12.0.0-20250827-2
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=7e546e07e50ca9202e22518e987ffec31e3e0b6e
+      version: 12.1.0-20250827-3
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=9010e4085db357ffbbf8e721ed6d78c592fe2ee8
     - name: zuul-executor
       container: quay.io/software-factory/zuul-executor
-      version: 12.0.0-20250827-2
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=7e546e07e50ca9202e22518e987ffec31e3e0b6e
+      version: 12.1.0-20250827-3
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=9010e4085db357ffbbf8e721ed6d78c592fe2ee8
     - name: zuul-merger
       container: quay.io/software-factory/zuul-merger
-      version: 12.0.0-20250827-2
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=7e546e07e50ca9202e22518e987ffec31e3e0b6e
+      version: 12.1.0-20250827-3
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=9010e4085db357ffbbf8e721ed6d78c592fe2ee8
     - name: zuul-web
       container: quay.io/software-factory/zuul-web
-      version: 12.0.0-20250827-2
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=7e546e07e50ca9202e22518e987ffec31e3e0b6e
+      version: 12.1.0-20250827-3
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=9010e4085db357ffbbf8e721ed6d78c592fe2ee8
     - name: nodepool-launcher
       container: quay.io/software-factory/nodepool-launcher
       version: 11.0.0-20250827-1
