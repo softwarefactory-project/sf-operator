@@ -1,10 +1,11 @@
+---
 - name: Ensure no diff (manifests generated)
   when: not remote_os_host
   block:
-    - name: Run make
-      ansible.builtin.command: make
-      args:
+    - name: Run make build
+      community.general.make:
         chdir: "{{ zuul.project.src_dir }}"
+        target: build
 
     # for some reasons, LICENSE file was updated with cert-manager license during go build
     - name: Check for diff
