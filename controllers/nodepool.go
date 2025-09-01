@@ -567,8 +567,8 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	nb.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nb.Spec.Template.Spec.Volumes = volumes
 	nb.Spec.Template.Spec.Containers[0].Command = []string{
-		"/usr/local/bin/dumb-init", "--", "bash", "-c",
-		"/usr/local/bin/nodepool-builder -f -l /etc/nodepool-logging/logging.yaml",
+		"/usr/local/bin/dumb-init", "-c", "--",
+		"/usr/local/bin/nodepool-builder", "-f", "-l", "/etc/nodepool-logging/logging.yaml",
 	}
 	nb.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 	nb.Spec.Template.Spec.Containers[0].Env = r.getNodepoolConfigEnvs()
@@ -761,8 +761,8 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	container := base.MkContainer("launcher", base.NodepoolLauncherImage(), r.isOpenShift)
 	container.VolumeMounts = volumeMounts
 	container.Command = []string{
-		"/usr/local/bin/dumb-init", "--", "bash", "-c",
-		"/usr/local/bin/nodepool-launcher -f -l /etc/nodepool-logging/logging.yaml",
+		"/usr/local/bin/dumb-init", "-c", "--",
+		"/usr/local/bin/nodepool-launcher", "-f", "-l", "/etc/nodepool-logging/logging.yaml",
 	}
 	container.Env = r.getNodepoolConfigEnvs()
 	base.SetContainerLimitsHighProfile(&container)

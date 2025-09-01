@@ -234,7 +234,7 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 	container := apiv1.Container{
 		Name:  service,
 		Image: getZuulImage(service),
-		Command: []string{"/usr/local/bin/dumb-init", "--", "bash", "-c",
+		Command: []string{"/usr/local/bin/dumb-init", "-c", "--", "bash", "-c",
 			// Trigger the update of the CA Trust chain
 			UpdateCATrustCommand + " && " +
 				// https://git-scm.com/docs/git-config#Documentation/git-config.txt-safedirectory
@@ -242,7 +242,7 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 				// to bypass the git ownership verification
 				"git config --global --add safe.directory '*'" + " && " +
 				// Start the service
-				"/usr/local/bin/" + service + " -f -d"},
+				"exec /usr/local/bin/" + service + " -f -d"},
 		Env:             envs,
 		VolumeMounts:    volumeMounts,
 		SecurityContext: base.MkSecurityContext(false, r.isOpenShift),
@@ -253,8 +253,8 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 	if service == "zuul-scheduler" {
 		// For the scheduler we do not run the update-ca-trust because the initContainer
 		// already handles that task.
-		container.Command = []string{"/usr/local/bin/dumb-init", "--", "bash", "-c",
-			"/usr/local/bin/zuul-scheduler -f -d"}
+		container.Command = []string{"/usr/local/bin/dumb-init", "-c", "--",
+			"/usr/local/bin/zuul-scheduler", "-f", "-d"}
 	}
 
 	return container
@@ -582,24 +582,6 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	zeStorage := r.getStorageConfOrDefault(r.cr.Spec.Zuul.Executor.Storage)
 	ze := r.mkHeadlessStatefulSet("zuul-executor", "", zeStorage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
 	zuulContainer := r.mkZuulContainer("zuul-executor", corporateCMExists)
-
-	// Add a preStop hook for a controlled shutdown. When a Pod terminates,
-	// this command runs *before* SIGTERM is sent. The hook and subsequent process
-	// cleanup must complete within the terminationGracePeriodSeconds to avoid a SIGKILL.
-	// As gracefull command returns and the graceful happen in background
-	// then we also sleep inf to let the desired time for the Zuul executor
-	// to shutdown.
-	zuulContainer.Lifecycle = &apiv1.Lifecycle{}
-	zuulContainer.Lifecycle.PreStop = &apiv1.LifecycleHandler{
-		Exec: &apiv1.ExecAction{
-			Command: []string{
-				"sh",
-				"-c",
-				"zuul-executor graceful && sleep inf",
-			},
-		},
-	}
-
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Executor.Limits, &zuulContainer)
 	ze.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
 	ze.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-executor", r, corporateCMExists)

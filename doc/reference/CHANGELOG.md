@@ -35,7 +35,6 @@ All notable changes to this project will be documented in this file.
 - Ensure the trailing '/' when accessing `https://<domain>/logjuicer`. The web app was failing without the trailing slash.
 - zuul: when the user provides a connection named `opendev.org`, the operator no longer adds its own Git connection and uses the one provided by the user for accessing zuul-jobs.
 - zuul-capacity: the corporate CA certificate is now part of the CA trust chain if provided.
-- zuul graceful stop is now better handled by the use of a container's `preStop` command.
 
 ## [v0.0.57] - 2025-04-24
 
