@@ -252,6 +252,7 @@ func (r *SFController) EnsureToolingVolume() {
 	schedulerToolingData := make(map[string]string)
 	schedulerToolingData["init-container.sh"] = zuulSchedulerInitContainerScript
 	schedulerToolingData["generate-zuul-tenant-yaml.sh"] = zuulGenerateTenantConfig
+	schedulerToolingData["reconnect-zk.py"] = zuulReconnectZK
 	schedulerToolingData["fetch-config-repo.sh"] = fetchConfigRepoScript
 	schedulerToolingData["hound-search-init.sh"] = houndSearchInit
 	schedulerToolingData["hound-search-config.sh"] = houndSearchConfig
@@ -584,6 +585,7 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 			ctx:        ctx,
 			owner:      owner,
 			standalone: standalone,
+			zkChanged:  false,
 		},
 		cr:            cr,
 		isOpenShift:   CheckOpenShift(),

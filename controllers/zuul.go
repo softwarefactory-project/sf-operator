@@ -57,6 +57,9 @@ var (
 	//go:embed static/zuul/generate-tenant-config.sh
 	zuulGenerateTenantConfig string
 
+	//go:embed static/zuul/reconnect-zk.py
+	zuulReconnectZK string
+
 	//go:embed static/zuul/logging.yaml.tmpl
 	zuulLoggingConfig string
 
@@ -218,6 +221,12 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 				Name:      "tooling-vol",
 				SubPath:   "zuul-change-dump.py",
 				MountPath: "/usr/local/bin/zuul-change-dump.py",
+				ReadOnly:  true,
+			},
+			apiv1.VolumeMount{
+				Name:      "tooling-vol",
+				SubPath:   "reconnect-zk.py",
+				MountPath: "/usr/local/bin/reconnect-zk.py",
 				ReadOnly:  true,
 			},
 		)

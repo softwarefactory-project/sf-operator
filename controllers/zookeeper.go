@@ -162,6 +162,7 @@ func (r *SFController) DeployZookeeper() bool {
 
 	current, changed := r.ensureStatefulset(storageConfig.StorageClassName, zk)
 	if changed {
+		r.zkChanged = true
 		return false
 	}
 
@@ -178,5 +179,10 @@ func (r *SFController) DeployZookeeper() bool {
 	isReady := r.IsStatefulSetReady(current) && pvcReadiness
 	conds.UpdateConditions(&r.cr.Status.Conditions, ZookeeperIdent, isReady)
 
+	if isReady && r.zkChanged {
+		logging.LogI("Running reconnect-zk.py on the scheduler to force a reconnection.")
+		r.RunPodCmd("zuul-scheduler-0", "zuul-scheduler", []string{"/usr/local/bin/reconnect-zk.py"})
+		r.zkChanged = false
+	}
 	return isReady
 }
