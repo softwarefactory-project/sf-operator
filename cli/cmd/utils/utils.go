@@ -49,8 +49,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/kubectl/pkg/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -550,27 +548,8 @@ func GetClientset(kubeContext string) (*rest.Config, *kubernetes.Clientset) {
 
 func RunRemoteCmd(kubeContext string, namespace string, podName string, containerName string, cmdArgs []string) *bytes.Buffer {
 	restConfig, kubeClientset := GetClientset(kubeContext)
-	buffer := &bytes.Buffer{}
-	errorBuffer := &bytes.Buffer{}
-	request := kubeClientset.CoreV1().RESTClient().Post().Resource("Pods").Namespace(namespace).Name(podName).SubResource("exec").VersionedParams(
-		&apiv1.PodExecOptions{
-			Container: containerName,
-			Command:   cmdArgs,
-			Stdin:     false,
-			Stdout:    true,
-			Stderr:    true,
-		},
-		scheme.ParameterCodec,
-	)
-	exec, _ := remotecommand.NewSPDYExecutor(restConfig, "POST", request.URL())
-	err := exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
-		Stdout: buffer,
-		Stderr: errorBuffer,
-	})
+	buffer, err := controllers.RunPodCmdRaw(restConfig, kubeClientset, namespace, podName, containerName, cmdArgs)
 	if err != nil {
-		errMsg := fmt.Sprintf("Command \"%s\" [Pod: %s - Container: %s] failed with the following stderr: %s",
-			strings.Join(cmdArgs, " "), podName, containerName, errorBuffer.String())
-		logging.LogE(err, errMsg)
 		os.Exit(1)
 	}
 	return buffer

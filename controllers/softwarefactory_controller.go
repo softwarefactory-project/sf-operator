@@ -17,6 +17,7 @@ import (
 	"github.com/fatih/color"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/strings/slices"
 
@@ -567,12 +568,18 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 		fmt.Fprintf(os.Stderr, "The git-server connection name is reserved, please rename it")
 		os.Exit(1)
 	}
+	clientSet, err2 := kubernetes.NewForConfig(r.RESTConfig)
+	if err2 != nil {
+		ctrl.Log.Error(err, "Invalid client")
+		os.Exit(1)
+	}
 	return SFController{
 		SFUtilContext: SFUtilContext{
 			Client:     r.Client,
 			Scheme:     r.Scheme,
 			RESTClient: r.RESTClient,
 			RESTConfig: r.RESTConfig,
+			ClientSet:  clientSet,
 			ns:         ns,
 			ctx:        ctx,
 			owner:      owner,

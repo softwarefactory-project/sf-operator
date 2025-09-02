@@ -6,6 +6,7 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	e "errors"
@@ -20,8 +21,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/kubectl/pkg/scheme"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -58,6 +61,7 @@ type SFUtilContext struct {
 	Scheme     *runtime.Scheme
 	RESTClient rest.Interface
 	RESTConfig *rest.Config
+	ClientSet  *kubernetes.Clientset
 	ns         string
 	ctx        context.Context
 	owner      client.Object
@@ -780,4 +784,35 @@ func AppendToolingVolume(volumeMounts []apiv1.Volume) []apiv1.Volume {
 				DefaultMode: &utils.Execmod,
 			},
 		}})
+}
+
+func RunPodCmdRaw(restConfig *rest.Config, kubeClientset *kubernetes.Clientset, namespace string, podName string, containerName string, cmdArgs []string) (*bytes.Buffer, error) {
+	buffer := &bytes.Buffer{}
+	errorBuffer := &bytes.Buffer{}
+	request := kubeClientset.CoreV1().RESTClient().Post().Resource("Pods").Namespace(namespace).Name(podName).SubResource("exec").VersionedParams(
+		&apiv1.PodExecOptions{
+			Container: containerName,
+			Command:   cmdArgs,
+			Stdin:     false,
+			Stdout:    true,
+			Stderr:    true,
+		},
+		scheme.ParameterCodec,
+	)
+	exec, _ := remotecommand.NewSPDYExecutor(restConfig, "POST", request.URL())
+	err := exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
+		Stdout: buffer,
+		Stderr: errorBuffer,
+	})
+	if err != nil {
+		errMsg := fmt.Sprintf("Command \"%s\" [Pod: %s - Container: %s] failed with the following stderr: %s",
+			strings.Join(cmdArgs, " "), podName, containerName, errorBuffer.String())
+		logging.LogE(err, errMsg)
+		return nil, err
+	}
+	return buffer, nil
+}
+
+func (r *SFUtilContext) RunPodCmd(podName string, containerName string, cmdArgs []string) (*bytes.Buffer, error) {
+	return RunPodCmdRaw(r.RESTConfig, r.ClientSet, r.ns, podName, containerName, cmdArgs)
 }

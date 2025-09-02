@@ -71,6 +71,7 @@ var _ = Describe("SoftwareFactory controller", func() {
 			sfReconciler := &SoftwareFactoryReconciler{
 				Client:     k8sClient,
 				Scheme:     k8sClient.Scheme(),
+				RESTConfig: cfg,
 				CancelFunc: cancel,
 			}
 
