@@ -33,9 +33,9 @@
     - health-check/zuul-executor-ensure-graceful-stop
     - health-check/test-deploy-zero-replica
     - health-check/test-nodepool-providers-secrets
+    - health-check/config-update-nodepool-launcher
 
     # FIXME: add more health-check
-    # - health-check/config-update-nodepool-launcher
     # - health-check/config-update-nodepool-builder
     # - health-check/test-nodepool-launcher-pod
     # - health-check/test-volumestats-sidecar
