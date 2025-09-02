@@ -5,12 +5,19 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+
+## [v0.0.58] - 2025-09-05
+
+### Added
 
 - zuul: the operator now validates that the user provided connections doesn't have any duplicate names.
-- A new defaultStorage.nodeAffinity attribute that can be set to prevent pod from being scheduled to a different host and avoid issue with storage class that doesn't support that.
-- zuul: increased the default executor TerminationGracePeriodSeconds to 2 hours and added a new CR attribute to configure the value through Zuul.Executor.TerminationGracePeriodSeconds.
+- A new `defaultStorage.nodeAffinity` attribute that can be set to prevent pod from being scheduled to a different host and avoid issue with storage class that doesn't support that.
+- zuul: increased the default executor `TerminationGracePeriodSeconds` to 2 hours and added a new CR attribute to configure the value through `Zuul.Executor.TerminationGracePeriodSeconds`.
 - The operator now validates that the user-provided connections do not have any duplicate names.
-- A new `defaultStorage.nodeAffinity` attribute that can be set to prevent a pod from being scheduled to a different host and avoid issues with a storage class that does not support that.
 
 ### Changed
 
@@ -19,12 +26,9 @@ All notable changes to this project will be documented in this file.
 - zookeeper: bumped to 3.9.3
 - httpd-24: bumped to registry.access.redhat.com/ubi8/httpd-24:1-350
 - weeder: update ubi9-python-39 container
-- Unifying Zuul label: workflow label
-  This change modifies the Zuul label to run gate pipelines from `gateit` to
-  `workflow`.
+- The Zuul label to run gate pipelines changed from `gateit` to `workflow`.
 - Container images based on UBI have been updated. Zuul and Nodepool services will be restarted during the upgrade.
 
-### Deprecated
 ### Removed
 
 - The gitlab api token name setting is removed as it is not necessary. The value is always set to Zuul, according to https://gitlab.com/gitlab-org/gitlab/-/issues/212953
