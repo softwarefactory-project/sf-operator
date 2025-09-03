@@ -38,9 +38,15 @@ func (r *SFController) EnsureLogJuicer() bool {
 	)
 
 	// Ensure PVC exists
-	pvc := base.MkPVC(pvcName, r.ns, base.StorageConfig{
+	storage := base.StorageConfig{
 		Size: utils.Qty1Gi(),
-	}, apiv1.ReadWriteOnce)
+	}
+	storageDefault := r.cr.Spec.StorageDefault
+	if storageDefault.ClassName != "" {
+		storage.StorageClassName = &storageDefault.ClassName
+	}
+
+	pvc := base.MkPVC(pvcName, r.ns, storage, apiv1.ReadWriteOnce)
 	r.GetOrCreate(&pvc)
 
 	// Create Service
