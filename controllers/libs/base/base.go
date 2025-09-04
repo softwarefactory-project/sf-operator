@@ -425,9 +425,10 @@ func MkDeployment(name string, ns string, image string, extraLabels map[string]s
 
 // IsStatefulSetRolloutDone returns True when the StatefulSet rollout is over
 func IsStatefulSetRolloutDone(obj *appsv1.StatefulSet) bool {
+	// A StatefulSet is considered "rolled out" when all of its replicas are updated and available.
 	return obj.Status.ObservedGeneration >= obj.Generation &&
-		obj.Status.Replicas == obj.Status.ReadyReplicas &&
-		obj.Status.Replicas == obj.Status.CurrentReplicas
+		obj.Status.ReadyReplicas == *obj.Spec.Replicas &&
+		obj.Status.CurrentReplicas == *obj.Spec.Replicas
 }
 
 // IsDeploymentRolloutDone returns True when the Deployment rollout is over
