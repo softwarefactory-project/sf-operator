@@ -705,10 +705,11 @@ func (r *SFController) injectStorageNodeAffinity(storageClass *string, sts *apps
 			sts.Spec.Template.Spec.Affinity = &apiv1.Affinity{
 				NodeAffinity: &apiv1.NodeAffinity{
 					PreferredDuringSchedulingIgnoredDuringExecution: []apiv1.PreferredSchedulingTerm{
-						apiv1.PreferredSchedulingTerm{
+						{
+							Weight: 100,
 							Preference: apiv1.NodeSelectorTerm{
 								MatchExpressions: []apiv1.NodeSelectorRequirement{
-									apiv1.NodeSelectorRequirement{
+									{
 										Key:      "kubernetes.io/hostname",
 										Operator: "In",
 										Values:   nodes,
