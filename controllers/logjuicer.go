@@ -38,10 +38,12 @@ func (r *SFController) EnsureLogJuicer() bool {
 	)
 
 	// Ensure PVC exists
-	storage := base.StorageConfig{
-		Size: utils.Qty1Gi(),
-	}
 	storageDefault := r.cr.Spec.StorageDefault
+	storage := base.StorageConfig{
+		Size:             utils.Qty1Gi(),
+		ExtraAnnotations: storageDefault.ExtraAnnotations,
+	}
+
 	if storageDefault.ClassName != "" {
 		storage.StorageClassName = &storageDefault.ClassName
 	}
