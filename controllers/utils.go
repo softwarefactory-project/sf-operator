@@ -66,6 +66,7 @@ type SFUtilContext struct {
 	ctx        context.Context
 	owner      client.Object
 	standalone bool
+	zkChanged  bool
 }
 
 type HostAlias struct {
