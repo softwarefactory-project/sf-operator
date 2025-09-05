@@ -14,7 +14,11 @@ spec:
         hostname: gerrit-sshd.sf
         puburl: "https://gerrit.sfop.me"
         verifyssl: false
+    scheduler:
+      logLevel: DEBUG
     executor:
+      logLevel: DEBUG
+    merger:
       logLevel: DEBUG
     web:
       logLevel: DEBUG
