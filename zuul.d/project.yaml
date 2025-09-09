@@ -8,6 +8,7 @@
         - sf-operator-olm-rhel
         - sf-operator-upgrade-rhel
     gate:
+      fail-fast: true
       jobs:
         - sf-operator-minikube
         - sf-operator-vuln-check
