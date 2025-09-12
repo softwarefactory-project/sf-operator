@@ -28,6 +28,9 @@ All notable changes to this project will be documented in this file.
 - weeder: update ubi9-python-39 container
 - The Zuul label to run gate pipelines changed from `gateit` to `workflow`.
 - Container images based on UBI have been updated. Zuul and Nodepool services will be restarted during the upgrade.
+- A new platform discovery mechanism has been added to the Software Factory CLI, allowing it
+  to automatically detect the Kubernetes distribution in use. As a consequence, the `OPENSHIFT_USER`
+  environment variable is now optional.
 
 ### Removed
 
