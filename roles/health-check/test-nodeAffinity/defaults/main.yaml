@@ -1,0 +1,3 @@
+---
+zuul_api_delay: 10
+zuul_api_retries: 60

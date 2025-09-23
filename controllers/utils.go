@@ -688,8 +688,19 @@ func (r *SFController) EnsureSFPodMonitor(ports []string, selector metav1.LabelS
 
 // injectStorageNodeAffinity injects the node affinity setting when the StatefulSet uses a given storageClass.
 // The node affinity is set to ensure that the pods are not scheduled to a different host by setting the current node name as a node selector requirement.
+// returns true if nodeAffinity is modified by calling this function.
 func (r *SFController) injectStorageNodeAffinity(storageClass *string, sts *appsv1.StatefulSet) bool {
+	if sts.Spec.Replicas != nil {
+		replicas := *sts.Spec.Replicas
+		if replicas == 0 {
+			logging.LogI(fmt.Sprintf("%s: replicas set to 0, skipping node affinity injection", sts.ObjectMeta.Name))
+			return false
+		}
+	}
 	storageDefault := r.cr.Spec.StorageDefault
+	if storageClass == nil {
+		return false
+	}
 	if storageDefault.NodeAffinity && storageDefault.ClassName == *storageClass {
 		pods, ok := r.getPods(sts)
 		if !ok {
@@ -700,6 +711,31 @@ func (r *SFController) injectStorageNodeAffinity(storageClass *string, sts *apps
 				name := pod.Spec.NodeName
 				if !slices.Contains(nodes, name) {
 					nodes = append(nodes, name)
+				}
+			}
+			// Have we set the nodeAffinity before?
+			logging.LogI(fmt.Sprintf("%s: check if node affinity is set ...", sts.ObjectMeta.Name))
+			if sts.Spec.Template.Spec.Affinity != nil {
+				affinity := *sts.Spec.Template.Spec.Affinity
+				if affinity.NodeAffinity != nil {
+					nodeAffinity := *affinity.NodeAffinity
+					for _, schedTerm := range nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+						matchExprs := schedTerm.Preference.MatchExpressions
+						for _, matchExpr := range matchExprs {
+							if matchExpr.Key == "kubernetes.io/hostname" && matchExpr.Operator == "In" {
+								var fullMatch = true
+								for _, node := range nodes {
+									if !slices.Contains(matchExpr.Values, node) {
+										fullMatch = false
+									}
+								}
+								if fullMatch {
+									logging.LogI(fmt.Sprintf("%s: node affinity already set, skipping", sts.ObjectMeta.Name))
+									return false
+								}
+							}
+						}
+					}
 				}
 			}
 			logging.LogI(fmt.Sprintf("%s: assigning node affinity to %s", sts.ObjectMeta.Name, nodes))
@@ -725,7 +761,7 @@ func (r *SFController) injectStorageNodeAffinity(storageClass *string, sts *apps
 			return true
 		}
 	} else {
-		return true
+		return false
 	}
 }
 
@@ -742,16 +778,19 @@ func getGracePeriod(sts appsv1.StatefulSet) int64 {
 func (r *SFController) ensureStatefulset(storageClass *string, sts appsv1.StatefulSet) (*appsv1.StatefulSet, bool) {
 	current := appsv1.StatefulSet{}
 	name := sts.ObjectMeta.Name
+	var needUpdate = false
 	if r.GetM(name, &current) {
 		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &sts.Spec.Template.ObjectMeta.Annotations) || getGracePeriod(current) != getGracePeriod(sts) {
+			needUpdate = true
 			current.Spec.Template = *sts.Spec.Template.DeepCopy()
-			if r.injectStorageNodeAffinity(storageClass, &current) {
-				logging.LogI(name + " configuration changed, rollout pods ...")
-				r.UpdateR(&current)
-				return &current, true
-			} else {
-				return &sts, false
-			}
+		}
+		if r.injectStorageNodeAffinity(storageClass, &current) {
+			needUpdate = true
+		}
+		if needUpdate {
+			logging.LogI(name + " configuration changed, rollout pods ...")
+			r.UpdateR(&current)
+			return &current, true
 		}
 	} else {
 		current := sts
