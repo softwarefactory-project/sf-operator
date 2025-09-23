@@ -58,12 +58,13 @@
   register: _is_pod_up
   until:
     - "'Running' in _is_pod_up.stdout"
+    - "'2/2' in _is_pod_up.stdout"
   retries: "{{ zuul_api_retries }}"
   delay: "{{ zuul_api_delay }}"
 
 - name: Ensure web pod is up
   ansible.builtin.shell: |
-    kubectl -n sf get pods
+    kubectl -n sf get pods --field-selector status.phase=Running
   register: _is_pod_up
   until:
     - "'zuul-web' in _is_pod_up.stdout"

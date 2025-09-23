@@ -31,9 +31,9 @@
     - health-check/check-logjuicer
     - health-check/zuul-demo-tenant-workflow
     - health-check/zuul-executor-ensure-graceful-stop
-    - health-check/test-deploy-zero-replica
     - health-check/test-nodepool-providers-secrets
     - health-check/config-update-nodepool-launcher
+    - health-check/test-deploy-zero-replica
 
     # FIXME: add more health-check
     # - health-check/config-update-nodepool-builder
