@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 - The Go version in go.mod is bumped to 1.24.6. Backward compatibility with earlier versions is not guaranteed.
 - The purgelogs mount point for the build logs is fixed to use the same location as the logserver.
+- Zuul version bumped to 13.0.0, zuul services will be restarted during upgrade
+- Zookeeper version bumped to 3.9.4
+- Container images based on UBI have been updated. Most of the services will be restarted during the upgrade.
 
 ### Deprecated
 ### Removed
