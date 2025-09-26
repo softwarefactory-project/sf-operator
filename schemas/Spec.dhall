@@ -7,6 +7,7 @@
     , gitserver : Optional (./Gitserver.dhall).Type
     , hostaliases : Optional (List (./Hostaliases.dhall).Type)
     , logserver : Optional (./Logserver.dhall).Type
+    , logjuicer : Optional (./Storage.dhall).Type
     , mariadb : Optional (./Mariadb.dhall).Type
     , nodepool : Optional (./Nodepool.dhall).Type
     , prometheusMonitorsDisabled : Optional Bool
@@ -22,6 +23,7 @@
   , gitserver = None (./Gitserver.dhall).Type
   , hostaliases = None (List (./Hostaliases.dhall).Type)
   , logserver = None (./Logserver.dhall).Type
+  , logjuicer = None (./Storage.dhall).Type
   , mariadb = None (./Mariadb.dhall).Type
   , nodepool = None (./Nodepool.dhall).Type
   , prometheusMonitorsDisabled = None Bool

@@ -455,6 +455,7 @@ _Appears in:_
 | `nodepool` _[NodepoolSpec](#nodepoolspec)_ | Nodepool services spec | -|
 | `zookeeper` _[ZookeeperSpec](#zookeeperspec)_ | Zookeeper service spec | -|
 | `logserver` _[LogServerSpec](#logserverspec)_ | Logserver service spec | {map[loopDelay:3600 retentionDays:60]}|
+| `logjuicer` _[StorageSpec](#storagespec)_ | Logjuicer service spec | -|
 | `mariadb` _[MariaDBSpec](#mariadbspec)_ | MariaDB service spec | -|
 | `gitserver` _[GitServerSpec](#gitserverspec)_ | Git server spec | -|
 | `codesearch` _[CodesearchSpec](#codesearchspec)_ | Codesearch service spec | -|
@@ -507,6 +508,7 @@ _Appears in:_
 - [LogServerSpec](#logserverspec)
 - [MariaDBSpec](#mariadbspec)
 - [NodepoolBuilderSpec](#nodepoolbuilderspec)
+- [SoftwareFactorySpec](#softwarefactoryspec)
 - [ZookeeperSpec](#zookeeperspec)
 - [ZuulExecutorSpec](#zuulexecutorspec)
 - [ZuulMergerSpec](#zuulmergerspec)

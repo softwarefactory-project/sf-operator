@@ -529,6 +529,7 @@ func (in *SoftwareFactorySpec) DeepCopyInto(out *SoftwareFactorySpec) {
 	in.Nodepool.DeepCopyInto(&out.Nodepool)
 	in.Zookeeper.DeepCopyInto(&out.Zookeeper)
 	in.Logserver.DeepCopyInto(&out.Logserver)
+	in.Logjuicer.DeepCopyInto(&out.Logjuicer)
 	in.MariaDB.DeepCopyInto(&out.MariaDB)
 	in.GitServer.DeepCopyInto(&out.GitServer)
 	in.Codesearch.DeepCopyInto(&out.Codesearch)

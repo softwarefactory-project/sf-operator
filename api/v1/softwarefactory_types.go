@@ -604,6 +604,10 @@ type SoftwareFactorySpec struct {
 	// +kubebuilder:default={"loopDelay": 3600, retentionDays: 60}
 	Logserver LogServerSpec `json:"logserver,omitempty"`
 
+	// Logjuicer service spec
+	// +optional
+	Logjuicer StorageSpec `json:"logjuicer,omitempty"`
+
 	// MariaDB service spec
 	MariaDB MariaDBSpec `json:"mariadb,omitempty"`
 

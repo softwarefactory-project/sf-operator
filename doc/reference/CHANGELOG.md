@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- Enable storage (PVC) configuration and resizing for the `logjuicer` component.
+
 ### Changed
 
 - The Go version in go.mod is bumped to 1.24.6. Backward compatibility with earlier versions is not guaranteed.

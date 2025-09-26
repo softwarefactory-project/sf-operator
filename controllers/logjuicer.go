@@ -38,15 +38,7 @@ func (r *SFController) EnsureLogJuicer() bool {
 	)
 
 	// Ensure PVC exists
-	storageDefault := r.cr.Spec.StorageDefault
-	storage := base.StorageConfig{
-		Size:             utils.Qty1Gi(),
-		ExtraAnnotations: storageDefault.ExtraAnnotations,
-	}
-
-	if storageDefault.ClassName != "" {
-		storage.StorageClassName = &storageDefault.ClassName
-	}
+	storage := r.getStorageConfOrDefault(r.cr.Spec.Logjuicer)
 
 	pvc := base.MkPVC(pvcName, r.ns, storage, apiv1.ReadWriteOnce)
 	r.GetOrCreate(&pvc)
@@ -84,9 +76,10 @@ func (r *SFController) EnsureLogJuicer() bool {
 
 	// Reconcile deployment
 	current := appsv1.Deployment{}
+	pvcReadiness := r.reconcileExpandPVC(pvcName, r.cr.Spec.Logjuicer)
 	if r.GetM(ident, &current) {
 		if utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &dep.Spec.Template.ObjectMeta.Annotations) {
-			return r.IsDeploymentReady(&current)
+			return r.IsDeploymentReady(&current) && pvcReadiness
 		}
 		current.Spec = dep.Spec
 		r.UpdateR(&current)
