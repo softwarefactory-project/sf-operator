@@ -33,9 +33,9 @@ func (r *SFController) DeployHTTPDGateway() bool {
 	})
 
 	annotations := map[string]string{
-		"image":      base.HTTPDImage(),
-		"httpd-conf": utils.Checksum([]byte(gatewayConfig)),
-		"serial":     "1",
+		"image":       base.HTTPDImage(),
+		"config-hash": utils.Checksum([]byte(gatewayConfig)),
+		"serial":      "1",
 	}
 
 	dep := base.MkDeployment(ident, r.ns, base.HTTPDImage(), r.cr.Spec.ExtraLabels, r.isOpenShift)

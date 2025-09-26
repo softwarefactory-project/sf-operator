@@ -74,9 +74,9 @@ func (r *SFController) DeployZookeeper() bool {
 	configChecksumable := zookeeperProbe + "\n" + zookeeperRun + "\n" + zkLogbackConfig
 
 	annotations := map[string]string{
-		"configuration": utils.Checksum([]byte(configChecksumable)),
-		"image":         base.ZookeeperImage(),
-		"serial":        "8",
+		"config-hash": utils.Checksum([]byte(configChecksumable)),
+		"image":       base.ZookeeperImage(),
+		"serial":      "8",
 	}
 
 	volumeMountsStatsExporter := []apiv1.VolumeMount{

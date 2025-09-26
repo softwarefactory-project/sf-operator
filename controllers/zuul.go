@@ -453,7 +453,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":                 getZuulImage("zuul-scheduler"),
+		"image":                      getZuulImage("zuul-scheduler"),
 		"statsd-image":               base.StatsdExporterImage(),
 		"node-exporter-image":        base.NodeExporterImage(),
 		"statsd_mapping":             utils.Checksum([]byte(zuulStatsdMappingConfig)),
@@ -580,7 +580,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":                 getZuulImage("zuul-executor"),
+		"image":                      getZuulImage("zuul-executor"),
 		"serial":                     "11",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
@@ -685,7 +685,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":                 getZuulImage(service),
+		"image":                      getZuulImage(service),
 		"serial":                     "8",
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-merger"))),
@@ -755,7 +755,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
-		"zuul-image":                 getZuulImage("zuul-web"),
+		"image":                      getZuulImage("zuul-web"),
 		"serial":                     "9",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),

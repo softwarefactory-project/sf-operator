@@ -271,10 +271,10 @@ func (r *SFController) DeployGitServer() bool {
 	r.EnsureConfigMap(GitServerIdent+"-pi", cmData)
 
 	annotations := map[string]string{
-		"system-config": utils.Checksum([]byte(preInitScript)),
-		"image":         base.GitServerImage(),
-		"fqdn":          r.cr.Spec.FQDN,
-		"serial":        "3",
+		"config-hash": utils.Checksum([]byte(preInitScript)),
+		"image":       base.GitServerImage(),
+		"fqdn":        r.cr.Spec.FQDN,
+		"serial":      "3",
 	}
 
 	logserverHost := "logserver"

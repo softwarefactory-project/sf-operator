@@ -69,8 +69,18 @@ func (r *SFController) EnsureLogJuicer() bool {
 	}
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/ready", port)
 
+	// Get all the configurations in one string, which are the environment varibles
+	config := ""
+
+	for _, v := range dep.Spec.Template.Spec.Containers[0].Env {
+		config = config + v.Value
+	}
+
 	dep.Spec.Template.ObjectMeta.Annotations = map[string]string{
-		"certs": r.AddCorporateCA(&dep.Spec.Template.Spec),
+		"image":       base.LogJuicerImage(),
+		"config-hash": utils.Checksum([]byte(config)),
+		"serial":      "1",
+		"certs":       r.AddCorporateCA(&dep.Spec.Template.Spec),
 	}
 	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 

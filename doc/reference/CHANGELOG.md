@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - Zuul version bumped to 13.0.0, zuul services will be restarted during upgrade
 - Zookeeper version bumped to 3.9.4
 - Container images based on UBI have been updated. Most of the services will be restarted during the upgrade.
+- Standarized annotations in components (gateway, git_server, hound-search, logjuicer, logserver, weeder, zookeeper, zuul)
 
 ### Deprecated
 ### Removed

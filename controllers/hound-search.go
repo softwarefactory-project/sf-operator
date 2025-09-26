@@ -102,7 +102,7 @@ func (r *SFController) DeployHoundSearch() bool {
 	}
 
 	annotations := map[string]string{
-		"config-repo-info":           r.configBaseURL + r.cr.Spec.ConfigRepositoryLocation.Name,
+		"config-hash":                utils.Checksum([]byte(r.configBaseURL + r.cr.Spec.ConfigRepositoryLocation.Name)),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 		"image":                      houndSearchImage,
 		"serial":                     "1",
