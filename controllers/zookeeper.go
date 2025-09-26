@@ -76,7 +76,7 @@ func (r *SFController) DeployZookeeper() bool {
 	annotations := map[string]string{
 		"configuration": utils.Checksum([]byte(configChecksumable)),
 		"image":         base.ZookeeperImage(),
-		"serial":        "7",
+		"serial":        "8",
 	}
 
 	volumeMountsStatsExporter := []apiv1.VolumeMount{
@@ -131,13 +131,27 @@ func (r *SFController) DeployZookeeper() bool {
 		base.MkPVC(ZookeeperIdent+"-data", r.ns, storageConfig, apiv1.ReadWriteOnce),
 		base.MkPVC(ZookeeperIdent+"-logs", r.ns, logStorageConfig, apiv1.ReadWriteOnce),
 	}
-	zk.Spec.Template.Spec.Containers[0].Command = []string{"/bin/bash", "/config-scripts/run.sh"}
+	zk.Spec.Template.Spec.Containers[0].Command = []string{"/config-scripts/run.sh"}
 	zk.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 	zk.Spec.Template.Spec.Volumes = []apiv1.Volume{
-		base.MkVolumeCM(ZookeeperIdent+"-pi", ZookeeperIdent+"-pi-config-map"),
 		base.MkVolumeSecret("zookeeper-client-tls"),
 		base.MkVolumeSecret("zookeeper-server-tls"),
 		base.MkEmptyDirVolume(ZookeeperIdent + "-conf"),
+		{
+			Name: ZookeeperIdent + "-pi",
+			VolumeSource: apiv1.VolumeSource{
+				ConfigMap: &apiv1.ConfigMapVolumeSource{
+					LocalObjectReference: apiv1.LocalObjectReference{
+						Name: ZookeeperIdent + "-pi-config-map",
+					},
+					Items: []apiv1.KeyToPath{
+						{Key: "run.sh", Path: "run.sh", Mode: &utils.Execmod},
+						{Key: "probe.sh", Path: "probe.sh", Mode: &utils.Execmod},
+						{Key: "logback.xml", Path: "logback.xml", Mode: &utils.Readmod},
+					},
+				},
+			},
+		},
 	}
 	zk.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessCMDProbe([]string{"/bin/bash", "/config-scripts/probe.sh"})
 	zk.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLivenessCMDProbe([]string{"/bin/bash", "/config-scripts/probe.sh"})
