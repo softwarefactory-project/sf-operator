@@ -43,7 +43,7 @@ Currently the SF Operator supports OpenStack (`clouds.yaml`) and Kubernetes (`ku
 They are managed by the SF Operator in a secret called `nodepool-providers-secrets`.
 
 ```sh
-kubectl create secret generic nodepool-providers-secrets --from-file=cloud.yaml=<path-to>/clouds.yaml --from-file=kube.config=<path-to>/kube.config --dry-run=client -o yaml | kubectl apply -f -
+kubectl create secret generic nodepool-providers-secrets --from-file=clouds.yaml=<path-to>/clouds.yaml --from-file=kube.config=<path-to>/kube.config --dry-run=client -o yaml | kubectl apply -f -
 ```
 
 Then wait until your deployment becomes ready again:
