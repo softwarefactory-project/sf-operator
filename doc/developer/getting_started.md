@@ -142,6 +142,21 @@ Wipe your deployment by running:
 go run main.go --namespace sf dev wipe sf --rm-data
 ```
 
+## Adding a new component
+
+To add a new component to `sf-operator`, refer to the existing components in the `controllers` directory as a guide. These examples demonstrate how to:
+
+*   Define `Deployments` and `StatefulSets`.
+*   Mount `Volumes` using `Secrets`, `ConfigMaps`, and `PVCs`.
+*   Expose applications using `Routes` or `Ingresses`.
+
+When creating a new component, aim for the existing implementations. The primary Kubernetes resource for the component **must** have the following annotations:
+
+*   `image`: The image name of the main application container.
+*   `serial`: A string-quoted number to identify the resource version.
+*   `config-hash`: A checksum of the configuration used by the main application container, if applicable.
+
+
 ## Next actions
 
 Now that you have a testing environment set up, you may want to [run the test suite on your modifications](./testing.md).
