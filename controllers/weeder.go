@@ -22,8 +22,8 @@ func (r *SFController) EnsureZuulWeeder(checksum string) bool {
 	r.GetOrCreate(&srv)
 
 	annotations := map[string]string{
-		"config-hash": checksum,
-		"serial":      "2",
+		"zuul-connections": checksum,
+		"serial":           "2",
 	}
 
 	dep := base.MkDeployment(ident, r.ns, base.ZuulWeederImage(), r.cr.Spec.ExtraLabels, r.isOpenShift)
