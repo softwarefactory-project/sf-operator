@@ -33,6 +33,7 @@
     - health-check/zuul-executor-ensure-graceful-stop
     - health-check/test-nodepool-providers-secrets
     - health-check/config-update-nodepool-launcher
+    - health-check/test-nodeAffinity
     - health-check/test-deploy-zero-replica
 
     # FIXME: add more health-check

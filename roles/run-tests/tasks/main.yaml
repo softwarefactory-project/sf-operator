@@ -46,5 +46,7 @@
     - name: test-external-ze
     - name: test-log-forwarding
     - name: test-backup-restore
+    - name: test-nodeAffinity
+      when: "{{ mode == 'standalone' }}"
   loop_control:
     loop_var: role
