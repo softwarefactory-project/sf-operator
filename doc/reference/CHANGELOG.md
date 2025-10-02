@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - Fix a few issues with the nodeAffinity setting logic, where the node affinity of a statefulset
   would only be updated when its annotations are changed; and where it would hang if the statefulset's
   replicas are set to 0.
+- Fix a race condition in the logserver controller that could cause PVCs to get stuck during operator upgrades or resource updates.
 
 ## [v0.0.58] - 2025-09-05
 

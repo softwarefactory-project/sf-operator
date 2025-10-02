@@ -303,6 +303,9 @@ func (r *SFController) DeployLogserver() bool {
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	current, stsUpdated := r.ensureStatefulset(storage.StorageClassName, sts)
+	if stsUpdated {
+		return false
+	}
 
 	pvcReadiness := r.reconcileExpandPVC(logserverIdent+"-"+logserverIdent+"-0", r.cr.Spec.Logserver.Storage)
 
