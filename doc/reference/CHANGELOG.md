@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - The Go version in go.mod is bumped to 1.24.6. Backward compatibility with earlier versions is not guaranteed.
+- The purgelogs mount point for the build logs is fixed to use the same location as the logserver.
 
 ### Deprecated
 ### Removed

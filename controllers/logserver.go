@@ -8,8 +8,9 @@ package controllers
 import (
 	_ "embed"
 	"encoding/base64"
-	"k8s.io/utils/ptr"
 	"strconv"
+
+	"k8s.io/utils/ptr"
 
 	"golang.org/x/exp/maps"
 	apiv1 "k8s.io/api/core/v1"
@@ -41,7 +42,7 @@ const sshdPortName = "logserver-sshd"
 var logserverRun string
 
 const purgelogIdent = "purgelogs"
-const purgelogsLogsDir = "/home/logs"
+const logsDir = "/var/www/html/logs"
 
 //go:embed static/logserver/logserver.conf
 var logserverConf string
@@ -149,7 +150,7 @@ func (r *SFController) DeployLogserver() bool {
 		},
 		{
 			Name:      logserverIdent,
-			MountPath: "/var/www/html/logs",
+			MountPath: logsDir,
 		},
 		{
 			Name:      logserverIdent + "-config-vol",
@@ -266,12 +267,12 @@ func (r *SFController) DeployLogserver() bool {
 		strconv.Itoa(retentionDays),
 		"--loop", strconv.Itoa(loopDelay),
 		"--log-path-dir",
-		purgelogsLogsDir,
+		logsDir,
 		"--debug"}
 	purgelogsContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      logserverIdent,
-			MountPath: purgelogsLogsDir,
+			MountPath: logsDir,
 		},
 	}
 
@@ -291,7 +292,7 @@ func (r *SFController) DeployLogserver() bool {
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
 	sts.Spec.Template.ObjectMeta.Annotations = map[string]string{
 		"fqdn":       r.cr.Spec.FQDN,
-		"serial":     "6",
+		"serial":     "7",
 		"httpd-conf": utils.Checksum([]byte(logserverConf)),
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Logserver.RetentionDays) +
 			" loopDelay:" + strconv.Itoa(r.cr.Spec.Logserver.LoopDelay),
