@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -1452,7 +1453,29 @@ func LoadConfigINI(zuulConf string) *ini.File {
 }
 
 func DumpConfigINI(cfg *ini.File) string {
+
 	writer := bytes.NewBufferString("")
+	sections := cfg.Sections()
+
+	for _, section := range sections {
+
+		keys := section.Keys()
+		sortedKeys := []*ini.Key{}
+
+		sort.Slice(keys, func(i, j int) bool {
+			return keys[i].Name() < keys[j].Name()
+		})
+
+		for _, key := range keys {
+			sortedKeys = append(sortedKeys, key)
+			section.DeleteKey(key.Name())
+		}
+
+		for _, key := range sortedKeys {
+			section.NewKey(key.Name(), key.Value())
+		}
+
+	}
 	cfg.WriteTo(writer)
 	return writer.String()
 }
