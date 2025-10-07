@@ -9,6 +9,7 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	"maps"
 )
 
 func (r *SFController) EnsureZuulWeeder(checksum string) bool {
@@ -23,11 +24,11 @@ func (r *SFController) EnsureZuulWeeder(checksum string) bool {
 	annotations := map[string]string{
 		"config-hash": checksum,
 		"serial":      "2",
-		"image":       base.ZuulWeederImage(),
 	}
 
 	dep := base.MkDeployment(ident, r.ns, base.ZuulWeederImage(), r.cr.Spec.ExtraLabels, r.isOpenShift)
 	dep.Spec.Template.Spec.Containers[0].ImagePullPolicy = "Always"
+	maps.Copy(annotations, ImagesAnnotationsFromSpec(dep.Spec.Template.Spec.Containers))
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkEmptyDirVolume("weeder-tmp"),

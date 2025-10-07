@@ -7,11 +7,11 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"maps"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"golang.org/x/exp/maps"
 	ini "gopkg.in/ini.v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -453,9 +453,6 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
-		"image":                      getZuulImage("zuul-scheduler"),
-		"statsd-image":               base.StatsdExporterImage(),
-		"node-exporter-image":        base.NodeExporterImage(),
 		"statsd_mapping":             utils.Checksum([]byte(zuulStatsdMappingConfig)),
 		"serial":                     "12",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
@@ -533,7 +530,6 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 
 	zsStorage := r.getStorageConfOrDefault(r.cr.Spec.Zuul.Scheduler.Storage)
 	zs := r.mkStatefulSet("zuul-scheduler", "", zsStorage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
-	zs.Spec.Template.ObjectMeta.Annotations = annotations
 	zs.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	zs.Spec.Template.Spec.Containers = zuulContainers
 	zs.Spec.Template.Spec.Volumes = zsVolumes
@@ -548,6 +544,9 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		base.MkContainerPort(zuulPrometheusPort, ZuulPrometheusPortName),
 	}
 	zs.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
+
+	maps.Copy(annotations, ImagesAnnotationsFromSpec(zs.Spec.Template.Spec.Containers))
+	zs.Spec.Template.ObjectMeta.Annotations = annotations
 
 	// Mount a local directory in place of the Zuul source from the container image
 	if path, _ := utils.GetEnvVarValue("ZUUL_LOCAL_SOURCE"); path != "" {
@@ -580,7 +579,6 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
-		"image":                      getZuulImage("zuul-executor"),
 		"serial":                     "11",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-executor"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
@@ -599,6 +597,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-executor", r.cr.Spec.FluentBitLogForwarding, zeFluentBitLabels, annotations)
 	ze.Spec.Template.Spec.Containers[0].Env = append(ze.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
 
+	maps.Copy(annotations, ImagesAnnotationsFromSpec(ze.Spec.Template.Spec.Containers))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
@@ -685,7 +684,6 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
-		"image":                      getZuulImage(service),
 		"serial":                     "8",
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-merger"))),
@@ -712,6 +710,8 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 			},
 		}, r.isOpenShift)
 	zm.Spec.Template.Spec.Containers = append(zm.Spec.Template.Spec.Containers, nodeExporterSidecar)
+
+	maps.Copy(annotations, ImagesAnnotationsFromSpec(zm.Spec.Template.Spec.Containers))
 
 	zm.Spec.Template.ObjectMeta.Annotations = annotations
 
@@ -755,7 +755,6 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	annotations := map[string]string{
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
-		"image":                      getZuulImage("zuul-web"),
 		"serial":                     "9",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-web"))),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
@@ -772,6 +771,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-web", r.cr.Spec.FluentBitLogForwarding, zwFluentBitLabels, annotations)
 	zw.Spec.Template.Spec.Containers[0].Env = append(zw.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
 
+	maps.Copy(annotations, ImagesAnnotationsFromSpec(zw.Spec.Template.Spec.Containers))
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
 
 	if !r.isOpenShift {
@@ -868,7 +868,7 @@ func (r *SFController) EnsureZuulComponents() bool {
 	zuulServices["web"] = r.EnsureZuulWeb(cfg)
 	zuulServices["merger"] = r.EnsureZuulMerger(cfg)
 
-	for _, ready := range maps.Values(zuulServices) {
+	for ready := range maps.Values(zuulServices) {
 		if !ready {
 			return false
 		}

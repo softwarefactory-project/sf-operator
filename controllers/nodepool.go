@@ -6,6 +6,7 @@ package controllers
 
 import (
 	_ "embed"
+	"maps"
 	"strconv"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -124,7 +125,6 @@ func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string
 	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts, r.isOpenShift)
 	annotations["dib-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["dib-fluent-bit-parser"] = utils.Checksum([]byte(fbForwarderConfig["parsers.conf"]))
-	annotations["dib-fluent-bit-image"] = sidecar.Image
 	return []apiv1.Volume{volume, storageEmptyDir}, sidecar
 
 }
@@ -518,7 +518,6 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		"ssh_config":                 utils.Checksum([]byte(builderSSHConfig)),
 		"buildlogs_httpd_config":     utils.Checksum([]byte(httpdBuildLogsDirConfig)),
 		"statsd_mapping":             utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
-		"image":                      base.NodepoolBuilderImage(),
 		"nodepool-providers-secrets": getSecretsVersion(providersSecrets, providerSecretsExists),
 		"serial":                     "18",
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
@@ -585,6 +584,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		nb.Spec.Template.Spec.Volumes = append(nb.Spec.Template.Spec.Volumes, fbVolumes...)
 	}
 
+	maps.Copy(annotations, ImagesAnnotationsFromSpec(nb.Spec.Template.Spec.Containers))
 	nb.Spec.Template.ObjectMeta.Annotations = annotations
 
 	// Append statsd exporter sidecar
@@ -715,7 +715,6 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		"statsd_mapping":        utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		"serial":                "12",
 		// When the Secret ResourceVersion field change (when edited) we force a nodepool-launcher restart
-		"image":                      base.NodepoolLauncherImage(),
 		"nodepool-providers-secrets": getSecretsVersion(providersSecrets, providerSecretsExists),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
 	}
@@ -778,6 +777,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	nl.Spec.Template.Spec.Containers = []apiv1.Container{
 		container,
 		monitoring.MkStatsdExporterSideCarContainer(shortIdent, "statsd-config", relayAddress, r.isOpenShift)}
+	maps.Copy(annotations, ImagesAnnotationsFromSpec(nl.Spec.Template.Spec.Containers))
 	nl.Spec.Template.ObjectMeta.Annotations = annotations
 	nl.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/ready", launcherPort)
 	nl.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/ready", launcherPort)

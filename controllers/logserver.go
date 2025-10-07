@@ -8,11 +8,11 @@ package controllers
 import (
 	_ "embed"
 	"encoding/base64"
+	"maps"
 	"strconv"
 
 	"k8s.io/utils/ptr"
 
-	"golang.org/x/exp/maps"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -296,11 +296,10 @@ func (r *SFController) DeployLogserver() bool {
 		"config-hash": utils.Checksum([]byte(logserverConf)),
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Logserver.RetentionDays) +
 			" loopDelay:" + strconv.Itoa(r.cr.Spec.Logserver.LoopDelay),
-		"httpd-image":     base.HTTPDImage(),
-		"purgelogs-image": base.PurgelogsImage(),
-		"sshd-image":      base.SSHDImage(),
-		"authorized-key":  utils.Checksum(pubKey),
+		"authorized-key": utils.Checksum(pubKey),
 	}
+	maps.Copy(sts.Spec.Template.ObjectMeta.Annotations, ImagesAnnotationsFromSpec(sts.Spec.Template.Spec.Containers))
+
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	current, stsUpdated := r.ensureStatefulset(storage.StorageClassName, sts)

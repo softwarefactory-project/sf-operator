@@ -5,6 +5,7 @@ package controllers
 
 import (
 	_ "embed"
+	"maps"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
@@ -75,7 +76,6 @@ func (r *SFController) DeployZookeeper() bool {
 
 	annotations := map[string]string{
 		"config-hash": utils.Checksum([]byte(configChecksumable)),
-		"image":       base.ZookeeperImage(),
 		"serial":      "8",
 	}
 
@@ -170,6 +170,7 @@ func (r *SFController) DeployZookeeper() bool {
 	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(ZookeeperIdent, volumeMountsStatsExporter, r.isOpenShift)
 	zk.Spec.Template.Spec.Containers = append(zk.Spec.Template.Spec.Containers, statsExporter)
 
+	maps.Copy(annotations, ImagesAnnotationsFromSpec(zk.Spec.Template.Spec.Containers))
 	zk.Spec.Template.ObjectMeta.Annotations = annotations
 
 	zk.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
