@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+
+	"gopkg.in/ini.v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -84,6 +86,37 @@ var _ = Describe("Zuul controller", func() {
 				}
 				return nil
 			}, 10*time.Second, time.Second).Should(Succeed())
+		})
+	})
+	Context("DumpConfigINI test", func() {
+		It("should sort keys alphabetically within each section", func() {
+
+			cfg := ini.Empty()
+			sec, err := cfg.NewSection("zookeeper")
+			Expect(err).ToNot(HaveOccurred())
+			_, err = sec.NewKey("hosts", "zookeeper.sfoperator.svc:2281")
+			Expect(err).ToNot(HaveOccurred())
+			_, err = sec.NewKey("ca", "/tls/client/ca.crt")
+			Expect(err).ToNot(HaveOccurred())
+
+			sec2, err := cfg.NewSection("scheduler")
+			Expect(err).ToNot(HaveOccurred())
+			_, err = sec2.NewKey("max_hold_expiration", "86400")
+			Expect(err).ToNot(HaveOccurred())
+			_, err = sec2.NewKey("default_hold_expiration", "3600")
+			Expect(err).ToNot(HaveOccurred())
+
+			actual := DumpConfigINI(cfg)
+
+			expected := `[zookeeper]
+ca    = /tls/client/ca.crt
+hosts = zookeeper.sfoperator.svc:2281
+
+[scheduler]
+default_hold_expiration = 3600
+max_hold_expiration     = 86400
+`
+			Expect(actual).To(Equal(expected))
 		})
 	})
 })
