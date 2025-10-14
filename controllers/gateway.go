@@ -7,6 +7,7 @@ package controllers
 
 import (
 	_ "embed"
+	"maps"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
@@ -33,12 +34,14 @@ func (r *SFController) DeployHTTPDGateway() bool {
 	})
 
 	annotations := map[string]string{
-		"image":       base.HTTPDImage(),
 		"config-hash": utils.Checksum([]byte(gatewayConfig)),
 		"serial":      "1",
 	}
 
 	dep := base.MkDeployment(ident, r.ns, base.HTTPDImage(), r.cr.Spec.ExtraLabels, r.isOpenShift)
+
+	maps.Copy(annotations, ImagesAnnotationsFromSpec(dep.Spec.Template.Spec.Containers))
+
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkVolumeCM(ident, ident+"-config-map"),

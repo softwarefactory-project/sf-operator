@@ -13,6 +13,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"maps"
 )
 
 const houndSearchIdent = "hound-search"
@@ -104,10 +105,12 @@ func (r *SFController) DeployHoundSearch() bool {
 	annotations := map[string]string{
 		"config-hash":                utils.Checksum([]byte(r.configBaseURL + r.cr.Spec.ConfigRepositoryLocation.Name)),
 		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
-		"image":                      houndSearchImage,
 		"serial":                     "1",
 		"config-scripts":             utils.Checksum([]byte(houndSearchRender + houndSearchInit + houndSearchConfig)),
 	}
+
+	maps.Copy(annotations, ImagesAnnotationsFromSpec(sts.Spec.Template.Spec.Containers))
+
 	limits := v1.LimitsSpec{
 		CPU:    resource.MustParse("500m"),
 		Memory: resource.MustParse("2Gi"),
@@ -123,6 +126,7 @@ func (r *SFController) DeployHoundSearch() bool {
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
+
 	current, stsUpdated := r.ensureStatefulset(storage.StorageClassName, sts)
 
 	if stsUpdated {

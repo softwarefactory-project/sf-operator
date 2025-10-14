@@ -857,3 +857,11 @@ func RunPodCmdRaw(restConfig *rest.Config, kubeClientset *kubernetes.Clientset, 
 func (r *SFUtilContext) RunPodCmd(podName string, containerName string, cmdArgs []string) (*bytes.Buffer, error) {
 	return RunPodCmdRaw(r.RESTConfig, r.ClientSet, r.ns, podName, containerName, cmdArgs)
 }
+
+func ImagesAnnotationsFromSpec(containers []apiv1.Container) map[string]string {
+	annotations := map[string]string{}
+	for _, container := range containers {
+		annotations["image/"+container.Name] = container.Image
+	}
+	return annotations
+}

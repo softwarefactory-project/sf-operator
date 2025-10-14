@@ -8,6 +8,7 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	"maps"
 )
 
 func (r *SFController) AddCorporateCA(spec *apiv1.PodSpec) string {
@@ -77,11 +78,11 @@ func (r *SFController) EnsureLogJuicer() bool {
 	}
 
 	dep.Spec.Template.ObjectMeta.Annotations = map[string]string{
-		"image":       base.LogJuicerImage(),
 		"config-hash": utils.Checksum([]byte(config)),
 		"serial":      "1",
 		"certs":       r.AddCorporateCA(&dep.Spec.Template.Spec),
 	}
+	maps.Copy(dep.Spec.Template.ObjectMeta.Annotations, ImagesAnnotationsFromSpec(dep.Spec.Template.Spec.Containers))
 	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	// Reconcile deployment
