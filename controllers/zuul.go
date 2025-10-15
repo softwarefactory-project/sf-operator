@@ -546,7 +546,6 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 	}
 	zs.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	maps.Copy(annotations, ImagesAnnotationsFromSpec(zs.Spec.Template.Spec.Containers))
 	zs.Spec.Template.ObjectMeta.Annotations = annotations
 
 	// Mount a local directory in place of the Zuul source from the container image
@@ -598,7 +597,6 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-executor", r.cr.Spec.FluentBitLogForwarding, zeFluentBitLabels, annotations)
 	ze.Spec.Template.Spec.Containers[0].Env = append(ze.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
 
-	maps.Copy(annotations, ImagesAnnotationsFromSpec(ze.Spec.Template.Spec.Containers))
 	ze.Spec.Template.ObjectMeta.Annotations = annotations
 
 	ze.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health/ready", zuulPrometheusPort)
@@ -712,8 +710,6 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		}, r.isOpenShift)
 	zm.Spec.Template.Spec.Containers = append(zm.Spec.Template.Spec.Containers, nodeExporterSidecar)
 
-	maps.Copy(annotations, ImagesAnnotationsFromSpec(zm.Spec.Template.Spec.Containers))
-
 	zm.Spec.Template.ObjectMeta.Annotations = annotations
 
 	if !r.isOpenShift {
@@ -772,7 +768,6 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-web", r.cr.Spec.FluentBitLogForwarding, zwFluentBitLabels, annotations)
 	zw.Spec.Template.Spec.Containers[0].Env = append(zw.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
 
-	maps.Copy(annotations, ImagesAnnotationsFromSpec(zw.Spec.Template.Spec.Containers))
 	zw.Spec.Template.ObjectMeta.Annotations = annotations
 
 	if !r.isOpenShift {
@@ -792,20 +787,12 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		enableZuulLocalSource(&zw.Spec.Template, path, false, r.isOpenShift)
 	}
 
-	current := appsv1.Deployment{}
-	if r.GetM("zuul-web", &current) {
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			logging.LogI("zuul-web configuration changed, rollout zuul-web pods ...")
-			current.Spec = zw.DeepCopy().Spec
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		current := zw
-		r.CreateR(&current)
+	current, changed := r.ensureDeployment(zw)
+	if changed {
+		return false
 	}
 
-	isDeploymentReady := r.IsDeploymentReady(&current)
+	isDeploymentReady := r.IsDeploymentReady(current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-web", isDeploymentReady)
 
 	return isDeploymentReady

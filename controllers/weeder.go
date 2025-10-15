@@ -5,11 +5,7 @@ package controllers
 
 import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	"maps"
 )
 
 func (r *SFController) EnsureZuulWeeder(checksum string) bool {
@@ -28,7 +24,6 @@ func (r *SFController) EnsureZuulWeeder(checksum string) bool {
 
 	dep := base.MkDeployment(ident, r.ns, base.ZuulWeederImage(), r.cr.Spec.ExtraLabels, r.isOpenShift)
 	dep.Spec.Template.Spec.Containers[0].ImagePullPolicy = "Always"
-	maps.Copy(annotations, ImagesAnnotationsFromSpec(dep.Spec.Template.Spec.Containers))
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkEmptyDirVolume("weeder-tmp"),
@@ -59,18 +54,6 @@ func (r *SFController) EnsureZuulWeeder(checksum string) bool {
 	}
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health", port)
 	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
-	current := appsv1.Deployment{}
-	if r.GetM(ident, &current) {
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			logging.LogI("zuul configuration changed, rollout zuul-weeder pods ...")
-			current.Spec = dep.DeepCopy().Spec
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		current := dep
-		r.CreateR(&current)
-	}
-
-	return r.IsDeploymentReady(&current)
+	current, changed := r.ensureDeployment(dep)
+	return !changed && r.IsDeploymentReady(current)
 }

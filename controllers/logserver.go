@@ -298,7 +298,6 @@ func (r *SFController) DeployLogserver() bool {
 			" loopDelay:" + strconv.Itoa(r.cr.Spec.Logserver.LoopDelay),
 		"authorized-key": utils.Checksum(pubKey),
 	}
-	maps.Copy(sts.Spec.Template.ObjectMeta.Annotations, ImagesAnnotationsFromSpec(sts.Spec.Template.Spec.Containers))
 
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 

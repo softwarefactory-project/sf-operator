@@ -8,7 +8,6 @@ package controllers
 import (
 	_ "embed"
 	"fmt"
-	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -292,7 +291,6 @@ func (r *SFController) DeployGitServer() bool {
 	// Create the statefulset
 	storage := r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage)
 	sts := r.mkStatefulSet(GitServerIdent, base.GitServerImage(), storage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
-	maps.Copy(annotations, ImagesAnnotationsFromSpec(sts.Spec.Template.Spec.Containers))
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 	GSVolumeMountsRO := []apiv1.VolumeMount{
 		{

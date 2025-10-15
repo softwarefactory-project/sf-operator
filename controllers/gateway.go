@@ -7,12 +7,9 @@ package controllers
 
 import (
 	_ "embed"
-	"maps"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -40,8 +37,6 @@ func (r *SFController) DeployHTTPDGateway() bool {
 
 	dep := base.MkDeployment(ident, r.ns, base.HTTPDImage(), r.cr.Spec.ExtraLabels, r.isOpenShift)
 
-	maps.Copy(annotations, ImagesAnnotationsFromSpec(dep.Spec.Template.Spec.Containers))
-
 	dep.Spec.Template.ObjectMeta.Annotations = annotations
 	dep.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkVolumeCM(ident, ident+"-config-map"),
@@ -56,18 +51,6 @@ func (r *SFController) DeployHTTPDGateway() bool {
 	}
 	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current := appsv1.Deployment{}
-	if r.GetM(ident, &current) {
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			logging.LogI("gateway configuration changed, rollout gateway pods ...")
-			current.Spec = dep.DeepCopy().Spec
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		current := dep
-		r.CreateR(&current)
-	}
-
-	return r.IsDeploymentReady(&current)
+	current, changed := r.ensureDeployment(dep)
+	return !changed && r.IsDeploymentReady(current)
 }

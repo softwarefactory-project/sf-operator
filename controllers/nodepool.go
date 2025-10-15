@@ -6,7 +6,6 @@ package controllers
 
 import (
 	_ "embed"
-	"maps"
 	"strconv"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -17,7 +16,6 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -584,7 +582,6 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		nb.Spec.Template.Spec.Volumes = append(nb.Spec.Template.Spec.Volumes, fbVolumes...)
 	}
 
-	maps.Copy(annotations, ImagesAnnotationsFromSpec(nb.Spec.Template.Spec.Containers))
 	nb.Spec.Template.ObjectMeta.Annotations = annotations
 
 	// Append statsd exporter sidecar
@@ -777,7 +774,6 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	nl.Spec.Template.Spec.Containers = []apiv1.Container{
 		container,
 		monitoring.MkStatsdExporterSideCarContainer(shortIdent, "statsd-config", relayAddress, r.isOpenShift)}
-	maps.Copy(annotations, ImagesAnnotationsFromSpec(nl.Spec.Template.Spec.Containers))
 	nl.Spec.Template.ObjectMeta.Annotations = annotations
 	nl.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/ready", launcherPort)
 	nl.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/ready", launcherPort)
@@ -797,23 +793,15 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	}
 	nl.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current := appsv1.Deployment{}
-	if r.GetM(LauncherIdent, &current) {
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-			logging.LogI("Nodepool-launcher configuration changed, rollout pods ...")
-			current.Spec = nl.DeepCopy().Spec
-			r.UpdateR(&current)
-			return false
-		}
-	} else {
-		current := nl
-		r.CreateR(&current)
+	current, changed := r.ensureDeployment(nl)
+	if changed {
+		return false
 	}
 
 	srv := base.MkService(LauncherIdent, r.ns, LauncherIdent, []int32{launcherPort}, LauncherIdent, r.cr.Spec.ExtraLabels)
 	r.GetOrCreate(&srv)
 
-	isDeploymentReady := r.IsDeploymentReady(&current)
+	isDeploymentReady := r.IsDeploymentReady(current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, LauncherIdent, isDeploymentReady)
 
 	return isDeploymentReady
