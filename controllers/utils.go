@@ -772,6 +772,39 @@ func getGracePeriod(sts appsv1.StatefulSet) int64 {
 	return 30
 }
 
+func imageChanged(desired []apiv1.Container, current []apiv1.Container) []string {
+	missing := make([]string, 0)
+	for idx, desiredContainer := range desired {
+		if idx >= len(current) || current[idx].Image != desiredContainer.Image {
+			missing = append(missing, desiredContainer.Image)
+		}
+	}
+	return missing
+}
+
+func (r *SFController) ensureDeployment(dep appsv1.Deployment) (*appsv1.Deployment, bool) {
+	current := appsv1.Deployment{}
+	name := dep.ObjectMeta.Name
+	var needUpdate = false
+	if r.GetM(name, &current) {
+		if missing := imageChanged(dep.Spec.Template.Spec.Containers, current.Spec.Template.Spec.Containers); len(missing) > 0 {
+			needUpdate = true
+		} else if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &dep.Spec.Template.ObjectMeta.Annotations) {
+			needUpdate = true
+		}
+		if needUpdate {
+			logging.LogI(name + " configuration changed, rollout pods ...")
+			current.Spec = dep.DeepCopy().Spec
+			r.UpdateR(&current)
+			return &current, true
+		}
+	} else {
+		r.CreateR(&dep)
+		return &dep, true
+	}
+	return &current, false
+}
+
 // ensureStatefulSet ensures that a StatefulSet object is as expected.
 // The function takes the expected StatefulSet and returns a tuple with the current object on
 // the cluster and a boolean indicating whether the function performed a create or update on the object.
@@ -780,8 +813,12 @@ func (r *SFController) ensureStatefulset(storageClass *string, sts appsv1.Statef
 	name := sts.ObjectMeta.Name
 	var needUpdate = false
 	if r.GetM(name, &current) {
-		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &sts.Spec.Template.ObjectMeta.Annotations) || getGracePeriod(current) != getGracePeriod(sts) {
+		if missing := imageChanged(sts.Spec.Template.Spec.Containers, current.Spec.Template.Spec.Containers); len(missing) > 0 {
 			needUpdate = true
+		} else if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &sts.Spec.Template.ObjectMeta.Annotations) || getGracePeriod(current) != getGracePeriod(sts) {
+			needUpdate = true
+		}
+		if needUpdate {
 			current.Spec.Template = *sts.Spec.Template.DeepCopy()
 		}
 		if r.injectStorageNodeAffinity(storageClass, &current) {
@@ -856,12 +893,4 @@ func RunPodCmdRaw(restConfig *rest.Config, kubeClientset *kubernetes.Clientset, 
 
 func (r *SFUtilContext) RunPodCmd(podName string, containerName string, cmdArgs []string) (*bytes.Buffer, error) {
 	return RunPodCmdRaw(r.RESTConfig, r.ClientSet, r.ns, podName, containerName, cmdArgs)
-}
-
-func ImagesAnnotationsFromSpec(containers []apiv1.Container) map[string]string {
-	annotations := map[string]string{}
-	for _, container := range containers {
-		annotations["image/"+container.Name] = container.Image
-	}
-	return annotations
 }

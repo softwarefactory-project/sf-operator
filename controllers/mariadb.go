@@ -8,7 +8,6 @@ package controllers
 import (
 	_ "embed"
 	"fmt"
-	"maps"
 	"strconv"
 
 	"github.com/go-sql-driver/mysql"
@@ -277,7 +276,6 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(MariaDBIdent, volumeMountsStatsExporter, r.isOpenShift)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
 
-	maps.Copy(annotations, ImagesAnnotationsFromSpec(sts.Spec.Template.Spec.Containers))
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)

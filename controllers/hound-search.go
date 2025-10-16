@@ -7,13 +7,11 @@ import (
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"maps"
 )
 
 const houndSearchIdent = "hound-search"
@@ -109,8 +107,6 @@ func (r *SFController) DeployHoundSearch() bool {
 		"config-scripts":             utils.Checksum([]byte(houndSearchRender + houndSearchInit + houndSearchConfig)),
 	}
 
-	maps.Copy(annotations, ImagesAnnotationsFromSpec(sts.Spec.Template.Spec.Containers))
-
 	limits := v1.LimitsSpec{
 		CPU:    resource.MustParse("500m"),
 		Memory: resource.MustParse("2Gi"),
@@ -130,13 +126,6 @@ func (r *SFController) DeployHoundSearch() bool {
 	current, stsUpdated := r.ensureStatefulset(storage.StorageClassName, sts)
 
 	if stsUpdated {
-		return false
-	}
-
-	if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &annotations) {
-		logging.LogI("hound-search configuration changed, rollout pods ...")
-		current.Spec = sts.DeepCopy().Spec
-		r.UpdateR(current)
 		return false
 	}
 

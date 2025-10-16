@@ -6,9 +6,7 @@ package controllers
 import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	"maps"
 )
 
 func (r *SFController) AddCorporateCA(spec *apiv1.PodSpec) string {
@@ -82,20 +80,10 @@ func (r *SFController) EnsureLogJuicer() bool {
 		"serial":      "1",
 		"certs":       r.AddCorporateCA(&dep.Spec.Template.Spec),
 	}
-	maps.Copy(dep.Spec.Template.ObjectMeta.Annotations, ImagesAnnotationsFromSpec(dep.Spec.Template.Spec.Containers))
 	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	// Reconcile deployment
-	current := appsv1.Deployment{}
 	pvcReadiness := r.reconcileExpandPVC(pvcName, r.cr.Spec.Logjuicer)
-	if r.GetM(ident, &current) {
-		if utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &dep.Spec.Template.ObjectMeta.Annotations) {
-			return r.IsDeploymentReady(&current) && pvcReadiness
-		}
-		current.Spec = dep.Spec
-		r.UpdateR(&current)
-	} else {
-		r.CreateR(&dep)
-	}
-	return false
+	current, changed := r.ensureDeployment(dep)
+	return !changed && r.IsDeploymentReady(current) && pvcReadiness
 }
