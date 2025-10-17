@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+
+## [v0.0.59] - 2025-10-17
+
+### Added
 
 - Enable storage (PVC) configuration and resizing for the `logjuicer` component.
 - CLI: add the `version` subcommand, displaying the current version of the executable.
