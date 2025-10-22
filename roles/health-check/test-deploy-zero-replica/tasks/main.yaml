@@ -1,41 +1,33 @@
 ---
 - name: scale down zuul-executor
   block:
-  - name: Set executor replica set to 0
-    ansible.builtin.command:
-      kubectl -n sf scale statefulsets zuul-executor --replicas=0
+    - name: Set executor replica set to 0
+      ansible.builtin.command:
+        kubectl -n sf scale statefulsets zuul-executor --replicas=0
 
-  - name: Ensure executor pod is down
-    ansible.builtin.shell: |
-      kubectl -n sf get pods
-    register: _is_pod_down
-    until:
-      - "'zuul-executor' not in _is_pod_down.stdout"
-    retries: "{{ zuul_api_retries }}"
-    delay: "{{ zuul_api_delay }}"
+    - name: Ensure executor pod is down
+      ansible.builtin.shell: |
+        kubectl -n sf get pods
+      register: _is_pod_down
+      until:
+        - "'zuul-executor' not in _is_pod_down.stdout"
+      retries: "{{ zuul_api_retries }}"
+      delay: "{{ zuul_api_delay }}"
 
 - name: scale down zuul-web
   block:
-  - name: Set zuul-web replica set to 0
-    ansible.builtin.command:
-      kubectl -n sf scale deployments zuul-web --replicas=0
+    - name: Set zuul-web replica set to 0
+      ansible.builtin.command:
+        kubectl -n sf scale deployments zuul-web --replicas=0
 
-  - name: Ensure zuul-web pod is down
-    ansible.builtin.shell: |
-      kubectl -n sf get pods
-    register: _is_pod_down
-    until:
-      - "'zuul-web' not in _is_pod_down.stdout"
-    retries: "{{ zuul_api_retries }}"
-    delay: "{{ zuul_api_delay }}"
-
-- name: annotate zuul-executor statefulset to trigger reconciliation
-  ansible.builtin.shell: |
-    kubectl annotate --overwrite statefulset zuul-executor serial=0
-
-- name: annotate zuul-web deployment to trigger reconciliation
-  ansible.builtin.shell: |
-    kubectl annotate --overwrite deployment zuul-web serial=0
+    - name: Ensure zuul-web pod is down
+      ansible.builtin.shell: |
+        kubectl -n sf get pods
+      register: _is_pod_down
+      until:
+        - "'zuul-web' not in _is_pod_down.stdout"
+      retries: "{{ zuul_api_retries }}"
+      delay: "{{ zuul_api_delay }}"
 
 - name: Run sf-operator and expect reconciliation
   ansible.builtin.shell: |
@@ -70,3 +62,7 @@
     - "'zuul-web' in _is_pod_up.stdout"
   retries: "{{ zuul_api_retries }}"
   delay: "{{ zuul_api_delay }}"
+
+- name: Run dry-run update detection test
+  ansible.builtin.include_role:
+    name: test-dry-run-update-detection

@@ -52,6 +52,7 @@ type SoftwareFactoryReconciler struct {
 	RESTConfig *rest.Config
 	CancelFunc context.CancelFunc
 	Completed  bool
+	DryRun     bool
 }
 
 // Run `make manifests` to apply rbac change
@@ -589,6 +590,7 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 			owner:      owner,
 			standalone: standalone,
 			zkChanged:  false,
+			DryRun:     r.DryRun,
 		},
 		cr:            cr,
 		isOpenShift:   CheckOpenShift(r.RESTConfig),
@@ -669,7 +671,9 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 		controllerCM.Data = map[string]string{
 			"spec": string(marshaledSpec),
 		}
-		logging.LogI("Creating ConfigMap, name: " + controllerCMName)
+		if !r.DryRun {
+			logging.LogI("Creating ConfigMap, name: " + controllerCMName)
+		}
 		// Create the fake controller configMap
 		if err := r.Create(ctx, &controllerCM); err != nil {
 			log.Error(err, "Unable to create configMap", "name", controllerCMName)
@@ -681,6 +685,10 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 
 	for {
 		status := sfCtrl.Step()
+		if r.DryRun {
+			log.Info("[Dry Run] Standalone reconcile done.")
+			return nil
+		}
 		attempt += 1
 		if attempt == maxAttempt {
 			return errors.New("unable to reconcile after max attempts")

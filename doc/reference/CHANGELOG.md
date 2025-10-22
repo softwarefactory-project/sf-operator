@@ -19,6 +19,8 @@ All notable changes to this project will be documented in this file.
 - standalone mode: the sf-standalone-owner configMap is annotated with the CLI's version that
   deployed the resource, and the end time of the deployment. The configMap's data
   is also set to hold the last applied SoftwareFactory spec.
+- Add a `--dry-run` flag to the `deploy` command. When used, the operator will log the actions it would take without
+  performing them, preventing any resource creation or modification.
 
 ### Changed
 

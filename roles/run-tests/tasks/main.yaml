@@ -48,5 +48,7 @@
     - name: test-backup-restore
     - name: test-nodeAffinity
       when: "{{ mode == 'standalone' }}"
+    - name: test-dry-run-lifecycle
+      when: "{{ mode == 'standalone' }}"
   loop_control:
     loop_var: role

@@ -1,5 +1,7 @@
+---
 glue: true
 cr_path: playbooks/files/sf.yaml
 context: ci
 log_file: sf-operator.log
 current_cr_path: /tmp/current_cr.yaml
+dry_run: false

@@ -1,0 +1,74 @@
+---
+- name: Create a temporary directory for generated CRs
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: "test-crs"
+  register: cr_temp_dir
+  check_mode: false
+
+- name: Test dry-run deployment of a new service
+  block:
+    - name: Generate CR with zuul-executor disabled
+      ansible.builtin.template:
+        src: ../../../../playbooks/files/sf.yaml.j2
+        dest: "{{ cr_temp_dir.path }}/sf-no-executor.yaml"
+      vars:
+        zuul_executor_enabled: false
+      check_mode: false
+
+    - name: Deploy SF without zuul-executor to ensure its removal
+      ansible.builtin.include_role:
+        name: run-operator-standalone
+      vars:
+        cr_path: "{{ cr_temp_dir.path }}/sf-no-executor.yaml"
+
+    - name: Ensure zuul-executor StatefulSet is not present
+      ansible.builtin.shell: |
+        kubectl get statefulset zuul-executor -n sf
+      register: get_sts
+      failed_when: get_sts.rc == 0
+      changed_when: false
+
+    - name: Run update detection test on zuul-web only
+      ansible.builtin.include_role:
+        name: test-dry-run-update-detection
+      vars:
+        cr_path: "{{ cr_temp_dir.path }}/sf-no-executor.yaml"
+        test_executor: false
+        test_web: true
+
+    - name: Generate CR with zuul-executor enabled
+      ansible.builtin.template:
+        src: ../../../../playbooks/files/sf.yaml.j2
+        dest: "{{ cr_temp_dir.path }}/sf-with-executor.yaml"
+      vars:
+        zuul_executor_enabled: true
+      check_mode: false
+
+    - name: Run deploy with --dry-run to test from-scratch creation
+      ansible.builtin.include_role:
+        name: run-operator-standalone
+      vars:
+        cr_path: "{{ cr_temp_dir.path }}/sf-with-executor.yaml"
+        dry_run: true
+        log_file: "{{ dry_run_log_file }}"
+
+    - name: Check for 'create' dry-run messages for zuul-executor resources
+      ansible.builtin.shell: |
+        grep "\[Dry Run\] Would create object, name: zuul-executor" {{ logs_dir }}/{{ dry_run_log_file }}
+      changed_when: false
+
+  always:
+    - name: Restore original state by deploying with zuul-executor enabled
+      ansible.builtin.include_role:
+        name: run-operator-standalone
+      vars:
+        cr_path: "{{ cr_temp_dir.path }}/sf-with-executor.yaml"
+      when: cr_temp_dir.path is defined
+
+    - name: Remove temporary directory
+      ansible.builtin.file:
+        path: "{{ cr_temp_dir.path }}"
+        state: absent
+      when: cr_temp_dir.path is defined
+      check_mode: false
