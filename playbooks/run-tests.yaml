@@ -2,7 +2,6 @@
 - hosts: "{{ hostname | default('controller') }}"
   vars:
     mode: standalone
-  vars:
     project_dir: "{% if zuul.project.src_dir is defined %}~/{{ zuul.project.src_dir }}{% else %}..{% endif %}"
   pre_tasks:
     - name: Install test dependencies
