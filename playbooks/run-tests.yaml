@@ -34,6 +34,7 @@
     - health-check/config-update-nodepool-launcher
     - health-check/test-nodeAffinity
     - health-check/test-deploy-zero-replica
+    - health-check/test-dry-run-lifecycle
 
     # FIXME: add more health-check
     # - health-check/config-update-nodepool-builder

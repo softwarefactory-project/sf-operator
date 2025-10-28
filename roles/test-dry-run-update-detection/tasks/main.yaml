@@ -1,0 +1,62 @@
+---
+- name: Fetch current serial for zuul-executor
+  ansible.builtin.shell: |
+    kubectl get statefulset zuul-executor -n sf -o jsonpath='{.spec.template.metadata.annotations.serial}'
+  register: executor_serial
+  changed_when: false
+  check_mode: false
+  when: test_executor | default(true)
+
+- name: Fetch current serial for zuul-web
+  ansible.builtin.shell: |
+    kubectl get deployment zuul-web -n sf -o jsonpath='{.spec.template.metadata.annotations.serial}'
+  register: web_serial
+  changed_when: false
+  check_mode: false
+  when: test_web | default(true)
+
+- name: Test dry-run update detection and restore serials
+  block:
+    - name: Patch zuul-executor statefulset template to trigger reconciliation
+      ansible.builtin.shell: |
+        kubectl patch statefulset zuul-executor -n sf --type=json -p='[{"op": "replace", "path": "/spec/template/metadata/annotations/serial", "value": "0"}]'
+      when: test_executor | default(true)
+
+    - name: Patch zuul-web deployment template to trigger reconciliation
+      ansible.builtin.shell: |
+        kubectl patch deployment zuul-web -n sf --type=json -p='[{"op": "replace", "path": "/spec/template/metadata/annotations/serial", "value": "0"}]'
+      when: test_web | default(true)
+
+    - name: Run deploy with --dry-run to check for update detection
+      ansible.builtin.include_role:
+        name: run-operator-standalone
+      vars:
+        dry_run: true
+        log_file: "{{ dry_run_log_file }}"
+
+    - name: Check for 'update' dry-run message in the log for zuul-executor
+      ansible.builtin.shell: |
+        grep "\[Dry Run\] Would update StatefulSet, name: zuul-executor. Reason: Spec template has changed." {{ logs_dir }}/{{ dry_run_log_file }}
+      changed_when: false
+      when: test_executor | default(true)
+
+    - name: Check for 'update' dry-run message in the log for zuul-web
+      ansible.builtin.shell: |
+        grep "\[Dry Run\] Would update Deployment, name: zuul-web. Reason: Spec template has changed." {{ logs_dir }}/{{ dry_run_log_file }}
+      changed_when: false
+      when: test_web | default(true)
+
+  always:
+    - name: Restore original serial for zuul-executor
+      ansible.builtin.shell: |
+        kubectl patch statefulset zuul-executor -n sf --type=json -p='[{"op": "replace", "path": "/spec/template/metadata/annotations/serial", "value": "{{ executor_serial.stdout }}"}]'
+      when:
+        - test_executor | default(true)
+        - executor_serial.stdout is defined and executor_serial.stdout != "" and executor_serial.stdout != "0"
+
+    - name: Restore original serial for zuul-web
+      ansible.builtin.shell: |
+        kubectl patch deployment zuul-web -n sf --type=json -p='[{"op": "replace", "path": "/spec/template/metadata/annotations/serial", "value": "{{ web_serial.stdout }}"}]'
+      when:
+        - test_web | default(true)
+        - web_serial.stdout is defined and web_serial.stdout != "" and web_serial.stdout != "0"

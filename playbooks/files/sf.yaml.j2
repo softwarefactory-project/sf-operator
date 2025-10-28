@@ -1,0 +1,30 @@
+apiVersion: sf.softwarefactory-project.io/v1
+kind: SoftwareFactory
+metadata:
+  name: my-sf
+spec:
+  fqdn: "sfop.me"
+  config-location:
+    name: config
+    zuul-connection-name: gerrit
+  zuul:
+    gerritconns:
+      - name: gerrit
+        username: zuul
+        hostname: gerrit-sshd.sf
+        puburl: "https://gerrit.sfop.me"
+        verifyssl: false
+    scheduler:
+      logLevel: DEBUG
+    executor:
+      logLevel: DEBUG
+      enabled: {{ zuul_executor_enabled | default(true) | string | lower }}
+    merger:
+      logLevel: DEBUG
+    web:
+      logLevel: DEBUG
+  logserver:
+    loopDelay: 3600
+    retentionDays: 30
+    storage:
+      size: 2Gi

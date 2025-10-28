@@ -92,7 +92,9 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 	var secret apiv1.Secret
 	secretName := "config-update-secrets"
 	if !r.GetM(secretName, &secret) {
-		logging.LogI("Creating the config-update service account secret")
+		if !r.DryRun {
+			logging.LogI("Creating the config-update service account secret")
+		}
 		secret = apiv1.Secret{
 			Type: "kubernetes.io/service-account-token",
 			ObjectMeta: metav1.ObjectMeta{
@@ -130,7 +132,9 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 	}
 
 	if !found {
-		logging.LogI("Creating base secret job")
+		if !r.DryRun {
+			logging.LogI("Creating base secret job")
+		}
 		r.CreateR(r.RunCommand(jobName, []string{"config-create-zuul-secrets"}, extraCmdVars))
 		return false
 	} else if job.Status.Succeeded >= 1 {

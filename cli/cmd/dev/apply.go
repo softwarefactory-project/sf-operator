@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func ApplyStandalone(ns string, sfResource string, kubeContext string) {
+func ApplyStandalone(ns string, sfResource string, kubeContext string, dryRun bool) {
 	if sfResource != "" && ns != "" {
 		var sf sfv1.SoftwareFactory
 		dat, err := os.ReadFile(sfResource)
@@ -45,7 +45,7 @@ func ApplyStandalone(ns string, sfResource string, kubeContext string) {
 			"CR", sf,
 			"CR name", sf.ObjectMeta.Name,
 			"Namespace", ns)
-		err = controllers.Standalone(sf, ns, kubeContext)
+		err = controllers.Standalone(sf, ns, kubeContext, dryRun)
 		if err != nil {
 			ctrl.Log.Error(err, "Could not reconcile resource")
 			os.Exit(1)

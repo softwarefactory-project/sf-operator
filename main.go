@@ -26,6 +26,8 @@ import (
 	"errors"
 )
 
+var dryRun bool
+
 // getWatchNamespace returns the Namespace the operator should be watching for changes
 func getWatchNamespace() (string, error) {
 	// WatchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
@@ -83,7 +85,7 @@ func deployCmd(kmd *cobra.Command, args []string) {
 		ctrl.Log.Error(err, "Argument error:")
 		os.Exit(1)
 	}
-	dev.ApplyStandalone(ns, sfResource, kubeContext)
+	dev.ApplyStandalone(ns, sfResource, kubeContext, dryRun)
 }
 
 func main() {
@@ -117,6 +119,9 @@ func main() {
 			Run:   deployCmd,
 		}
 	)
+
+	// Flags for the deploy command
+	deployCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Shows what resources will be changed by a deploy operation")
 
 	// Global flags
 	rootCmd.PersistentFlags().StringVarP(&ns, "namespace", "n", "", "The namespace on which to perform actions.")

@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"k8s.io/client-go/kubernetes"
@@ -67,6 +68,7 @@ type SFUtilContext struct {
 	owner      client.Object
 	standalone bool
 	zkChanged  bool
+	DryRun     bool
 }
 
 type HostAlias struct {
@@ -99,7 +101,8 @@ func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
 		client.ObjectKey{
 			Name:      name,
 			Namespace: r.ns,
-		}, obj)
+		},
+		obj)
 	if errors.IsNotFound(err) {
 		return false
 	} else if err != nil {
@@ -110,6 +113,10 @@ func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
 
 // CreateR creates a resource with the owner as the ownerReferences.
 func (r *SFUtilContext) CreateR(obj client.Object) {
+	if r.DryRun {
+		logging.LogI("[Dry Run] Would create object, name: " + obj.GetName())
+		return
+	}
 	r.setOwnerReference(obj)
 	if err := r.Client.Create(r.ctx, obj); err != nil && !errors.IsAlreadyExists(err) {
 		panic(err.Error())
@@ -118,6 +125,10 @@ func (r *SFUtilContext) CreateR(obj client.Object) {
 
 // DeleteR delete a resource.
 func (r *SFUtilContext) DeleteR(obj client.Object) {
+	if r.DryRun {
+		logging.LogI("[Dry Run] Would delete object, name: " + obj.GetName())
+		return
+	}
 	if err := r.Client.Delete(r.ctx, obj); err != nil && !errors.IsNotFound(err) {
 		panic(err.Error())
 	}
@@ -125,6 +136,23 @@ func (r *SFUtilContext) DeleteR(obj client.Object) {
 
 // UpdateR updates resource with the owner as the ownerReferences.
 func (r *SFUtilContext) UpdateR(obj client.Object) bool {
+	if r.DryRun {
+		// When dry-running, we must check that the object exists to avoid reconciliation loops.
+		gvk, err := apiutil.GVKForObject(obj, r.Scheme)
+		if err != nil {
+			panic(err.Error())
+		}
+		newObj, err := r.Scheme.New(gvk)
+		if err != nil {
+			// This should not happen if GVKForObject succeeded.
+			panic(err.Error())
+		}
+		if !r.GetM(obj.GetName(), newObj.(client.Object)) {
+			logging.LogI("[Dry Run] Would have failed to update non-existent object, name: " + obj.GetName())
+			return false
+		}
+		return true
+	}
 	r.setOwnerReference(obj)
 	logging.LogI("Updating object name:" + obj.GetName())
 	if err := r.Client.Update(r.ctx, obj); err != nil {
@@ -140,7 +168,9 @@ func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
 	name := obj.GetName()
 
 	if !r.GetM(name, obj) {
-		logging.LogI("Creating object, name: " + obj.GetName())
+		if !r.DryRun {
+			logging.LogI("Creating object, name: " + obj.GetName())
+		}
 		r.CreateR(obj)
 		return false
 	}
@@ -191,7 +221,9 @@ func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string)
 	name := baseName + "-config-map"
 	var cm apiv1.ConfigMap
 	if !r.GetM(name, &cm) {
-		logging.LogI("Creating config map name: " + name)
+		if !r.DryRun {
+			logging.LogI("Creating config map name: " + name)
+		}
 		cm = apiv1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns},
 			Data:       data,
@@ -199,7 +231,11 @@ func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string)
 		r.CreateR(&cm)
 	} else {
 		if !reflect.DeepEqual(cm.Data, data) {
-			logging.LogI("Updating configmap, name: " + name)
+			if r.DryRun {
+				logging.LogI("[Dry Run] Would update ConfigMap, name: " + name + ". Reason: Data has changed.")
+			} else {
+				logging.LogI("Updating configmap, name: " + name)
+			}
 			cm.Data = data
 			r.UpdateR(&cm)
 		}
@@ -213,11 +249,17 @@ func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
 	var current apiv1.Secret
 	name := secret.GetName()
 	if !r.GetM(name, &current) {
-		logging.LogI("Creating secret, name: " + name)
+		if !r.DryRun {
+			logging.LogI("Creating secret, name: " + name)
+		}
 		r.CreateR(secret)
 	} else {
 		if !reflect.DeepEqual(current.Data, secret.Data) {
-			logging.LogI("Updating secret, name: " + name)
+			if r.DryRun {
+				logging.LogI("[Dry Run] Would update Secret, name: " + name + ". Reason: Data has changed.")
+			} else {
+				logging.LogI("Updating secret, name: " + name)
+			}
 			current.Data = secret.Data
 			r.UpdateR(&current)
 		}
@@ -231,7 +273,9 @@ func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
 func (r *SFUtilContext) ensureSecretFromFunc(name string, getData func() string) apiv1.Secret {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
-		logging.LogI("Creating secret, name: " + name)
+		if !r.DryRun {
+			logging.LogI("Creating secret, name: " + name)
+		}
 		secret = base.MkSecretFromFunc(name, r.ns, getData)
 		r.CreateR(&secret)
 	}
@@ -250,7 +294,9 @@ func (r *SFUtilContext) EnsureSecretUUID(name string) apiv1.Secret {
 func (r *SFUtilContext) EnsureSSHKeySecret(name string) {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
-		logging.LogI("Creating ssh key, name: " + name)
+		if !r.DryRun {
+			logging.LogI("Creating ssh key, name: " + name)
+		}
 		secret := base.MkSSHKeySecret(name, r.ns)
 		r.CreateR(&secret)
 	}
@@ -270,12 +316,18 @@ func (r *SFUtilContext) EnsureService(service *apiv1.Service) {
 	}
 	name := service.GetName()
 	if !r.GetM(name, &current) {
-		logging.LogI("Creating service, name: " + name)
+		if !r.DryRun {
+			logging.LogI("Creating service, name: " + name)
+		}
 		r.CreateR(service)
 	} else {
 		if !reflect.DeepEqual(current.Spec.Selector, service.Spec.Selector) ||
 			spsAsString(current.Spec.Ports) != spsAsString(service.Spec.Ports) {
-			logging.LogI("Updating service, name: " + name)
+			if r.DryRun {
+				logging.LogI("[Dry Run] Would update Service, name: " + name + ". Reason: Spec has changed.")
+			} else {
+				logging.LogI("Updating service, name: " + name)
+			}
 			current.Spec = *service.Spec.DeepCopy()
 			r.UpdateR(&current)
 		}
@@ -384,6 +436,10 @@ func (r *SFUtilContext) getPods(dep *appsv1.StatefulSet) ([]apiv1.Pod, bool) {
 
 // IsStatefulSetReady checks if StatefulSet is ready
 func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
+	if r.DryRun {
+		return true
+	}
+
 	logging.LogI("Waiting for statefulset, name: " + dep.ObjectMeta.GetName())
 	rolloutOk := base.IsStatefulSetRolloutDone(dep)
 	if rolloutOk {
@@ -407,6 +463,10 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 
 // IsDeploymentReady checks if Deployment is ready
 func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
+	if r.DryRun {
+		return true
+	}
+
 	logging.LogI("Waiting for deployment, name: " + dep.ObjectMeta.GetName())
 	rolloutOk := base.IsDeploymentRolloutDone(dep)
 	if rolloutOk {
@@ -646,7 +706,9 @@ func (r *SFController) EnsureDiskUsagePromRule(ruleGroups []monitoringv1.RuleGro
 		return false
 	} else {
 		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &desiredDUPromRule.ObjectMeta.Annotations) {
-			logging.LogI("Default disk usage Prometheus rules changed, updating...")
+			if !r.DryRun {
+				logging.LogI("Default disk usage Prometheus rules changed, updating...")
+			}
 			currentPromRule.Spec = desiredDUPromRule.Spec
 			currentPromRule.ObjectMeta.Annotations = desiredDUPromRule.ObjectMeta.Annotations
 			r.UpdateR(&currentPromRule)
@@ -676,7 +738,9 @@ func (r *SFController) EnsureSFPodMonitor(ports []string, selector metav1.LabelS
 		return false
 	} else {
 		if !utils.MapEquals(&currentPodMonitor.ObjectMeta.Annotations, &annotations) {
-			logging.LogI("SF PodMonitor configuration changed, updating...")
+			if !r.DryRun {
+				logging.LogI("SF PodMonitor configuration changed, updating...")
+			}
 			currentPodMonitor.Spec = desiredPodMonitor.Spec
 			currentPodMonitor.ObjectMeta.Annotations = annotations
 			r.UpdateR(&currentPodMonitor)
@@ -793,7 +857,11 @@ func (r *SFController) ensureDeployment(dep appsv1.Deployment) (*appsv1.Deployme
 			needUpdate = true
 		}
 		if needUpdate {
-			logging.LogI(name + " configuration changed, rollout pods ...")
+			if r.DryRun {
+				logging.LogI("[Dry Run] Would update Deployment, name: " + name + ". Reason: Spec template has changed.")
+			} else {
+				logging.LogI(name + " configuration changed, rollout pods ...")
+			}
 			current.Spec = dep.DeepCopy().Spec
 			r.UpdateR(&current)
 			return &current, true
@@ -825,7 +893,11 @@ func (r *SFController) ensureStatefulset(storageClass *string, sts appsv1.Statef
 			needUpdate = true
 		}
 		if needUpdate {
-			logging.LogI(name + " configuration changed, rollout pods ...")
+			if r.DryRun {
+				logging.LogI("[Dry Run] Would update StatefulSet, name: " + name + ". Reason: Spec template has changed.")
+			} else {
+				logging.LogI(name + " configuration changed, rollout pods ...")
+			}
 			r.UpdateR(&current)
 			return &current, true
 		}
