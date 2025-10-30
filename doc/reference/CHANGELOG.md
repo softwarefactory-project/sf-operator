@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+- The Go version in go.mod is bumped to 1.24.9. Backward compatibility with earlier versions is not guaranteed.
+
 ### Deprecated
 ### Removed
 ### Fixed

@@ -1,6 +1,6 @@
 module github.com/softwarefactory-project/sf-operator
 
-go 1.24.6
+go 1.24.9
 
 require (
 	github.com/apenella/go-ansible v1.3.0
