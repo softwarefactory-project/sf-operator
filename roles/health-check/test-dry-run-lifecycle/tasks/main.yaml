@@ -55,7 +55,7 @@
 
     - name: Check for 'create' dry-run messages for zuul-executor resources
       ansible.builtin.shell: |
-        grep "\[Dry Run\] Would create object, name: zuul-executor" {{ logs_dir }}/{{ dry_run_log_file }}
+        grep "Creating object, name: zuul-executor (server dry run)" {{ logs_dir }}/{{ dry_run_log_file }}
       changed_when: false
 
   always:

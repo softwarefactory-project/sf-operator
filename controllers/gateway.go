@@ -7,7 +7,6 @@ package controllers
 
 import (
 	_ "embed"
-
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	apiv1 "k8s.io/api/core/v1"

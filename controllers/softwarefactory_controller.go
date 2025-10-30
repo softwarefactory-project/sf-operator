@@ -671,9 +671,7 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 		controllerCM.Data = map[string]string{
 			"spec": string(marshaledSpec),
 		}
-		if !r.DryRun {
-			logging.LogI("Creating ConfigMap, name: " + controllerCMName)
-		}
+		logging.LogI("Creating ConfigMap, name: " + controllerCMName)
 		// Create the fake controller configMap
 		if err := r.Create(ctx, &controllerCM); err != nil {
 			log.Error(err, "Unable to create configMap", "name", controllerCMName)
@@ -686,7 +684,7 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 	for {
 		status := sfCtrl.Step()
 		if r.DryRun {
-			log.Info("[Dry Run] Standalone reconcile done.")
+			log.Info("[Dry Run] Standalone reconcile done")
 			return nil
 		}
 		attempt += 1

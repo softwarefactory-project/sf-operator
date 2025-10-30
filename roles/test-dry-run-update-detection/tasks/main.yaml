@@ -36,13 +36,13 @@
 
     - name: Check for 'update' dry-run message in the log for zuul-executor
       ansible.builtin.shell: |
-        grep "\[Dry Run\] Would update StatefulSet, name: zuul-executor. Reason: Spec template has changed." {{ logs_dir }}/{{ dry_run_log_file }}
+        grep "\[Dry Run\] Would update StatefulSet, name: zuul-executor. Reason: annotation 'serial' changed from '{{ executor_serial.stdout }}' to '0'" {{ logs_dir }}/{{ dry_run_log_file }}
       changed_when: false
       when: test_executor | default(true)
 
     - name: Check for 'update' dry-run message in the log for zuul-web
       ansible.builtin.shell: |
-        grep "\[Dry Run\] Would update Deployment, name: zuul-web. Reason: Spec template has changed." {{ logs_dir }}/{{ dry_run_log_file }}
+        grep "\[Dry Run\] Would update Deployment, name: zuul-web. Reason: annotation 'serial' changed from '{{ web_serial.stdout }}' to '0'" {{ logs_dir }}/{{ dry_run_log_file }}
       changed_when: false
       when: test_web | default(true)
 

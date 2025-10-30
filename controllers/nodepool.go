@@ -6,8 +6,6 @@ package controllers
 
 import (
 	_ "embed"
-	"strconv"
-
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
@@ -15,6 +13,7 @@ import (
 	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+	"strconv"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
