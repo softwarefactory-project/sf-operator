@@ -74,4 +74,4 @@ images:
       version: v0.28.0
     - name: fluent-bit
       container: quay.io/software-factory/fluent-bit
-      version: 3.2.10
+      version: 4.1.1
