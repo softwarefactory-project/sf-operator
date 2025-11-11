@@ -47,8 +47,8 @@ Zuul's default configuration: its default pipelines, jobs (notably the **config-
 To hack on this configuration, you need to clone the **system-config** repository:
 
 ```sh
-kubectl port-forward service/git-server 9418
-git clone git://localhost:9418/system-config /tmp/system-config
+kubectl port-forward service/git-server-rw 9419
+git clone git://localhost:9419/system-config /tmp/system-config
 ```
 
 Make your changes, commit them, then push them with `git push`.
