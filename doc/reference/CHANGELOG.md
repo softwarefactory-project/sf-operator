@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - The Go version in go.mod is bumped to 1.24.9. Backward compatibility with earlier versions is not guaranteed.
+- zuul: update version to 13.0.1 https://zuul-ci.org/docs/zuul/latest/releasenotes.html#relnotes-13-0-1/
 
 ### Deprecated
 ### Removed
