@@ -4,19 +4,19 @@
 images:
     - name: zuul-scheduler
       container: quay.io/software-factory/zuul-scheduler
-      version: 13.0.0-20250925-1
+      version: 13.0.1-20250925-1
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=4757eabbb2ecaa9adaed501124417cc529f644d1
     - name: zuul-executor
       container: quay.io/software-factory/zuul-executor
-      version: 13.0.0-20250925-1
+      version: 13.0.1-20250925-1
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=4757eabbb2ecaa9adaed501124417cc529f644d1
     - name: zuul-merger
       container: quay.io/software-factory/zuul-merger
-      version: 13.0.0-20250925-1
+      version: 13.0.1-20250925-1
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=4757eabbb2ecaa9adaed501124417cc529f644d1
     - name: zuul-web
       container: quay.io/software-factory/zuul-web
-      version: 13.0.0-20250925-1
+      version: 13.0.1-20250925-1
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=4757eabbb2ecaa9adaed501124417cc529f644d1
     - name: nodepool-launcher
       container: quay.io/software-factory/nodepool-launcher
