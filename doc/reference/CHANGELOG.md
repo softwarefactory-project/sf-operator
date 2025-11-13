@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+
+## [v0.0.60] - 2025-11-13
+
+### Added
 
 - Add a `--dry-run` flag to the `deploy` command. When used, the operator will log the actions it would take without
   performing them, preventing any resource creation or modification.
