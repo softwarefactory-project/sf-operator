@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 ### Removed
 ### Fixed
 
+- In standalone mode, the `sf-standalone-owner` ConfigMap's `data` field is now updated on reconciliation.
+
 ## [v0.0.60] - 2025-11-13
 
 ### Added

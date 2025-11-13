@@ -50,5 +50,7 @@
       when: "{{ mode == 'standalone' }}"
     - name: test-dry-run-lifecycle
       when: "{{ mode == 'standalone' }}"
+    - name: test-standalone-update
+      when: "{{ mode == 'standalone' }}"
   loop_control:
     loop_var: role

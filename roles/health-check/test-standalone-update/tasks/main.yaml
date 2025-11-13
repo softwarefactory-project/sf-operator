@@ -1,0 +1,91 @@
+---
+- name: Create a temporary directory for generated CRs
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: "standalone-update-test"
+  register: cr_temp_dir
+  check_mode: false
+
+- name: Test standalone update functionality
+  block:
+    - name: Generate initial CR
+      ansible.builtin.template:
+        src: "{{ project_dir }}/playbooks/files/sf.yaml.j2"
+        dest: "{{ cr_temp_dir.path }}/sf-initial.yaml"
+      vars:
+        fqdn: "test-initial.sf.io"
+      check_mode: false
+
+    - name: Run standalone operator with initial config
+      ansible.builtin.include_role:
+        name: run-operator-standalone
+      vars:
+        cr_path: "{{ cr_temp_dir.path }}/sf-initial.yaml"
+
+    - name: Get standalone owner configmap after initial creation
+      ansible.builtin.command: kubectl get configmap sf-standalone-owner -o jsonpath='{.data.spec}'
+      register: cm_initial_spec
+      changed_when: false
+
+    - name: Verify initial spec in configmap
+      ansible.builtin.assert:
+        that:
+          - "'fqdn: test-initial.sf.io' in cm_initial_spec.stdout"
+
+    - name: Get standalone owner configmap annotation after initial creation
+      ansible.builtin.command: kubectl get configmap sf-standalone-owner -o jsonpath='{.metadata.annotations.last-reconcile}'
+      register: cm_initial_annotation
+      changed_when: false
+
+    - name: Pause for 2 seconds to ensure timestamp difference
+      ansible.builtin.pause:
+        seconds: 2
+
+    - name: Generate updated CR
+      ansible.builtin.template:
+        src: "{{ project_dir }}/playbooks/files/sf.yaml.j2"
+        dest: "{{ cr_temp_dir.path }}/sf-updated.yaml"
+      vars:
+        fqdn: "test-updated.sf.io"
+      check_mode: false
+
+    - name: Run standalone operator with updated config
+      ansible.builtin.include_role:
+        name: run-operator-standalone
+      vars:
+        cr_path: "{{ cr_temp_dir.path }}/sf-updated.yaml"
+
+    - name: Get standalone owner configmap after update
+      ansible.builtin.command: kubectl get configmap sf-standalone-owner -o jsonpath='{.data.spec}'
+      register: cm_updated_spec
+      changed_when: false
+
+    - name: Verify updated spec in configmap
+      ansible.builtin.assert:
+        that:
+          - "'fqdn: test-updated.sf.io' in cm_updated_spec.stdout"
+
+    - name: Get standalone owner configmap annotation after update
+      ansible.builtin.command: kubectl get configmap sf-standalone-owner -o jsonpath='{.metadata.annotations.last-reconcile}'
+      register: cm_updated_annotation
+      changed_when: false
+
+    - name: Verify that the last-reconcile annotation has changed
+      ansible.builtin.assert:
+        that:
+          - "cm_initial_annotation.stdout != cm_updated_annotation.stdout"
+
+  always:
+    - name: Restore original state
+      ansible.builtin.include_role:
+        name: run-operator-standalone
+      vars:
+        cr_path: "{{ project_dir }}/playbooks/files/sf.yaml"
+      when: cr_temp_dir.path is defined
+
+    - name: Remove temporary directory
+      ansible.builtin.file:
+        path: "{{ cr_temp_dir.path }}"
+        state: absent
+      when: cr_temp_dir.path is defined
+      check_mode: false

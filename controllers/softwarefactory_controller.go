@@ -692,17 +692,19 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 			return errors.New("unable to reconcile after max attempts")
 		}
 		if status.Ready {
-			log.Info("Standalone reconcile done.")
 			log.Info("Updating controller configmap ...")
+			marshaledSpec, _ := yaml.Marshal(sf.Spec)
 			if err := r.Client.Get(
 				ctx, client.ObjectKey{Name: controllerCMName, Namespace: ns}, &controllerCM); err == nil {
+				controllerCM.Data = map[string]string{
+					"spec": string(marshaledSpec),
+				}
 				controllerCM.ObjectMeta.Annotations = controllerAnnotations
 				if err := r.Update(ctx, &controllerCM); err != nil {
 					log.Error(err, "Unable to update configMap", "name", controllerCMName)
 					return err
-				} else {
-					log.Info("Controller configmap is up to date.")
 				}
+				log.Info("Standalone reconcile done.")
 			} else {
 				log.Error(err, "Controller configmap not found")
 			}
