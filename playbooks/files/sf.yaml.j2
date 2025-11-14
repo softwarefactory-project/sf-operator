@@ -3,7 +3,7 @@ kind: SoftwareFactory
 metadata:
   name: my-sf
 spec:
-  fqdn: "sfop.me"
+  fqdn: "{{ fqdn | default('sfop.me') }}"
   config-location:
     name: config
     zuul-connection-name: gerrit

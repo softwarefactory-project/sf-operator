@@ -20,6 +20,7 @@
     - run-operator-standalone
 
     # Validate services are working
+    - health-check/test-standalone-update
     - health-check/check-service-uri
     - health-check/check-zuul-weeder
     - health-check/enable-log-forward
