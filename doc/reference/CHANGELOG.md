@@ -14,6 +14,9 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - In standalone mode, the `sf-standalone-owner` ConfigMap's `data` field is now updated on reconciliation.
+- the automatic node affinity logic was failing when applied to a resource that previously had a replica count set to 0.
+  Since we can't compute the node affinity in that case, skip and suggest to re-run the reconciliation in the application's
+  logs.
 
 ## [v0.0.60] - 2025-11-13
 

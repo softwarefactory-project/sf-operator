@@ -796,6 +796,7 @@ func (r *SFController) injectStorageNodeAffinity(storageClass *string, sts *apps
 	if storageDefault.NodeAffinity && storageDefault.ClassName == *storageClass {
 		pods, ok := r.getPods(sts)
 		if !ok {
+			logging.LogI(fmt.Sprintf("%s: Unknown error encountered while listing pods, skipping node affinity", sts.ObjectMeta.Name))
 			return false
 		} else {
 			nodes := make([]string, 0)
@@ -804,6 +805,12 @@ func (r *SFController) injectStorageNodeAffinity(storageClass *string, sts *apps
 				if !slices.Contains(nodes, name) {
 					nodes = append(nodes, name)
 				}
+			}
+			if len(nodes) == 0 {
+				logging.LogI(fmt.Sprintf("%s: could not establish which node(s) to set affinity for, skipping nodeAffinity setup. "+
+					"If this message persists at the end of the reconciliation, "+
+					"re-run sf-operator when pods are actually deployed to set node affinity", sts.ObjectMeta.Name))
+				return false
 			}
 			// Have we set the nodeAffinity before?
 			logging.LogI(fmt.Sprintf("%s: check if node affinity is set ...", sts.ObjectMeta.Name))
