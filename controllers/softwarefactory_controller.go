@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"sort"
 	"strconv"
@@ -341,7 +342,13 @@ func (r *SFController) deployZKAndZuulAndNodepool(services map[string]bool) map[
 			logging.LogI("Waiting for GitServer and MariaDB services to be ready before deploying Zuul ...")
 			return services
 		}
-		services["Zuul"] = r.DeployZuul()
+		zuulComponentsStatus := r.DeployZuul()
+		services["Zuul"] = zuulComponentsStatus["Zuul"]
+		if !services["Zuul"] {
+			for cmp := range maps.Keys(zuulComponentsStatus) {
+				services[cmp] = zuulComponentsStatus[cmp]
+			}
+		}
 		if !services["Zuul"] || !services["NodePoolLauncher"] || !services["NodePoolBuilder"] {
 			return services
 		}
@@ -359,7 +366,13 @@ func (r *SFController) deployZKAndZuulAndNodepool(services map[string]bool) map[
 	// 3. Ensure Zuul and Nodepool services
 	// ------------------------------------
 	if !services["Zuul"] {
-		services["Zuul"] = r.DeployZuul()
+		zuulComponentsStatus := r.DeployZuul()
+		services["Zuul"] = zuulComponentsStatus["Zuul"]
+		if !services["Zuul"] {
+			for cmp := range zuulComponentsStatus {
+				services[cmp] = zuulComponentsStatus[cmp]
+			}
+		}
 	}
 	if !services["NodePoolLauncher"] || !services["NodePoolBuilder"] {
 		nodepool := r.DeployNodepool()
