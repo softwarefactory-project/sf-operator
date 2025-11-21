@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+- LogJuicer is updated to version 0.16.0
+
 ### Deprecated
 ### Removed
 ### Fixed
