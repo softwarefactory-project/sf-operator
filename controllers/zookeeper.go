@@ -256,6 +256,41 @@ func (r *SFController) DeployZookeeper() bool {
 
 	zk.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
+	// Node Anti-Affinity
+	//
+	// TODO: changes to this should appear in the dry-run/verbose output, and respect user-defined affinities
+	//
+	// Also note that to disable this after it's been enabled (but why would you ?) you will have to
+	// 1. remove the setting in the SF CR
+	// 2. manually edit the zookeeper statefulset to remove the PodAntiAffinity setting
+	// This is because we do not want to interfere with custom-set rules that may be set OoB.
+	aaEnabled := false
+	if r.cr.Spec.Zookeeper.NodeAntiAffinityEnabled != nil {
+		aaEnabled = *r.cr.Spec.Zookeeper.NodeAntiAffinityEnabled
+	}
+	if aaEnabled {
+		zkAALabelSelector := metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app": "sf",
+				"run": ZookeeperIdent,
+			},
+		}
+		zkRequiredDuringSchedulingIgnoredDuringExecution := []apiv1.PodAffinityTerm{
+			{
+				LabelSelector: &zkAALabelSelector,
+				TopologyKey:   "kubernetes.io/hostname",
+			},
+		}
+		zkPodAntiAffinity := apiv1.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: zkRequiredDuringSchedulingIgnoredDuringExecution,
+		}
+		zkAffinity := apiv1.Affinity{
+			PodAntiAffinity: &zkPodAntiAffinity,
+		}
+		zk.Spec.Template.Spec.Affinity = &zkAffinity
+	}
+
+	// we want to ensure the replica count is always at 3
 	replicaCount := int32(ZookeeperReplicas)
 
 	// If we are bumping from 1 to 3 replicas we need to backup zookeeper first.
