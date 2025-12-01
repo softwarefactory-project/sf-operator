@@ -301,7 +301,7 @@ func (r *SFController) DeployLogserver() bool {
 
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current, stsUpdated := r.ensureStatefulset(storage.StorageClassName, sts)
+	current, stsUpdated := r.ensureStatefulset(storage.StorageClassName, sts, nil)
 	if stsUpdated {
 		return false
 	}

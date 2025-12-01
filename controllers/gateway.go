@@ -7,6 +7,7 @@ package controllers
 
 import (
 	_ "embed"
+
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	apiv1 "k8s.io/api/core/v1"
@@ -50,6 +51,6 @@ func (r *SFController) DeployHTTPDGateway() bool {
 	}
 	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current, changed := r.ensureDeployment(dep)
+	current, changed := r.ensureDeployment(dep, nil)
 	return !changed && r.IsDeploymentReady(current)
 }

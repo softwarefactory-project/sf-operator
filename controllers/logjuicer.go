@@ -84,6 +84,6 @@ func (r *SFController) EnsureLogJuicer() bool {
 
 	// Reconcile deployment
 	pvcReadiness := r.reconcileExpandPVC(pvcName, r.cr.Spec.Logjuicer)
-	current, changed := r.ensureDeployment(dep)
+	current, changed := r.ensureDeployment(dep, nil)
 	return !changed && r.IsDeploymentReady(current) && pvcReadiness
 }

@@ -416,7 +416,7 @@ func (r *SFUtilContext) getPods(dep *appsv1.StatefulSet) ([]apiv1.Pod, bool) {
 		for _, pod := range podList.Items {
 			if pod.Status.Phase != "Running" {
 				logging.LogI(fmt.Sprintf(
-					"Waiting for statefulset state: Running, name: %s, status: %v", dep.GetName(), dep.Status))
+					"Waiting for pod name: %s, pod state: %s, statefulset name: %s, statefulset status: %v", pod.Name, pod.Status.Phase, dep.GetName(), dep.Status))
 				return pods, false
 			}
 			containerStatuses := pod.Status.ContainerStatuses
@@ -453,7 +453,10 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 		} else {
 			replicas = *_replicas
 		}
-		if replicas > 0 {
+		if replicas != dep.Status.ReadyReplicas {
+			logging.LogI("Waiting for statefulset readyReplicas, name: " + dep.ObjectMeta.GetName())
+			return false
+		} else if replicas > 0 {
 			_, ok := r.getPods(dep)
 			return ok
 		} else {
@@ -461,6 +464,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 			return true
 		}
 	}
+	logging.LogI("statefulset rollout not ok, name: " + dep.ObjectMeta.GetName())
 	return false
 }
 
@@ -482,11 +486,13 @@ func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 		}
 		if replicas > 0 {
 			// At least one replica up is enough
+			logging.LogI("Checking deployment ready replicas, name: " + dep.ObjectMeta.GetName())
 			return dep.Status.ReadyReplicas > 0
 		} else {
 			return true
 		}
 	}
+	logging.LogI("deployment rollout not ok, name: " + dep.ObjectMeta.GetName())
 	return false
 }
 
@@ -881,26 +887,45 @@ func imageChanged(desired []apiv1.Container, current []apiv1.Container) []string
 	return missing
 }
 
-func (r *SFController) ensureDeployment(dep appsv1.Deployment) (*appsv1.Deployment, bool) {
+func (r *SFController) ensureDeployment(dep appsv1.Deployment, desiredReplicaCount *int32) (*appsv1.Deployment, bool) {
 	current := appsv1.Deployment{}
 	name := dep.ObjectMeta.Name
-	var needUpdate = false
+	needUpdate := false
+	var diffs []string
+	logPrefix := ""
+	logger := logging.LogD
 	if r.GetM(name, &current) {
+		// Assume a default count of 1 replica
+		currentReplicas := int32(1)
+		if current.Spec.Replicas != nil {
+			currentReplicas = *current.Spec.Replicas
+		}
+		if desiredReplicaCount != nil {
+			if *desiredReplicaCount != currentReplicas {
+				needUpdate = true
+				// force replica count programmatically
+				diffs = append(diffs, fmt.Sprintf("forcing replica count change from %d to %d", currentReplicas, *desiredReplicaCount))
+				current.Spec.Replicas = desiredReplicaCount
+			}
+		}
 		if missing := imageChanged(dep.Spec.Template.Spec.Containers, current.Spec.Template.Spec.Containers); len(missing) > 0 {
 			needUpdate = true
-		} else if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &dep.Spec.Template.ObjectMeta.Annotations) {
+			//TODO explicit which images
+			diffs = append(diffs, "some images changed")
+		}
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &dep.Spec.Template.ObjectMeta.Annotations) {
 			needUpdate = true
-		}
-		if needUpdate && r.DryRun {
-			diffs := compareAnnotations(current.Spec.Template.ObjectMeta.Annotations, dep.Spec.Template.ObjectMeta.Annotations)
-			reason := strings.Join(diffs, ", ")
-			logging.LogI("[Dry Run] Would update Deployment, name: " + name + ". Reason: " + reason)
+			diffs = append(diffs, compareAnnotations(current.Spec.Template.ObjectMeta.Annotations, dep.Spec.Template.ObjectMeta.Annotations)...)
 		}
 		if needUpdate {
+			if r.DryRun {
+				logger = logging.LogI
+				logPrefix = "[Dry Run] "
+			}
 			current.Spec = dep.DeepCopy().Spec
-		}
-		if needUpdate {
-			logging.LogI(name + " configuration changed, rollout pods ...")
+			reason := strings.Join(diffs, ", ")
+			logging.LogI(fmt.Sprintf("%sStatefulset \"%s\" configuration changed, applying...", logPrefix, name))
+			logger(fmt.Sprintf("%sReason: %s", logPrefix, reason))
 			r.UpdateR(&current)
 			return &current, true
 		}
@@ -915,33 +940,57 @@ func (r *SFController) ensureDeployment(dep appsv1.Deployment) (*appsv1.Deployme
 // ensureStatefulSet ensures that a StatefulSet object is as expected.
 // The function takes the expected StatefulSet and returns a tuple with the current object on
 // the cluster and a boolean indicating whether the function performed a create or update on the object.
-func (r *SFController) ensureStatefulset(storageClass *string, sts appsv1.StatefulSet) (*appsv1.StatefulSet, bool) {
+func (r *SFController) ensureStatefulset(storageClass *string, sts appsv1.StatefulSet, desiredReplicaCount *int32) (*appsv1.StatefulSet, bool) {
 	current := appsv1.StatefulSet{}
 	name := sts.ObjectMeta.Name
-	var needUpdate = false
+	needUpdate := false
+	var diffs []string
+	logPrefix := ""
+	logger := logging.LogD
+
 	if r.GetM(name, &current) {
+		// Assume a default count of 1 replica
+		currentReplicas := int32(1)
+		if current.Spec.Replicas != nil {
+			currentReplicas = *current.Spec.Replicas
+		}
+		if desiredReplicaCount != nil {
+			if *desiredReplicaCount != currentReplicas {
+				needUpdate = true
+				// force replica count programmatically
+				diffs = append(diffs, fmt.Sprintf("forcing replica count change from %d to %d", currentReplicas, *desiredReplicaCount))
+				current.Spec.Replicas = desiredReplicaCount
+			}
+		}
 		if missing := imageChanged(sts.Spec.Template.Spec.Containers, current.Spec.Template.Spec.Containers); len(missing) > 0 {
 			needUpdate = true
-		} else if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &sts.Spec.Template.ObjectMeta.Annotations) || getGracePeriod(current) != getGracePeriod(sts) {
+			//TODO explicit which images
+			diffs = append(diffs, "some images changed")
+		}
+		if !utils.MapEquals(&current.Spec.Template.ObjectMeta.Annotations, &sts.Spec.Template.ObjectMeta.Annotations) {
+			needUpdate = true
+			diffs = append(diffs, compareAnnotations(current.Spec.Template.ObjectMeta.Annotations, sts.Spec.Template.ObjectMeta.Annotations)...)
+		}
+		if getGracePeriod(current) != getGracePeriod(sts) {
+			diffs = append(diffs, "terminationGracePeriodSeconds changed")
 			needUpdate = true
 		}
-		if needUpdate && r.DryRun {
-			diffs := compareAnnotations(current.Spec.Template.ObjectMeta.Annotations, sts.Spec.Template.ObjectMeta.Annotations)
-			if getGracePeriod(current) != getGracePeriod(sts) {
-				diffs = append(diffs, "terminationGracePeriodSeconds changed")
-			}
-			reason := strings.Join(diffs, ", ")
-			logging.LogI("[Dry Run] Would update StatefulSet, name: " + name + ". Reason: " + reason)
-		}
-
+		// TODO does this need to be done before the call to injectStorageNodeAffinity?
 		if needUpdate {
 			current.Spec.Template = *sts.Spec.Template.DeepCopy()
 		}
 		if r.injectStorageNodeAffinity(storageClass, &current) {
 			needUpdate = true
+			diffs = append(diffs, "storage node affinity config changed")
 		}
 		if needUpdate {
-			logging.LogI(name + " configuration changed, rollout pods ...")
+			if r.DryRun {
+				logger = logging.LogI
+				logPrefix = "[Dry Run] "
+			}
+			reason := strings.Join(diffs, ", ")
+			logging.LogI(fmt.Sprintf("%sStatefulset \"%s\" configuration changed, applying...", logPrefix, name))
+			logger(fmt.Sprintf("%sReason: %s", logPrefix, reason))
 			r.UpdateR(&current)
 			return &current, true
 		}

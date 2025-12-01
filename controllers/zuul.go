@@ -552,7 +552,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		enableZuulLocalSource(&zs.Spec.Template, path, true, r.isOpenShift)
 	}
 
-	current, changed := r.ensureStatefulset(zsStorage.StorageClassName, zs)
+	current, changed := r.ensureStatefulset(zsStorage.StorageClassName, zs, nil)
 	if changed {
 		return false
 	}
@@ -656,7 +656,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 		enableZuulLocalSource(&ze.Spec.Template, path, false, r.isOpenShift)
 	}
 
-	current, changed := r.ensureStatefulset(zeStorage.StorageClassName, ze)
+	current, changed := r.ensureStatefulset(zeStorage.StorageClassName, ze, nil)
 	if changed {
 		return false
 	}
@@ -726,7 +726,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 		enableZuulLocalSource(&zm.Spec.Template, path, false, r.isOpenShift)
 	}
 
-	current, changed := r.ensureStatefulset(zmStorage.StorageClassName, zm)
+	current, changed := r.ensureStatefulset(zmStorage.StorageClassName, zm, nil)
 	if changed {
 		return false
 	}
@@ -786,7 +786,7 @@ func (r *SFController) EnsureZuulWeb(cfg *ini.File) bool {
 		enableZuulLocalSource(&zw.Spec.Template, path, false, r.isOpenShift)
 	}
 
-	current, changed := r.ensureDeployment(zw)
+	current, changed := r.ensureDeployment(zw, nil)
 	if changed {
 		return false
 	}

@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 
 - LogJuicer is updated to version 0.16.0
 - The Go version in go.mod is bumped to 1.24.11. Backward compatibility with earlier versions is not guaranteed.
+- Zookeeper: enforce replica count of 1 on reconciliation.
 
 ### Deprecated
 ### Removed

@@ -6,6 +6,8 @@ package controllers
 
 import (
 	_ "embed"
+	"strconv"
+
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
@@ -13,7 +15,6 @@ import (
 	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
-	"strconv"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -127,6 +128,7 @@ func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string
 }
 
 func (r *SFController) setNodepoolTooling() {
+
 	toolingData := make(map[string]string)
 	toolingData["init-container.sh"] = initContainerScript
 	toolingData["generate-config.sh"] = generateConfigScript
@@ -620,7 +622,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		BuilderIdent, r.ns, BuilderIdent+"-0", []int32{buildLogsHttpdPort}, BuilderIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
 
-	current, changed := r.ensureStatefulset(nbStorage.StorageClassName, nb)
+	current, changed := r.ensureStatefulset(nbStorage.StorageClassName, nb, nil)
 	if changed {
 		return false
 	}
@@ -792,7 +794,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	}
 	nl.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current, changed := r.ensureDeployment(nl)
+	current, changed := r.ensureDeployment(nl, nil)
 	if changed {
 		return false
 	}

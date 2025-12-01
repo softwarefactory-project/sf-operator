@@ -359,7 +359,7 @@ func (r *SFController) DeployGitServer() bool {
 	sts.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current, changed := r.ensureStatefulset(storage.StorageClassName, sts)
+	current, changed := r.ensureStatefulset(storage.StorageClassName, sts, nil)
 	if changed {
 		return false
 	}

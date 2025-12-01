@@ -54,6 +54,6 @@ func (r *SFController) EnsureZuulWeeder(checksum string) bool {
 	}
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/health", port)
 	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
-	current, changed := r.ensureDeployment(dep)
+	current, changed := r.ensureDeployment(dep, nil)
 	return !changed && r.IsDeploymentReady(current)
 }

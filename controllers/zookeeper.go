@@ -30,6 +30,7 @@ const zkSSLPortName = "zkssl"
 const zkSSLPort = 2281
 
 const ZookeeperIdent = "zookeeper"
+const ZookeeperReplicas = 1
 const zkPIMountPath = "/config-scripts"
 
 func createZKLogForwarderSidecar(r *SFController, annotations map[string]string) ([]apiv1.Volume, apiv1.Container) {
@@ -113,7 +114,6 @@ func (r *SFController) DeployZookeeper() bool {
 
 	srv := base.MkServicePod(ZookeeperIdent, r.ns, ZookeeperIdent+"-0", []int32{zkSSLPort}, ZookeeperIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&srv)
-
 	storageConfig := r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage)
 	logStorageConfig := base.StorageConfig{
 		Size:             utils.Qty1Gi(),
@@ -157,6 +157,7 @@ func (r *SFController) DeployZookeeper() bool {
 	zk.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(zkSSLPort, zkSSLPortName),
 	}
+	zk.Spec.Replicas = utils.Int32Ptr(ZookeeperReplicas)
 	base.SetContainerLimitsHighProfile(&zk.Spec.Template.Spec.Containers[0])
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zookeeper.Limits, &zk.Spec.Template.Spec.Containers[0])
 
@@ -173,7 +174,8 @@ func (r *SFController) DeployZookeeper() bool {
 
 	zk.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current, changed := r.ensureStatefulset(storageConfig.StorageClassName, zk)
+	replicaCount := int32(ZookeeperReplicas)
+	current, changed := r.ensureStatefulset(storageConfig.StorageClassName, zk, &replicaCount)
 	if changed {
 		r.zkChanged = true
 		return false

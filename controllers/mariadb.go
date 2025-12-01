@@ -280,7 +280,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
-	current, changed := r.ensureStatefulset(storage.StorageClassName, sts)
+	current, changed := r.ensureStatefulset(storage.StorageClassName, sts, nil)
 	if changed {
 		return false
 	}
