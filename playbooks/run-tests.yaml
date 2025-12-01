@@ -25,6 +25,7 @@
     - health-check/check-zuul-weeder
     - health-check/enable-log-forward
     - health-check/scale-resources
+    - health-check/zuul-components
     - health-check/zuul-connections
     - health-check/zuul-authenticators
     - health-check/config-update-zuul
