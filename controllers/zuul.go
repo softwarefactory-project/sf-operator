@@ -7,7 +7,6 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"maps"
 	"regexp"
 	"sort"
 	"strconv"
@@ -822,7 +821,11 @@ func (r *SFController) EnsureZuulComponentsFrontServices() {
 	}
 }
 
-func (r *SFController) EnsureZuulComponents() bool {
+func (r *SFController) EnsureZuulComponents() map[string]bool {
+
+	componentStatus := make(map[string]bool)
+	componentStatus["Zuul"] = false
+	componentStatus["|_ Config Secrets"] = false
 
 	// Ensure executor removed if disabled
 	if r.cr.Spec.Zuul.Executor.Enabled != nil && !*r.cr.Spec.Zuul.Executor.Enabled {
@@ -833,11 +836,20 @@ func (r *SFController) EnsureZuulComponents() bool {
 		}
 	}
 
+	// Init the zuul services status index
+	zuulServices := map[string]bool{}
+
 	// Setup zuul.conf Secret
 	cfg := r.EnsureZuulConfigSecret(false, false)
 	if cfg == nil {
-		return false
+		return componentStatus
+	} else {
+		componentStatus["|_ Config Secrets"] = true
 	}
+
+	componentStatus["|_ Scheduler"] = false
+	componentStatus["|_ Web"] = false
+	componentStatus["|_ Merger"] = false
 
 	if !r.cr.Spec.PrometheusMonitorsDisabled {
 		r.ensureZuulPromRule()
@@ -846,23 +858,20 @@ func (r *SFController) EnsureZuulComponents() bool {
 	// Install Services resources
 	r.EnsureZuulComponentsFrontServices()
 
-	// Init the zuul services status index
-	zuulServices := map[string]bool{}
-
-	zuulServices["scheduler"] = r.EnsureZuulScheduler(cfg)
+	zuulServices["Scheduler"] = r.EnsureZuulScheduler(cfg)
 	if r.IsExecutorEnabled() {
-		zuulServices["executor"] = r.EnsureZuulExecutor(cfg)
+		zuulServices["Executor"] = r.EnsureZuulExecutor(cfg)
 	}
-	zuulServices["web"] = r.EnsureZuulWeb(cfg)
-	zuulServices["merger"] = r.EnsureZuulMerger(cfg)
+	zuulServices["Web"] = r.EnsureZuulWeb(cfg)
+	zuulServices["Merger"] = r.EnsureZuulMerger(cfg)
 
-	for ready := range maps.Values(zuulServices) {
-		if !ready {
-			return false
-		}
+	componentStatus["Zuul"] = true
+	for ready := range zuulServices {
+		componentStatus["|_ "+ready] = zuulServices[ready]
+		componentStatus["Zuul"] = componentStatus["Zuul"] && zuulServices[ready]
 	}
 
-	return true
+	return componentStatus
 }
 
 // create default alerts
@@ -1473,7 +1482,7 @@ func (r *SFController) DeployZuulSecrets() {
 	r.EnsureSecretUUID("zuul-auth-secret")
 }
 
-func (r *SFController) DeployZuul() bool {
+func (r *SFController) DeployZuul() map[string]bool {
 	return r.EnsureZuulComponents()
 }
 
