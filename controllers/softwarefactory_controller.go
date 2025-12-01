@@ -23,7 +23,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/strings/slices"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -328,34 +327,8 @@ func (r *SFController) setupMonitoring() ([]string, []string) {
 }
 
 func (r *SFController) deployZKAndZuulAndNodepool(services map[string]bool) map[string]bool {
-	// 1. Handle Zuul and Nodepool deployment if Zookeeper is up and running
-	// ---------------------------------------------------------------------
-	var currentZk appsv1.StatefulSet
-	isZkDeployed := r.GetM(ZookeeperIdent, &currentZk)
-	if isZkDeployed && r.IsStatefulSetReady(&currentZk) {
-		services["Zookeeper"] = true
-		logging.LogI("Handling Zuul and Nodepool deployment while Zookeeper is up ...")
-		nodepool := r.DeployNodepool()
-		services["NodePoolLauncher"] = nodepool[LauncherIdent]
-		services["NodePoolBuilder"] = nodepool[BuilderIdent]
-		if !services["GitServer"] || !services["MariaDB"] {
-			logging.LogI("Waiting for GitServer and MariaDB services to be ready before deploying Zuul ...")
-			return services
-		}
-		zuulComponentsStatus := r.DeployZuul()
-		services["Zuul"] = zuulComponentsStatus["Zuul"]
-		if !services["Zuul"] {
-			for cmp := range maps.Keys(zuulComponentsStatus) {
-				services[cmp] = zuulComponentsStatus[cmp]
-			}
-		}
-		if !services["Zuul"] || !services["NodePoolLauncher"] || !services["NodePoolBuilder"] {
-			return services
-		}
-	}
-
-	// 2. Ensure Zookeeper is up and running
-	// -------------------------------------
+	// 1. Ensure Zookeeper is reconciled
+	// ---------------------------------
 	// The Zookeeper service is needed by Zuul and Nodepool to synchronize
 	services["Zookeeper"] = r.DeployZookeeper()
 	if !services["Zookeeper"] {
@@ -363,21 +336,22 @@ func (r *SFController) deployZKAndZuulAndNodepool(services map[string]bool) map[
 		return services
 	}
 
-	// 3. Ensure Zuul and Nodepool services
-	// ------------------------------------
-	if !services["Zuul"] {
-		zuulComponentsStatus := r.DeployZuul()
-		services["Zuul"] = zuulComponentsStatus["Zuul"]
-		if !services["Zuul"] {
-			for cmp := range zuulComponentsStatus {
-				services[cmp] = zuulComponentsStatus[cmp]
-			}
-		}
+	// 2. Handle Zuul and Nodepool deployment if Zookeeper is up and running
+	// ---------------------------------------------------------------------
+	if !services["GitServer"] || !services["MariaDB"] {
+		logging.LogI("Waiting for GitServer and MariaDB services to be ready ...")
+		return services
 	}
-	if !services["NodePoolLauncher"] || !services["NodePoolBuilder"] {
-		nodepool := r.DeployNodepool()
-		services["NodePoolLauncher"] = nodepool[LauncherIdent]
-		services["NodePoolBuilder"] = nodepool[BuilderIdent]
+	logging.LogI("Deploying Zuul and Nodepool ...")
+	nodepool := r.DeployNodepool()
+	services["NodePoolLauncher"] = nodepool[LauncherIdent]
+	services["NodePoolBuilder"] = nodepool[BuilderIdent]
+	zuulComponentsStatus := r.DeployZuul()
+	services["Zuul"] = zuulComponentsStatus["Zuul"]
+	if !services["Zuul"] {
+		for cmp := range maps.Keys(zuulComponentsStatus) {
+			services[cmp] = zuulComponentsStatus[cmp]
+		}
 	}
 	return services
 }
