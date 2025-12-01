@@ -1,5 +1,12 @@
 ---
+- name: "Get initial replica count for {{ service.name }}"
+  ansible.builtin.command: >
+    kubectl get {{ service.kind }} {{ service.name }}
+    -o jsonpath='{.status.readyReplicas}'
+  register: _init_ready
+
 - name: "Collect {{ service.kind }} log before executing the scale command"
+  when: ( _init_ready.stdout | default("0") ) | int > 0
   ansible.builtin.shell: |
     mkdir -p ~/zuul-output/logs/k8s-resources/sf/pod
     kubectl logs {{ service.kind }}/{{ service.name }} > ~/zuul-output/logs/k8s-resources/sf/pod/{{ service.name }}-0-{{ service.name }}-logs0.txt
