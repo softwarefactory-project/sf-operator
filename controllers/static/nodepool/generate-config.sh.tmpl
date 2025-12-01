@@ -8,14 +8,21 @@ set -ex
 # can be parameterized via the NODEPOOL_CONFIG_FILE environment variable.
 NODEPOOL_CONFIG_FILE="${NODEPOOL_CONFIG_FILE:-nodepool.yaml}"
 
+# TODO the nodepool containers need hostname to figure out the actual domain. For now it is safe to assume
+# the base domain to be svc.local.cluster but other defaults exist.
+# DOMAIN=$(hostname -d)
+
 # Generate the default tenants configuration file
+# TODO loop on Zookeeper replicas
 cat << EOF > ~/nodepool.yaml
 ---
 webapp:
   port: 8006
 zookeeper-servers:
-  - host: zookeeper
+{{- range .ZookeeperReplicas }}
+  - host: {{ . }}
     port: 2281
+{{- end }}
 zookeeper-tls:
   ca: /tls/client/ca.crt
   cert: /tls/client/tls.crt

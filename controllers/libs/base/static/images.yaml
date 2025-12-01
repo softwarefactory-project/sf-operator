@@ -28,8 +28,8 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-builder.container?id=d15ce30e7c731af04ba6a93ee2956d916b811eae
     - name: zookeeper
       container: quay.io/software-factory/zookeeper
-      version: 3.9.4-20250925-1
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zookeeper.container?id=b29d4786c7076f5d929480e7cc06279da724ba46
+      version: 3.9.4-20250925-2
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zookeeper.container?id=4dadc83841e4c3737430cec106e927ab3b74b8cd
     - name: git-deamon
       container: quay.io/software-factory/git-deamon
       version: 2.39.3-20250925-1

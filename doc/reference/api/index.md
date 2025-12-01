@@ -476,6 +476,7 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `controlPlanePublicZKHostname` _string_ | This is the public hostname or IP where control plane's Zookeeper can be reached | -|
+| `controlPlanePublicZKHostnames` _string_ | This is the public hostnames or IPs where control plane's Zookeepers can be reached | -|
 | `controlPlanePublicGSHostname` _string_ | This is the public hostname or IP where control plane's GitServer can be reached | -|
 | `publicHostname` _string_ | This is the public host or IP address reachable from zuul-web | -|
 

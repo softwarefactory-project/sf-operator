@@ -623,6 +623,12 @@ spec:
                             description: This is the public hostname or IP where control
                               plane's Zookeeper can be reached
                             type: string
+                          controlPlanePublicZKHostnames:
+                            description: This is the public hostnames or IPs where
+                              control plane's Zookeepers can be reached
+                            items:
+                              type: string
+                            type: array
                           publicHostname:
                             description: This is the public host or IP address reachable
                               from zuul-web

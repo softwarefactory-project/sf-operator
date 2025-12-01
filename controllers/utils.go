@@ -337,10 +337,15 @@ func (r *SFUtilContext) EnsureService(service *apiv1.Service) {
 	}
 }
 
-// EnsureLocalCA ensures 3 secrets containing TLS material for zookeeper/zuul/nodepool
-// connections
-// This function does not support update
-func (r *SFUtilContext) EnsureLocalCA(dnsNames []string) {
+// EnsureZookeeperCertificates ensures the following TLS secrets for zookeeper/zuul/nodepool
+// connections:
+// - self-signed root certificate authority
+// - client certificate for zookeeper, localhost (so we can use zkClient locally from the pod)
+// - server certificates for each zookeeper replica
+func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, ZookeeperReplicas int) {
+	annotations := map[string]string{
+		"serial": "1",
+	}
 
 	caCert, caPrivKey, caPEM, caPrivKeyPEM := cert.X509CA()
 	certificateCASecret := apiv1.Secret{
@@ -349,38 +354,93 @@ func (r *SFUtilContext) EnsureLocalCA(dnsNames []string) {
 			"tls.crt": caPEM.Bytes(),
 			"tls.key": caPrivKeyPEM.Bytes(),
 		},
-		ObjectMeta: metav1.ObjectMeta{Name: "ca-cert", Namespace: r.ns},
-		Type:       "kubernetes.io/tls",
-	}
-	r.GetOrCreate(&certificateCASecret)
-
-	// server cert
-	certPEM, certPrivKeyPEM := cert.X509Cert(caCert, caPrivKey, dnsNames)
-
-	certificateSecret := apiv1.Secret{
-		Data: map[string][]byte{
-			"ca.crt":  caPEM.Bytes(),
-			"tls.crt": certPEM.Bytes(),
-			"tls.key": certPrivKeyPEM.Bytes(),
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "ca-cert",
+			Namespace:   r.ns,
+			Annotations: annotations,
 		},
-		ObjectMeta: metav1.ObjectMeta{Name: "zookeeper-server-tls", Namespace: r.ns},
-		Type:       "kubernetes.io/tls",
+		Type: "kubernetes.io/tls",
 	}
-	r.GetOrCreate(&certificateSecret)
+	currentCASecret := apiv1.Secret{}
+	if r.GetM(certificateCASecret.Name, &currentCASecret) {
+		if !utils.MapEquals(&currentCASecret.ObjectMeta.Annotations, &annotations) {
+			r.UpdateR(&certificateCASecret)
+		}
+	} else {
+		r.GetOrCreate(&certificateCASecret)
+	}
 
 	// client cert
-	certPEM2, certPrivKeyPEM2 := cert.X509Cert(caCert, caPrivKey, dnsNames)
+	clientDNSNames := []string{
+		ZookeeperIdent,
+		fmt.Sprintf("%s.%s", ZookeeperIdent, r.cr.GetName()),
+		fmt.Sprintf("%s.%s", ZookeeperIdent, r.cr.Spec.FQDN),
+		"localhost",
+	}
+	for i := range ZookeeperReplicas {
+		clientDNSNames = append(
+			clientDNSNames,
+			fmt.Sprintf("%s-%d", ZookeeperIdent, i),
+			fmt.Sprintf("%s-%d.%s", ZookeeperIdent, i, r.cr.GetName()),
+			fmt.Sprintf("%s-%d.%s", ZookeeperIdent, i, r.cr.Spec.FQDN),
+		)
+	}
+	zkClientCertPEM, zkClientPrivKeyPEM := cert.X509Cert(caCert, caPrivKey, clientDNSNames)
 
-	certificateSecret2 := apiv1.Secret{
+	zkClientCertificateSecret := apiv1.Secret{
 		Data: map[string][]byte{
 			"ca.crt":  caPEM.Bytes(),
-			"tls.crt": certPEM2.Bytes(),
-			"tls.key": certPrivKeyPEM2.Bytes(),
+			"tls.crt": zkClientCertPEM.Bytes(),
+			"tls.key": zkClientPrivKeyPEM.Bytes(),
 		},
-		ObjectMeta: metav1.ObjectMeta{Name: "zookeeper-client-tls", Namespace: r.ns},
-		Type:       "kubernetes.io/tls",
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "zookeeper-client-tls",
+			Namespace:   r.ns,
+			Annotations: annotations,
+		},
+		Type: "kubernetes.io/tls",
 	}
-	r.GetOrCreate(&certificateSecret2)
+	currentClientSecret := apiv1.Secret{}
+	if r.GetM(zkClientCertificateSecret.Name, &currentClientSecret) {
+		if !utils.MapEquals(&zkClientCertificateSecret.ObjectMeta.Annotations, &annotations) {
+			r.UpdateR(&zkClientCertificateSecret)
+		}
+	} else {
+		r.GetOrCreate(&zkClientCertificateSecret)
+	}
+
+	// servers certificates
+	var serversSecretData = make(map[string][]byte)
+	serversSecretData["ca.crt"] = caPEM.Bytes()
+	for i := range ZookeeperReplicas {
+		serversDNSNames := []string{}
+		var replicaName = fmt.Sprintf("%s-%d", ZookeeperIdent, i)
+		var replicaWithService = fmt.Sprintf("%s.%s-headless", replicaName, ZookeeperIdent)
+		var replicaNamespaced = fmt.Sprintf("%s.%s", replicaWithService, r.ns)
+		var replicaFQDN = fmt.Sprintf("%s.%s", replicaWithService, r.cr.Spec.FQDN)
+		serversDNSNames = append(serversDNSNames, replicaName, replicaWithService, replicaNamespaced, replicaFQDN)
+		zkServersCertPEM, zkServersPrivKeyPEM := cert.X509Cert(caCert, caPrivKey, serversDNSNames)
+		serversSecretData[fmt.Sprintf("%d-tls.crt", i)] = zkServersCertPEM.Bytes()
+		serversSecretData[fmt.Sprintf("%d-tls.key", i)] = zkServersPrivKeyPEM.Bytes()
+	}
+
+	zkServersCertificateSecret := apiv1.Secret{
+		Data: serversSecretData,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "zookeeper-server-tls",
+			Namespace:   r.ns,
+			Annotations: annotations,
+		},
+		Type: "Opaque",
+	}
+	currentServersSecret := apiv1.Secret{}
+	if r.GetM(zkServersCertificateSecret.Name, &currentServersSecret) {
+		if !utils.MapEquals(&zkServersCertificateSecret.ObjectMeta.Annotations, &annotations) {
+			r.UpdateR(&zkServersCertificateSecret)
+		}
+	} else {
+		r.GetOrCreate(&zkServersCertificateSecret)
+	}
 }
 
 // mkStatefulSet Create a default statefulset.

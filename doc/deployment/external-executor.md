@@ -46,6 +46,8 @@ spec:
       targetPort: 2281
   selector:
     statefulset.kubernetes.io/pod-name: zookeeper-0
+    app: sf
+    run: zookeeper
   type: LoadBalancer
 ---
 apiVersion: v1

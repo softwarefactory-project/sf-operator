@@ -9,7 +9,16 @@ All notable changes to this project will be documented in this file.
 
 - LogJuicer is updated to version 0.16.0
 - The Go version in go.mod is bumped to 1.24.11. Backward compatibility with earlier versions is not guaranteed.
-- Zookeeper: enforce replica count of 1 on reconciliation.
+- Zookeeper's configuration changed to enable running as a 3-replica ensemble in a future version of sf-operator.
+  For now the Zookeeper statefulset is still expected to run with just one replica; manual changes to
+  the statefulset's replica count won't have any consequences (besides deploying useless pods) and will
+  be canceled by sf-operator's reconciliations.
+- Zookeeper: base image updated to include basic tooling to manage processes (pkill). The statefulset will be restarted to
+  update the image.
+- Zuul: include an unmerged patch [1] in images to improve the handling of closed zookeeper connections, especially during an executor's
+  graceful stop. All components will be restarted when upgrading to this version.
+
+[1]: https://review.opendev.org/c/zuul/zuul/+/967968
 
 ### Deprecated
 ### Removed

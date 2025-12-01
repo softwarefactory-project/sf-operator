@@ -9,6 +9,7 @@ ZK_DATA_LOG_DIR="/data/log"
 ZK_CONF_DIR="/conf"
 ZK_CLIENT_PORT=${ZK_CLIENT_PORT:-2181}
 ZK_SSL_CLIENT_PORT=${ZK_SSL_CLIENT_PORT:-2281}
+ZK_SERVER_SERVICE=${ZK_SERVER_PORT:-"zookeeper-headless"}
 ZK_SERVER_PORT=${ZK_SERVER_PORT:-2888}
 ZK_ELECTION_PORT=${ZK_ELECTION_PORT:-3888}
 ZK_TICK_TIME=${ZK_TICK_TIME:-2000}
@@ -48,7 +49,7 @@ echo $MY_ID >> "$ID_FILE"
 
 if [[ -f /tls/server/ca.crt ]]; then
   cp /tls/server/ca.crt /data/server-ca.pem
-  cat /tls/server/tls.crt /tls/server/tls.key > /data/server.pem
+  cat /tls/server/${ORD}-tls.crt /tls/server/${ORD}-tls.key > /data/server.pem
 fi
 if [[ -f /tls/client/ca.crt ]]; then
   cp /tls/client/ca.crt /data/client-ca.pem
@@ -79,6 +80,17 @@ ssl.keyStore.location=/data/client.pem
 ssl.trustStore.location=/data/client-ca.pem
 EOF
 
+# Add helper script to use zkCli.sh
+cat << EOF >> /tmp/zkCli
+#!/bin/sh
+CLIENT_JVMFLAGS="
+-Dzookeeper.clientCnxnSocket=org.apache.zookeeper.ClientCnxnSocketNetty
+-Dzookeeper.client.secure=true
+-Dzookeeper.ssl.keyStore.location=/data/client.pem
+-Dzookeeper.ssl.trustStore.location=/data/client-ca.pem" /zookeeper/bin/zkCli.sh -server localhost:2281
+EOF
+chmod +x /tmp/zkCli
+
 else
   echo "clientPort=$ZK_CLIENT_PORT" >> "$ZK_CONFIG_FILE"
 fi
@@ -95,7 +107,7 @@ EOF
 
 fi
 
-for (( i=1; i<=ZK_REPLICAS; i++ ))
+for (( i=1; i<=$ZK_REPLICAS; i++ ))
 do
     echo "server.$i=$NAME-$((i-1)).$DOMAIN:$ZK_SERVER_PORT:$ZK_ELECTION_PORT" >> "$ZK_CONFIG_FILE"
 done

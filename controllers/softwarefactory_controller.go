@@ -361,8 +361,7 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 	// 1. Ensure some content resources
 	// --------------------------------
 	// Setup the Certificate Authority for Zookeeper/Zuul/Nodepool usage
-	dnsNames := r.MkClientDNSNames(ZookeeperIdent)
-	r.EnsureLocalCA(dnsNames)
+	r.EnsureZookeeperCertificates(ZookeeperIdent, ZookeeperReplicas)
 	// Ensure SF Admin ssh key pair
 	r.DeployZuulSecrets()
 	// Setup custom tools used by zuul and code-search

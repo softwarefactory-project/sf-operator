@@ -268,6 +268,8 @@ type ZuulOIDCAuthenticatorSpec struct {
 type StandaloneZuulExecutorSpec struct {
 	// This is the public hostname or IP where control plane's Zookeeper can be reached
 	ControlPlanePublicZKHostname string `json:"controlPlanePublicZKHostname"`
+	// This is the public hostnames or IPs where control plane's Zookeepers can be reached
+	ControlPlanePublicZKHostnames *[]string `json:"controlPlanePublicZKHostnames,omitempty"`
 	// This is the public hostname or IP where control plane's GitServer can be reached
 	ControlPlanePublicGSHostname string `json:"controlPlanePublicGSHostname"`
 	// This is the public host or IP address reachable from zuul-web

@@ -14,6 +14,9 @@ spec:
     executor:
       logLevel: DEBUG
       standalone:
-        controlPlanePublicZKHostname: zookeeper.sf
+        # deprecated setting, remove after next release
+        controlPlanePublicZKHostname: ""
+        controlPlanePublicZKHostnames:
+          - zookeeper-0.zookeeper-headless.sf.svc.cluster.local
         controlPlanePublicGSHostname: git-server.sf
         publicHostname: zuul-executor-headless.ext-ze

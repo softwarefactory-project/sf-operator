@@ -37,7 +37,8 @@ MariaDB is deployed as a single-pod statefulset.
 
 ZooKeeper coordinates data and configurations between all the Zuul and Nodepool microservices.
 
-ZooKeeper is deployed as a single-pod statefulset.
+ZooKeeper is deployed as a single-pod statefulset; The SF operator enforces this replica count, meaning that if the statefulset was edited to run 0 or more than one replica
+the operator will scale it up or down to one replica.
 
 ### Certificates
 
@@ -61,3 +62,8 @@ Roll out the following `Statefulset` and `Deployment` resources:
 - nodepool-launcher
 
 Then make sure to trigger the `Reconcile` loop of the `sf-operator` by running the `standalone` command.
+
+### Debugging
+
+Since zookeeper's client port is TLS-protected, a wrapper for ZkClient.sh was added inside the container to set the proper env variables enabling access to the secure port.
+The wrapper can be found as `/tmp/zkCli`.

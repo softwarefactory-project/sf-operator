@@ -1093,10 +1093,23 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 	}
 
 	// Set Zookeeper hosts
-	zkHost := "zookeeper." + r.ns + ":2281"
+	var zkHost string
 	if r.IsExternalExecutorEnabled() {
-		zkHost = r.cr.Spec.Zuul.Executor.Standalone.ControlPlanePublicZKHostname + ":2281"
+		if r.cr.Spec.Zuul.Executor.Standalone.ControlPlanePublicZKHostnames != nil {
+			publicZKHostnames := *r.cr.Spec.Zuul.Executor.Standalone.ControlPlanePublicZKHostnames
+			for _, h := range publicZKHostnames {
+				zkHost = zkHost + h + ":2281,"
+			}
+		} else {
+			logging.LogI("controlPlanePublicZKHostname (string) is deprecated, use controlePlanePublicZKHostnames ([]string) instead")
+			zkHost = r.cr.Spec.Zuul.Executor.Standalone.ControlPlanePublicZKHostname + ":2281"
+		}
+	} else {
+		for i := range ZookeeperReplicas {
+			zkHost = zkHost + fmt.Sprintf("%s-%d.%s-headless.%s:2281,", ZookeeperIdent, i, ZookeeperIdent, r.ns)
+		}
 	}
+	zkHost = strings.TrimSuffix(zkHost, ",")
 	cfgINI.Section("zookeeper").NewKey("hosts", zkHost)
 
 	// Set executor public hostname (live job console support)

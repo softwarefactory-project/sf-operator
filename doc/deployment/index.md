@@ -15,7 +15,7 @@ and managing a Software Factory Custom Resource through SF-Operator.
     - [Zuul](./zuul.md)
     - [Zuul External Executor](./external-executor.md)
     - [Logserver](./logserver.md)
-    - [Backing services](./backing_services.md)
+    - [Other services](./backing_services.md)
 1. [Setting up certificates](./certificates.md)
 1. [Add Corporate CA Certificates to the CA Trust Chain](./corporate-certificates.md)
 1. [Monitoring](./monitoring.md)

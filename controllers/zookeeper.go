@@ -5,6 +5,7 @@ package controllers
 
 import (
 	_ "embed"
+	"fmt"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
@@ -12,6 +13,9 @@ import (
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 //go:embed static/zookeeper/probe.sh
@@ -26,11 +30,13 @@ var zkFluentBitForwarderConfig string
 //go:embed static/zookeeper/logback.xml
 var zkLogbackConfig string
 
-const zkSSLPortName = "zkssl"
-const zkSSLPort = 2281
+const zkClientPort = 2281
+const zkElectionPort = 3888
+const zkServerPort = 2888
 
 const ZookeeperIdent = "zookeeper"
 const ZookeeperReplicas = 1
+
 const zkPIMountPath = "/config-scripts"
 
 func createZKLogForwarderSidecar(r *SFController, annotations map[string]string) ([]apiv1.Volume, apiv1.Container) {
@@ -76,7 +82,7 @@ func (r *SFController) DeployZookeeper() bool {
 
 	annotations := map[string]string{
 		"config-hash": utils.Checksum([]byte(configChecksumable)),
-		"serial":      "8",
+		"serial":      "9",
 	}
 
 	volumeMountsStatsExporter := []apiv1.VolumeMount{
@@ -112,7 +118,44 @@ func (r *SFController) DeployZookeeper() bool {
 	}
 	volumeMounts = append(volumeMounts, volumeMountsStatsExporter...)
 
-	srv := base.MkServicePod(ZookeeperIdent, r.ns, ZookeeperIdent+"-0", []int32{zkSSLPort}, ZookeeperIdent, r.cr.Spec.ExtraLabels)
+	// TODO Use base.MkHeadlessService here if possible
+	srvHeadless := apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ZookeeperIdent + "-headless",
+			Namespace: r.ns,
+			Labels:    r.cr.Spec.ExtraLabels,
+		},
+		Spec: apiv1.ServiceSpec{
+			ClusterIP:                "None",
+			PublishNotReadyAddresses: true,
+			Selector: map[string]string{
+				"app": "sf",
+				"run": ZookeeperIdent,
+			},
+			Ports: []apiv1.ServicePort{
+				{
+					Name:       "election",
+					Protocol:   apiv1.ProtocolTCP,
+					Port:       zkElectionPort,
+					TargetPort: intstr.FromInt(zkElectionPort),
+				},
+				{
+					Name:       "server",
+					Protocol:   apiv1.ProtocolTCP,
+					Port:       zkServerPort,
+					TargetPort: intstr.FromInt(zkServerPort),
+				},
+				{
+					Name:       "client",
+					Protocol:   apiv1.ProtocolTCP,
+					Port:       zkClientPort,
+					TargetPort: intstr.FromInt(zkClientPort),
+				},
+			},
+		}}
+	r.EnsureService(&srvHeadless)
+	// TODO we keep the original service but this could be removed. Zookeeper is assumed to also work behind a load balancer.
+	srv := base.MkService(ZookeeperIdent, r.ns, ZookeeperIdent, []int32{zkClientPort}, ZookeeperIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&srv)
 	storageConfig := r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage)
 	logStorageConfig := base.StorageConfig{
@@ -155,8 +198,28 @@ func (r *SFController) DeployZookeeper() bool {
 	zk.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessCMDProbe([]string{"/bin/bash", "/config-scripts/probe.sh"})
 	zk.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLivenessCMDProbe([]string{"/bin/bash", "/config-scripts/probe.sh"})
 	zk.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
-		base.MkContainerPort(zkSSLPort, zkSSLPortName),
+		base.MkContainerPort(zkClientPort, "client"),
+		base.MkContainerPort(zkElectionPort, "election"),
+		base.MkContainerPort(zkServerPort, "server"),
 	}
+	zk.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
+		base.MkEnvVar("ZK_REPLICAS", fmt.Sprintf("%d", ZookeeperReplicas)),
+	}
+
+	// Delay termination with a sleep to give time to remaining replicas to react to potential leader loss
+	execAction := apiv1.ExecAction{
+		Command: []string{"/bin/sh", "-c", "pkill java; sleep 60"},
+	}
+	lfHandler := apiv1.LifecycleHandler{
+		Exec: &execAction,
+	}
+	terminationSettings := apiv1.Lifecycle{
+		PreStop: &lfHandler,
+	}
+	zk.Spec.Template.Spec.Containers[0].Lifecycle = &terminationSettings
+	// Grace period is twice the sleep to be sure
+	zk.Spec.Template.Spec.TerminationGracePeriodSeconds = ptr.To[int64](120)
+
 	zk.Spec.Replicas = utils.Int32Ptr(ZookeeperReplicas)
 	base.SetContainerLimitsHighProfile(&zk.Spec.Template.Spec.Containers[0])
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zookeeper.Limits, &zk.Spec.Template.Spec.Containers[0])
@@ -189,15 +252,14 @@ func (r *SFController) DeployZookeeper() bool {
 		return false
 	}
 
-	pvcReadiness := r.reconcileExpandPVC(ZookeeperIdent+"-data-"+ZookeeperIdent+"-0", r.cr.Spec.Zookeeper.Storage)
+	pvcReadiness := true
+	for i := range ZookeeperReplicas {
+		var pvcName = fmt.Sprintf("%s-data-%s-%d", ZookeeperIdent, ZookeeperIdent, i)
+		pvcReadiness = pvcReadiness && r.reconcileExpandPVC(pvcName, r.cr.Spec.Zookeeper.Storage)
+	}
 
 	isReady := r.IsStatefulSetReady(current) && pvcReadiness
 	conds.UpdateConditions(&r.cr.Status.Conditions, ZookeeperIdent, isReady)
 
-	if isReady && r.zkChanged {
-		logging.LogI("Running reconnect-zk.py on the scheduler to force a reconnection.")
-		r.RunPodCmd("zuul-scheduler-0", "zuul-scheduler", []string{"/usr/local/bin/reconnect-zk.py"})
-		r.zkChanged = false
-	}
 	return isReady
 }

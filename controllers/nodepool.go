@@ -6,6 +6,7 @@ package controllers
 
 import (
 	_ "embed"
+	"fmt"
 	"strconv"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -24,8 +25,8 @@ import (
 //go:embed static/nodepool/init-container.sh
 var initContainerScript string
 
-//go:embed static/nodepool/generate-config.sh
-var generateConfigScript string
+//go:embed static/nodepool/generate-config.sh.tmpl
+var generateConfigScriptTemplate string
 
 //go:embed static/nodepool/logging.yaml.tmpl
 var loggingConfigTemplate string
@@ -127,11 +128,27 @@ func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string
 
 }
 
+func (r *SFController) generateConfigScript() string {
+	var zkReplicas []string
+	// TODO is there a way to confirm the cluster's domain config from the operator?
+	for i := range ZookeeperReplicas {
+		zkReplicas = append(zkReplicas, fmt.Sprintf("%s-%d.%s-headless.%s.svc.cluster.local", ZookeeperIdent, i, ZookeeperIdent, r.ns))
+	}
+	var generateConfigScript string
+	generateConfigScript, _ = utils.ParseString(
+		generateConfigScriptTemplate,
+		struct {
+			Namespace         string
+			ZookeeperReplicas []string
+		}{r.ns, zkReplicas})
+	return generateConfigScript
+}
+
 func (r *SFController) setNodepoolTooling() {
 
 	toolingData := make(map[string]string)
 	toolingData["init-container.sh"] = initContainerScript
-	toolingData["generate-config.sh"] = generateConfigScript
+	toolingData["generate-config.sh"] = r.generateConfigScript()
 	toolingData["fetch-config-repo.sh"] = fetchConfigRepoScript
 	toolingData["dib-ansible.py"] = dibAnsibleWrapper
 	toolingData["ssh_config"] = builderSSHConfig
@@ -511,7 +528,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	volumeMounts = append(volumeMounts, nodeExporterVolumeMount...)
 
 	annotations := map[string]string{
-		"nodepool.yaml":              utils.Checksum([]byte(generateConfigScript)),
+		"nodepool.yaml":              utils.Checksum([]byte(r.generateConfigScript())),
 		"nodepool-logging.yaml":      utils.Checksum([]byte(loggingConfig)),
 		"dib-ansible.py":             utils.Checksum([]byte(dibAnsibleWrapper)),
 		"ssh_config":                 utils.Checksum([]byte(builderSSHConfig)),
@@ -708,7 +725,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	volumeMounts = append(volumeMounts, configScriptsVolumeMounts...)
 
 	annotations := map[string]string{
-		"nodepool.yaml":         utils.Checksum([]byte(generateConfigScript)),
+		"nodepool.yaml":         utils.Checksum([]byte(r.generateConfigScript())),
 		"nodepool-logging.yaml": utils.Checksum([]byte(loggingConfig)),
 		"statsd_mapping":        utils.Checksum([]byte(nodepoolStatsdMappingConfig)),
 		"serial":                "12",
