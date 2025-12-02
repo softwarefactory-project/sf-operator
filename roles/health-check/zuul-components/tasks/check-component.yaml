@@ -1,0 +1,30 @@
+---
+- name: "Get expected replica count for zuul-{{ item.component }}"
+  ansible.builtin.command: >
+    kubectl get {{ item.kind }} zuul-{{ item.component }} -o jsonpath='{.spec.replicas}'
+  register: _scale_replicas
+
+- name: "Wait until all of zuul-{{ item.component }} replicas are ready"
+  ansible.builtin.command: >
+    kubectl get {{ item.kind }} zuul-{{ item.component }} -o jsonpath='{.status.readyReplicas}'
+  register: _scale_ready
+  until:
+    - _scale_replicas.stdout | int == _scale_ready.stdout | int
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"
+
+- name: "Validate zuul-{{ item.component }} Component(s)"
+  ansible.builtin.uri:
+    url: https://{{ zuul_endpoint }}/api/components
+    status_code: [200]
+    method: GET
+    validate_certs: "{{ validate_certs }}"
+  register: _components
+  until:
+    - "'json' in _components"
+    - "item.component in _components.json"
+    - "_components.json[item.component] | length == (_scale_ready.stdout | int)"
+    # all elements listed under component must have a state equal to 'running'
+    - "_components.json | community.general.json_query('{{ item.component }}[*].state') | reject('equalto', 'running') | length == 0"
+  retries: "{{ zuul_api_retries }}"
+  delay: "{{ zuul_api_delay }}"

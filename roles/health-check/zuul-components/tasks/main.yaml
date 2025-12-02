@@ -1,55 +1,15 @@
-- name: Get Zuul Components
-  ansible.builtin.uri:
-    url: https://{{ zuul_endpoint }}/api/components
-    status_code: [200]
-    method: GET
-    validate_certs: "{{ validate_certs }}"
-  register: _components
-  until:
-    - "'json' in _components"
-  retries: "{{ zuul_api_retries }}"
-  delay: "{{ zuul_api_delay }}"
+# This role assumes the replica counts to be stable during execution, make
+# sure no reconciliation, rollout or scaling operation is in progress.
+#
 
-- name: Check if, at least, one Zuul Web instance Exists, fails otherwise
-  ansible.builtin.fail:
-    msg: "Zuul Web has no instances"
-  when: "_components.json['web'] | length  == 0"
-
-- name: Check if Zuul Web Intances are running
-  ansible.builtin.fail:
-    msg: "Zuul Web has an element {{ item.hostname }} on a non-running state: {{ item.state }}"
-  failed_when: "'running' not in item.state"
-  loop: "{{ _components.json['web'] }}"
-
-- name: Check if, at least, one Zuul Scheduler instance Exists, fails otherwise
-  ansible.builtin.fail:
-    msg: "Zuul Scheduler has no instances"
-  when: "_components.json['scheduler'] | length  == 0"
-
-- name: Check if Zuul Scheduler Instances are Running
-  ansible.builtin.fail:
-    msg: "Zuul Scheduler has an element {{ item.hostname }} on a non-running state: {{ item.state }}"
-  failed_when: "'running' not in item.state"
-  loop: "{{ _components.json['scheduler'] }}"
-
-- name: Check if, two Zuul Executor Instances Exist, fails otherwise
-  ansible.builtin.fail:
-    msg: "Zuul Executor must have 2 replicas"
-  when: "_components.json['executor'] | length != 2"
-
-- name: Check if Zuul Executor Instances are Running
-  ansible.builtin.fail:
-    msg: "Zuul Executor has an element {{ item.hostname }} on a non-running state: {{ item.state }}"
-  failed_when: "'running' not in item.state"
-  loop: "{{ _components.json['executor'] }}"
-
-- name: Check if, two Zuul Merger Instances Exist, fails otherwise
-  ansible.builtin.fail:
-    msg: "Zuul Merger must have 2 replicas"
-  when: "_components.json['merger'] | length != 2"
-
-- name: Check if Zuul Merger Components are Running
-  ansible.builtin.fail:
-    msg: "Zuul Merger has an element {{ item.hostname }} on a non-running state: {{ item.state }}"
-  failed_when: "'running' not in item.state"
-  loop: "{{ _components.json['merger'] }}"
+- name: Check zuul components sequentially
+  ansible.builtin.include_tasks: check-component.yaml
+  loop:
+    - kind: deployment
+      component: web
+    - kind: statefulset
+      component: scheduler
+    - kind: statefulset
+      component: merger
+    - kind: statefulset
+      component: executor
