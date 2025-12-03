@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - LogJuicer is updated to version 0.16.0
+- The Go version in go.mod is bumped to 1.24.11. Backward compatibility with earlier versions is not guaranteed.
 
 ### Deprecated
 ### Removed
