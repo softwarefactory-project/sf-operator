@@ -21,4 +21,5 @@ and managing a Software Factory Custom Resource through SF-Operator.
 1. [Monitoring](./monitoring.md)
 1. [Logging](./logging.md)
 1. [Backup and Restore](./backup-restore.md)
+1. [General upgrade guidelines](./upgrades.md)
 1. [Custom Resource Definitions Reference](./crds.md)
