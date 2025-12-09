@@ -21,7 +21,10 @@ Before tagging, please make sure the [CHANGELOG](../reference/CHANGELOG.md) is u
 ### Security
 ```
 
-Then commit the changes to the CHANGELOG for review, and have them validated and merged. **This change should be the last one before tagging.**
+Make also sure that any specific upgrade instructions are mentioned in the [upgrades guidelines](../deployment/upgrades.md) if
+needed.
+
+Then commit the changes for review, and have them validated and merged. **This change should be the last one before tagging.**
 
 # Tagging
 
