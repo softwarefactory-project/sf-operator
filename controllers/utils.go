@@ -905,7 +905,7 @@ func (r *SFController) ensureDeployment(dep appsv1.Deployment, desiredReplicaCou
 				needUpdate = true
 				// force replica count programmatically
 				diffs = append(diffs, fmt.Sprintf("forcing replica count change from %d to %d", currentReplicas, *desiredReplicaCount))
-				dep.Spec.Replicas = desiredReplicaCount
+				current.Spec.Replicas = desiredReplicaCount
 			}
 		}
 		if missing := imageChanged(dep.Spec.Template.Spec.Containers, current.Spec.Template.Spec.Containers); len(missing) > 0 {
@@ -922,7 +922,7 @@ func (r *SFController) ensureDeployment(dep appsv1.Deployment, desiredReplicaCou
 				logger = logging.LogI
 				logPrefix = "[Dry Run] "
 			}
-			current.Spec = dep.DeepCopy().Spec
+			current.Spec.Template = *dep.Spec.Template.DeepCopy()
 			reason := strings.Join(diffs, ", ")
 			logging.LogI(fmt.Sprintf("%sStatefulset \"%s\" configuration changed, applying...", logPrefix, name))
 			logger(fmt.Sprintf("%sReason: %s", logPrefix, reason))

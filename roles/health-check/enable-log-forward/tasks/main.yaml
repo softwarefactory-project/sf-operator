@@ -1,4 +1,22 @@
 ---
+- name: scale down zuul components
+  ansible.builtin.include_role:
+    name: "health-check/scale-resources"
+  vars:
+    scaling_services:
+      - name: zuul-executor
+        kind: sts
+        replicas: 0
+      - name: zuul-merger
+        kind: sts
+        replicas: 0
+      - name: zuul-scheduler
+        kind: sts
+        replicas: 0
+      - name: zuul-web
+        kind: deployment
+        replicas: 0
+
 - name: Enable log forwarding
   ansible.builtin.include_role:
     name: "update-custom-resource"
@@ -7,3 +25,21 @@
       FluentBitLogForwarding:
         forwardInputHost: fluent-bit-forward-input
         forwardInputPort: 24224
+
+- name: scale zuul components back up to defaults
+  ansible.builtin.include_role:
+    name: "health-check/scale-resources"
+  vars:
+    scaling_services:
+      - name: zuul-executor
+        kind: sts
+        replicas: 1
+      - name: zuul-merger
+        kind: sts
+        replicas: 1
+      - name: zuul-scheduler
+        kind: sts
+        replicas: 1
+      - name: zuul-web
+        kind: deployment
+        replicas: 1
