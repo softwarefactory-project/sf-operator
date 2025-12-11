@@ -905,7 +905,7 @@ func (r *SFController) ensureDeployment(dep appsv1.Deployment, desiredReplicaCou
 				needUpdate = true
 				// force replica count programmatically
 				diffs = append(diffs, fmt.Sprintf("forcing replica count change from %d to %d", currentReplicas, *desiredReplicaCount))
-				current.Spec.Replicas = desiredReplicaCount
+				dep.Spec.Replicas = desiredReplicaCount
 			}
 		}
 		if missing := imageChanged(dep.Spec.Template.Spec.Containers, current.Spec.Template.Spec.Containers); len(missing) > 0 {
