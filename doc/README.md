@@ -4,7 +4,7 @@
 <a href="https://softwarefactory-project.io/zuul/t/local/buildsets?project=software-factory%2Fsf-operator&pipeline=post&skip=0" ><img src="https://softwarefactory-project.io/zuul/api/tenant/local/badge?project=software-factory/sf-operator&pipeline=post" /></a>
 <a href="https://matrix.to/#/#softwarefactory-project:matrix.org"><img src="https://img.shields.io/badge/matrix-%23softwarefactory--project-8A2BE2" alt="Matrix Channel" /></a>
 <a href="https://github.com/softwarefactory-project/sf-operator/tags" ><img src="https://img.shields.io/github/v/tag/softwarefactory-project/sf-operator" /></a>
-<img src="https://img.shields.io/badge/project%20status-ALPHA-FF2060" alt="Testing only; use in production at your own risks" />
+<img src="https://img.shields.io/badge/project%20status-BETA-orange" alt="This project is in beta phase. Use in production at your own risks." />
 
 SF-Operator is a Kubernetes deployment system to install Software Factory (SF) on the OpenShift Container Platform.
 SF is a Continuous Integration (CI) service based on [Zuul](https://zuul-ci.org) to provide project gating with Ansible
