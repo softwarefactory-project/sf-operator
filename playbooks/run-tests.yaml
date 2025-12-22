@@ -41,7 +41,7 @@
     # FIXME: add more health-check
     # - health-check/config-update-nodepool-builder
     - health-check/test-nodepool-launcher-pod
-    # - health-check/test-volumestats-sidecar
+    - health-check/test-volumestats-sidecar
 
   tasks:
     # test versioning
