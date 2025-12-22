@@ -79,7 +79,7 @@ spec:
   port:
     targetPort: 8080
   to:
-    Kind: Service
+    kind: Service
     name: gateway
   tls:
     insecureEdgeTerminationPolicy: Redirect
