@@ -7,6 +7,7 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	apiv1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 func (r *SFController) AddCorporateCA(spec *apiv1.PodSpec) string {
@@ -68,6 +69,8 @@ func (r *SFController) EnsureLogJuicer() bool {
 	}
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/ready", port)
 
+	dep.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
+	dep.Spec.Strategy.RollingUpdate = nil
 	// Get all the configurations in one string, which are the environment varibles
 	config := ""
 
@@ -77,7 +80,7 @@ func (r *SFController) EnsureLogJuicer() bool {
 
 	dep.Spec.Template.ObjectMeta.Annotations = map[string]string{
 		"config-hash": utils.Checksum([]byte(config)),
-		"serial":      "1",
+		"serial":      "2",
 		"certs":       r.AddCorporateCA(&dep.Spec.Template.Spec),
 	}
 	dep.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
