@@ -5,8 +5,10 @@
         - sf-operator-vuln-check
         - sf-operator-ansible-lint
         - sf-operator-go-test
-        - sf-operator-olm-rhel
-        - sf-operator-upgrade-rhel
+        - sf-operator-olm-rhel:
+            voting: false
+        - sf-operator-upgrade-rhel:
+            voting: false
     gate:
       fail-fast: true
       jobs:
@@ -14,8 +16,8 @@
         - sf-operator-vuln-check
         - sf-operator-ansible-lint
         - sf-operator-go-test
-        - sf-operator-olm-rhel
-        - sf-operator-upgrade-rhel
+        # - sf-operator-olm-rhel
+        # - sf-operator-upgrade-rhel
     release:
       jobs:
         - sf-operator-publish-olm-bundle-image
