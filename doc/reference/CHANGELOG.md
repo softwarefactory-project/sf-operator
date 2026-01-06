@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+### Deprecated
+### Removed
+### Fixed
+
+
+## [v0.0.61] - 2026-01-07
+
+### Added
+### Changed
 
 - LogJuicer is updated to version 0.16.0
 - The Go version in go.mod is bumped to 1.24.11. Backward compatibility with earlier versions is not guaranteed.
@@ -17,6 +26,7 @@ All notable changes to this project will be documented in this file.
   update the image.
 - Zuul: include an unmerged patch [1] in images to improve the handling of closed zookeeper connections, especially during an executor's
   graceful stop. All components will be restarted when upgrading to this version.
+- ensureDeployment function now checks if Strategy has changed.
 
 [1]: https://review.opendev.org/c/zuul/zuul/+/967968
 
@@ -28,6 +38,7 @@ All notable changes to this project will be documented in this file.
 - the automatic node affinity logic was failing when applied to a resource that previously had a replica count set to 0.
   Since we can't compute the node affinity in that case, skip and suggest to re-run the reconciliation in the application's
   logs.
+- Logjuicer Deployment Strategy changed from RollingUpdate to Recreate.
 
 ## [v0.0.60] - 2025-11-13
 
