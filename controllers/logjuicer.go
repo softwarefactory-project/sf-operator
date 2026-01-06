@@ -6,8 +6,8 @@ package controllers
 import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
-	apiv1 "k8s.io/api/core/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 )
 
 func (r *SFController) AddCorporateCA(spec *apiv1.PodSpec) string {
@@ -69,8 +69,9 @@ func (r *SFController) EnsureLogJuicer() bool {
 	}
 	dep.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/ready", port)
 
+	// Setting Strategy to Recreate
 	dep.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
-	dep.Spec.Strategy.RollingUpdate = nil
+
 	// Get all the configurations in one string, which are the environment varibles
 	config := ""
 
