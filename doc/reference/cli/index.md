@@ -96,7 +96,7 @@ contexts:
       sf-operator-repository-path: /path/to/sf-operator/repository
       # Microshift deployment settings (used by the Ansible deployment playbook)
       microshift:
-        host: microshift.dev
+        host: microshift.sfci
         user: cloud-user
         # The pull secret is required, see the MicroShift section of the developer documentation
         openshift-pull-secret: |

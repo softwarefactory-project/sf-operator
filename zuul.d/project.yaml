@@ -6,10 +6,8 @@
         - sf-operator-ansible-lint
         - sf-operator-go-test
         - sf-operator-doc-check
-        - sf-operator-olm-rhel:
-            voting: false
-        - sf-operator-upgrade-rhel:
-            voting: false
+        - sf-operator-olm-rhel
+        - sf-operator-upgrade-rhel
     gate:
       fail-fast: true
       jobs:
@@ -18,8 +16,8 @@
         - sf-operator-ansible-lint
         - sf-operator-go-test
         - sf-operator-doc-check
-        # - sf-operator-olm-rhel
-        # - sf-operator-upgrade-rhel
+        - sf-operator-olm-rhel
+        - sf-operator-upgrade-rhel
     release:
       jobs:
         - sf-operator-publish-olm-bundle-image

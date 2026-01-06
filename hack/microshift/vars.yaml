@@ -1,5 +1,5 @@
 microshift_ip: "{{ hostvars.controller.ansible_host | default(ansible_default_ipv4.address) }}"
-fqdn: microshift.dev
+fqdn: microshift.sfci
 sf_fqdn: sfop.me
 disk_file_sparsed: true
 disk_file_size: 30G

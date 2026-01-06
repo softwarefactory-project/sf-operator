@@ -9,7 +9,7 @@ contexts:
       ansible-microshift-role-path: /path/to/ansible-microshift-role
       microshift:
         disk-file-size: 30G
-        host: microshift.dev
+        host: microshift.sfci
         openshift-pull-secret: <PULL SECRET>
         user: cloud-user
         ramdisk_size: 1g

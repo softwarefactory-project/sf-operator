@@ -10,4 +10,4 @@ hostaliases:
       - "sfop.me"
   - ip: "{{ microshift_ip_address | default(ansible_default_ipv4.address) }}"
     hostnames:
-      - microshift.dev
+      - microshift.sfci

@@ -168,7 +168,7 @@ func initializeCLIConfig(isDevEnv bool) {
 	if isDevEnv {
 		defaultContextConfig.Dev.AnsibleMicroshiftRolePath = "/path/to/ansible-microshift-role"
 		defaultContextConfig.Dev.SFOperatorRepositoryPath = "/path/to/sf-operator"
-		defaultContextConfig.Dev.Microshift.Host = "microshift.dev"
+		defaultContextConfig.Dev.Microshift.Host = "microshift.sfci"
 		defaultContextConfig.Dev.Microshift.User = "cloud-user"
 		defaultContextConfig.Dev.Microshift.OpenshiftPullSecret = "PULL SECRET"
 		defaultContextConfig.Dev.Microshift.DiskFileSize = "30G"
