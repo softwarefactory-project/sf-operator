@@ -977,6 +977,12 @@ func (r *SFController) ensureDeployment(dep appsv1.Deployment, desiredReplicaCou
 			needUpdate = true
 			diffs = append(diffs, compareAnnotations(current.Spec.Template.ObjectMeta.Annotations, dep.Spec.Template.ObjectMeta.Annotations)...)
 		}
+		if (!reflect.DeepEqual(current.Spec.Strategy, dep.Spec.Strategy) && dep.Spec.Strategy != appsv1.DeploymentStrategy{}) {
+			needUpdate = true
+			current.Spec.Strategy = *dep.Spec.Strategy.DeepCopy()
+			diffs = append(diffs, fmt.Sprintf("strategy changed from %+v to %+v", current.Spec.Strategy, dep.Spec.Strategy))
+		}
+
 		if needUpdate {
 			if r.DryRun {
 				logger = logging.LogI
