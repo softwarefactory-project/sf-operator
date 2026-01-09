@@ -11,6 +11,13 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 
+## [v0.0.62] - 2026-01-09
+
+### Changed
+
+- Zuul is updated to version 13.1.0 to fix a critical security issue in zuul-web: https://lists.zuul-ci.org/archives/list/zuul-announce@lists.zuul-ci.org/thread/2WHXPBPRLFF6ZNSSZ3AKOBBBHMWY4YNR/
+
+
 ## [v0.0.61] - 2026-01-07
 
 ### Added
