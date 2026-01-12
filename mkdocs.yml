@@ -63,9 +63,6 @@ extra:
 
 nav:
   - Home: README.md
-  - Operator:
-      - operator/index.md
-      - Getting started: operator/getting_started.md
   - Deploy:
       - deployment/index.md
       - Getting started: deployment/getting_started.md

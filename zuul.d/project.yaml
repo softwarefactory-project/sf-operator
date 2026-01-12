@@ -5,6 +5,7 @@
         - sf-operator-vuln-check
         - sf-operator-ansible-lint
         - sf-operator-go-test
+        - sf-operator-doc-check
         - sf-operator-olm-rhel:
             voting: false
         - sf-operator-upgrade-rhel:
@@ -16,6 +17,7 @@
         - sf-operator-vuln-check
         - sf-operator-ansible-lint
         - sf-operator-go-test
+        - sf-operator-doc-check
         # - sf-operator-olm-rhel
         # - sf-operator-upgrade-rhel
     release:

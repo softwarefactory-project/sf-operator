@@ -96,7 +96,7 @@ Besides the Getting Started process, here are the available installation modes:
 - Run the SF-Operator in standalone mode (recommended).
 - Install the CRD and deploy the SF-Operator on the cluster to manage the SF resources with kubectl.
 
-For example, here is a standard configuration resource (CR), adapted from the getting started one, which is available in [sf.yaml](./playbooks/files/sf.yaml):
+For example, here is a standard configuration resource (CR), adapted from the getting started one, which is available in [sf.yaml](https://github.com/softwarefactory-project/sf-operator/blob/master/playbooks/files/sf.yaml):
 
 ```yaml
 apiVersion: sf.softwarefactory-project.io/v1
@@ -128,8 +128,8 @@ go run ./main.go deploy ./my-sf.yaml
 
 Check out the other documentation:
 
-* [Deploying Zuul and dependencies with SF-Operator](deployment/getting_started)
-* [Developing the SF-Operator](developer/getting_started)
+* [Deploying Zuul and dependencies with SF-Operator](deployment/getting_started.md)
+* [Developing the SF-Operator](developer/getting_started.md)
 
 ## About
 

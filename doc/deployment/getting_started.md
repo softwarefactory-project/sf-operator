@@ -11,7 +11,7 @@ For simplicity's sake, we will refer to a Zuul-based CI infrastructure that can 
 
 In order to deploy a Software Factory with the SF-Operator on an OpenShift cluster, you will need the following:
 
-1. The SF-Operator must be installed on the cluster. Ask your cluster admin whether this is the case; or if you are allowed to install it on the cluster, follow the [Operator's installation steps in the documentation](../operator/getting_started.md).
+1. The SF-Operator must be installed on the cluster. Ask your cluster admin whether this is the case; or if you are allowed to install it on the cluster, follow the [Operator's installation steps in the documentation](../README.md#install).
 1. A valid kubeconfig file, for a user with sufficient rights to create a namespace (optional) and enable privileged [SCCs](https://docs.openshift.com/container-platform/4.13/authentication/managing-security-context-constraints.html) on the target namespace.
 
 ## Installation

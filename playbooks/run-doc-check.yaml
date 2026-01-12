@@ -1,0 +1,47 @@
+---
+- name: Build and check documentation
+  hosts: controller
+  gather_facts: false
+  tasks:
+    - name: Build API documentation
+      ansible.builtin.shell:
+        cmd: "make build-api-doc"
+        chdir: "{{ zuul.project.src_dir }}"
+
+    - name: Build documentation and check links
+      ansible.builtin.shell:
+        cmd: "make doc-check"
+        chdir: "{{ zuul.project.src_dir }}"
+      register: link_check_result
+      ignore_errors: true  # Don't stop execution if link check fails
+
+    - name: Display link check output
+      ansible.builtin.debug:
+        var: link_check_result.stdout_lines
+      when: link_check_result.rc != 0
+
+    - name: Ensure artifacts directory exists
+      ansible.builtin.file:
+        path: "{{ ansible_user_dir }}/zuul-output/logs/docs"
+        state: directory
+
+    - name: Copy built documentation to artifacts directory
+      ansible.builtin.copy:
+        src: "{{ zuul.project.src_dir }}/_site/"
+        dest: "{{ ansible_user_dir }}/zuul-output/logs/docs/"
+        remote_src: yes
+      when: link_check_result.rc == 0 or link_check_result.rc != 0  # Always run
+
+    - name: Define zuul artifacts
+      delegate_to: localhost
+      zuul_return:
+        data:
+          zuul:
+            artifacts:
+              - name: "Documentation"
+                url: "docs/"
+
+    - name: Fail if link check failed
+      ansible.builtin.fail:
+        msg: "Documentation link check failed. See output above for details."
+      when: link_check_result.rc != 0

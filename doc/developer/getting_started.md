@@ -33,7 +33,6 @@ The following tools are not mandatory, but they will make your life much easier:
 ### OpenShift
 
 You need an OpenShift cluster or equivalent on which to run the operator and deploy resources.
-The requirements for the cluster are [the ones listed in the operator section of this documentation](../operator/getting_started.md#prerequisites). We recommend, however, using a dedicated MicroShift instance, as it is much more flexible for hacking and is also the environment used to test and develop the SF-Operator.
 
 You can read about [how to deploy a MicroShift instance here](./microshift.md).
 

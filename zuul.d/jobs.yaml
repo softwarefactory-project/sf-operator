@@ -96,6 +96,24 @@
           label: cloud-centos-9
     run: playbooks/run-go-tests.yaml
 
+# Documentation checking job
+- job:
+    name: sf-operator-doc-check
+    description: Check internal and external links in documentation and fail on warnings
+    pre-run: playbooks/install-golang.yaml
+    timeout: 600
+    irrelevant-files:
+      - ".*"
+      - "!doc/.*"
+      - "!mkdocs.yml"
+      - "!mkdocs-requirements.txt"
+      - "!Makefile"
+    nodeset:
+      nodes:
+        - name: controller
+          label: zuul-worker-f41
+    run: playbooks/run-doc-check.yaml
+
 # sf-operator on microshift jobs
 - job:
     name: sf-operator-olm-rhel

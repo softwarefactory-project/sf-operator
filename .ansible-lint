@@ -1,2 +1,4 @@
 # https://ansible-lint.readthedocs.io/profiles/
 profile: min
+mock_modules:
+  - zuul_return
