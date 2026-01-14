@@ -43,7 +43,7 @@ The configuration provided in `nodepool/nodepool.yaml` will be appended to the b
     --8<-- "controllers/static/nodepool/generate-config.sh"
     ```
 
-For each provider used in the Nodepool launcher configuration, Nodepool must be able to find the required connection credentials. Please refer to the deployment documentation about [setting up provider secrets](../deployment/nodepool.md#setting-up-provider-secrets).
+For each provider used in the Nodepool launcher configuration, Nodepool must be able to find the required connection credentials. Please refer to the deployment documentation about [setting up provider secrets](../deployment/nodepool.md#setting-up-providers-secrets).
 
 ### Use an official cloud image within an OpenStack cloud
 
@@ -100,7 +100,7 @@ The configuration provided in `nodepool/nodepool-builder.yaml` will be appended 
 
 1. See ["What happens during a `config-update` job?"](#configuring-nodepool-launcher) for implementation details.
 
-For each provider used in the Nodepool builder configuration, Nodepool must be able to find the required connection credentials. Please refer to the deployment documentation about [setting up provider secrets](../deployment/nodepool.md#setting-up-provider-secrets).
+For each provider used in the Nodepool builder configuration, Nodepool must be able to find the required connection credentials. Please refer to the deployment documentation about [setting up provider secrets](../deployment/nodepool.md#setting-up-providers-secrets).
 
 ### disk-image-builder
 

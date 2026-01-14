@@ -30,7 +30,7 @@ deployments, beyond what can be defined in a custom resource manifest.
   1. [Zuul](#zuul)
     - [create auth-token](#create-auth-token)
     - [create client-config](#create-client-config)
-  1. [Deploy](#deploy-sf)
+  1. [Deploy](#deploy)
   1. [Version](#version)
 
 ## Installing the CLI

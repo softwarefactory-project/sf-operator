@@ -4,6 +4,17 @@ repo_name: softwarefactory-project/sf-operator
 repo_url: https://github.com/softwarefactory-project/sf-operator
 
 docs_dir: ./doc/
+
+validation:
+  links:
+    unrecognized_links: warn
+    not_found: warn
+    anchors: warn
+    absolute_links: relative_to_docs
+  nav:
+    omitted_files: warn
+    not_found: warn
+
 theme:
   name: material
   features:
@@ -61,6 +72,9 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/softwarefactory-project/sf-operator
 
+exclude_docs: |
+  reference/adr/adr-template.md
+
 nav:
   - Home: README.md
   - Deploy:
@@ -77,6 +91,8 @@ nav:
           - Adding third-party certificates into the CA trust chain: deployment/corporate-certificates.md
       - Monitoring: deployment/monitoring.md
       - Logging: deployment/logging.md
+      - Backup and Restore: deployment/backup-restore.md
+      - General upgrade guidelines: deployment/upgrades.md
   - User:
       - user/index.md
       - Services configuration:
@@ -114,6 +130,9 @@ nav:
           - reference/adr/0012-CLI-overhaul.md
           - reference/adr/0013-more-CLI-features.md
           - reference/adr/0014-external-zuul-executor.md
+          - reference/adr/0015-route-handling.md
+          - reference/adr/0016-remove-olm-and-simplify-the-ci.md
+          - reference/adr/0017-sf-operator-code-hosting.md
         # - Template: reference/adr/adr-template.md
       - Custom Resource Definitions: deployment/crds.md
       - API:

@@ -31,3 +31,6 @@ General information about architectural decision records is available at <https:
 1. [Usage of the upstream zuul-operator](./0010-zuul-operator-usage.md)
 1. [Nodepool Builder](./0011-nodepool-builder.md)
 1. [CLI overhaul](./0012-CLI-overhaul.md)
+1. [Route management](./0015-route-handling.md)
+1. [Remove OLM and simplify the CI](./0016-remove-olm-and-simplify-the-ci.md)
+1. [Project code hosting change](./0017-sf-operator-code-hosting.md)

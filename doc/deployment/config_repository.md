@@ -2,7 +2,6 @@
 
 
 1. [Concept](#concept)
-1. [Repository content](#repository-content)
 1. [Setting up the repository](#setting-up-the-repository)
     1. [Gerrit](#hosting-on-gerrit)
         - [Prerequisites](#prerequisites-on-gerrit)
