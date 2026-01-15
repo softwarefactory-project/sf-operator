@@ -58,3 +58,4 @@
       loop:
         - upgrade-operator
         - run-tests
+        - run-upgrade-validation-tests
