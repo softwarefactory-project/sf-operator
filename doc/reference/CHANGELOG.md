@@ -169,7 +169,7 @@ This release also marks the migration of the sf-operator's CI to https://gateway
 ### Removed
 
 - cert-manager: dependency removal complete. If you deployed a Software Factory with sf-operator prior to version
-  v0.0.55, please upgrade to [v0.0.55](#v0055---2025-03-03) first to ensure the proper removal of dangling cert-manager-related resources.
+  v0.0.55, please upgrade to [v0.0.55](#v0055-2025-03-03) first to ensure the proper removal of dangling cert-manager-related resources.
 - The spec `config-location` "base-url" attribute is no longer required.
 
 ### Fixed

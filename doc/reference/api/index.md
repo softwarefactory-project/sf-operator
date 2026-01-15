@@ -662,3 +662,36 @@ _Appears in:_
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 
 
+
+#### SoftwareFactoryStatus
+
+_Type alias for:_ _[BaseStatus](#basestatus)_
+
+SoftwareFactoryStatus defines the observed state of SoftwareFactory. It is a type alias for BaseStatus with no additional fields.
+
+_Appears in:_
+- [SoftwareFactory](#softwarefactory)
+
+#### SecretRef
+
+_This type is defined but not currently used in the public API._
+
+SecretRef selects a key of a secret in the pod's namespace.
+
+_Appears in:_
+- [Secret](#secret)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `secretKeyRef` _[Secret](#secret)_ | Selects a key of a secret in the pod's namespace | - |
+
+#### LetsEncryptSpec
+
+_This type is defined but not currently implemented in the operator._
+
+LetsEncryptSpec specifies the Let's Encrypt server configuration. This feature is planned but not yet implemented.
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `server` _[LEServer](#leserver)_ | Specify the Let's Encrypt server. Valid values are: "staging", "prod" | staging |
+

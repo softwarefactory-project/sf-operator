@@ -184,16 +184,14 @@ The current project status is: **Beta**
 
 ## Getting Started
 
-* [Installing the Operator ](https://softwarefactory-project.github.io/sf-operator/operator/getting_started/)
-* [Deploying Zuul and dependencies with SF-Operator](https://softwarefactory-project.github.io/sf-operator/deployment/getting_started)
+* [Deploying Zuul and dependencies with SF-Operator](deployment/getting_started.md)
 
 ## Documentation
 
-* [Operator documentation](https://softwarefactory-project.github.io/sf-operator/operator/): for OpenShift cluster administrators, this documentation covers installing SF-Operator and managing the operator's lifecycle.
-* [Deployment documentation](https://softwarefactory-project.github.io/sf-operator/deployment/): this documentation covers the essentials for people or teams who intend to deploy and manage Zuul and its dependencies through the SF-Operator.
-* [Developer documentation](https://softwarefactory-project.github.io/sf-operator/developer/): this documentation describes how to set up a development and testing environment to develop the SF-Operator.
-* [End User documentation](https://softwarefactory-project.github.io/sf-operator/user/): for users of a Software Factory instance. This documentation mostly describes the `Software Factory's config repository` usage (configuration-as-code).
-* [CLI reference](https://softwarefactory-project.github.io/sf-operator/reference/cli/)
+* [Deployment documentation](deployment/index.md): this documentation covers the essentials for people or teams who intend to deploy and manage Zuul and its dependencies through the SF-Operator.
+* [Developer documentation](developer/index.md): this documentation describes how to set up a development and testing environment to develop the SF-Operator.
+* [End User documentation](user/index.md): for users of a Software Factory instance. This documentation mostly describes the `Software Factory's config repository` usage (configuration-as-code).
+* [CLI reference](reference/cli/index.md)
 
 ## Getting Help
 
@@ -205,7 +203,7 @@ Should you have any questions or feedback concerning the SF-Operator, you can:
 
 ## Contributing
 
-Refer to [CONTRIBUTING.md](https://softwarefactory-project.github.io/sf-operator/developer/CONTRIBUTING/).
+Refer to [CONTRIBUTING.md](developer/CONTRIBUTING.md).
 
 ## License
 

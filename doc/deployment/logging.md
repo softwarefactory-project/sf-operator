@@ -5,8 +5,8 @@ This document describes different ways of handling log collection and aggregatio
 
 1. [Using kubectl](#using-kubectl)
 1. [Native Cluster Logging](#native-cluster-logging)
-1. [Operator-Managed Log Forwarding](#operator-managed-log-forwarding)
-1. [Example: Forwarding Logs to Loki](#example-forwarding-logs-to-loki)
+1. [Log Forwarding to a Fluent Bit collector](#log-forwarding-to-a-fluent-bit-collector)
+1. [Example: Setting up a simple Fluent Bit + Loki stack for log collection](#example-setting-up-a-simple-fluent-bit-loki-stack-for-log-collection)
 
 ## Using kubectl
 
@@ -21,7 +21,7 @@ If you need to check logs from init containers, crashed containers, batch jobs, 
 just containers that were destroyed after a configuration change, you will need to rely on
 another tool.
 
-### Native Cluster Logging
+## Native Cluster Logging
 
 Some clusters may have a built-in log collection infrastructure in place. For example:
 

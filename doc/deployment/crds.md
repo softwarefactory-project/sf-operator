@@ -4,7 +4,7 @@ This document gives details about the Custom Resource Definitions (CRDs) that th
 
 The specs are constantly evolving during alpha development and should be considered unstable, but they are the ultimate source of truth for documentation about their properties.
 
-1. [SoftwareFactory](#crds)
+1. [SoftwareFactory](#softwarefactory)
 
 ## SoftwareFactory
 

@@ -102,12 +102,11 @@
     description: Check internal and external links in documentation and fail on warnings
     pre-run: playbooks/install-golang.yaml
     timeout: 600
-    irrelevant-files:
-      - ".*"
-      - "!doc/.*"
-      - "!mkdocs.yml"
-      - "!mkdocs-requirements.txt"
-      - "!Makefile"
+    files:
+      - "doc/.*"
+      - "mkdocs.yml"
+      - "mkdocs-requirements.txt"
+      - "Makefile"
     nodeset:
       nodes:
         - name: controller
