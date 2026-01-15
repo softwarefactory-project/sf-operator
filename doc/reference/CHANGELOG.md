@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- A zuul-spare-ssh-key secret is created to help with secret rotation.
+
 ### Changed
 
 - Force a recreation of the zookeeper TLS secrets (ca-cert, zookeeper-client-tls, zookeeper-server-tls). This fixes a typo in the code

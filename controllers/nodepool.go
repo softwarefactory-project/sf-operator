@@ -448,6 +448,19 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 				},
 			},
 		},
+		{
+			Name: "zuul-spare-ssh-key",
+			VolumeSource: apiv1.VolumeSource{
+				Secret: &apiv1.SecretVolumeSource{
+					SecretName: "zuul-spare-ssh-key",
+					Items: []apiv1.KeyToPath{{
+						Key:  "pub",
+						Path: "pub",
+					}},
+					DefaultMode: &utils.Readmod,
+				},
+			},
+		},
 		base.MkVolumeCM("nodepool-builder-extra-config-vol",
 			"nodepool-builder-extra-config-config-map"),
 		statsdExporterVolume,
@@ -496,6 +509,11 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		{
 			Name:      "zuul-ssh-key",
 			MountPath: "/var/lib/zuul-ssh-key",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "zuul-spare-ssh-key",
+			MountPath: "/var/lib/zuul-spare-ssh-key",
 			ReadOnly:  true,
 		},
 		{
@@ -828,6 +846,9 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 func (r *SFController) DeployNodepool() map[string]bool {
 
 	deployments := make(map[string]bool)
+
+	// Create a spare ssh key to be added to the nodepool image for zuul
+	r.EnsureSSHKeySecret("zuul-spare-ssh-key")
 
 	// We need to initialize the providers secrets early
 	var volumeMounts, nodepoolProvidersSecrets, providerSecretsResourceExists = r.setProviderSecretsVolumeMounts()

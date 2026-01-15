@@ -80,6 +80,7 @@ providers:
               - name: cloud-user
                 ssh_authorized_keys:
                   - $zuul-ssh-key
+                  - $zuul-spare-ssh-key
 ```
 
 2. Save, commit, propose a review and merge the change.
@@ -142,6 +143,10 @@ Here is an example of an image build playbook:
       copy:
         src: /var/lib/zuul-ssh-key/pub
         dest: /tmp/zuul-ssh-key.pub
+    - name: Copy the Zuul spare public key on the image-builder to integrate it on the built cloud image
+      copy:
+        src: /var/lib/zuul-spare-ssh-key/pub
+        dest: /tmp/zuul-spare-ssh-key.pub
     # Build steps begin from here
     # - name: Build task 1
     #   shell: true
