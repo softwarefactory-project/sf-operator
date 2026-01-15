@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+- Force a recreation of the zookeeper TLS secrets (ca-cert, zookeeper-client-tls, zookeeper-server-tls). This fixes a typo in the code
+  that prevented the client and server certs to be properly generated on a deployment that was created before v0.0.61. This is also an
+  opportunity to enforce a rotation of those secrets in case such secrets were leaked due to the zuul-web issue fixed in v0.0.62.
+
 ### Deprecated
 ### Removed
 ### Fixed

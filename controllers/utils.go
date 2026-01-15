@@ -344,7 +344,7 @@ func (r *SFUtilContext) EnsureService(service *apiv1.Service) {
 // - server certificates for each zookeeper replica
 func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, ZookeeperReplicas int) {
 	annotations := map[string]string{
-		"serial": "1",
+		"serial": "2",
 	}
 
 	caCert, caPrivKey, caPEM, caPrivKeyPEM := cert.X509CA()
@@ -402,7 +402,7 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 	}
 	currentClientSecret := apiv1.Secret{}
 	if r.GetM(zkClientCertificateSecret.Name, &currentClientSecret) {
-		if !utils.MapEquals(&zkClientCertificateSecret.ObjectMeta.Annotations, &annotations) {
+		if !utils.MapEquals(&currentClientSecret.ObjectMeta.Annotations, &annotations) {
 			r.UpdateR(&zkClientCertificateSecret)
 		}
 	} else {
@@ -435,7 +435,7 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 	}
 	currentServersSecret := apiv1.Secret{}
 	if r.GetM(zkServersCertificateSecret.Name, &currentServersSecret) {
-		if !utils.MapEquals(&zkServersCertificateSecret.ObjectMeta.Annotations, &annotations) {
+		if !utils.MapEquals(&currentServersSecret.ObjectMeta.Annotations, &annotations) {
 			r.UpdateR(&zkServersCertificateSecret)
 		}
 	} else {
