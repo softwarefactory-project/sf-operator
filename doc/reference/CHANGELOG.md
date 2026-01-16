@@ -2,7 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+
 ## [in development]
+
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [v0.0.63] - 2026-01-20
 
 ### Added
 
@@ -14,10 +24,6 @@ All notable changes to this project will be documented in this file.
   that prevented the client and server certs to be properly generated on a deployment that was created before v0.0.61. This is also an
   opportunity to enforce a rotation of those secrets in case such secrets were leaked due to the zuul-web issue fixed in v0.0.62.
 - The logserver's sshd container memory limit has been bumped to 512Mi as we experienced OOMKilled due to memory limit in production.
-
-### Deprecated
-### Removed
-### Fixed
 
 
 ## [v0.0.62] - 2026-01-09
