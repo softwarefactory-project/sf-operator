@@ -93,7 +93,11 @@ doc-check: mkdocs build-api-doc ## Build documentation and fail on warnings
 
 .PHONY: test
 test: manifests generate fmt vet envtest vendor-crds ## Run tests.
-	CGO_ENABLED=1 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -race ./... -coverprofile cover.out
+	CGO_ENABLED=1 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -race ./controllers/... -coverprofile cover.out
+
+.PHONY: integration-test
+integration-tests: ## Run golang integration tests.
+	go test -v ./tests/...
 
 ##@ Build
 
