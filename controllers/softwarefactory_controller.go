@@ -543,9 +543,7 @@ func HasDuplicate(conns []string) string {
 	return ""
 }
 
-func (r *SoftwareFactoryReconciler) mkSFController(
-	ctx context.Context, ns string, owner client.Object, cr sfv1.SoftwareFactory,
-	standalone bool) SFController {
+func MkSFController(r SFUtilContext, cr sfv1.SoftwareFactory) SFController {
 	conns, err := GetUserDefinedConnections(&cr.Spec.Zuul)
 	if err != nil {
 		ctrl.Log.Error(err, "Invalid Zuul connections")
@@ -559,13 +557,26 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 		fmt.Fprintf(os.Stderr, "The git-server connection name is reserved, please rename it")
 		os.Exit(1)
 	}
-	clientSet, err2 := kubernetes.NewForConfig(r.RESTConfig)
-	if err2 != nil {
+	return SFController{
+		SFUtilContext: r,
+		cr:            cr,
+		isOpenShift:   CheckOpenShift(r.RESTConfig),
+		hasProcMount:  os.Getenv("HAS_PROC_MOUNT") == "true",
+		configBaseURL: resolveConfigBaseURL(cr),
+		needOpendev:   !slices.Contains(conns, "opendev.org"),
+	}
+}
+
+func (r *SoftwareFactoryReconciler) mkSFController(
+	ctx context.Context, ns string, owner client.Object, cr sfv1.SoftwareFactory,
+	standalone bool) SFController {
+	clientSet, err := kubernetes.NewForConfig(r.RESTConfig)
+	if err != nil {
 		ctrl.Log.Error(err, "Invalid client")
 		os.Exit(1)
 	}
-	return SFController{
-		SFUtilContext: SFUtilContext{
+	return MkSFController(
+		SFUtilContext{
 			Client:     r.Client,
 			Scheme:     r.Scheme,
 			RESTClient: r.RESTClient,
@@ -578,12 +589,8 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 			zkChanged:  false,
 			DryRun:     r.DryRun,
 		},
-		cr:            cr,
-		isOpenShift:   CheckOpenShift(r.RESTConfig),
-		hasProcMount:  os.Getenv("HAS_PROC_MOUNT") == "true",
-		configBaseURL: resolveConfigBaseURL(cr),
-		needOpendev:   !slices.Contains(conns, "opendev.org"),
-	}
+		cr,
+	)
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -633,36 +640,45 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 }
 
-func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns string, sf sfv1.SoftwareFactory) error {
-	d, _ := time.ParseDuration("5s")
-	maxAttempt := 60
-	log := log.FromContext(ctx)
+var controllerCMName = "sf-standalone-owner"
 
+func EnsureStandaloneOwner(ctx context.Context, cl client.Client, ns string, spec sfv1.SoftwareFactorySpec) (corev1.ConfigMap, error) {
 	// Create a fake resource that simulate the Resource Owner.
 	// A deletion to that resource Owner will cascade delete owned resources
-	controllerCMName := "sf-standalone-owner"
 	controllerCM := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controllerCMName,
 			Namespace: ns,
 		}}
-	controllerAnnotations := map[string]string{
-		"sf-operator-version": utils.GetVersion(),
-		"last-reconcile":      strconv.FormatInt(time.Now().Unix(), 10),
-	}
-	err := r.Client.Get(
+	err := cl.Get(
 		ctx, client.ObjectKey{Name: controllerCMName, Namespace: ns}, &controllerCM)
 	if err != nil && k8s_errors.IsNotFound(err) {
-		marshaledSpec, _ := yaml.Marshal(sf.Spec)
+		marshaledSpec, _ := yaml.Marshal(spec)
 		controllerCM.Data = map[string]string{
 			"spec": string(marshaledSpec),
 		}
 		logging.LogI("Creating ConfigMap, name: " + controllerCMName)
 		// Create the fake controller configMap
-		if err := r.Create(ctx, &controllerCM); err != nil {
+		if err := cl.Create(ctx, &controllerCM); err != nil {
+			log := log.FromContext(ctx)
 			log.Error(err, "Unable to create configMap", "name", controllerCMName)
-			return err
+			return controllerCM, err
 		}
+	}
+	return controllerCM, nil
+}
+
+func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns string, sf sfv1.SoftwareFactory) error {
+	d, _ := time.ParseDuration("5s")
+	maxAttempt := 60
+	log := log.FromContext(ctx)
+	controllerAnnotations := map[string]string{
+		"sf-operator-version": utils.GetVersion(),
+		"last-reconcile":      strconv.FormatInt(time.Now().Unix(), 10),
+	}
+	controllerCM, err := EnsureStandaloneOwner(ctx, r.Client, ns, sf.Spec)
+	if err != nil {
+		return err
 	}
 	sfCtrl := r.mkSFController(ctx, ns, &controllerCM, sf, true)
 	attempt := 0

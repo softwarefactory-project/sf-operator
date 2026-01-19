@@ -70,6 +70,26 @@ type SFUtilContext struct {
 	DryRun     bool
 }
 
+func MkSFUtilContext(ctx context.Context, goClient client.Client, restConfig *rest.Config, namespace string, owner client.Object, standalone bool) SFUtilContext {
+	clientSet, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		panic("no client set!")
+	}
+	return SFUtilContext{
+		Client:     goClient,
+		Scheme:     controllerScheme,
+		RESTConfig: restConfig,
+		RESTClient: getPodRESTClient(restConfig),
+		ClientSet:  clientSet,
+		ns:         namespace,
+		ctx:        ctx,
+		owner:      owner,
+		standalone: standalone,
+		zkChanged:  false,
+		DryRun:     false,
+	}
+}
+
 type HostAlias struct {
 	IP        string   `json:"ip" mapstructure:"ip"`
 	Hostnames []string `json:"hostnames" mapstructure:"hostnames"`

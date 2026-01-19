@@ -26,19 +26,14 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/yaml"
 )
 
 func ApplyStandalone(ns string, sfResource string, kubeContext string, dryRun bool) {
 	if sfResource != "" && ns != "" {
 		var sf sfv1.SoftwareFactory
-		dat, err := os.ReadFile(sfResource)
+		sf, err := controllers.ReadSFYAML(sfResource)
 		if err != nil {
-			ctrl.Log.Error(err, "Error reading manifest:")
-			os.Exit(1)
-		}
-		if err := yaml.Unmarshal(dat, &sf); err != nil {
-			ctrl.Log.Error(err, "Error interpreting the SF custom resource:")
+			ctrl.Log.Error(err, "Could not reconcile resource")
 			os.Exit(1)
 		}
 		ctrl.Log.Info("Applying custom resource with the following parameters:",
