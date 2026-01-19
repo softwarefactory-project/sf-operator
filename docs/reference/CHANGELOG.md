@@ -17,6 +17,11 @@ All notable changes to this project will be documented in this file.
 ### Deprecated
 ### Removed
 ### Fixed
+
+- nodepool-builder: fixed default configuration issues in ansible's custom timestamped output callback plugin
+  that caused some callback events to throw exceptions, preventing these events from being logged in the image build
+  playbook's output.
+
 ### Security
 
 ## [v0.0.64] - 2026-01-23
@@ -44,7 +49,6 @@ All notable changes to this project will be documented in this file.
   that prevented the client and server certs to be properly generated on a deployment that was created before v0.0.61. This is also an
   opportunity to enforce a rotation of those secrets in case such secrets were leaked due to the zuul-web issue fixed in v0.0.62.
 - The logserver's sshd container memory limit has been bumped to 512Mi as we experienced OOMKilled due to memory limit in production.
-
 
 ## [v0.0.62] - 2026-01-09
 
