@@ -38,7 +38,6 @@
     - name: config-update-nodepool-builder
     - name: test-nodepool-launcher-pod
     - name: test-volumestats-sidecar
-    - name: expand-volume
     - name: validate-purgelogs
       when: "{{ mode == 'olm' }}"
     - name: zuul-client-api
@@ -52,5 +51,8 @@
       when: "{{ mode == 'standalone' }}"
     - name: test-standalone-update
       when: "{{ mode == 'standalone' }}"
+    # Always ensure this test is done last, since whenever a reconcile is done with
+    # the sample my-sf.yaml CR as base, it'll attempt to shrink storage back to 2Gi.
+    - name: expand-volume
   loop_control:
     loop_var: role
