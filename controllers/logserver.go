@@ -8,16 +8,16 @@ package controllers
 import (
 	_ "embed"
 	"encoding/base64"
-	"maps"
-	"strconv"
-
-	"k8s.io/utils/ptr"
-
+	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
+	"maps"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strconv"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
@@ -248,6 +248,13 @@ func (r *SFController) DeployLogserver() bool {
 		base.MkContainerPort(sshdPort, sshdPortName),
 	}
 
+	sshdContainerLimits := v1.LimitsSpec{
+		CPU: resource.MustParse("500m"),
+		// The default profile set by MkContainer is not enough
+		Memory: resource.MustParse("512Mi"),
+	}
+	base.UpdateContainerLimit(&sshdContainerLimits, &sshdContainer)
+
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, sshdContainer)
 
 	retentionDays := r.cr.Spec.Logserver.RetentionDays
@@ -292,7 +299,7 @@ func (r *SFController) DeployLogserver() bool {
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
 	sts.Spec.Template.ObjectMeta.Annotations = map[string]string{
 		"fqdn":        r.cr.Spec.FQDN,
-		"serial":      "7",
+		"serial":      "8",
 		"config-hash": utils.Checksum([]byte(logserverConf)),
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Logserver.RetentionDays) +
 			" loopDelay:" + strconv.Itoa(r.cr.Spec.Logserver.LoopDelay),
