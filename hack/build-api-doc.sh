@@ -5,7 +5,7 @@
 
 REPO_ROOT=DOC_ROOT="${DOC_ROOT:-$(cd "$(dirname "$0")/../" && pwd)}"
 API_ROOT="${API_ROOT:-$(cd "$(dirname "$0")/../api/v1/" && pwd)}"
-DOC_ROOT="${DOC_ROOT:-$(cd "$(dirname "$0")/../doc/" && pwd)}"
+DOC_ROOT="${DOC_ROOT:-$(cd "$(dirname "$0")/../docs/" && pwd)}"
 
 tmpdir="$(mktemp -d)"
 docstmpdir="$(mktemp -d)"

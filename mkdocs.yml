@@ -3,7 +3,7 @@ site_name: sf-operator documentation
 repo_name: softwarefactory-project/sf-operator
 repo_url: https://github.com/softwarefactory-project/sf-operator
 
-docs_dir: ./doc/
+docs_dir: ./docs/
 
 validation:
   links:
