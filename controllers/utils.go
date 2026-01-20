@@ -11,6 +11,7 @@ import (
 	_ "embed"
 	e "errors"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"slices"
@@ -200,10 +201,10 @@ func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
 	return true
 }
 
-// PodExec connects to a container's Pod and execute a command
-// Stdout and Stderr is output on the caller's Stdout
+// PodExecOut connects to a container's Pod and execute a command
+// Stderr is output on the caller's Stdout
 // The function returns an Error for any issue
-func (r *SFUtilContext) PodExec(pod string, container string, command []string) error {
+func (r *SFUtilContext) PodExecOut(pod string, container string, command []string, out io.Writer) error {
 	logging.LogI(fmt.Sprintf("Running pod execution pod: %s, command: %s", pod, command))
 	execReq := r.RESTClient.
 		Post().
@@ -226,7 +227,7 @@ func (r *SFUtilContext) PodExec(pod string, container string, command []string) 
 
 	// r.log.V(1).Info("Streaming start")
 	err = exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
-		Stdout: os.Stdout,
+		Stdout: out,
 		Stderr: os.Stderr,
 		Tty:    false,
 	})
@@ -234,6 +235,12 @@ func (r *SFUtilContext) PodExec(pod string, container string, command []string) 
 		return err
 	}
 	return nil
+}
+
+// PodExec connects to a container's Pod and execute a command
+// Stdout and Stderr is output on the caller's Stdout
+func (r *SFUtilContext) PodExec(pod string, container string, command []string) error {
+	return r.PodExecOut(pod, container, command, os.Stdout)
 }
 
 // --- Ensure resources functions ---

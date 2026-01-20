@@ -11,4 +11,7 @@ var _ = Describe("Deploy Tests", Ordered, func() {
 	It("Reconcile default", func() {
 		runReconcile(sf)
 	})
+	It("Match zuul secrets", func() {
+		zuulConfMatchSecret()
+	})
 })

@@ -11,6 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -88,6 +89,20 @@ var _ = BeforeSuite(func() {
 
 	sfctx = sfop.MkSFUtilContext(ctx, client, restConfig, namespace, &owner, true)
 })
+
+// helpers
+func readSecret(name string) map[string][]byte {
+	var sec apiv1.Secret
+	err := sfctx.Client.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &sec)
+	if err != nil {
+		return make(map[string][]byte)
+	}
+	return sec.Data
+}
+
+func readSecretValue(name string, key string) string {
+	return string(readSecret(name)[key])
+}
 
 var _ = Describe("Test Env", Ordered, func() {
 	It("Has namespace", func() {
