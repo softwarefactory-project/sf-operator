@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/yaml"
 
 	apiroutev1 "github.com/openshift/api/route/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,11 +39,29 @@ var SetupLog = setupLog
 var controllerScheme = runtime.NewScheme()
 
 func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(controllerScheme))
+	InitScheme()
+}
 
+func InitScheme() *runtime.Scheme {
+	utilruntime.Must(clientgoscheme.AddToScheme(controllerScheme))
 	utilruntime.Must(sfv1.AddToScheme(controllerScheme))
 	utilruntime.Must(apiroutev1.AddToScheme(controllerScheme))
 	utilruntime.Must(monitoringv1.AddToScheme(controllerScheme))
+	return controllerScheme
+}
+
+func ReadSFYAML(fp string) (sfv1.SoftwareFactory, error) {
+	var sf sfv1.SoftwareFactory
+	dat, err := os.ReadFile(fp)
+	if err != nil {
+		ctrl.Log.Error(err, "Error reading manifest:")
+		return sf, err
+	}
+	if err := yaml.Unmarshal(dat, &sf); err != nil {
+		ctrl.Log.Error(err, "Error interpreting the SF custom resource:")
+		return sf, err
+	}
+	return sf, nil
 }
 
 func getPodRESTClient(config *rest.Config) rest.Interface {
