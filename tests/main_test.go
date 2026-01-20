@@ -40,7 +40,7 @@ func runReconcile(cr sfv1.SoftwareFactory) {
 	Eventually(func() bool {
 		status := ctrl.Step()
 		return status.Ready
-	}, time.Second*900, time.Second).Should(Equal(true))
+	}).WithTimeout(900 * time.Second).WithPolling(time.Second).WithContext(ctx).Should(Equal(true))
 }
 
 // Test global environment
