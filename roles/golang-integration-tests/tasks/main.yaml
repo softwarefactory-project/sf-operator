@@ -1,0 +1,4 @@
+- name: Run integration tests
+  command: make integration-tests
+  args:
+    chdir: "{{ zuul.project.src_dir }}"

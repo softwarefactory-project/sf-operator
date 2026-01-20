@@ -16,6 +16,8 @@
     - utils/config-repo-reset
     - utils/setup-log-forwarding-stack
 
+    - golang-integration-tests
+
     # Apply the sf.yaml resources with the config repo on gerrit
     - run-operator-standalone
 
