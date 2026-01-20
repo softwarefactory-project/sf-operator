@@ -4,8 +4,6 @@
 package sf_test
 
 import (
-	"bytes"
-
 	. "github.com/onsi/gomega"
 )
 
@@ -15,12 +13,18 @@ func zuulConfMatchSecret() string {
 	secret := readSecretValue("zuul-config", "zuul.conf")
 
 	// zuul.conf from pod
-	var buf bytes.Buffer
-	sfctx.PodExecOut("zuul-scheduler-0", "zuul-scheduler", []string{"cat", "/etc/zuul/zuul.conf"}, &buf)
-	config := buf.String()
+	config := readZuulCommand("cat /etc/zuul/zuul.conf")
 
 	// validate it matches
 	Ω(config).Should(Equal(secret))
 
 	return config
+}
+
+func readZuulCommand(command string) string {
+	return readCommand("zuul-scheduler-0", "zuul-scheduler", command)
+}
+
+func readZuulCommandArgs(args []string) string {
+	return readCommandArgs("zuul-scheduler-0", "zuul-scheduler", args)
 }

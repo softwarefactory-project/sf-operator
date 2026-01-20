@@ -4,11 +4,8 @@
 package sf_test
 
 import (
-	"strings"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -19,10 +16,15 @@ type Secret struct {
 
 var _ = Describe("Secret Rotations", Ordered, func() {
 	var zuulConf string
+	var builds string
 	BeforeAll(func() {
 		secrets := []Secret{
 			{name: "zuul-auth-secret", key: "zuul-auth-secret"},
+			// {name: "zuul-db-connection", key: "password"},
 		}
+
+		By("Checking build database")
+		builds = readZuulCommand("curl zuul-web:9000/api/tenant/demo-tenant/builds")
 
 		By("Deleting secrets")
 		prevValues := make(map[string]map[string][]byte)
@@ -51,6 +53,18 @@ var _ = Describe("Secret Rotations", Ordered, func() {
 		Ω(zuulConf).Should(ContainSubstring(newAuth))
 
 		By("Checking zuul-client works")
-		Ω(sfctx.PodExec("zuul-scheduler-0", "zuul-scheduler", strings.Split("zuul-client -v autohold --tenant internal --project system-config --job testytest --reason testy", " "))).Should(BeNil())
+		// Need to force zuul-client stderr to stdout, otherwise it only works when the command has terminal and stdin!?
+		Ω(readZuulCommandArgs([]string{"bash", "-c", "zuul-client -v autohold --tenant internal --project system-config --job testytest --reason testy 2>&1"})).
+			Should(ContainSubstring("Command autohold completed successfully"))
+	})
+
+	It("zuul-db works", func() {
+		By("Checking the secret is in the zuul.conf")
+		newAuth := readSecretValue("zuul-db-connection", "password")
+		Ω(zuulConf).Should(ContainSubstring(newAuth))
+
+		By("Checking zuul-web works")
+		newBuilds := readZuulCommand("curl zuul-web:9000/api/tenant/demo-tenant/builds")
+		Ω(newBuilds).Should(Equal(builds))
 	})
 })
