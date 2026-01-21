@@ -103,8 +103,7 @@ func (r *SFController) CreateDBInitContainer(username string, password string, d
 	return container
 }
 
-func (r *SFController) CreateProvisionDBJob(database string, password string) batchv1.Job {
-	var ttl int32 = 600
+func (r *SFController) EnsureProvisionDBJob(database string, password string) bool {
 	var backoffLimit int32 = 5
 	dbInitJob := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -112,8 +111,7 @@ func (r *SFController) CreateProvisionDBJob(database string, password string) ba
 			Namespace: r.ns,
 		},
 		Spec: batchv1.JobSpec{
-			TTLSecondsAfterFinished: &ttl,
-			BackoffLimit:            &backoffLimit,
+			BackoffLimit: &backoffLimit,
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
 					RestartPolicy: apiv1.RestartPolicyOnFailure,
@@ -124,43 +122,32 @@ func (r *SFController) CreateProvisionDBJob(database string, password string) ba
 			},
 		},
 	}
-	r.GetOrCreate(dbInitJob)
-	return *dbInitJob
+	annotations := map[string]string{
+		"cfg": utils.Checksum([]byte(password)),
+	}
+
+	dbInitJob.Annotations = annotations
+
+	current := dbInitJob.DeepCopy()
+	if r.GetOrCreate(current) {
+		if dbInitJob.Annotations["cfg"] != current.Annotations["cfg"] {
+			logging.LogI("Re-provisioning db password")
+			r.DeleteR(current)
+			r.CreateR(dbInitJob)
+			return false
+		}
+	}
+	return current.Status.Succeeded > 0
 }
 
-func (r *SFController) DBPostInit(configSecret apiv1.Secret) apiv1.Secret {
-	zuulOpts := ZuulDBOpts{
-		Username: "zuul",
-		Password: utils.NewUUIDString(),
-		Host:     MariaDBIdent,
-		Port:     mariadbPort,
-		Database: "zuul",
-	}
-
+func mkDSN(password string) string {
 	config := mysql.NewConfig()
 	config.Net = "tcp"
-	config.Addr = fmt.Sprintf("%s:%d", zuulOpts.Host, zuulOpts.Port)
-	config.User = zuulOpts.Username
-	config.Passwd = zuulOpts.Password
-	config.DBName = zuulOpts.Database
-	dsn := config.FormatDSN()
-
-	zuulSecretData := map[string][]byte{
-		"username": []byte(zuulOpts.Username),
-		"password": []byte(zuulOpts.Password),
-		"host":     []byte(zuulOpts.Host),
-		"port":     []byte(strconv.Itoa(int(zuulOpts.Port))),
-		"database": []byte(zuulOpts.Database),
-		"dsn":      []byte(dsn),
-	}
-
-	dbInitJob := r.CreateProvisionDBJob(zuulOpts.Database, zuulOpts.Password)
-	if *dbInitJob.Spec.Completions > 0 {
-		configSecret.Data = zuulSecretData
-		r.GetOrCreate(&configSecret)
-	}
-
-	return configSecret
+	config.Addr = fmt.Sprintf("%s:%d", MariaDBIdent, mariadbPort)
+	config.User = "zuul"
+	config.Passwd = password
+	config.DBName = "zuul"
+	return config.FormatDSN()
 }
 
 func (r *SFController) DeployMariadb() bool {
@@ -293,6 +280,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 
 	stsReady := r.IsStatefulSetReady(current)
 
+	postReady := false
 	if stsReady {
 		zuulDBSecret = apiv1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -302,15 +290,24 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 			Data: nil,
 		}
 		if !r.GetM(zuulDBConfigSecret, &zuulDBSecret) {
-			logging.LogI("Starting DB Post Init")
-			zuulDBSecret = r.DBPostInit(zuulDBSecret)
+			password := utils.NewUUIDString()
+			zuulDBSecret.Data = map[string][]byte{
+				"username": []byte("zuul"),
+				"password": []byte(password),
+				"host":     []byte(MariaDBIdent),
+				"port":     []byte(strconv.Itoa(int(mariadbPort))),
+				"database": []byte("zuul"),
+				"dsn":      []byte(mkDSN(password)),
+			}
+			r.CreateR(&zuulDBSecret)
 		}
+		postReady = r.EnsureProvisionDBJob("zuul", string(zuulDBSecret.Data["password"]))
 	}
 
 	pvcDataReadiness := r.reconcileExpandPVC(MariaDBIdent+"-"+MariaDBIdent+"-0", r.cr.Spec.MariaDB.DBStorage)
 	pvcLogsReadiness := r.reconcileExpandPVC(MariaDBIdent+"-logs-"+MariaDBIdent+"-0", r.cr.Spec.MariaDB.LogStorage)
 
-	isReady := stsReady && pvcDataReadiness && pvcLogsReadiness && zuulDBSecret.Data != nil
+	isReady := stsReady && pvcDataReadiness && pvcLogsReadiness && postReady
 
 	conds.UpdateConditions(&r.cr.Status.Conditions, MariaDBIdent, isReady)
 

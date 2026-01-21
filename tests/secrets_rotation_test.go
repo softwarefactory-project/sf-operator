@@ -21,7 +21,7 @@ var _ = Describe("Secret Rotations", Ordered, func() {
 	BeforeAll(func() {
 		secrets := []Secret{
 			{name: "zuul-auth-secret", key: "zuul-auth-secret"},
-			// {name: "zuul-db-connection", key: "password"},
+			{name: "zuul-db-connection", key: "password"},
 		}
 
 		By("Checking build database")
