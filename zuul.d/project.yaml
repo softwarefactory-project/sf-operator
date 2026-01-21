@@ -1,6 +1,7 @@
 - project:
     check:
       jobs:
+        - sf-operator-upgrade-minikube
         - sf-operator-minikube
         - sf-operator-vuln-check
         - sf-operator-ansible-lint

@@ -14,6 +14,7 @@ type Secret struct {
 	key  string
 }
 
+// run with go test -v ./tests/... -args --ginkgo.v --ginkgo.focus "Secret Rotations"
 var _ = Describe("Secret Rotations", Ordered, func() {
 	var zuulConf string
 	var builds string
