@@ -4,11 +4,14 @@
 package sf_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/google/shlex"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv1 "k8s.io/api/core/v1"
@@ -108,6 +111,22 @@ func readSecret(name string) map[string][]byte {
 
 func readSecretValue(name string, key string) string {
 	return string(readSecret(name)[key])
+}
+
+func readCommandArgs(pod string, container string, args []string) string {
+	var buf bytes.Buffer
+	if err := sfctx.PodExecOut(pod, container, args, &buf); err != nil {
+		panic(fmt.Sprintf("Command failed: kubectl exec %s -c %s -- %s", pod, container, strings.Join(args, " ")))
+	}
+	return buf.String()
+}
+
+func readCommand(pod string, container string, command string) string {
+	if args, err := shlex.Split(command); err != nil {
+		panic(fmt.Sprintf("Bad command %s: %v", command, err))
+	} else {
+		return readCommandArgs(pod, container, args)
+	}
 }
 
 func ensureDelete(obj client.Object) {
