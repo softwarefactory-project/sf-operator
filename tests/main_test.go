@@ -12,6 +12,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -91,6 +93,10 @@ var _ = BeforeSuite(func() {
 })
 
 // helpers
+func mkMeta(name string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{Name: name, Namespace: namespace}
+}
+
 func readSecret(name string) map[string][]byte {
 	var sec apiv1.Secret
 	err := sfctx.Client.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &sec)
@@ -102,6 +108,13 @@ func readSecret(name string) map[string][]byte {
 
 func readSecretValue(name string, key string) string {
 	return string(readSecret(name)[key])
+}
+
+func ensureDelete(obj client.Object) {
+	err := sfctx.Client.Delete(ctx, obj)
+	if err != nil && !apierrors.IsNotFound(err) {
+		panic(fmt.Sprintf("Couldn't delete %v", obj))
+	}
 }
 
 var _ = Describe("Test Env", Ordered, func() {
