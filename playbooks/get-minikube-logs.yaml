@@ -22,3 +22,4 @@
     # Fetch collected logs from loki
     - ansible.builtin.include_role:
           name: post/get-loki-logs
+      when: with_loki

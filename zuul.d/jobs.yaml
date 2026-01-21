@@ -141,6 +141,7 @@
     timeout: 7200
     vars:
       create_ramdisk: True
+      with_loki: true
     nodeset:
       nodes:
         - name: controller
@@ -153,3 +154,12 @@
     run:
       - playbooks/run-deploy.yaml
       - playbooks/run-tests.yaml
+
+- job:
+    name: sf-operator-upgrade-minikube
+    parent: minikube-env
+    irrelevant-files: *irrelevant-files
+    run:
+      - playbooks/minikube-upgrade.yaml
+    vars:
+      with_loki: false

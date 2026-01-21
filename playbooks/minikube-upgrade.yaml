@@ -1,0 +1,19 @@
+# The goal of this playbook is to validate the upgrade to 0.0.63
+# by reproducing a deployment that went from 0.0.60 (before ZK HA) to 0.0.60 (to trigger ZK HA secret issue)
+- name: "Perform upgrade from 0.0.60"
+  hosts: controller
+  tasks:
+    - name: Deploy version before ZooKeeper HA
+      command: ./hack/deploy-version.sh v0.0.60
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
+
+    - name: Deploy version with incompleted ZooKeeper HA (deploying this one first would work because the secrets would be properly created)
+      command: ./hack/deploy-version.sh v0.0.62
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
+
+    - name: Validate upgrade to latest release
+      command: go test -v ./tests/... -args --ginkgo.v --ginkgo.focus "Secret Rotations"
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
