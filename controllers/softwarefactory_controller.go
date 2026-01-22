@@ -13,6 +13,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -23,6 +24,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/strings/slices"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -115,6 +117,35 @@ func (r *SFController) cleanup() {
 
 	logging.LogI("Nothing to clean up.")
 
+	// sanity check: if zookeeper certs are missing, the services must be terminated to avoid them from not responding to sigterm.
+	// First, ZK is flooded with `io.netty.handler.codec.DecoderException: javax.net.ssl.SSLHandshakeException: Insufficient buffer remaining for AEAD cipher fragment (2). Needs to be more than tag size (16)`
+	// Then, python-kazoo is stuck and zuul services are not responding to sigterm
+	zkTLS := corev1.Secret{}
+	if r.cr.Spec.Zuul.Executor.Standalone == nil && !r.GetM("zookeeper-client-tls", &zkTLS) {
+		r.nukeZKClients()
+	}
+}
+
+// Manually kill all the ZK process in last resort
+func (r *SFController) nukeZKClients() {
+	podslist, _ := r.ClientSet.CoreV1().Pods(r.ns).List(r.ctx, metav1.ListOptions{})
+	for _, pod := range podslist.Items {
+		if strings.HasPrefix(pod.Name, "zuul-") || strings.HasPrefix(pod.Name, "nodepool-") {
+			// Get the service name from the first container
+			cName := pod.Spec.Containers[0].Name
+			logging.LogW("Killing ZooKeeper client: " + pod.Name + " " + cName)
+
+			// Ensure the process are killed
+			r.PodExec(pod.Name, cName, []string{"kill", "-9", "1"})
+			if cName == "zuul-web" || cName == "zuul-weeder" || cName == "nodepool-launcher" {
+				r.DeleteR(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: cName, Namespace: r.ns}})
+			} else {
+				r.DeleteR(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: cName, Namespace: r.ns}})
+			}
+		}
+	}
+	// Delete zookeeper at the end
+	r.DeleteR(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "zookeeper", Namespace: r.ns}})
 }
 
 func (r *SFController) validateZuulConnectionsSecrets() error {
