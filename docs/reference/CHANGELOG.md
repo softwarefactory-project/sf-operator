@@ -12,6 +12,19 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 ### Security
 
+## [v0.0.64] - 2026-01-23
+
+### Added
+
+- A new test suite based on ginkgo is now available in the "tests" folder. It is presently used for performing password rotation test and ensuring that the zuul configuration is properly set.
+- The "hack/deploy-version.sh" can be used to deploy a previous sf-operator commit and perform upgrade test.
+
+### Changed
+
+- Documentation structure updated to follow GitHub recommendations.
+- MariaDB controller updated to support zuul-db password rotation, allowing the database password to be rotated without service disruption.
+- ZooKeeper lifecycle improved to ensure full zookeeper stop when secret are removed by forcing a statefulset restart.
+
 ## [v0.0.63] - 2026-01-20
 
 ### Added
