@@ -32,10 +32,8 @@ var (
 )
 
 func zuulCreate(kmd *cobra.Command, args []string) {
-	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, zuulGetAllowedArgs)
+	env := cliutils.GetCLIContext(kmd)
 	target := args[0]
-	ns := cliCtx.Namespace
-	kubeContext := cliCtx.KubeContext
 	authConfig, _ := kmd.Flags().GetString("auth-config")
 	tenant, _ := kmd.Flags().GetString("tenant")
 	user, _ := kmd.Flags().GetString("user")
@@ -45,13 +43,16 @@ func zuulCreate(kmd *cobra.Command, args []string) {
 			ctrl.Log.Error(errors.New("missing argument"), "A tenant is required")
 			os.Exit(1)
 		}
-		token := CreateAuthToken(kubeContext, ns, authConfig, tenant, user, expiry)
+		token := CreateAuthToken(env, authConfig, tenant, user, expiry)
 		fmt.Println(token)
 	}
 	if target == "client-config" {
 		insecure, _ := kmd.Flags().GetBool("insecure")
-		fqdn := cliCtx.FQDN
-		config := CreateClientConfig(kubeContext, ns, fqdn, authConfig, tenant, user, expiry, !insecure)
+		fqdn, _ := kmd.Flags().GetString("fqdn")
+		if fqdn == "" {
+			fqdn = "sfop.me"
+		}
+		config := CreateClientConfig(env, fqdn, authConfig, tenant, user, expiry, !insecure)
 		fmt.Println(config)
 	}
 }

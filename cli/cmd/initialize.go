@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
-	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	controllerutils "github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 	"github.com/spf13/cobra"
 
@@ -147,55 +146,8 @@ func initializeSFManifest(withAuth bool, withBuilder bool, full bool, connection
 	fmt.Println(string(yamlData))
 }
 
-func initializeCLIConfig(isDevEnv bool) {
-	var defaultContextConfig cliutils.SoftwareFactoryConfigContext
-
-	defaultContextConfig.ConfigRepository = "/path/to/config-repo"
-	defaultContextConfig.Manifest = "/path/to/manifest"
-	defaultContextConfig.IsStandalone = false
-	defaultContextConfig.Namespace = "sf"
-	defaultContextConfig.KubeContext = "microshift"
-	defaultContextConfig.FQDN = "sfop.me"
-	defaultContextConfig.Components.Nodepool.CloudsFile = "/path/to/clouds.yaml"
-	defaultContextConfig.Components.Nodepool.KubeFile = "/path/to/kube.config"
-	defaultContextConfig.HostAliases = []sfv1.HostAlias{
-		{
-			IP:        "",
-			Hostnames: []string{""},
-		},
-	}
-
-	if isDevEnv {
-		defaultContextConfig.Dev.AnsibleMicroshiftRolePath = "/path/to/ansible-microshift-role"
-		defaultContextConfig.Dev.SFOperatorRepositoryPath = "/path/to/sf-operator"
-		defaultContextConfig.Dev.Microshift.Host = "microshift.sfci"
-		defaultContextConfig.Dev.Microshift.User = "cloud-user"
-		defaultContextConfig.Dev.Microshift.OpenshiftPullSecret = "PULL SECRET"
-		defaultContextConfig.Dev.Microshift.DiskFileSize = "30G"
-		defaultContextConfig.Dev.Microshift.RAMDiskSize = "1g"
-		defaultContextConfig.Dev.Tests.ExtraVars = map[string]string{"foo": "bar"}
-	}
-
-	contexts := cliutils.SoftwareFactoryConfig{
-		Contexts: map[string]cliutils.SoftwareFactoryConfigContext{
-			"my-context": defaultContextConfig,
-		},
-		Default: "my-context",
-	}
-
-	yamlData, err := yaml.Marshal(contexts)
-	if err != nil {
-		ctrl.Log.Error(err, "Could not serialize sample config")
-		os.Exit(1)
-	}
-	fmt.Println(string(yamlData))
-}
-
 func initialize(kmd *cobra.Command, args []string) {
-	if args[0] == "config" {
-		isDevEnv, _ := kmd.Flags().GetBool("dev")
-		initializeCLIConfig(isDevEnv)
-	} else if args[0] == "manifest" {
+	if args[0] == "manifest" {
 		withAuth, _ := kmd.Flags().GetBool("with-auth")
 		withBuilder, _ := kmd.Flags().GetBool("with-builder")
 		minimal, _ := kmd.Flags().GetBool("minimal")
@@ -215,7 +167,7 @@ func MkInitCmd() *cobra.Command {
 		full        bool
 		connections []string
 		initCmd     = &cobra.Command{
-			Use:       "init {config,manifest}",
+			Use:       "init {manifest}",
 			Short:     "CLI/project initialization subcommands",
 			Long:      "These subcommands can be used to generate a sample CLI context, or a sample Software Factory manifest.",
 			ValidArgs: initAllowedArgs,

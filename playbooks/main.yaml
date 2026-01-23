@@ -20,7 +20,6 @@
       loop:
         - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/ext-ze.yaml"
         - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/sf.yaml"
-        - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/sf-operator-cli.yaml"
       loop_control:
         loop_var: yaml_file
 

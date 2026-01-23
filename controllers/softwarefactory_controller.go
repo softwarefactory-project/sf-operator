@@ -69,8 +69,7 @@ type SoftwareFactoryReconciler struct {
 type SFController struct {
 	SFKubeContext
 	cr            sfv1.SoftwareFactory
-	IsOpenShift   bool
-	hasProcMount  bool
+	ZkChanged     bool
 	configBaseURL string
 	needOpendev   bool
 }
@@ -591,8 +590,7 @@ func MkSFController(r SFKubeContext, cr sfv1.SoftwareFactory) SFController {
 	return SFController{
 		SFKubeContext: r,
 		cr:            cr,
-		IsOpenShift:   CheckOpenShift(r.RESTConfig),
-		hasProcMount:  os.Getenv("HAS_PROC_MOUNT") == "true",
+		ZkChanged:     false,
 		configBaseURL: resolveConfigBaseURL(cr),
 		needOpendev:   !slices.Contains(conns, "opendev.org"),
 	}
@@ -617,8 +615,10 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 			Ctx:        ctx,
 			Owner:      owner,
 			Standalone: standalone,
-			ZkChanged:  false,
 			DryRun:     r.DryRun,
+			// cluster settings
+			IsOpenShift:  CheckOpenShift(r.RESTConfig),
+			hasProcMount: os.Getenv("HAS_PROC_MOUNT") == "true",
 		},
 		cr,
 	)

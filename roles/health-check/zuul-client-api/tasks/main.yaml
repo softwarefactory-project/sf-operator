@@ -8,15 +8,9 @@
 
 - name: Create a zuul-client configuration file
   ansible.builtin.shell: >
-    go run main.go --config playbooks/files/sf-operator-cli.yaml zuul create client-config --insecure
-  register: zc_config
+    go run main.go zuul create client-config --insecure > /tmp/zuul-client.conf
   args:
     chdir: "{{ zuul.project.src_dir }}"
-
-- name: Save zuul-client configuration to file
-  ansible.builtin.copy:
-    content: "{{ zc_config.stdout }}"
-    dest: "/tmp/zuul-client.conf"
 
 - name: Create a autohold request with zuul-client and the generated config
   ansible.builtin.command: |

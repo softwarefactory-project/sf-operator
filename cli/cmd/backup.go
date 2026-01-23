@@ -65,7 +65,7 @@ var SecretsToBackup = []string{
 	"logserver-keys",
 }
 
-func createSecretBackup(backupDir string, env cliutils.ENV) {
+func createSecretBackup(backupDir string, env *controllers.SFKubeContext) {
 	ctrl.Log.Info("Creating secrets backup...")
 
 	secretsDir := backupDir + "/" + SecretsBackupPath
@@ -73,7 +73,7 @@ func createSecretBackup(backupDir string, env cliutils.ENV) {
 
 	for _, secName := range SecretsToBackup {
 		secret := apiv1.Secret{}
-		cliutils.GetMOrDie(&env, secName, &secret)
+		env.GetM(secName, &secret)
 
 		// convert secret content to string (was bytes)
 		strMap := cliutils.ConvertMapOfBytesToMapOfStrings(secret.Data)
@@ -102,12 +102,12 @@ func createSecretBackup(backupDir string, env cliutils.ENV) {
 	ctrl.Log.Info("Finished doing secret backup!")
 }
 
-func createZuulKeypairBackup(backupDir string, kubeContext string, env cliutils.ENV) {
+func createZuulKeypairBackup(backupDir string, env *controllers.SFKubeContext) {
 
 	ctrl.Log.Info("Doing Zuul keys backup...")
 
 	pod := apiv1.Pod{}
-	cliutils.GetMOrDie(&env, zuulBackupPod, &pod)
+	env.GetM(zuulBackupPod, &pod)
 
 	// https://zuul-ci.org/docs/zuul/latest/client.html
 	zuulBackupPath := backupDir + "/" + ZuulBackupPath
@@ -128,21 +128,21 @@ func createZuulKeypairBackup(backupDir string, kubeContext string, env cliutils.
 	}
 
 	// Execute command for backup
-	cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.ZuulSchedulerIdent, backupZuulCMD)
+	env.PodExecM(pod.Name, controllers.ZuulSchedulerIdent, backupZuulCMD)
 
 	// Take output of the backup
-	commandBuffer := cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.ZuulSchedulerIdent, backupZuulPrintCMD)
+	commandBuffer := env.PodExecBytes(pod.Name, controllers.ZuulSchedulerIdent, backupZuulPrintCMD)
 
 	// write stdout to file
 	cliutils.WriteContentToFile(zuulBackupPath, commandBuffer.Bytes(), 0640)
 
 	// Remove key file from the pod
-	cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.ZuulSchedulerIdent, backupZuulRemoveCMD)
+	env.PodExecM(pod.Name, controllers.ZuulSchedulerIdent, backupZuulRemoveCMD)
 
 	ctrl.Log.Info("Finished doing Zuul private keys backup!")
 }
 
-func createMySQLBackup(backupDir string, kubeContext string, env cliutils.ENV) {
+func createMySQLBackup(backupDir string, env *controllers.SFKubeContext) {
 	ctrl.Log.Info("Doing DB backup...")
 
 	// create MariaDB dir
@@ -152,7 +152,7 @@ func createMySQLBackup(backupDir string, kubeContext string, env cliutils.ENV) {
 	cliutils.CreateDirectory(mariaDBBackupDir, 0755)
 
 	pod := apiv1.Pod{}
-	cliutils.GetMOrDie(&env, dbBackupPod, &pod)
+	env.GetM(dbBackupPod, &pod)
 
 	// NOTE: We use option: --single-transaction to avoid error:
 	// "The user specified as a definer ('mariadb.sys'@'localhost') does not exist" when using LOCK TABLES
@@ -164,7 +164,7 @@ func createMySQLBackup(backupDir string, kubeContext string, env cliutils.ENV) {
 	}
 
 	// just create Zuul DB backup
-	commandBuffer := cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.MariaDBIdent, backupZuulCMD)
+	commandBuffer := env.PodExecBytes(pod.Name, controllers.MariaDBIdent, backupZuulCMD)
 
 	// write stdout to file
 	cliutils.WriteContentToFile(mariadbBackupPath, commandBuffer.Bytes(), 0640)
@@ -181,7 +181,7 @@ func backupCmd(kmd *cobra.Command, args []string) {
 
 	cliutils.CreateDirectory(backupDir, 0755)
 
-	kubeContext, env := cliutils.GetCLIENV(kmd)
+	env := cliutils.GetCLIContext(kmd)
 
 	if env.Ns == "" {
 		ctrl.Log.Error(errors.New("no namespace set"), "You need to specify the namespace!")
@@ -194,10 +194,10 @@ func backupCmd(kmd *cobra.Command, args []string) {
 	createSecretBackup(backupDir, env)
 
 	// create zuul backup
-	createZuulKeypairBackup(backupDir, kubeContext, env)
+	createZuulKeypairBackup(backupDir, env)
 
 	// create DB backup
-	createMySQLBackup(backupDir, kubeContext, env)
+	createMySQLBackup(backupDir, env)
 
 }
 

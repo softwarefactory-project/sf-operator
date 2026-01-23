@@ -57,40 +57,6 @@ const (
 //go:embed static/fetch-config-repo.sh
 var fetchConfigRepoScript string
 
-type SFKubeContext struct {
-	Client     client.Client
-	Scheme     *runtime.Scheme
-	RESTClient rest.Interface
-	RESTConfig *rest.Config
-	ClientSet  *kubernetes.Clientset
-	Ns         string
-	Ctx        context.Context
-	Owner      client.Object
-	Standalone bool
-	ZkChanged  bool
-	DryRun     bool
-}
-
-func MkSFKubeContext(ctx context.Context, goClient client.Client, restConfig *rest.Config, namespace string, owner client.Object, standalone bool) SFKubeContext {
-	clientSet, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		panic("no client set!")
-	}
-	return SFKubeContext{
-		Client:     goClient,
-		Scheme:     controllerScheme,
-		RESTConfig: restConfig,
-		RESTClient: getPodRESTClient(restConfig),
-		ClientSet:  clientSet,
-		Ns:         namespace,
-		Ctx:        ctx,
-		Owner:      owner,
-		Standalone: standalone,
-		ZkChanged:  false,
-		DryRun:     false,
-	}
-}
-
 type HostAlias struct {
 	IP        string   `json:"ip" mapstructure:"ip"`
 	Hostnames []string `json:"hostnames" mapstructure:"hostnames"`
@@ -241,6 +207,20 @@ func (r *SFKubeContext) PodExecOut(pod string, container string, command []strin
 // Stdout and Stderr is output on the caller's Stdout
 func (r *SFKubeContext) PodExec(pod string, container string, command []string) error {
 	return r.PodExecOut(pod, container, command, os.Stdout)
+}
+
+func (r *SFKubeContext) PodExecM(pod string, container string, command []string) {
+	if err := r.PodExecOut(pod, container, command, os.Stdout); err != nil {
+		panic(fmt.Sprintf("Command exec failed: %s", err))
+	}
+}
+
+func (r *SFKubeContext) PodExecBytes(pod string, container string, command []string) bytes.Buffer {
+	var buf bytes.Buffer
+	if err := r.PodExecOut(pod, container, command, &buf); err != nil {
+		panic(fmt.Sprintf("Command exec failed: %s", err))
+	}
+	return buf
 }
 
 // --- Ensure resources functions ---

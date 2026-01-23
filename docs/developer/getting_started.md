@@ -63,7 +63,7 @@ Consult [Create a sf-operator configuration file](../reference/cli/index.md#conf
 Then run the `sf-operator` command:
 
 ```sh
-go run main.go --config /path/to/sfcli.yaml dev create demo-env
+go run main.go dev create demo-env
 ```
 
 [This command](./../reference/cli/index.md#create-demo-env) performs the following tasks:

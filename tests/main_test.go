@@ -5,7 +5,6 @@ package sf_test
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -17,7 +16,6 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -40,15 +38,13 @@ func runReconcile(cr sfv1.SoftwareFactory) {
 	Eventually(func() bool {
 		status := ctrl.Step()
 		return status.Ready
-	}).WithTimeout(900 * time.Second).WithPolling(time.Second).WithContext(ctx).Should(Equal(true))
+	}).WithTimeout(900 * time.Second).WithPolling(time.Second).WithContext(sfctx.Ctx).Should(Equal(true))
 }
 
 // Test global environment
 var (
-	ctx       context.Context
-	cancel    context.CancelFunc
-	sfctx     sfop.SFKubeContext
-	namespace string
+	sfctx sfop.SFKubeContext
+
 	// The default sf CR from playbooks/files/sf.yaml
 	sf sfv1.SoftwareFactory
 )
@@ -57,52 +53,33 @@ var (
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
-	// Load kubeconfig from the dev host
-	config, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+	var err error
+	sfctx, err = sfop.MkSFKubeContext("", "")
 	if err != nil {
-		panic("No kube config")
-	}
-	contextName := config.CurrentContext
-	kcontext, err2 := config.Contexts[contextName]
-	if !err2 {
-		panic("No kube context")
+		panic(fmt.Sprintf("Failed to create SFKubeContext: %s", err))
 	}
 
-	// Important: discover the default namespace:
-	namespace = kcontext.Namespace
-
-	ctx, cancel = context.WithCancel(context.TODO())
-	scheme := sfop.InitScheme()
-	restConfig := sfop.GetConfigContextOrDie(contextName)
-	clientConfig := sfop.GetConfigContextOrDie(contextName)
-	client, err3 := client.New(clientConfig, client.Options{
-		Scheme: scheme,
-	})
-	if err3 != nil {
-		panic("client create error")
+	sf, err = sfop.ReadSFYAML("../playbooks/files/sf.yaml")
+	if err != nil {
+		panic(fmt.Sprintf("sf resource read fail: %s", err))
 	}
 
-	sf, err3 = sfop.ReadSFYAML("../playbooks/files/sf.yaml")
-	if err3 != nil {
-		panic(fmt.Sprintf("sf resource read fail: %s", err3))
-	}
-
-	owner, err5 := sfop.EnsureStandaloneOwner(ctx, client, namespace, sf.Spec)
-	if err5 != nil {
+	owner, err := sfop.EnsureStandaloneOwner(sfctx.Ctx, sfctx.Client, sfctx.Ns, sf.Spec)
+	if err != nil {
 		panic("sf owner resource creation failed")
 	}
+	sfctx.Owner = &owner
 
-	sfctx = sfop.MkSFKubeContext(ctx, client, restConfig, namespace, &owner, true)
 })
 
 // helpers
 func mkMeta(name string) metav1.ObjectMeta {
-	return metav1.ObjectMeta{Name: name, Namespace: namespace}
+	return metav1.ObjectMeta{Name: name, Namespace: sfctx.Ns}
 }
 
 func readSecret(name string) map[string][]byte {
 	var sec apiv1.Secret
-	err := sfctx.Client.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &sec)
+	err := sfctx.Client.Get(sfctx.Ctx, client.ObjectKey{Name: name, Namespace: sfctx.Ns}, &sec)
 	if err != nil {
 		return make(map[string][]byte)
 	}
@@ -130,7 +107,7 @@ func readCommand(pod string, container string, command string) string {
 }
 
 func ensureDelete(obj client.Object) {
-	err := sfctx.Client.Delete(ctx, obj)
+	err := sfctx.Client.Delete(sfctx.Ctx, obj)
 	if err != nil && !apierrors.IsNotFound(err) {
 		panic(fmt.Sprintf("Couldn't delete %v", obj))
 	}
@@ -138,6 +115,6 @@ func ensureDelete(obj client.Object) {
 
 var _ = Describe("Test Env", Ordered, func() {
 	It("Has namespace", func() {
-		Ω(namespace).ShouldNot(BeEmpty())
+		Ω(sfctx.Ns).ShouldNot(BeEmpty())
 	})
 })

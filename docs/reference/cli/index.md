@@ -56,8 +56,6 @@ These flags apply to every subcommand.
 |-n, --namespace |string | The namespace on which to perform actions | Dependent |-|
 |-k, --kube-context |string | The cluster context on which to operate | Dependent |-|
 |-d, --fqdn | string | The FQDN of the deployment (if no manifest is provided) | Yes | sfop.me |
-|-C, --config | string | Path to the CLI configuration file | Yes | - |
-|-c, --context | string | Context to use in the configuration file. Defaults to the "default-context" value in the config file if set, or the first available context | Yes | Dependent |
 
 ## Configuration File
 
@@ -282,21 +280,6 @@ Flags:
 ### Init
 
 The `init` subcommand can be used to initialize a CLI configuration file, or a sample manifest for deploying Software Factory.
-
-#### config
-
-Generate a simple CLI configuration tree with one context. It is up to you to save it to a chosen
-file, and to edit it to suit your requirements.
-
-```sh
-sf-operator [GLOBAL FLAGS] init config [--dev] > /path/to/sfcli.config
-```
-
-Flags:
-
-| Argument | Type | Description | Optional | Default |
-|----------|------|-------|----|----|
-| --dev | boolean | Include development-related configuration parameters | yes | False |
 
 #### manifest
 

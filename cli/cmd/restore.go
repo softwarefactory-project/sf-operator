@@ -39,7 +39,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func restoreSecret(backupDir string, env cliutils.ENV) {
+func restoreSecret(backupDir string, env *controllers.SFKubeContext) {
 	ctrl.Log.Info("Restoring secrets...")
 
 	for _, sec := range SecretsToBackup {
@@ -47,7 +47,7 @@ func restoreSecret(backupDir string, env cliutils.ENV) {
 		secretContent := cliutils.ReadYAMLToMapOrDie(pathToSecret)
 
 		secret := apiv1.Secret{}
-		if cliutils.GetMOrDie(&env, sec, &secret) {
+		if env.GetM(sec, &secret) {
 			secretMap := secretContent["data"].(map[string]interface{})
 			secretMapKeys := maps.Keys(secretMap)
 			sort.Strings(secretMapKeys)
@@ -66,22 +66,22 @@ func restoreSecret(backupDir string, env cliutils.ENV) {
 			os.Exit(1)
 		}
 
-		cliutils.UpdateROrDie(&env, &secret)
+		env.UpdateROrDie(&secret)
 	}
 
 }
 
-func restoreDB(backupDir string, kubeContext string, env cliutils.ENV) {
+func restoreDB(backupDir string, env *controllers.SFKubeContext) {
 	ctrl.Log.Info("Restoring DB...")
 	pod := apiv1.Pod{}
-	cliutils.GetMOrDie(&env, dbBackupPod, &pod)
+	env.GetM(dbBackupPod, &pod)
 
 	kubectlPath := cliutils.GetKubectlPath()
 	dropDBCMD := []string{
 		"mysql",
 		"-e DROP DATABASE zuul;",
 	}
-	cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.MariaDBIdent, dropDBCMD)
+	env.PodExecM(pod.Name, controllers.MariaDBIdent, dropDBCMD)
 
 	mariadbBackupPath := backupDir + "/" + DBBackupPath
 
@@ -97,15 +97,15 @@ func restoreDB(backupDir string, kubeContext string, env cliutils.ENV) {
 
 	ctrl.Log.Info("Finished restoring DB from backup!")
 }
-func restoreZuul(backupDir string, kubeContext string, env cliutils.ENV) {
+func restoreZuul(backupDir string, env *controllers.SFKubeContext) {
 	ctrl.Log.Info("Restoring Zuul...")
 	pod := apiv1.Pod{}
-	cliutils.GetMOrDie(&env, zuulBackupPod, &pod)
+	env.GetM(zuulBackupPod, &pod)
 
 	// ensure that pod does not have any restore file
 	cleanCMD := []string{
 		"bash", "-c", "rm -rf /tmp/zuul-import && mkdir -p /tmp/zuul-import"}
-	cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.ZuulSchedulerIdent, cleanCMD)
+	env.PodExecM(pod.Name, controllers.ZuulSchedulerIdent, cleanCMD)
 
 	// copy the Zuul private keys backup to pod
 	// tar cf - -C /tmp/backup/zuul zuul.keys | /usr/bin/kubectl exec -i -n sf zuul-scheduler-0 -c zuul-scheduler -- tar xf -  -C /tmp
@@ -126,20 +126,20 @@ func restoreZuul(backupDir string, kubeContext string, env cliutils.ENV) {
 			"rm -rf /tmp/zuul-import"}
 
 	// Execute command for restore
-	cliutils.RunRemoteCmd(kubeContext, env.Ns, pod.Name, controllers.ZuulSchedulerIdent, restoreCMD)
+	env.PodExecM(pod.Name, controllers.ZuulSchedulerIdent, restoreCMD)
 
 	ctrl.Log.Info("Finished doing Zuul private keys restore!")
 
 }
 
-func clearComponents(env cliutils.ENV) {
+func clearComponents(env *controllers.SFKubeContext) {
 	ctrl.Log.Info("Removing components requiring a complete restart ...")
 
 	// --- Scale down Zuul STS components
 	components := []string{"zuul-executor", "zuul-merger", "zuul-scheduler"}
 	ctrl.Log.Info("Scaling down StatefulSets before deletion...")
 	for _, comp := range components {
-		if err := cliutils.ScaleDownSTSAndWait(&env, env.Ns, comp); err != nil {
+		if err := env.ScaleDownSTSAndWait(comp); err != nil {
 			ctrl.Log.Error(err, "Could not scale down StatefulSet, continuing...", "name", comp)
 		}
 	}
@@ -148,7 +148,7 @@ func clearComponents(env cliutils.ENV) {
 	for _, stsName := range []string{
 		"zuul-executor", "zuul-merger", "zuul-scheduler",
 		"nodepool-builder", "zookeeper", "logserver"} {
-		cliutils.DeleteOrDie(&env, &appsv1.StatefulSet{
+		env.DeleteOrDie(&appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      stsName,
 				Namespace: env.Ns,
@@ -160,7 +160,7 @@ func clearComponents(env cliutils.ENV) {
 
 	// --- Stop deployments
 	for _, depName := range []string{"zuul-web", "zuul-weeder", "nodepool-launcher"} {
-		cliutils.DeleteOrDie(&env, &appsv1.Deployment{
+		env.DeleteOrDie(&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      depName,
 				Namespace: env.Ns,
@@ -187,16 +187,16 @@ func restoreCmd(kmd *cobra.Command, args []string) {
 
 	}
 
-	kubeContext, env := cliutils.GetCLIENV(kmd)
+	env := cliutils.GetCLIContext(kmd)
 
 	if env.Ns == "" {
 		ctrl.Log.Info("You did not specify the namespace!")
 		os.Exit(1)
 	}
 
-	restoreZuul(backupDir, kubeContext, env)
+	restoreZuul(backupDir, env)
 	restoreSecret(backupDir, env)
-	restoreDB(backupDir, kubeContext, env)
+	restoreDB(backupDir, env)
 	clearComponents(env)
 
 }

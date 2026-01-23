@@ -82,7 +82,7 @@ var CreateRepoScript string
 var CreateCIUserScript string
 
 type GerritCMDContext struct {
-	env  *cliutils.ENV
+	env  *controllers.SFKubeContext
 	fqdn string
 }
 
@@ -94,24 +94,24 @@ func (g *GerritCMDContext) ensureSecretOrDie(
 	name string, secretGenerator func(string, string) apiv1.Secret) apiv1.Secret {
 	secret := apiv1.Secret{}
 
-	if !cliutils.GetMOrDie(g.env, name, &secret) {
+	if !g.env.GetM(name, &secret) {
 		secret = secretGenerator(name, g.env.Ns)
-		cliutils.CreateROrDie(g.env, &secret)
+		g.env.CreateROrDie(&secret)
 	}
 	return secret
 }
 
 func (g *GerritCMDContext) ensureServiceOrDie(service apiv1.Service) {
 	var serv apiv1.Service
-	if !cliutils.GetMOrDie(g.env, service.Name, &serv) {
-		cliutils.CreateROrDie(g.env, &service)
+	if !g.env.GetM(service.Name, &serv) {
+		g.env.CreateROrDie(&service)
 	}
 }
 
 func (g *GerritCMDContext) ensureJobCompletedOrDie(job batchv1.Job) {
 	var curJob batchv1.Job
-	if !cliutils.GetMOrDie(g.env, job.Name, &curJob) {
-		cliutils.CreateROrDie(g.env, &job)
+	if !g.env.GetM(job.Name, &curJob) {
+		g.env.CreateROrDie(&job)
 	}
 	for range 60 {
 		if curJob.Status.Succeeded >= 1 {
@@ -119,7 +119,7 @@ func (g *GerritCMDContext) ensureJobCompletedOrDie(job batchv1.Job) {
 		}
 		time.Sleep(2 * time.Second)
 		// refresh curJob
-		cliutils.GetMOrDie(g.env, job.Name, &curJob)
+		g.env.GetM(job.Name, &curJob)
 	}
 	ctrl.Log.Error(errors.New("timeout reached"), "Error waiting for job '"+job.Name+"' to complete")
 	os.Exit(1)
@@ -127,21 +127,21 @@ func (g *GerritCMDContext) ensureJobCompletedOrDie(job batchv1.Job) {
 
 func (g *GerritCMDContext) ensureRouteOrDie(route apiroutev1.Route) {
 	var rte apiroutev1.Route
-	if !cliutils.GetMOrDie(g.env, route.Name, &rte) {
-		cliutils.CreateROrDie(g.env, &route)
+	if !g.env.GetM(route.Name, &rte) {
+		g.env.CreateROrDie(&route)
 	}
 }
 
 func (g *GerritCMDContext) ensureConfigMapOrDie(name string, data map[string]string) {
 	cmName := name + "-config-map"
 	var cm apiv1.ConfigMap
-	if !cliutils.GetMOrDie(g.env, cmName, &cm) {
+	if !g.env.GetM(cmName, &cm) {
 		ctrl.Log.Info(name)
 		cm = apiv1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: g.env.Ns},
 			Data:       data,
 		}
-		cliutils.CreateROrDie(g.env, &cm)
+		g.env.CreateROrDie(&cm)
 	}
 }
 
@@ -342,7 +342,7 @@ func (g *GerritCMDContext) ensureGerritPostInitJobOrDie() {
 
 func (g *GerritCMDContext) getStatefulSetOrDie(name string) (bool, appsv1.StatefulSet) {
 	sts := appsv1.StatefulSet{}
-	b := cliutils.GetMOrDie(g.env, name, &sts)
+	b := g.env.GetM(name, &sts)
 	return b, sts
 }
 
@@ -379,7 +379,7 @@ func (g *GerritCMDContext) ensureStatefulSetOrDie(hostAliases []v1.HostAlias) {
 		addManageSFContainer(&sts, g.fqdn, g.env.IsOpenShift)
 		addManageSFVolumes(&sts)
 
-		cliutils.CreateROrDie(g.env, &sts)
+		g.env.CreateROrDie(&sts)
 	}
 }
 
@@ -393,19 +393,19 @@ func (g *GerritCMDContext) ensureGerritRouteOrDie() {
 func (g *GerritCMDContext) ensureGerritIngressOrDie() {
 	cliutils.EnsureSelfSignCert(g.env)
 	ingress := cliutils.MkHTTPSIngress(g.env.Ns, "gerrit-ingress", "gerrit."+g.fqdn, gerritHTTPDPortName, gerritHTTPDPort, map[string]string{})
-	if !cliutils.GetMOrDie(g.env, ingress.Name, &ingress) {
-		cliutils.CreateROrDie(g.env, &ingress)
+	if !g.env.GetM(ingress.Name, &ingress) {
+		g.env.CreateROrDie(&ingress)
 	}
 }
 
-func ensureNamespaceOrDie(env *cliutils.ENV) {
+func ensureNamespaceOrDie(env *controllers.SFKubeContext) {
 	var namespace apiv1.Namespace
-	err := env.Cli.Get(env.Ctx, client.ObjectKey{Name: env.Ns}, &namespace)
+	err := env.Client.Get(env.Ctx, client.ObjectKey{Name: env.Ns}, &namespace)
 	if err != nil && apierrors.IsNotFound(err) {
 		nsR := apiv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: env.Ns},
 		}
-		err = env.Cli.Create(env.Ctx, &nsR)
+		err = env.Client.Create(env.Ctx, &nsR)
 		if err != nil {
 			ctrl.Log.Error(err, "Failed to create namespace '"+env.Ns+"'")
 			os.Exit(1)
@@ -415,7 +415,7 @@ func ensureNamespaceOrDie(env *cliutils.ENV) {
 	}
 }
 
-func EnsureGerrit(env *cliutils.ENV, fqdn string, hostAliases []v1.HostAlias) {
+func EnsureGerrit(env *controllers.SFKubeContext, fqdn string, hostAliases []v1.HostAlias) {
 	ensureNamespaceOrDie(env)
 
 	g := GerritCMDContext{
@@ -472,11 +472,11 @@ func EnsureGerrit(env *cliutils.ENV, fqdn string, hostAliases []v1.HostAlias) {
 	}
 }
 
-func WipeGerrit(env *cliutils.ENV, rmData bool) {
+func WipeGerrit(env *controllers.SFKubeContext, rmData bool) {
 	ns := env.Ns
 	// Delete route
 	if env.IsOpenShift {
-		cliutils.DeleteOrDie(env, &apiroutev1.Route{ObjectMeta: metav1.ObjectMeta{Name: "gerrit", Namespace: ns}})
+		env.DeleteOrDie(&apiroutev1.Route{ObjectMeta: metav1.ObjectMeta{Name: "gerrit", Namespace: ns}})
 	}
 	// Delete secrets
 	for _, secret := range []string{
@@ -485,28 +485,28 @@ func WipeGerrit(env *cliutils.ENV, rmData bool) {
 		"gerrit-admin-api-key",
 		"zuul-gerrit-api-key",
 	} {
-		cliutils.DeleteOrDie(env, &apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret, Namespace: ns}})
+		env.DeleteOrDie(&apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret, Namespace: ns}})
 	}
 	// Delete services
 	for _, srv := range []string{
 		gerritHTTPDPortName,
 		gerritSSHDPortName,
 	} {
-		cliutils.DeleteOrDie(env, &apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: srv, Namespace: ns}})
+		env.DeleteOrDie(&apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: srv, Namespace: ns}})
 	}
 	// Delete config maps
 	for _, cm := range []string{
 		managesfResourcesIdent + "-config-map",
 		managesfResourcesIdent + "-tooling-config-map",
 	} {
-		cliutils.DeleteOrDie(env, &apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: cm, Namespace: ns}})
+		env.DeleteOrDie(&apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: cm, Namespace: ns}})
 	}
 	// Delete statefulset
-	cliutils.DeleteOrDie(env, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: gerritIdent, Namespace: ns}})
+	env.DeleteOrDie(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: gerritIdent, Namespace: ns}})
 
 	// Delete post init job
 	backgroundDeletion := metav1.DeletePropagationBackground
-	cliutils.DeleteOrDie(env,
+	env.DeleteOrDie(
 		&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "post-init", Namespace: ns}},
 		&client.DeleteOptions{
 			PropagationPolicy: &backgroundDeletion,
@@ -514,15 +514,15 @@ func WipeGerrit(env *cliutils.ENV, rmData bool) {
 
 	// Delete persistent volume for full wipe
 	if rmData {
-		cliutils.DeleteOrDie(env, &apiv1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "gerrit-gerrit-0", Namespace: ns}})
+		env.DeleteOrDie(&apiv1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "gerrit-gerrit-0", Namespace: ns}})
 	}
 }
 
-func GetAdminRepoURL(env *cliutils.ENV, fqdn string, repoName string) string {
+func GetAdminRepoURL(env *controllers.SFKubeContext, fqdn string, repoName string) string {
 	var (
 		gerritAPIKey apiv1.Secret
 	)
-	if !cliutils.GetMOrDie(env, "gerrit-admin-api-key", &gerritAPIKey) {
+	if !env.GetM("gerrit-admin-api-key", &gerritAPIKey) {
 		ctrl.Log.Error(errors.New("secret 'gerrit-admin-api-key' does not exist"), "Cannot clone repo as admin")
 		os.Exit(1)
 	}
@@ -532,7 +532,7 @@ func GetAdminRepoURL(env *cliutils.ENV, fqdn string, repoName string) string {
 	return repoURL
 }
 
-func CloneAsAdmin(env *cliutils.ENV, fqdn string, repoName string, dest string, verify bool) {
+func CloneAsAdmin(env *controllers.SFKubeContext, fqdn string, repoName string, dest string, verify bool) {
 	var (
 		output string
 	)

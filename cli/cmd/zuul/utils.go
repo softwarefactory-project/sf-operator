@@ -18,18 +18,12 @@ limitations under the License.
 package zuul
 
 import (
-	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"os"
-	"strings"
-
-	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -74,19 +68,4 @@ func GetTenants(fqdn string, verify bool) []string {
 		tenants = append(tenants, tenant.Name)
 	}
 	return tenants
-}
-
-func getFirstPod(prefix string, namespace string, kubeContext string) *v1.Pod {
-	var ctr *v1.Pod = nil
-
-	_, kubeClientset := cliutils.GetClientset(kubeContext)
-
-	podslist, _ := kubeClientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
-	for _, container := range podslist.Items {
-		if strings.HasPrefix(container.Name, prefix) {
-			ctr = &container
-			break
-		}
-	}
-	return ctr
 }

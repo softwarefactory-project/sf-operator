@@ -1,12 +1,4 @@
 ---
-- name: Set host ip address for sf-operator-cli
-  ansible.builtin.replace:
-    path: "{{ item }}"
-    regexp: 'ANSIBLE_HOST'
-    replace: "{{ ansible_default_ipv4.address }}"
-  loop:
-    - "{{ zuul.project.src_dir + '/playbooks' | default(playbook_dir) }}/files/sf-operator-cli.yaml"
-
 - name: Run the CLI dev create demo-env
   ansible.builtin.command: "go run main.go {{ cli_global_flags }} dev create demo-env --repos-path {{ demo_repos_path }}"
   args:

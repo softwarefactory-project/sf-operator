@@ -29,22 +29,21 @@ import (
 )
 
 func ApplyStandalone(ns string, sfResource string, kubeContext string, dryRun bool) {
-	if sfResource != "" && ns != "" {
-		var sf sfv1.SoftwareFactory
-		sf, err := controllers.ReadSFYAML(sfResource)
-		if err != nil {
-			ctrl.Log.Error(err, "Could not reconcile resource")
-			os.Exit(1)
-		}
-		ctrl.Log.Info("Applying custom resource with the following parameters:",
-			"CR", sf,
-			"CR name", sf.ObjectMeta.Name,
-			"Namespace", ns)
-		err = controllers.Standalone(sf, ns, kubeContext, dryRun)
-		if err != nil {
-			ctrl.Log.Error(err, "Could not reconcile resource")
-			os.Exit(1)
-		}
-		os.Exit(0)
+	var sf sfv1.SoftwareFactory
+	sf, err := controllers.ReadSFYAML(sfResource)
+	if err != nil {
+		ctrl.Log.Error(err, "Could not read resource")
+		os.Exit(1)
 	}
+	ctrl.Log.Info("Applying custom resource with the following parameters:",
+		"CR", sf,
+		"CR name", sf.ObjectMeta.Name,
+		"Namespace", ns)
+	err = controllers.Standalone(sf, ns, kubeContext, dryRun)
+	if err != nil {
+		ctrl.Log.Error(err, "Could not reconcile resource")
+		os.Exit(1)
+	}
+	os.Exit(0)
+
 }

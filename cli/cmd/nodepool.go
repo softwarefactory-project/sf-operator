@@ -9,7 +9,6 @@ package cmd
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -42,42 +41,23 @@ var (
 )
 
 func npGet(kmd *cobra.Command, args []string) {
-	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, npGetAllowedArgs)
+	cliCtx := cliutils.GetCLIContext(kmd)
 	target := args[0]
-	ns := cliCtx.Namespace
-	kubeContext := cliCtx.KubeContext
 	if target == "builder-ssh-key" {
 		pubKey, _ := kmd.Flags().GetString("pubkey")
-		getBuilderSSHKey(ns, kubeContext, pubKey)
+		getBuilderSSHKey(cliCtx, pubKey)
 	}
 }
 
 func npCreate(kmd *cobra.Command, args []string) {
-	cliCtx := cliutils.GetCLIctxOrDie(kmd, args, npCreateAllowedArgs)
-	ns := cliCtx.Namespace
-	kubeContext := cliCtx.KubeContext
-	restConfig := controllers.GetConfigContextOrDie(kubeContext)
-	client := cliutils.CreateKubernetesClientOrDie(kubeContext)
-	ctx := context.TODO()
-	sfEnv := cliutils.ENV{
-		Cli:         client,
-		Ctx:         ctx,
-		Ns:          ns,
-		IsOpenShift: controllers.CheckOpenShift(restConfig),
-	}
+	cliCtx := cliutils.GetCLIContext(kmd)
 	if args[0] == "openshiftpods-namespace" {
 		nodepoolContext, _ := kmd.Flags().GetString("nodepool-context")
 		nodepoolNamespace, _ := kmd.Flags().GetString("nodepool-namespace")
 		showConfigTemplate, _ := kmd.Flags().GetBool("show-config-template")
 		skipProvidersSecrets, _ := kmd.Flags().GetBool("skip-providers-secrets")
 
-		if nodepoolContext == kubeContext {
-			logging.LogW("Nodepool will use the same cluster context as SF")
-			if nodepoolNamespace == ns {
-				logging.LogW("Nodepool will manage resources in the same namespace as the Software Factory deployment")
-			}
-		}
-		CreateNamespaceForNodepool(&sfEnv, nodepoolContext, nodepoolNamespace, skipProvidersSecrets)
+		CreateNamespaceForNodepool(cliCtx, nodepoolContext, nodepoolNamespace, skipProvidersSecrets)
 		if showConfigTemplate {
 			configTemplate := mkNodepoolOpenshiftPodsConfigTemplate(nodepoolNamespace)
 			fmt.Println("Nodepool configuration template:")
@@ -86,23 +66,19 @@ func npCreate(kmd *cobra.Command, args []string) {
 	}
 }
 
-func CreateNamespaceForNodepool(sfEnv *cliutils.ENV, nodepoolContext, nodepoolNamespace string, skipProvidersSecrets bool) {
-	client := cliutils.CreateKubernetesClientOrDie(nodepoolContext)
-	restConfig := controllers.GetConfigContextOrDie(nodepoolContext)
-	ctx := context.TODO()
-	nodepoolEnv := cliutils.ENV{
-		Cli:         client,
-		Ctx:         ctx,
-		Ns:          nodepoolNamespace,
-		IsOpenShift: controllers.CheckOpenShift(restConfig),
+func CreateNamespaceForNodepool(sfEnv *controllers.SFKubeContext, nodepoolContext, nodepoolNamespace string, skipProvidersSecrets bool) {
+	npEnv, err := controllers.MkSFKubeContext(nodepoolNamespace, nodepoolContext)
+	if err != nil {
+		logging.LogE(err, "Could not create nodepool kube client")
+		os.Exit(1)
 	}
 
-	cliutils.EnsureNamespaceOrDie(&nodepoolEnv, nodepoolNamespace)
-	cliutils.EnsureServiceAccountOrDie(&nodepoolEnv, nodepoolServiceAccount)
-	ensureNodepoolRole(&nodepoolEnv)
-	token := ensureNodepoolServiceAccountSecret(&nodepoolEnv)
-	nodepoolKubeConfig := createNodepoolKubeConfigOrDie(nodepoolContext, nodepoolNamespace, token)
-	kconfig, err := clientcmd.Write(nodepoolKubeConfig)
+	npEnv.EnsureNamespaceOrDie(nodepoolNamespace)
+	npEnv.EnsureServiceAccountOrDie(nodepoolServiceAccount)
+	ensureNodepoolRole(&npEnv)
+	token := ensureNodepoolServiceAccountSecret(&npEnv)
+	npKubeConfig := createNodepoolKubeConfigOrDie(nodepoolContext, nodepoolNamespace, token)
+	kconfig, err := clientcmd.Write(npKubeConfig)
 
 	if err != nil {
 		ctrl.Log.Error(err, "Could not serialize nodepool's kubeconfig")
@@ -116,17 +92,17 @@ func CreateNamespaceForNodepool(sfEnv *cliutils.ENV, nodepoolContext, nodepoolNa
 
 }
 
-func ensureNodepoolKubeProvidersSecrets(env *cliutils.ENV, kubeconfig []byte) {
+func ensureNodepoolKubeProvidersSecrets(env *controllers.SFKubeContext, kubeconfig []byte) {
 
 	var secret apiv1.Secret
-	if !cliutils.GetMOrDie(env, controllers.NodepoolProvidersSecretsName, &secret) {
+	if !env.GetM(controllers.NodepoolProvidersSecretsName, &secret) {
 		// Initialize the secret data
 		secret.Name = controllers.NodepoolProvidersSecretsName
 		secret.Data = make(map[string][]byte)
 		if kubeconfig != nil {
 			secret.Data["kube.config"] = kubeconfig
 		}
-		cliutils.CreateROrDie(env, &secret)
+		env.CreateROrDie(&secret)
 	} else {
 		// Handle secret update
 		if secret.Data == nil {
@@ -147,21 +123,16 @@ func ensureNodepoolKubeProvidersSecrets(env *cliutils.ENV, kubeconfig []byte) {
 			}
 		}
 		if needUpdate {
-			cliutils.UpdateROrDie(env, &secret)
+			env.UpdateROrDie(&secret)
 		} else {
 			ctrl.Log.Info("Secret \"" + controllers.NodepoolProvidersSecretsName + "\" already up to date, doing nothing")
 		}
 	}
 }
 
-func getBuilderSSHKey(ns string, kubeContext string, pubKey string) {
-	sfEnv := cliutils.ENV{
-		Cli: cliutils.CreateKubernetesClientOrDie(kubeContext),
-		Ctx: context.TODO(),
-		Ns:  ns,
-	}
+func getBuilderSSHKey(sfEnv *controllers.SFKubeContext, pubKey string) {
 	var secret apiv1.Secret
-	if cliutils.GetMOrDie(&sfEnv, "nodepool-builder-ssh-key", &secret) {
+	if sfEnv.GetM("nodepool-builder-ssh-key", &secret) {
 		if pubKey == "" {
 			fmt.Println(string(secret.Data["pub"]))
 		} else {
@@ -169,17 +140,17 @@ func getBuilderSSHKey(ns string, kubeContext string, pubKey string) {
 			ctrl.Log.Info("File " + pubKey + " saved")
 		}
 	} else {
-		ctrl.Log.Error(errors.New("Secret nodepool-builder-ssh-key not found in namespace "+ns),
+		ctrl.Log.Error(errors.New("Secret nodepool-builder-ssh-key not found in namespace "+sfEnv.Ns),
 			"Error fetching builder SSH key")
 		os.Exit(1)
 	}
 }
 
-func ensureNodepoolRole(env *cliutils.ENV) {
+func ensureNodepoolRole(env *controllers.SFKubeContext) {
 	var role rbacv1.Role
 	var roleBinding rbacv1.RoleBinding
 
-	if !cliutils.GetMOrDie(env, nodepoolRole, &role) {
+	if !env.GetM(nodepoolRole, &role) {
 		role.Name = nodepoolRole
 		role.Rules = []rbacv1.PolicyRule{
 			{
@@ -193,10 +164,10 @@ func ensureNodepoolRole(env *cliutils.ENV) {
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 		}
-		cliutils.CreateROrDie(env, &role)
+		env.CreateROrDie(&role)
 	}
 
-	if !cliutils.GetMOrDie(env, nodepoolRoleBinding, &roleBinding) {
+	if !env.GetM(nodepoolRoleBinding, &roleBinding) {
 		roleBinding.Name = nodepoolRoleBinding
 		roleBinding.Subjects = []rbacv1.Subject{
 			{
@@ -207,19 +178,19 @@ func ensureNodepoolRole(env *cliutils.ENV) {
 		roleBinding.RoleRef.Kind = "Role"
 		roleBinding.RoleRef.Name = nodepoolRole
 		roleBinding.RoleRef.APIGroup = "rbac.authorization.k8s.io"
-		cliutils.CreateROrDie(env, &roleBinding)
+		env.CreateROrDie(&roleBinding)
 	}
 }
 
-func ensureNodepoolServiceAccountSecret(env *cliutils.ENV) string {
+func ensureNodepoolServiceAccountSecret(env *controllers.SFKubeContext) string {
 	var secret apiv1.Secret
-	if !cliutils.GetMOrDie(env, nodepoolToken, &secret) {
+	if !env.GetM(nodepoolToken, &secret) {
 		secret.Name = nodepoolToken
 		secret.ObjectMeta.Annotations = map[string]string{
 			"kubernetes.io/service-account.name": nodepoolServiceAccount,
 		}
 		secret.Type = "kubernetes.io/service-account-token"
-		cliutils.CreateROrDie(env, &secret)
+		env.CreateROrDie(&secret)
 	}
 	var token []byte
 	for retry := 1; retry < 20; retry++ {
@@ -228,7 +199,7 @@ func ensureNodepoolServiceAccountSecret(env *cliutils.ENV) string {
 			break
 		}
 		time.Sleep(time.Second)
-		cliutils.GetMOrDie(env, nodepoolToken, &secret)
+		env.GetM(nodepoolToken, &secret)
 	}
 	if token == nil {
 		ctrl.Log.Error(errors.New("query timeout"), "Error getting nodepool service account token")
@@ -238,7 +209,12 @@ func ensureNodepoolServiceAccountSecret(env *cliutils.ENV) string {
 }
 
 func createNodepoolKubeConfigOrDie(contextName string, ns string, token string) cliapi.Config {
-	currentConfig := controllers.GetConfigContextOrDie(contextName)
+	ctx, err := controllers.MkSFKubeContext(ns, contextName)
+	if err != nil {
+		logging.LogE(err, "Could not build kube context")
+		os.Exit(1)
+	}
+	currentConfig := ctx.RESTConfig
 	if strings.HasPrefix(currentConfig.Host, "https://localhost") || strings.HasPrefix(currentConfig.Host, "https://127.") {
 		ctrl.Log.Error(
 			errors.New("invalid config host address"),

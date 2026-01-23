@@ -18,8 +18,6 @@ limitations under the License.
 package utils
 
 import (
-	"bytes"
-	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -33,110 +31,24 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
-	"reflect"
 	"strings"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
 	apiroutev1 "github.com/openshift/api/route/v1"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	ctrl "sigs.k8s.io/controller-runtime"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	monitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-
-	opv1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
-
-	"k8s.io/client-go/kubernetes"
-
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-
+	"github.com/spf13/cobra"
+	apiv1 "k8s.io/api/core/v1"
 	networkv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/utils/ptr"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 )
-
-// CLI config struct
-type SoftwareFactoryConfigContext struct {
-	ConfigRepository string `json:"config-repository-path" mapstructure:"config-repository-path"`
-	Manifest         string `json:"manifest-file" mapstructure:"manifest-file"`
-	IsStandalone     bool   `json:"standalone" mapstructure:"standalone"`
-	Namespace        string `json:"namespace" mapstructure:"namespace"`
-	KubeContext      string `json:"kube-context" mapstructure:"kube-context"`
-	FQDN             string `json:"fqdn" mapstructure:"fqdn"`
-	Dev              struct {
-		AnsibleMicroshiftRolePath string `json:"ansible-microshift-role-path" mapstructure:"ansible-microshift-role-path"`
-		SFOperatorRepositoryPath  string `json:"sf-operator-repository-path" mapstructure:"sf-operator-repository-path"`
-		Microshift                struct {
-			Host                string `json:"host" mapstructure:"host"`
-			User                string `json:"user" mapstructure:"user"`
-			OpenshiftPullSecret string `json:"openshift-pull-secret" mapstructure:"openshift-pull-secret"`
-			DiskFileSize        string `json:"disk-file-size" mapstructure:"disk-file-size"`
-			ETCDOnRAMDisk       bool   `json:"etcd-on-ramdisk" mapstructure:"etcd-on-ramdisk"`
-			RAMDiskSize         string `json:"ramdisk-size" mapstructure:"ramdisk-size"`
-		} `json:"microshift" mapstructure:"microshift"`
-		Tests struct {
-			DemoReposPath string            `json:"demo-repos-path" mapstructure:"demo-repos-path"`
-			ExtraVars     map[string]string `json:"extra-vars" mapstructure:"extra-vars"`
-		} `json:"tests" mapstructure:"tests"`
-	} `json:"development" mapstructure:"development"`
-	Components struct {
-		Nodepool struct {
-			CloudsFile string `json:"clouds-file" mapstructure:"clouds-file"`
-			KubeFile   string `json:"kube-file" mapstructure:"kube-file"`
-		} `json:"nodepool" mapstructure:"nodepool"`
-	} `json:"components" mapstructure:"components"`
-	HostAliases []sfv1.HostAlias `json:"hostaliases,omitempty" mapstructure:"hostaliases"`
-}
-
-type SoftwareFactoryConfig struct {
-	Contexts map[string]SoftwareFactoryConfigContext `json:"contexts" mapstructure:"contexts"`
-	Default  string                                  `json:"default-context" mapstructure:"default-context"`
-}
-
-func loadConfigFile(command *cobra.Command) (cliConfig SoftwareFactoryConfig, err error) {
-	configPath, _ := command.Flags().GetString("config")
-	viper.SetConfigFile(configPath)
-	err = viper.ReadInConfig()
-	if err != nil {
-		return
-	}
-	err = viper.Unmarshal(&cliConfig)
-	return
-}
-
-func getContextFromFile(command *cobra.Command) (ctxName string, cliContext SoftwareFactoryConfigContext, err error) {
-	cliConfig, err := loadConfigFile(command)
-	if err != nil {
-		return
-	}
-	ctx, _ := command.Flags().GetString("context")
-	if ctx == "" {
-		ctx = cliConfig.Default
-	}
-	for c := range cliConfig.Contexts {
-		if ctx == "" || ctx == c {
-			return c, cliConfig.Contexts[c], nil
-		}
-	}
-	return ctxName, cliContext, errors.New("context not found")
-}
 
 // SetLogger enables the DEBUG LogLevel in the Logger when the debug flag is set
 func SetLogger(command *cobra.Command) {
@@ -154,76 +66,19 @@ func SetLogger(command *cobra.Command) {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 }
 
-func GetCLIContext(command *cobra.Command) (SoftwareFactoryConfigContext, error) {
-
+func GetCLIContext(command *cobra.Command) *controllers.SFKubeContext {
 	// This is usually called for every CLI command so here let's set the Logger settings
 	SetLogger(command)
 
-	var cliContext SoftwareFactoryConfigContext
-	var ctxName string
-	var err error
-	configPath, _ := command.Flags().GetString("config")
-	if configPath != "" {
-		ctxName, cliContext, err = getContextFromFile(command)
-		if err != nil {
-			logging.LogE(err, "Could not load config file")
-			os.Exit(1)
-		} else {
-			logging.LogD("Using configuration context " + ctxName)
-		}
-	}
-	// Override with defaults
-	// We don't set a default namespace here so as not to interfere with rootcommand.
-
-	ns, _ := command.Flags().GetString("namespace")
-
+	namespace, _ := command.Flags().GetString("namespace")
 	kubeContext, _ := command.Flags().GetString("kube-context")
-	currentContext, contextName := GetKubeConfigContextByName(kubeContext)
 
-	defaultFunc := func(userProvided string, defaultValue string) string {
-		if userProvided != "" {
-			return userProvided
-		}
-		return defaultValue
+	ctx, err := controllers.MkSFKubeContext(namespace, kubeContext)
+	if err != nil {
+		logging.LogE(err, "Error creating Kubernetes client")
+		os.Exit(1)
 	}
-
-	// Default ladder: 1st what is in sf-operator cli config file passed as --config argument
-	//                 2st what is in sf-operator cli passed as --namespace argumente
-	//                 3rd what is defind default kubeconfig
-	if cliContext.Namespace == "" {
-		// The user did not provide a --namespace argument, let's find it in the context
-		currentContextNamespace := ""
-		if currentContext != nil {
-			currentContextNamespace = currentContext.Namespace
-		}
-		cliContext.Namespace = defaultFunc(ns, currentContextNamespace)
-	}
-
-	// Default ladder: 1st what is in sf-operator cli config file passed as --config argument
-	//                 2st what is in sf-operator cli passed as --kube-context argumente
-	//                 3rd what is defind default kubeconfig
-	if cliContext.KubeContext == "" {
-		cliContext.KubeContext = defaultFunc(kubeContext, contextName)
-	}
-
-	fqdn, _ := command.Flags().GetString("fqdn")
-	if fqdn == "" {
-		fqdn = "sfop.me"
-	}
-	if cliContext.FQDN == "" {
-		cliContext.FQDN = fqdn
-	}
-	if cliContext.Dev.SFOperatorRepositoryPath == "" {
-		defaultSFOperatorRepositoryPath, getwdErr := os.Getwd()
-		if getwdErr != nil {
-			logging.LogE(getwdErr,
-				"sf-operator-repository-path is not set in `dev` section of the configuration file and unable to determine the current working directory")
-			os.Exit(1)
-		}
-		cliContext.Dev.SFOperatorRepositoryPath = defaultSFOperatorRepositoryPath
-		logging.LogD("Using current working directory for sf-operator-repository-path: " + cliContext.Dev.SFOperatorRepositoryPath)
-	}
-	return cliContext, nil
+	return &ctx
 }
 
 func GetCRUDSubcommands() (*cobra.Command, *cobra.Command, *cobra.Command) {
@@ -240,210 +95,6 @@ func GetCRUDSubcommands() (*cobra.Command, *cobra.Command, *cobra.Command) {
 		Short: "Get a resource",
 	}
 	return createCmd, configureCmd, getCmd
-}
-
-// Moving code from cli/sfconfig/cmd/utils/utils.go as we need it to avoid dead code
-type ENV struct {
-	Cli         client.Client
-	Ns          string
-	Ctx         context.Context
-	IsOpenShift bool
-}
-
-func CreateKubernetesClient(contextName string) (client.Client, error) {
-	scheme := runtime.NewScheme()
-	monitoring.AddToScheme(scheme)
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(apiroutev1.AddToScheme(scheme))
-	utilruntime.Must(opv1.AddToScheme(scheme))
-	utilruntime.Must(sfv1.AddToScheme(scheme))
-	var conf = controllers.GetConfigContextOrDie(contextName)
-	return client.New(conf, client.Options{
-		Scheme: scheme,
-	})
-}
-
-func CreateKubernetesClientOrDie(contextName string) client.Client {
-	cli, err := CreateKubernetesClient(contextName)
-	if err != nil {
-		logging.LogE(err, "Error creating Kubernetes client")
-		os.Exit(1)
-	}
-	return cli
-}
-
-func GetCLIENV(kmd *cobra.Command) (string, ENV) {
-
-	cliCtx, err := GetCLIContext(kmd)
-	if err != nil {
-		logging.LogE(err, "Error initializing CLI:")
-		os.Exit(1)
-	}
-
-	kubeContext := cliCtx.KubeContext
-
-	env := ENV{
-		Cli: CreateKubernetesClientOrDie(kubeContext),
-		Ctx: context.TODO(),
-		Ns:  cliCtx.Namespace,
-	}
-
-	return kubeContext, env
-}
-
-func GetM(env *ENV, name string, obj client.Object) (bool, error) {
-	err := env.Cli.Get(env.Ctx,
-		client.ObjectKey{
-			Name:      name,
-			Namespace: env.Ns,
-		}, obj)
-	if err != nil {
-		return false, err
-	} else {
-		return true, nil
-	}
-}
-
-// ScaleDownSTSAndWait scales a StatefulSet to 0 replica and waits for its pods to terminate.
-// It returns an error if the operation fails or times out.
-func ScaleDownSTSAndWait(env *ENV, ns string, name string) error {
-	ctx := context.Background()
-	var sts appsv1.StatefulSet
-	key := client.ObjectKey{Namespace: ns, Name: name}
-
-	// 1. Get the StatefulSet
-	if err := env.Cli.Get(ctx, key, &sts); err != nil {
-		if apierrors.IsNotFound(err) {
-			ctrl.Log.Info("StatefulSet not found, nothing to do.", "name", name)
-			return nil // The goal is achieved if it doesn't exist.
-		}
-		ctrl.Log.Error(err, "Failed to get StatefulSet", "name", name)
-		return err
-	}
-
-	// 2. Scale replicas to 0
-	if sts.Spec.Replicas == nil || *sts.Spec.Replicas != 0 {
-		ctrl.Log.Info("Scaling down StatefulSet replicas to 0", "name", name)
-		sts.Spec.Replicas = ptr.To[int32](0)
-		if err := env.Cli.Update(ctx, &sts); err != nil {
-			ctrl.Log.Error(err, "Failed to update StatefulSet replicas", "name", name)
-			return err
-		}
-	} else {
-		ctrl.Log.Info("StatefulSet already has 0 replicas", "name", name)
-	}
-
-	// 3. Wait for all pods managed by the StatefulSet to terminate
-	ctrl.Log.Info("Waiting for pods to terminate...", "statefulset", name)
-	selector, err := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
-	if err != nil {
-		ctrl.Log.Error(err, "Failed to build label selector from StatefulSet", "name", name)
-		return err
-	}
-
-	for range 10 {
-		var podList apiv1.PodList
-		listOpts := []client.ListOption{
-			client.InNamespace(ns),
-			client.MatchingLabelsSelector{Selector: selector},
-		}
-		if err := env.Cli.List(ctx, &podList, listOpts...); err != nil {
-			ctrl.Log.Error(err, "Unable to list statefulset pods")
-			return err
-		}
-		if len(podList.Items) == 0 {
-			break // Done: no pods found
-		}
-		ctrl.Log.Info("Waiting, pods still present", "name", name, "count", len(podList.Items))
-		time.Sleep(5 * time.Second)
-		continue // Not done yet
-	}
-
-	ctrl.Log.Info("All pods for StatefulSet have terminated.", "name", name)
-	return nil
-}
-
-func DeleteOrDie(env *ENV, obj client.Object, opts ...client.DeleteOption) bool {
-	err := env.Cli.Delete(env.Ctx, obj, opts...)
-	if apierrors.IsNotFound(err) {
-		return false
-	} else if err != nil {
-		msg := fmt.Sprintf("Error while deleting %s \"%s\"", reflect.TypeOf(obj).Name(), obj.GetName())
-		logging.LogE(err, msg)
-		os.Exit(1)
-	}
-	return true
-}
-
-func GetMOrDie(env *ENV, name string, obj client.Object) bool {
-	_, err := GetM(env, name, obj)
-	if apierrors.IsNotFound(err) {
-		return false
-	} else if err != nil {
-		msg := fmt.Sprintf("Error while fetching %s \"%s\"", reflect.TypeOf(obj).Name(), name)
-		logging.LogE(err, msg)
-		os.Exit(1)
-	}
-	return true
-}
-
-func UpdateROrDie(env *ENV, obj client.Object) {
-	var msg = fmt.Sprintf("Updating %s \"%s\" in %s", reflect.TypeOf(obj).Name(), obj.GetName(), env.Ns)
-	logging.LogI(msg)
-	if err := env.Cli.Update(env.Ctx, obj); err != nil {
-		msg = fmt.Sprintf("Error while updating %s \"%s\"", reflect.TypeOf(obj).Name(), obj.GetName())
-		logging.LogE(err, msg)
-		os.Exit(1)
-	}
-	msg = fmt.Sprintf("%s \"%s\" updated", reflect.TypeOf(obj).Name(), obj.GetName())
-	logging.LogI(msg)
-}
-
-func CreateROrDie(env *ENV, obj client.Object) {
-	var msg = fmt.Sprintf("Creating %s \"%s\" in %s", reflect.TypeOf(obj).Name(), obj.GetName(), env.Ns)
-	logging.LogI(msg)
-	obj.SetNamespace(env.Ns)
-	if err := env.Cli.Create(env.Ctx, obj); err != nil {
-		msg = fmt.Sprintf("Error while creating %s \"%s\"", reflect.TypeOf(obj).Name(), obj.GetName())
-		logging.LogE(err, msg)
-		os.Exit(1)
-	}
-	msg = fmt.Sprintf("%s \"%s\" created", reflect.TypeOf(obj).Name(), obj.GetName())
-	logging.LogI(msg)
-}
-
-func DeleteAllOfOrDie(env *ENV, obj client.Object, opts ...client.DeleteAllOfOption) {
-	if err := env.Cli.DeleteAllOf(env.Ctx, obj, opts...); err != nil {
-		var msg = "Error while deleting"
-		logging.LogE(err, msg)
-		os.Exit(1)
-	}
-}
-
-func GetCLIctxOrDie(kmd *cobra.Command, args []string, allowedArgs []string) SoftwareFactoryConfigContext {
-	cliCtx, err := GetCLIContext(kmd)
-	if err != nil {
-		logging.LogE(err, "Error initializing:")
-		os.Exit(1)
-	}
-	if len(allowedArgs) == 0 {
-		// no more validation needed
-		return cliCtx
-	} else {
-		argumentError := errors.New("argument must be in: " + strings.Join(allowedArgs, ", "))
-		if len(args) != 1 {
-			logging.LogE(argumentError, "Need one argument")
-			os.Exit(1)
-		}
-		for _, a := range allowedArgs {
-			if args[0] == a {
-				return cliCtx
-			}
-		}
-		logging.LogE(argumentError, "Unknown argument "+args[0])
-		os.Exit(1)
-	}
-	return SoftwareFactoryConfigContext{}
 }
 
 func GetFileContent(filePath string) ([]byte, error) {
@@ -475,24 +126,6 @@ func RunCmdWithEnvOrDie(environ []string, cmd string, args ...string) string {
 
 func RunCmdOrDie(cmd string, args ...string) string {
 	return RunCmdWithEnvOrDie([]string{}, cmd, args...)
-}
-
-func EnsureNamespaceOrDie(env *ENV, name string) {
-	var ns apiv1.Namespace
-	if err := env.Cli.Get(env.Ctx, client.ObjectKey{Name: name}, &ns); apierrors.IsNotFound(err) {
-		ns.Name = name
-		CreateROrDie(env, &ns)
-	} else if err != nil {
-		logging.LogE(err, "Error checking namespace "+name)
-		os.Exit(1)
-	}
-}
-func EnsureServiceAccountOrDie(env *ENV, name string) {
-	var sa apiv1.ServiceAccount
-	if !GetMOrDie(env, name, &sa) {
-		sa.Name = name
-		CreateROrDie(env, &sa)
-	}
 }
 
 func WriteContentToFile(filePath string, content []byte, mode fs.FileMode) {
@@ -534,25 +167,6 @@ func ConvertMapOfBytesToMapOfStrings(contentMap map[string][]byte) map[string]st
 		strMap[key] = strValue
 	}
 	return strMap
-}
-
-func GetClientset(kubeContext string) (*rest.Config, *kubernetes.Clientset) {
-	restConfig := controllers.GetConfigContextOrDie(kubeContext)
-	kubeClientset, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		logging.LogE(err, "Could not instantiate Clientset")
-		os.Exit(1)
-	}
-	return restConfig, kubeClientset
-}
-
-func RunRemoteCmd(kubeContext string, namespace string, podName string, containerName string, cmdArgs []string) *bytes.Buffer {
-	restConfig, kubeClientset := GetClientset(kubeContext)
-	buffer, err := controllers.RunPodCmdRaw(restConfig, kubeClientset, namespace, podName, containerName, cmdArgs)
-	if err != nil {
-		os.Exit(1)
-	}
-	return buffer
 }
 
 func ReadYAMLToMapOrDie(filePath string) map[string]interface{} {
@@ -701,10 +315,10 @@ func MkHTTPSIngress(ns string, name string, host string, service string, port in
 	}
 }
 
-func EnsureSelfSignCert(env *ENV) {
+func EnsureSelfSignCert(env *controllers.SFKubeContext) {
 	name := "self-signed-cert"
 	var secret apiv1.Secret
-	if !GetMOrDie(env, name, &secret) {
+	if !env.GetM(name, &secret) {
 		// Generate key
 		var err error
 		var priv *rsa.PrivateKey
@@ -747,16 +361,16 @@ func EnsureSelfSignCert(env *ENV) {
 			Data:       data,
 			Type:       "kubernetes.io/tls",
 		}
-		CreateROrDie(env, &secret)
+		env.CreateROrDie(&secret)
 	}
 }
 
-func ReadIngressIP(env *ENV, name string) string {
+func ReadIngressIP(env *controllers.SFKubeContext, name string) string {
 	attempt := 1
 	maxTries := 25
 	for {
 		var ingress networkv1.Ingress
-		if GetMOrDie(env, name, &ingress) {
+		if env.GetM(name, &ingress) {
 			lb := ingress.Status.LoadBalancer.Ingress
 			if len(lb) > 0 {
 				return lb[0].IP
@@ -772,15 +386,15 @@ func ReadIngressIP(env *ENV, name string) string {
 	}
 }
 
-func EnsureGatewayIngress(env *ENV, fqdn string) {
+func EnsureGatewayIngress(env *controllers.SFKubeContext, fqdn string) {
 	EnsureSelfSignCert(env)
 	ingress := MkHTTPSIngress(env.Ns, "sf-ingress", fqdn, "gateway", 8080, map[string]string{})
-	if !GetMOrDie(env, ingress.Name, &ingress) {
-		CreateROrDie(env, &ingress)
+	if !env.GetM(ingress.Name, &ingress) {
+		env.CreateROrDie(&ingress)
 	}
 }
 
-func WriteIngressToEtcHosts(env *ENV, fqdn string) {
+func WriteIngressToEtcHosts(env *controllers.SFKubeContext, fqdn string) {
 	// Grab the ingress ip
 	var gerritIP = ReadIngressIP(env, "gerrit-ingress")
 	var gatewayIP = ReadIngressIP(env, "sf-ingress")

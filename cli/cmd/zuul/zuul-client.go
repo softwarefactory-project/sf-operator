@@ -22,6 +22,7 @@ import (
 	"strings"
 	"text/template"
 
+	sfop "github.com/softwarefactory-project/sf-operator/controllers"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -42,7 +43,7 @@ verify_ssl={{ if .VerifySSL }}True{{ else }}False{{ end }}
 
 `
 
-func CreateClientConfig(kubeContext string, namespace string, fqdn string, authConfig string, tenant string, user string, expiry int, verify bool) string {
+func CreateClientConfig(env *sfop.SFKubeContext, fqdn string, authConfig string, tenant string, user string, expiry int, verify bool) string {
 	var tenants []string
 	if tenant != "" {
 		tenants = []string{tenant}
@@ -51,7 +52,7 @@ func CreateClientConfig(kubeContext string, namespace string, fqdn string, authC
 	}
 	var config string
 	for _, t := range tenants {
-		token := CreateAuthToken(kubeContext, namespace, authConfig, t, user, expiry)
+		token := CreateAuthToken(env, authConfig, t, user, expiry)
 		section := ZuulClientConfigSection{
 			Name:      t,
 			URL:       "https://" + fqdn + "/zuul",

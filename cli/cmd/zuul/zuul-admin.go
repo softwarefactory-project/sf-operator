@@ -16,17 +16,19 @@ limitations under the License.
 
 package zuul
 
-import "strconv"
-import cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
+import (
+	"strconv"
+
+	sfop "github.com/softwarefactory-project/sf-operator/controllers"
+)
 
 // zuul-admin proxy commands.
 
-func CreateAuthToken(kubeContext string, namespace string, authConfig string, tenant string, user string, expiry int) string {
+func CreateAuthToken(env *sfop.SFKubeContext, authConfig string, tenant string, user string, expiry int) string {
 	_authConfig := authConfig
 	if _authConfig == "" {
 		_authConfig = "zuul_client"
 	}
-	scheduler := getFirstPod("zuul-scheduler", namespace, kubeContext)
 	createAuthTokenCmd := []string{
 		"zuul-admin",
 		"create-auth-token",
@@ -35,6 +37,6 @@ func CreateAuthToken(kubeContext string, namespace string, authConfig string, te
 		"--user", user,
 		"--expires-in", strconv.Itoa(expiry),
 	}
-	token := cliutils.RunRemoteCmd(kubeContext, namespace, scheduler.Name, "zuul-scheduler", createAuthTokenCmd)
+	token := env.PodExecBytes("zuul-scheduler-0", "zuul-scheduler", createAuthTokenCmd)
 	return token.String()
 }

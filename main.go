@@ -4,16 +4,11 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
-
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/softwarefactory-project/sf-operator/cli/cmd"
 	dev "github.com/softwarefactory-project/sf-operator/cli/cmd/dev"
@@ -21,9 +16,6 @@ import (
 	zuul "github.com/softwarefactory-project/sf-operator/cli/cmd/zuul"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
-
-	//+kubebuilder:scaffold:imports
-	"errors"
 )
 
 var dryRun bool
@@ -37,12 +29,8 @@ func getWatchNamespace() (string, error) {
 }
 
 func operatorCmd(kmd *cobra.Command, args []string) {
-	cliCtx, err := cliutils.GetCLIContext(kmd)
-	if err != nil {
-		ctrl.Log.Error(err, "Error initializing:")
-		os.Exit(1)
-	}
-	ns := cliCtx.Namespace
+	cliutils.SetLogger(kmd)
+	ns, _ := kmd.Flags().GetString("namespace")
 	metricsAddr, _ := kmd.Flags().GetString("metrics-bind-address")
 	probeAddr, _ := kmd.Flags().GetString("health-probe-bind-address")
 	enableLeaderElection, _ := kmd.Flags().GetBool("leader-elect")
@@ -61,28 +49,17 @@ func operatorCmd(kmd *cobra.Command, args []string) {
 }
 
 func deployCmd(kmd *cobra.Command, args []string) {
-
+	cliutils.SetLogger(kmd)
 	var sfResource string
 
-	cliCtx, err := cliutils.GetCLIContext(kmd)
-	if err != nil {
-		ctrl.Log.Error(err, "Error initializing:")
-		os.Exit(1)
-	}
-	ns := cliCtx.Namespace
-	kubeContext := cliCtx.KubeContext
-	if len(args) != 1 {
-		ctrl.Log.Error(errors.New("wrong number of arguments"), "deploy command only accepts 1 argument.")
-		os.Exit(1)
-	}
+	ns, _ := kmd.Flags().GetString("namespace")
+	kubeContext, _ := kmd.Flags().GetString("kube-context")
 
 	sfResource = args[0]
-	if sfResource == "" && cliCtx.Manifest != "" {
-		sfResource = cliCtx.Manifest
-	}
-	if (sfResource != "" && ns == "") || (sfResource == "" && ns != "") {
-		err := errors.New("standalone mode requires --namespace to be set")
-		ctrl.Log.Error(err, "Argument error:")
+
+	if sfResource == "" {
+		fmt.Printf("Missing CR to deploy!\n")
+		fmt.Printf("usage: deploy <path-to-cr>\n")
 		os.Exit(1)
 	}
 	dev.ApplyStandalone(ns, sfResource, kubeContext, dryRun)
@@ -97,12 +74,9 @@ func main() {
 		ns                   string
 		kubeContext          string
 		fqdn                 string
-		cliContext           string
-		configFile           string
 
-		rootCmd = &cobra.Command{
-			Short: "SF Operator CLI",
-			Long:  `Multi-purpose command line utility related to sf-operator, SF instances management, and development tools.`,
+		rootCmd = &cobra.Command{Short: "SF Operator CLI",
+			Long: `Multi-purpose command line utility related to sf-operator, SF instances management, and development tools.`,
 		}
 
 		operatorCmd = &cobra.Command{
@@ -127,8 +101,6 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&ns, "namespace", "n", "", "The namespace on which to perform actions.")
 	rootCmd.PersistentFlags().StringVarP(&kubeContext, "kube-context", "k", "", "The cluster context to use to perform calls to the K8s API.")
 	rootCmd.PersistentFlags().StringVarP(&fqdn, "fqdn", "d", "", "The FQDN of the deployment (if no manifest is provided).")
-	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "C", "", "Path to the CLI configuration file.")
-	rootCmd.PersistentFlags().StringVarP(&cliContext, "context", "c", "", "Context to use in the configuration file. Defaults to the \"default-context\" value in the config file if set, or the first available context in the config file.")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable DEBUG logs")
 
 	// Flags for the operator command
@@ -152,6 +124,5 @@ func main() {
 	for _, c := range subcommands {
 		rootCmd.AddCommand(c)
 	}
-
 	rootCmd.Execute()
 }

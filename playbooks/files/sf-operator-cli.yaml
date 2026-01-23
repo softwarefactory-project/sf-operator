@@ -1,7 +1,0 @@
-contexts:
-  ci:
-    namespace: sf
-    fqdn: sfop.me
-  ext-ze:
-    namespace: ext-ze
-default-context: ci

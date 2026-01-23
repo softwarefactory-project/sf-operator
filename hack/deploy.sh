@@ -25,7 +25,7 @@ go version > /dev/null || {
 grep -q " gerrit\." /etc/hosts > /dev/null || {
     echo "[+] Setting up gerrit"
     sudo chown $USER /etc/hosts
-    go run main.go --config playbooks/files/sf-operator-cli.yaml dev create demo-env --repos-path deploy
+    go run main.go dev create demo-env --repos-path deploy
     sudo chown root /etc/hosts
 }
 
