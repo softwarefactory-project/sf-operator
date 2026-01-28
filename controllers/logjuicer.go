@@ -40,15 +40,15 @@ func (r *SFController) EnsureLogJuicer() bool {
 	// Ensure PVC exists
 	storage := r.getStorageConfOrDefault(r.cr.Spec.Logjuicer)
 
-	pvc := base.MkPVC(pvcName, r.ns, storage, apiv1.ReadWriteOnce)
+	pvc := base.MkPVC(pvcName, r.Ns, storage, apiv1.ReadWriteOnce)
 	r.GetOrCreate(&pvc)
 
 	// Create Service
-	srv := base.MkService(ident, r.ns, ident, []int32{port}, ident, r.cr.Spec.ExtraLabels)
+	srv := base.MkService(ident, r.Ns, ident, []int32{port}, ident, r.cr.Spec.ExtraLabels)
 	r.GetOrCreate(&srv)
 
 	// Create Deployment
-	dep := base.MkDeployment(ident, r.ns, base.LogJuicerImage(), r.cr.Spec.ExtraLabels, r.isOpenShift)
+	dep := base.MkDeployment(ident, r.Ns, base.LogJuicerImage(), r.cr.Spec.ExtraLabels, r.IsOpenShift)
 	dep.Spec.Template.Spec.Containers[0].ImagePullPolicy = "Always"
 
 	// Use PVC for logjuicer-data volume

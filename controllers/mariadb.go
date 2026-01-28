@@ -70,7 +70,7 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 			MountPath: "/fluent-bit/etc/",
 		},
 	}
-	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer(MariaDBIdent, []logging.FluentBitLabel{}, volumeMounts, r.isOpenShift)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer(MariaDBIdent, []logging.FluentBitLabel{}, volumeMounts, r.IsOpenShift)
 	annotations["mariadb-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["mariadb-fluent-bit-image"] = sidecar.Image
 	return []apiv1.Volume{volume, storageEmptyDir}, sidecar
@@ -79,7 +79,7 @@ func createLogForwarderSidecar(r *SFController, annotations map[string]string) (
 func (r *SFController) CreateDBInitContainer(username string, password string, dbname string) apiv1.Container {
 	c := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8 COLLATE utf8_general_ci;", dbname)
 	g := fmt.Sprintf("GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%%' IDENTIFIED BY '${USER_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;", dbname, username)
-	container := base.MkContainer("mariadb-client", base.MariaDBImage(), r.isOpenShift)
+	container := base.MkContainer("mariadb-client", base.MariaDBImage(), r.IsOpenShift)
 	base.SetContainerLimitsLowProfile(&container)
 	container.Command = []string{"sh", "-c", `
 	echo 'Running: mysql --host="` + MariaDBIdent + `" --user=root --password="$MARIADB_ROOT_PASSWORD" -e "` + c + g + `"'
@@ -108,7 +108,7 @@ func (r *SFController) EnsureProvisionDBJob(database string, password string) bo
 	dbInitJob := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      database + "-db-provision",
-			Namespace: r.ns,
+			Namespace: r.Ns,
 		},
 		Spec: batchv1.JobSpec{
 			BackoffLimit: &backoffLimit,
@@ -173,7 +173,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 	configSecret := apiv1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mariadb-config-secrets",
-			Namespace: r.ns,
+			Namespace: r.Ns,
 		},
 		Data: map[string][]byte{
 			"my.cnf": []byte(myCNF),
@@ -182,7 +182,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 	initDBSecret := apiv1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mariadb-initdb-secrets",
-			Namespace: r.ns,
+			Namespace: r.Ns,
 		},
 		Data: map[string][]byte{
 			"initfile.sql": []byte(initfileSQL),
@@ -192,7 +192,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 	r.EnsureSecret(&initDBSecret)
 
 	storage := r.getStorageConfOrDefault(r.cr.Spec.MariaDB.DBStorage)
-	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), storage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+	sts := r.mkStatefulSet(MariaDBIdent, base.MariaDBImage(), storage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.IsOpenShift)
 
 	base.SetContainerLimitsHighProfile(&sts.Spec.Template.Spec.Containers[0])
 	limitstr := base.UpdateContainerLimit(r.cr.Spec.MariaDB.Limits, &sts.Spec.Template.Spec.Containers[0])
@@ -200,7 +200,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 	sts.Spec.VolumeClaimTemplates = append(
 		sts.Spec.VolumeClaimTemplates,
 		// TODO redirect logs to stdout so we don't need a volume
-		base.MkPVC("mariadb-logs", r.ns, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.LogStorage), apiv1.ReadWriteOnce))
+		base.MkPVC("mariadb-logs", r.Ns, r.getStorageConfOrDefault(r.cr.Spec.MariaDB.LogStorage), apiv1.ReadWriteOnce))
 
 	volumeMountsStatsExporter := []apiv1.VolumeMount{
 		{
@@ -260,7 +260,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, fbVolumes...)
 	}
 
-	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(MariaDBIdent, volumeMountsStatsExporter, r.isOpenShift)
+	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(MariaDBIdent, volumeMountsStatsExporter, r.IsOpenShift)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
 
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
@@ -273,7 +273,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 	}
 
 	servicePorts := []int32{mariadbPort}
-	srv := base.MkServicePod(MariaDBIdent, r.ns, "mariadb-0", servicePorts, mariaDBPortName, r.cr.Spec.ExtraLabels)
+	srv := base.MkServicePod(MariaDBIdent, r.Ns, "mariadb-0", servicePorts, mariaDBPortName, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&srv)
 
 	var zuulDBSecret apiv1.Secret
@@ -285,7 +285,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 		zuulDBSecret = apiv1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      zuulDBConfigSecret,
-				Namespace: r.ns,
+				Namespace: r.Ns,
 			},
 			Data: nil,
 		}

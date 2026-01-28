@@ -58,38 +58,38 @@ func (r *SFController) TerminateHoundSearch() {
 	r.DeleteR(&apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      houndSearchIdent,
-			Namespace: r.ns,
+			Namespace: r.Ns,
 		},
 	})
 	r.DeleteR(&appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      houndSearchIdent,
-			Namespace: r.ns,
+			Namespace: r.Ns,
 		},
 	})
 	r.DeleteR(&apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      houndSearchData,
-			Namespace: r.ns,
+			Namespace: r.Ns,
 		},
 	})
 }
 
 func (r *SFController) DeployHoundSearch() bool {
-	svc := base.MkService(houndSearchIdent, r.ns, houndSearchIdent, []int32{6080}, houndSearchIdent, r.cr.Spec.ExtraLabels)
+	svc := base.MkService(houndSearchIdent, r.Ns, houndSearchIdent, []int32{6080}, houndSearchIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
 
 	// Check if Corporate Certificate exists
 	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
 
 	storage := r.getStorageConfOrDefault(r.cr.Spec.Codesearch.Storage)
-	pvc := base.MkPVC(houndSearchData, r.ns, storage, apiv1.ReadWriteOnce)
-	container := MkHoundSearchContainer(corporateCMExists, r.isOpenShift)
+	pvc := base.MkPVC(houndSearchData, r.Ns, storage, apiv1.ReadWriteOnce)
+	container := MkHoundSearchContainer(corporateCMExists, r.IsOpenShift)
 	container.Env = []apiv1.EnvVar{
 		base.MkEnvVar("CONFIG_REPO_BASE_URL", r.configBaseURL),
 		base.MkEnvVar("CONFIG_REPO_NAME", r.cr.Spec.ConfigRepositoryLocation.Name),
 	}
-	sts := base.MkStatefulset(houndSearchIdent, r.ns, 1, houndSearchIdent, container, pvc, r.cr.Spec.ExtraLabels)
+	sts := base.MkStatefulset(houndSearchIdent, r.Ns, 1, houndSearchIdent, container, pvc, r.cr.Spec.ExtraLabels)
 	sts.Spec.Template.Spec.Volumes = AppendToolingVolume(sts.Spec.Template.Spec.Volumes)
 	sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, base.MkVolumeSecret("zuul-config"))
 

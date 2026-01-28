@@ -67,9 +67,9 @@ type SoftwareFactoryReconciler struct {
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
 
 type SFController struct {
-	SFUtilContext
+	SFKubeContext
 	cr            sfv1.SoftwareFactory
-	isOpenShift   bool
+	IsOpenShift   bool
 	hasProcMount  bool
 	configBaseURL string
 	needOpendev   bool
@@ -128,7 +128,7 @@ func (r *SFController) cleanup() {
 
 // Manually kill all the ZK process in last resort
 func (r *SFController) nukeZKClients() {
-	podslist, _ := r.ClientSet.CoreV1().Pods(r.ns).List(r.ctx, metav1.ListOptions{})
+	podslist, _ := r.ClientSet.CoreV1().Pods(r.Ns).List(r.Ctx, metav1.ListOptions{})
 	for _, pod := range podslist.Items {
 		if strings.HasPrefix(pod.Name, "zuul-") || strings.HasPrefix(pod.Name, "nodepool-") {
 			// Get the service name from the first container
@@ -138,14 +138,14 @@ func (r *SFController) nukeZKClients() {
 			// Ensure the process are killed
 			r.PodExec(pod.Name, cName, []string{"kill", "-9", "1"})
 			if cName == "zuul-web" || cName == "zuul-weeder" || cName == "nodepool-launcher" {
-				r.DeleteR(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: cName, Namespace: r.ns}})
+				r.DeleteR(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: cName, Namespace: r.Ns}})
 			} else {
-				r.DeleteR(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: cName, Namespace: r.ns}})
+				r.DeleteR(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: cName, Namespace: r.Ns}})
 			}
 		}
 	}
 	// Delete zookeeper at the end
-	r.DeleteR(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "zookeeper", Namespace: r.ns}})
+	r.DeleteR(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "zookeeper", Namespace: r.Ns}})
 }
 
 func (r *SFController) validateZuulConnectionsSecrets() error {
@@ -467,7 +467,7 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	// TODO? we could add this to the readiness computation.
 	if !r.cr.Spec.PrometheusMonitorsDisabled && isReady {
 		DURuleGroups := []monitoringv1.RuleGroup{
-			sfmonitoring.MkDiskUsageRuleGroup(r.ns, "sf"),
+			sfmonitoring.MkDiskUsageRuleGroup(r.Ns, "sf"),
 		}
 		monitoredPorts, selectorRunList := r.setupMonitoring()
 		podMonitorSelector := metav1.LabelSelector{
@@ -574,7 +574,7 @@ func HasDuplicate(conns []string) string {
 	return ""
 }
 
-func MkSFController(r SFUtilContext, cr sfv1.SoftwareFactory) SFController {
+func MkSFController(r SFKubeContext, cr sfv1.SoftwareFactory) SFController {
 	conns, err := GetUserDefinedConnections(&cr.Spec.Zuul)
 	if err != nil {
 		ctrl.Log.Error(err, "Invalid Zuul connections")
@@ -589,9 +589,9 @@ func MkSFController(r SFUtilContext, cr sfv1.SoftwareFactory) SFController {
 		os.Exit(1)
 	}
 	return SFController{
-		SFUtilContext: r,
+		SFKubeContext: r,
 		cr:            cr,
-		isOpenShift:   CheckOpenShift(r.RESTConfig),
+		IsOpenShift:   CheckOpenShift(r.RESTConfig),
 		hasProcMount:  os.Getenv("HAS_PROC_MOUNT") == "true",
 		configBaseURL: resolveConfigBaseURL(cr),
 		needOpendev:   !slices.Contains(conns, "opendev.org"),
@@ -607,17 +607,17 @@ func (r *SoftwareFactoryReconciler) mkSFController(
 		os.Exit(1)
 	}
 	return MkSFController(
-		SFUtilContext{
+		SFKubeContext{
 			Client:     r.Client,
 			Scheme:     r.Scheme,
 			RESTClient: r.RESTClient,
 			RESTConfig: r.RESTConfig,
 			ClientSet:  clientSet,
-			ns:         ns,
-			ctx:        ctx,
-			owner:      owner,
-			standalone: standalone,
-			zkChanged:  false,
+			Ns:         ns,
+			Ctx:        ctx,
+			Owner:      owner,
+			Standalone: standalone,
+			ZkChanged:  false,
 			DryRun:     r.DryRun,
 		},
 		cr,

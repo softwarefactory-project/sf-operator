@@ -65,7 +65,7 @@ func createZKLogForwarderSidecar(r *SFController, annotations map[string]string)
 			MountPath: "/fluent-bit/etc/",
 		},
 	}
-	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("zookeeper", []logging.FluentBitLabel{}, volumeMounts, r.isOpenShift)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("zookeeper", []logging.FluentBitLabel{}, volumeMounts, r.IsOpenShift)
 	annotations["zk-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["zk-fluent-bit-image"] = sidecar.Image
 	return []apiv1.Volume{volume, storageEmptyDir}, sidecar
@@ -122,7 +122,7 @@ func (r *SFController) DeployZookeeper() bool {
 	srvHeadless := apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ZookeeperIdent + "-headless",
-			Namespace: r.ns,
+			Namespace: r.Ns,
 			Labels:    r.cr.Spec.ExtraLabels,
 		},
 		Spec: apiv1.ServiceSpec{
@@ -155,7 +155,7 @@ func (r *SFController) DeployZookeeper() bool {
 		}}
 	r.EnsureService(&srvHeadless)
 	// TODO we keep the original service but this could be removed. Zookeeper is assumed to also work behind a load balancer.
-	srv := base.MkService(ZookeeperIdent, r.ns, ZookeeperIdent, []int32{zkClientPort}, ZookeeperIdent, r.cr.Spec.ExtraLabels)
+	srv := base.MkService(ZookeeperIdent, r.Ns, ZookeeperIdent, []int32{zkClientPort}, ZookeeperIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&srv)
 	storageConfig := r.getStorageConfOrDefault(r.cr.Spec.Zookeeper.Storage)
 	logStorageConfig := base.StorageConfig{
@@ -164,14 +164,14 @@ func (r *SFController) DeployZookeeper() bool {
 		ExtraAnnotations: storageConfig.ExtraAnnotations,
 	}
 	zk := r.mkHeadlessStatefulSet(
-		ZookeeperIdent, base.ZookeeperImage(), storageConfig, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+		ZookeeperIdent, base.ZookeeperImage(), storageConfig, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.IsOpenShift)
 	// We overwrite the VolumeClaimTemplates set by MkHeadlessStatefulSet to keep the previous volume name
 	// Previously the default PVC created by MkHeadlessStatefulSet was not used by Zookeeper (not mounted). So to avoid having two Volumes
 	// and to ensure data persistence during the upgrade we keep the previous naming 'ZookeeperIdent + "-data"' and we discard the one
 	// created by MkHeadlessStatefulSet.
 	zk.Spec.VolumeClaimTemplates = []apiv1.PersistentVolumeClaim{
-		base.MkPVC(ZookeeperIdent+"-data", r.ns, storageConfig, apiv1.ReadWriteOnce),
-		base.MkPVC(ZookeeperIdent+"-logs", r.ns, logStorageConfig, apiv1.ReadWriteOnce),
+		base.MkPVC(ZookeeperIdent+"-data", r.Ns, storageConfig, apiv1.ReadWriteOnce),
+		base.MkPVC(ZookeeperIdent+"-logs", r.Ns, logStorageConfig, apiv1.ReadWriteOnce),
 	}
 	zk.Spec.Template.Spec.Containers[0].Command = []string{"/config-scripts/run.sh"}
 	zk.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
@@ -230,7 +230,7 @@ func (r *SFController) DeployZookeeper() bool {
 		zk.Spec.Template.Spec.Volumes = append(zk.Spec.Template.Spec.Volumes, fbVolumes...)
 	}
 
-	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(ZookeeperIdent, volumeMountsStatsExporter, r.isOpenShift)
+	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(ZookeeperIdent, volumeMountsStatsExporter, r.IsOpenShift)
 	zk.Spec.Template.Spec.Containers = append(zk.Spec.Template.Spec.Containers, statsExporter)
 
 	zk.Spec.Template.ObjectMeta.Annotations = annotations
@@ -240,7 +240,7 @@ func (r *SFController) DeployZookeeper() bool {
 	replicaCount := int32(ZookeeperReplicas)
 	current, changed := r.ensureStatefulset(storageConfig.StorageClassName, zk, &replicaCount)
 	if changed {
-		r.zkChanged = true
+		r.ZkChanged = true
 		return false
 	}
 

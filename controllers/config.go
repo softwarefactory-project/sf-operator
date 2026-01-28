@@ -29,7 +29,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 	serviceAccountName := "config-updater"
 	serviceAccount := apiv1.ServiceAccount{}
 	if !r.GetM(serviceAccountName, &serviceAccount) {
-		serviceAccount.SetNamespace(r.ns)
+		serviceAccount.SetNamespace(r.Ns)
 		serviceAccount.Name = serviceAccountName
 		r.CreateR(&serviceAccount)
 	}
@@ -59,7 +59,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 
 	currentRole := rbacv1.Role{}
 	if !r.GetM(roleName, &currentRole) {
-		currentRole.SetNamespace(r.ns)
+		currentRole.SetNamespace(r.Ns)
 		currentRole.Name = roleName
 		currentRole.Annotations = roleAnnotations
 		currentRole.Rules = roleRules
@@ -77,7 +77,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 	roleBindingName := serviceAccountName
 	rb := rbacv1.RoleBinding{}
 	if !r.GetM(roleBindingName, &rb) {
-		rb.SetNamespace(r.ns)
+		rb.SetNamespace(r.Ns)
 		rb.Name = roleBindingName
 		rb.Subjects = []rbacv1.Subject{{Kind: "ServiceAccount", Name: serviceAccountName}}
 		rb.RoleRef.Kind = "Role"
@@ -99,7 +99,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 				Name: secretName,
 				Annotations: map[string]string{
 					"kubernetes.io/service-account.name": "config-updater"},
-				Namespace: r.ns,
+				Namespace: r.Ns,
 			},
 		}
 		r.CreateR(&secret)
@@ -142,7 +142,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 }
 
 func (r *SFController) RunCommand(name string, args []string, extraVars []apiv1.EnvVar) *batchv1.Job {
-	jobContainer := base.MkContainer("sf-operator", base.BusyboxImage(), r.isOpenShift)
+	jobContainer := base.MkContainer("sf-operator", base.BusyboxImage(), r.IsOpenShift)
 	jobContainer.Command = append([]string{"python3", "/sf_operator/main.py"}, args...)
 	jobContainer.Env = append([]apiv1.EnvVar{
 		base.MkEnvVar("PYTHONPATH", "/"),
@@ -151,7 +151,7 @@ func (r *SFController) RunCommand(name string, args []string, extraVars []apiv1.
 	jobContainer.VolumeMounts = []apiv1.VolumeMount{
 		{Name: "pymod-sf-operator", MountPath: "/sf_operator"},
 	}
-	job := base.MkJob(name, r.ns, jobContainer, r.cr.Spec.ExtraLabels)
+	job := base.MkJob(name, r.Ns, jobContainer, r.cr.Spec.ExtraLabels)
 	job.Spec.Template.Spec.Volumes = []apiv1.Volume{
 		base.MkVolumeCM("pymod-sf-operator", "pymod-sf-operator-config-map"),
 	}
@@ -219,7 +219,7 @@ func (r *SFController) SetupConfigJob() bool {
 				// Create an empty ConfigMap to keep note the reconfigure has been already done
 				zsInternalTenantReconfigure.ObjectMeta = metav1.ObjectMeta{
 					Name:      cmName,
-					Namespace: r.ns,
+					Namespace: r.Ns,
 				}
 				zsInternalTenantReconfigure.Data = map[string]string{
 					"internal-tenant-config-hash":     configHash,

@@ -47,7 +47,7 @@ func runReconcile(cr sfv1.SoftwareFactory) {
 var (
 	ctx       context.Context
 	cancel    context.CancelFunc
-	sfctx     sfop.SFUtilContext
+	sfctx     sfop.SFKubeContext
 	namespace string
 	// The default sf CR from playbooks/files/sf.yaml
 	sf sfv1.SoftwareFactory
@@ -92,7 +92,7 @@ var _ = BeforeSuite(func() {
 		panic("sf owner resource creation failed")
 	}
 
-	sfctx = sfop.MkSFUtilContext(ctx, client, restConfig, namespace, &owner, true)
+	sfctx = sfop.MkSFKubeContext(ctx, client, restConfig, namespace, &owner, true)
 })
 
 // helpers

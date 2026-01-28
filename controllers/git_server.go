@@ -290,7 +290,7 @@ func (r *SFController) DeployGitServer() bool {
 
 	// Create the statefulset
 	storage := r.getStorageConfOrDefault(r.cr.Spec.GitServer.Storage)
-	sts := r.mkStatefulSet(GitServerIdent, base.GitServerImage(), storage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+	sts := r.mkStatefulSet(GitServerIdent, base.GitServerImage(), storage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.IsOpenShift)
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 	GSVolumeMountsRO := []apiv1.VolumeMount{
 		{
@@ -307,7 +307,7 @@ func (r *SFController) DeployGitServer() bool {
 	base.SetContainerLimitsLowProfile(&sts.Spec.Template.Spec.Containers[0])
 
 	// Add a second container to serve the git-server with RW access (should not be exposed)
-	containerRW := base.MkContainer(GitServerIdentRW, base.GitServerImage(), r.isOpenShift)
+	containerRW := base.MkContainer(GitServerIdentRW, base.GitServerImage(), r.IsOpenShift)
 	containerRW.Command = []string{"git", "daemon", "--base-path=/git",
 		"--enable=receive-pack", "--export-all", "--port=" + strconv.Itoa(gsGitPortRW)}
 	containerRW.VolumeMounts = []apiv1.VolumeMount{
@@ -332,7 +332,7 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Define initContainer
-	initContainer := base.MkContainer("init-config", base.GitServerImage(), r.isOpenShift)
+	initContainer := base.MkContainer("init-config", base.GitServerImage(), r.IsOpenShift)
 	initContainer.Command = []string{"/bin/bash", "/entry/pre-init.sh"}
 	initContainer.Env = []apiv1.EnvVar{
 		base.MkEnvVar("FQDN", r.cr.Spec.FQDN),
@@ -365,9 +365,9 @@ func (r *SFController) DeployGitServer() bool {
 	}
 
 	// Create services exposed
-	svc := base.MkServicePod(GitServerIdent, r.ns, GitServerIdent+"-0", []int32{gsGitPort}, gsGitPortName, r.cr.Spec.ExtraLabels)
+	svc := base.MkServicePod(GitServerIdent, r.Ns, GitServerIdent+"-0", []int32{gsGitPort}, gsGitPortName, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
-	svcRW := base.MkServicePod(GitServerIdentRW, r.ns, GitServerIdent+"-0", []int32{gsGitPortRW}, gsGitPortName, r.cr.Spec.ExtraLabels)
+	svcRW := base.MkServicePod(GitServerIdentRW, r.Ns, GitServerIdent+"-0", []int32{gsGitPortRW}, gsGitPortName, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svcRW)
 
 	ready := r.IsStatefulSetReady(current)

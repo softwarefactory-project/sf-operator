@@ -46,12 +46,12 @@ var _ = Describe("Zuul controller", func() {
 
 		It("should handle user provided opendev connection", func() {
 			r := SFController{
-				SFUtilContext: SFUtilContext{
+				SFKubeContext: SFKubeContext{
 					Client: k8sClient,
 					Scheme: k8sClient.Scheme(),
-					ns:     TestName,
-					ctx:    ctx,
-					owner:  namespace,
+					Ns:     TestName,
+					Ctx:    ctx,
+					Owner:  namespace,
 				},
 				needOpendev: true,
 			}

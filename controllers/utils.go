@@ -57,36 +57,36 @@ const (
 //go:embed static/fetch-config-repo.sh
 var fetchConfigRepoScript string
 
-type SFUtilContext struct {
+type SFKubeContext struct {
 	Client     client.Client
 	Scheme     *runtime.Scheme
 	RESTClient rest.Interface
 	RESTConfig *rest.Config
 	ClientSet  *kubernetes.Clientset
-	ns         string
-	ctx        context.Context
-	owner      client.Object
-	standalone bool
-	zkChanged  bool
+	Ns         string
+	Ctx        context.Context
+	Owner      client.Object
+	Standalone bool
+	ZkChanged  bool
 	DryRun     bool
 }
 
-func MkSFUtilContext(ctx context.Context, goClient client.Client, restConfig *rest.Config, namespace string, owner client.Object, standalone bool) SFUtilContext {
+func MkSFKubeContext(ctx context.Context, goClient client.Client, restConfig *rest.Config, namespace string, owner client.Object, standalone bool) SFKubeContext {
 	clientSet, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		panic("no client set!")
 	}
-	return SFUtilContext{
+	return SFKubeContext{
 		Client:     goClient,
 		Scheme:     controllerScheme,
 		RESTConfig: restConfig,
 		RESTClient: getPodRESTClient(restConfig),
 		ClientSet:  clientSet,
-		ns:         namespace,
-		ctx:        ctx,
-		owner:      owner,
-		standalone: standalone,
-		zkChanged:  false,
+		Ns:         namespace,
+		Ctx:        ctx,
+		Owner:      owner,
+		Standalone: standalone,
+		ZkChanged:  false,
 		DryRun:     false,
 	}
 }
@@ -101,12 +101,12 @@ type HostAlias struct {
 // setOwnerReference set the Owner of a resources
 // Whether we are running the controller or standalone mode the owneship must
 // be managed differently
-func (r *SFUtilContext) setOwnerReference(controlled metav1.Object) error {
+func (r *SFKubeContext) setOwnerReference(controlled metav1.Object) error {
 	var err error
-	if r.standalone {
-		err = controllerutil.SetOwnerReference(r.owner, controlled, r.Scheme)
+	if r.Standalone {
+		err = controllerutil.SetOwnerReference(r.Owner, controlled, r.Scheme)
 	} else {
-		err = controllerutil.SetControllerReference(r.owner, controlled, r.Scheme)
+		err = controllerutil.SetControllerReference(r.Owner, controlled, r.Scheme)
 	}
 	if err != nil {
 		logging.LogE(err, "Unable to set controller reference, name="+controlled.GetName())
@@ -116,11 +116,11 @@ func (r *SFUtilContext) setOwnerReference(controlled metav1.Object) error {
 }
 
 // GetM gets a resource, returning if it was found
-func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
-	err := r.Client.Get(r.ctx,
+func (r *SFKubeContext) GetM(name string, obj client.Object) bool {
+	err := r.Client.Get(r.Ctx,
 		client.ObjectKey{
 			Name:      name,
-			Namespace: r.ns,
+			Namespace: r.Ns,
 		},
 		obj)
 	if errors.IsNotFound(err) {
@@ -132,7 +132,7 @@ func (r *SFUtilContext) GetM(name string, obj client.Object) bool {
 }
 
 // CreateR creates a resource with the owner as the ownerReferences.
-func (r *SFUtilContext) CreateR(obj client.Object) {
+func (r *SFKubeContext) CreateR(obj client.Object) {
 	r.setOwnerReference(obj)
 	var err error
 	msg := "Creating object, name: " + obj.GetName()
@@ -142,14 +142,14 @@ func (r *SFUtilContext) CreateR(obj client.Object) {
 		opts = append(opts, client.DryRunAll)
 	}
 	logging.LogI(msg)
-	err = r.Client.Create(r.ctx, obj, opts...)
+	err = r.Client.Create(r.Ctx, obj, opts...)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		panic(err.Error())
 	}
 }
 
 // DeleteR delete a resource.
-func (r *SFUtilContext) DeleteR(obj client.Object) {
+func (r *SFKubeContext) DeleteR(obj client.Object) {
 	var err error
 	msg := "Deleting object, name: " + obj.GetName()
 	opts := []client.DeleteOption{}
@@ -158,14 +158,14 @@ func (r *SFUtilContext) DeleteR(obj client.Object) {
 		opts = append(opts, client.DryRunAll)
 	}
 	logging.LogI(msg)
-	err = r.Client.Delete(r.ctx, obj, opts...)
+	err = r.Client.Delete(r.Ctx, obj, opts...)
 	if err != nil && !errors.IsNotFound(err) {
 		panic(err.Error())
 	}
 }
 
 // UpdateR updates resource with the owner as the ownerReferences.
-func (r *SFUtilContext) UpdateR(obj client.Object) bool {
+func (r *SFKubeContext) UpdateR(obj client.Object) bool {
 	r.setOwnerReference(obj)
 	var err error
 	msg := "Updating object, name: " + obj.GetName()
@@ -175,7 +175,7 @@ func (r *SFUtilContext) UpdateR(obj client.Object) bool {
 		opts = append(opts, client.DryRunAll)
 	}
 	logging.LogI(msg)
-	err = r.Client.Update(r.ctx, obj, opts...)
+	err = r.Client.Update(r.Ctx, obj, opts...)
 	if err != nil {
 		// A not found error is ignored during dry-run because the object might be created
 		// in the same reconciliation loop.
@@ -191,7 +191,7 @@ func (r *SFUtilContext) UpdateR(obj client.Object) bool {
 
 // GetOrCreate does not change an existing object, update needs to be used manually.
 // In the case the object already exists then the function return True
-func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
+func (r *SFKubeContext) GetOrCreate(obj client.Object) bool {
 	name := obj.GetName()
 
 	if !r.GetM(name, obj) {
@@ -204,11 +204,11 @@ func (r *SFUtilContext) GetOrCreate(obj client.Object) bool {
 // PodExecOut connects to a container's Pod and execute a command
 // Stderr is output on the caller's Stdout
 // The function returns an Error for any issue
-func (r *SFUtilContext) PodExecOut(pod string, container string, command []string, out io.Writer) error {
+func (r *SFKubeContext) PodExecOut(pod string, container string, command []string, out io.Writer) error {
 	logging.LogI(fmt.Sprintf("Running pod execution pod: %s, command: %s", pod, command))
 	execReq := r.RESTClient.
 		Post().
-		Namespace(r.ns).
+		Namespace(r.Ns).
 		Resource("pods").
 		Name(pod).
 		SubResource("exec").
@@ -239,7 +239,7 @@ func (r *SFUtilContext) PodExecOut(pod string, container string, command []strin
 
 // PodExec connects to a container's Pod and execute a command
 // Stdout and Stderr is output on the caller's Stdout
-func (r *SFUtilContext) PodExec(pod string, container string, command []string) error {
+func (r *SFKubeContext) PodExec(pod string, container string, command []string) error {
 	return r.PodExecOut(pod, container, command, os.Stdout)
 }
 
@@ -247,7 +247,7 @@ func (r *SFUtilContext) PodExec(pod string, container string, command []string) 
 
 // EnsureConfigMap ensures a config map exist
 // The ConfigMap is updated if needed
-func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string) apiv1.ConfigMap {
+func (r *SFKubeContext) EnsureConfigMap(baseName string, data map[string]string) apiv1.ConfigMap {
 	name := baseName + "-config-map"
 	var cm apiv1.ConfigMap
 	if !r.GetM(name, &cm) {
@@ -255,7 +255,7 @@ func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string)
 			logging.LogI("Creating config map name: " + name)
 		}
 		cm = apiv1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.ns},
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.Ns},
 			Data:       data,
 		}
 		r.CreateR(&cm)
@@ -275,7 +275,7 @@ func (r *SFUtilContext) EnsureConfigMap(baseName string, data map[string]string)
 
 // EnsureSecret ensures a Secret exist
 // The Secret is updated if needed
-func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
+func (r *SFKubeContext) EnsureSecret(secret *apiv1.Secret) {
 	var current apiv1.Secret
 	name := secret.GetName()
 	if !r.GetM(name, &current) {
@@ -300,13 +300,13 @@ func (r *SFUtilContext) EnsureSecret(secret *apiv1.Secret) {
 // If it does not the Secret is created from the getData function
 // This function does not support Secret update
 // This function returns the Secret
-func (r *SFUtilContext) ensureSecretFromFunc(name string, getData func() string) apiv1.Secret {
+func (r *SFKubeContext) ensureSecretFromFunc(name string, getData func() string) apiv1.Secret {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
 		if !r.DryRun {
 			logging.LogI("Creating secret, name: " + name)
 		}
-		secret = base.MkSecretFromFunc(name, r.ns, getData)
+		secret = base.MkSecretFromFunc(name, r.Ns, getData)
 		r.CreateR(&secret)
 	}
 	return secret
@@ -314,27 +314,27 @@ func (r *SFUtilContext) ensureSecretFromFunc(name string, getData func() string)
 
 // EnsureSecretUUID ensures a Secret containing an UUID
 // This function does not support update
-func (r *SFUtilContext) EnsureSecretUUID(name string) apiv1.Secret {
+func (r *SFKubeContext) EnsureSecretUUID(name string) apiv1.Secret {
 	return r.ensureSecretFromFunc(name, utils.NewUUIDString)
 }
 
 // EnsureSSHKeySecret ensures a Secret exists container an autogenerated SSH key pair
 // If it does not exixtthe Secret is created
 // This function does not support Secret update
-func (r *SFUtilContext) EnsureSSHKeySecret(name string) {
+func (r *SFKubeContext) EnsureSSHKeySecret(name string) {
 	var secret apiv1.Secret
 	if !r.GetM(name, &secret) {
 		if !r.DryRun {
 			logging.LogI("Creating ssh key, name: " + name)
 		}
-		secret := base.MkSSHKeySecret(name, r.ns)
+		secret := base.MkSSHKeySecret(name, r.Ns)
 		r.CreateR(&secret)
 	}
 }
 
 // EnsureService ensures a Service exists
 // The Service is updated if needed
-func (r *SFUtilContext) EnsureService(service *apiv1.Service) {
+func (r *SFKubeContext) EnsureService(service *apiv1.Service) {
 	var current apiv1.Service
 	spsAsString := func(sps []apiv1.ServicePort) string {
 		s := []string{}
@@ -383,7 +383,7 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "ca-cert",
-			Namespace:   r.ns,
+			Namespace:   r.Ns,
 			Annotations: annotations,
 		},
 		Type: "kubernetes.io/tls",
@@ -422,7 +422,7 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "zookeeper-client-tls",
-			Namespace:   r.ns,
+			Namespace:   r.Ns,
 			Annotations: annotations,
 		},
 		Type: "kubernetes.io/tls",
@@ -443,7 +443,7 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 		serversDNSNames := []string{}
 		var replicaName = fmt.Sprintf("%s-%d", ZookeeperIdent, i)
 		var replicaWithService = fmt.Sprintf("%s.%s-headless", replicaName, ZookeeperIdent)
-		var replicaNamespaced = fmt.Sprintf("%s.%s", replicaWithService, r.ns)
+		var replicaNamespaced = fmt.Sprintf("%s.%s", replicaWithService, r.Ns)
 		var replicaFQDN = fmt.Sprintf("%s.%s", replicaWithService, r.cr.Spec.FQDN)
 		serversDNSNames = append(serversDNSNames, replicaName, replicaWithService, replicaNamespaced, replicaFQDN)
 		zkServersCertPEM, zkServersPrivKeyPEM := cert.X509Cert(caCert, caPrivKey, serversDNSNames)
@@ -455,7 +455,7 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 		Data: serversSecretData,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "zookeeper-server-tls",
-			Namespace:   r.ns,
+			Namespace:   r.Ns,
 			Annotations: annotations,
 		},
 		Type: "Opaque",
@@ -471,33 +471,33 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 }
 
 // mkStatefulSet Create a default statefulset.
-func (r *SFUtilContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, accessMode apiv1.PersistentVolumeAccessMode, extraLabels map[string]string, openshiftUser bool, nameSuffix ...string) appsv1.StatefulSet {
+func (r *SFKubeContext) mkStatefulSet(name string, image string, storageConfig base.StorageConfig, accessMode apiv1.PersistentVolumeAccessMode, extraLabels map[string]string, openshiftUser bool, nameSuffix ...string) appsv1.StatefulSet {
 	serviceName := name
 	if nameSuffix != nil {
 		serviceName = name + "-" + nameSuffix[0]
 	}
 
 	container := base.MkContainer(name, image, openshiftUser)
-	pvc := base.MkPVC(name, r.ns, storageConfig, accessMode)
-	return base.MkStatefulset(name, r.ns, 1, serviceName, container, pvc, extraLabels)
+	pvc := base.MkPVC(name, r.Ns, storageConfig, accessMode)
+	return base.MkStatefulset(name, r.Ns, 1, serviceName, container, pvc, extraLabels)
 }
 
 // mkHeadlessStatefulSet Create a default headless statefulset.
-func (r *SFUtilContext) mkHeadlessStatefulSet(
+func (r *SFKubeContext) mkHeadlessStatefulSet(
 	name string, image string, storageConfig base.StorageConfig,
 	accessMode apiv1.PersistentVolumeAccessMode, extraLabels map[string]string, openshiftUser bool) appsv1.StatefulSet {
 	return r.mkStatefulSet(name, image, storageConfig, accessMode, extraLabels, openshiftUser, "headless")
 }
 
 // getPods return the StatefulSet pods and a bool which is true when all the pods are ready.
-func (r *SFUtilContext) getPods(dep *appsv1.StatefulSet) ([]apiv1.Pod, bool) {
+func (r *SFKubeContext) getPods(dep *appsv1.StatefulSet) ([]apiv1.Pod, bool) {
 	pods := make([]apiv1.Pod, 0)
 	if dep.Status.ReadyReplicas > 0 {
 		var podList apiv1.PodList
 		matchLabels := dep.Spec.Selector.MatchLabels
 		labels := labels.SelectorFromSet(labels.Set(matchLabels))
 		labelSelectors := client.MatchingLabelsSelector{Selector: labels}
-		if err := r.Client.List(r.ctx, &podList, labelSelectors, client.InNamespace(r.ns)); err != nil {
+		if err := r.Client.List(r.Ctx, &podList, labelSelectors, client.InNamespace(r.Ns)); err != nil {
 			panic(err.Error())
 		}
 		for _, pod := range podList.Items {
@@ -525,7 +525,7 @@ func (r *SFUtilContext) getPods(dep *appsv1.StatefulSet) ([]apiv1.Pod, bool) {
 }
 
 // IsStatefulSetReady checks if StatefulSet is ready
-func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
+func (r *SFKubeContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 	if r.DryRun {
 		return true
 	}
@@ -556,7 +556,7 @@ func (r *SFUtilContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 }
 
 // IsDeploymentReady checks if Deployment is ready
-func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
+func (r *SFKubeContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 	if r.DryRun {
 		return true
 	}
@@ -584,7 +584,7 @@ func (r *SFUtilContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 }
 
 // DebugStatefulSet disables StatefulSet main container probes
-func (r *SFUtilContext) DebugStatefulSet(name string) {
+func (r *SFKubeContext) DebugStatefulSet(name string) {
 	var dep appsv1.StatefulSet
 	if !r.GetM(name, &dep) {
 		panic("Can't find the statefulset")
@@ -599,7 +599,7 @@ func (r *SFUtilContext) DebugStatefulSet(name string) {
 }
 
 // GetConfigMap Get ConfigMap by name
-func (r *SFUtilContext) GetConfigMap(name string) (apiv1.ConfigMap, error) {
+func (r *SFKubeContext) GetConfigMap(name string) (apiv1.ConfigMap, error) {
 	var dep apiv1.ConfigMap
 	if name != "" && r.GetM(name, &dep) {
 		return dep, nil
@@ -608,7 +608,7 @@ func (r *SFUtilContext) GetConfigMap(name string) (apiv1.ConfigMap, error) {
 }
 
 // GetSecret Get Secret by name
-func (r *SFUtilContext) GetSecret(name string) (apiv1.Secret, error) {
+func (r *SFKubeContext) GetSecret(name string) (apiv1.Secret, error) {
 	var dep apiv1.Secret
 	if name != "" && r.GetM(name, &dep) {
 		return dep, nil
@@ -652,7 +652,7 @@ func compareAnnotations(current, desired map[string]string) []string {
 }
 
 // GetSecretDataFromKey Get Data from Secret Key
-func (r *SFUtilContext) GetSecretDataFromKey(name string, key string) ([]byte, error) {
+func (r *SFKubeContext) GetSecretDataFromKey(name string, key string) ([]byte, error) {
 	secret, err := r.GetSecret(name)
 	if err != nil {
 		return []byte{}, err
@@ -671,7 +671,7 @@ func (r *SFUtilContext) GetSecretDataFromKey(name string, key string) ([]byte, e
 }
 
 // getSecretData Gets Secret Data in which the Keyname is the same as the Secret Name
-func (r *SFUtilContext) getSecretData(name string) ([]byte, error) {
+func (r *SFKubeContext) getSecretData(name string) ([]byte, error) {
 	return r.GetSecretDataFromKey(name, "")
 }
 
@@ -695,10 +695,10 @@ func BaseGetStorageConfOrDefault(storageSpec sfv1.StorageSpec, storageDefault sf
 	}
 }
 
-func (r *SFUtilContext) reconcileExpandPVCs(serviceName string, newStorageSpec sfv1.StorageSpec) bool {
+func (r *SFKubeContext) reconcileExpandPVCs(serviceName string, newStorageSpec sfv1.StorageSpec) bool {
 	PVCList := &apiv1.PersistentVolumeClaimList{}
 	selector := client.MatchingLabels{"run": serviceName, "app": "sf"}
-	err := r.Client.List(r.ctx, PVCList, selector, client.InNamespace(r.ns))
+	err := r.Client.List(r.Ctx, PVCList, selector, client.InNamespace(r.Ns))
 	if err != nil {
 		logging.LogE(err, "Unable to get the list of PVC for service "+serviceName)
 		return false
@@ -715,7 +715,7 @@ func (r *SFUtilContext) reconcileExpandPVCs(serviceName string, newStorageSpec s
 	return true
 }
 
-func (r *SFUtilContext) canStorageResize(storageName *string) bool {
+func (r *SFKubeContext) canStorageResize(storageName *string) bool {
 	var sc storagev1.StorageClass
 	if storageName == nil || *storageName == "" || !r.GetM(*storageName, &sc) {
 		// This is odd, so let's assume that unknown storage class support expansion
@@ -725,7 +725,7 @@ func (r *SFUtilContext) canStorageResize(storageName *string) bool {
 }
 
 // reconcileExpandPVC  resizes the pvc with the spec
-func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.StorageSpec) bool {
+func (r *SFKubeContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.StorageSpec) bool {
 	newQTY := newStorageSpec.Size
 	if newQTY.Sign() <= 0 {
 		return true
@@ -781,7 +781,7 @@ func (r *SFUtilContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 			},
 		}
 		foundPVC.Spec.Resources = newResources
-		if err := r.Client.Update(r.ctx, foundPVC); err != nil {
+		if err := r.Client.Update(r.Ctx, foundPVC); err != nil {
 			logging.LogE(err, "Updating PVC failed for volume, name: "+pvcName)
 			return false
 		}
@@ -820,7 +820,7 @@ func (r *SFController) MkClientDNSNames(serviceName string) []string {
 
 // EnsureDiskUsagePromRule sync Prometheus Rules
 func (r *SFController) EnsureDiskUsagePromRule(ruleGroups []monitoringv1.RuleGroup) bool {
-	desiredDUPromRule := sfmonitoring.MkDiskUsagePromRule(ruleGroups, r.ns)
+	desiredDUPromRule := sfmonitoring.MkDiskUsagePromRule(ruleGroups, r.Ns)
 	currentPromRule := monitoringv1.PrometheusRule{}
 	if !r.GetM(desiredDUPromRule.Name, &currentPromRule) {
 		r.CreateR(&desiredDUPromRule)
@@ -841,7 +841,7 @@ func (r *SFController) EnsureDiskUsagePromRule(ruleGroups []monitoringv1.RuleGro
 
 // EnsureSFPodMonitor Create or Updates Software Factory Monitor for metrics
 func (r *SFController) EnsureSFPodMonitor(ports []string, selector metav1.LabelSelector) bool {
-	desiredPodMonitor := sfmonitoring.MkPodMonitor("sf-monitor", r.ns, ports, selector)
+	desiredPodMonitor := sfmonitoring.MkPodMonitor("sf-monitor", r.Ns, ports, selector)
 	// add annotations so we can handle lifecycle
 	var portsChecksumable string
 	sort.Strings(ports)
@@ -1096,7 +1096,7 @@ func (r *SFController) ensureStatefulset(storageClass *string, sts appsv1.Statef
 }
 
 // CorporateCAConfigMapExists check if the ConfigMap named "corporate-ca-certs" exists
-func (r *SFUtilContext) CorporateCAConfigMapExists() (apiv1.ConfigMap, bool) {
+func (r *SFKubeContext) CorporateCAConfigMapExists() (apiv1.ConfigMap, bool) {
 	cm, err := r.GetConfigMap(CorporateCACerts)
 	return cm, err == nil
 }
@@ -1149,6 +1149,6 @@ func RunPodCmdRaw(restConfig *rest.Config, kubeClientset *kubernetes.Clientset, 
 	return buffer, nil
 }
 
-func (r *SFUtilContext) RunPodCmd(podName string, containerName string, cmdArgs []string) (*bytes.Buffer, error) {
-	return RunPodCmdRaw(r.RESTConfig, r.ClientSet, r.ns, podName, containerName, cmdArgs)
+func (r *SFKubeContext) RunPodCmd(podName string, containerName string, cmdArgs []string) (*bytes.Buffer, error) {
+	return RunPodCmdRaw(r.RESTConfig, r.ClientSet, r.Ns, podName, containerName, cmdArgs)
 }

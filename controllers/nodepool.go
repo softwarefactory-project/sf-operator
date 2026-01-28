@@ -121,7 +121,7 @@ func createImageBuildLogForwarderSidecar(r *SFController, annotations map[string
 		},
 	}
 	builderFluentBitLabels := append(nodepoolFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: BuilderIdent})
-	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts, r.isOpenShift)
+	sidecar, storageEmptyDir := logging.CreateFluentBitSideCarContainer("diskimage-builder", builderFluentBitLabels, volumeMounts, r.IsOpenShift)
 	annotations["dib-fluent-bit.conf"] = utils.Checksum([]byte(fbForwarderConfig["fluent-bit.conf"]))
 	annotations["dib-fluent-bit-parser"] = utils.Checksum([]byte(fbForwarderConfig["parsers.conf"]))
 	return []apiv1.Volume{volume, storageEmptyDir}, sidecar
@@ -132,7 +132,7 @@ func (r *SFController) generateConfigScript() string {
 	var zkReplicas []string
 	// TODO is there a way to confirm the cluster's domain config from the operator?
 	for i := range ZookeeperReplicas {
-		zkReplicas = append(zkReplicas, fmt.Sprintf("%s-%d.%s-headless.%s.svc.cluster.local", ZookeeperIdent, i, ZookeeperIdent, r.ns))
+		zkReplicas = append(zkReplicas, fmt.Sprintf("%s-%d.%s-headless.%s.svc.cluster.local", ZookeeperIdent, i, ZookeeperIdent, r.Ns))
 	}
 	var generateConfigScript string
 	generateConfigScript, _ = utils.ParseString(
@@ -140,7 +140,7 @@ func (r *SFController) generateConfigScript() string {
 		struct {
 			Namespace         string
 			ZookeeperReplicas []string
-		}{r.ns, zkReplicas})
+		}{r.Ns, zkReplicas})
 	return generateConfigScript
 }
 
@@ -206,7 +206,7 @@ func (r *SFController) mkLoggingTemplate(serviceName string) (string, error) {
 	}
 
 	var loggingParams = logging.CreateForwarderConfigTemplateParams("nodepool."+serviceName, r.cr.Spec.FluentBitLogForwarding)
-	var loggingExtraKeys = logging.CreateBaseLoggingExtraKeys("nodepool-"+serviceName, "nodepool", serviceName, r.ns)
+	var loggingExtraKeys = logging.CreateBaseLoggingExtraKeys("nodepool-"+serviceName, "nodepool", serviceName, r.Ns)
 	// Change logLevel to what we actually want
 	loggingParams.LogLevel = string(selectedLogLevel)
 
@@ -321,7 +321,7 @@ func (r *SFController) ensureNodepoolPromRule(cloudsYaml map[string]interface{})
 	providersAPIRuleGroup := monitoring.MkPrometheusRuleGroup(
 		"providersAPI_default.rules",
 		openstackAPIRules)
-	desiredNodepoolPromRule := monitoring.MkPrometheusRuleCR(nodepoolIdent+"-default.rules", r.ns)
+	desiredNodepoolPromRule := monitoring.MkPrometheusRuleCR(nodepoolIdent+"-default.rules", r.Ns)
 	desiredNodepoolPromRule.Spec.Groups = append(
 		desiredNodepoolPromRule.Spec.Groups,
 		launcherRuleGroup,
@@ -561,7 +561,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		annotations["config-repo-info-hash"] = r.configBaseURL + r.cr.Spec.ConfigRepositoryLocation.Name
 	}
 
-	initContainer := base.MkContainer("nodepool-builder-init", base.NodepoolBuilderImage(), r.isOpenShift)
+	initContainer := base.MkContainer("nodepool-builder-init", base.NodepoolBuilderImage(), r.IsOpenShift)
 	base.SetContainerLimitsLowProfile(&initContainer)
 
 	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
@@ -595,7 +595,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	nbStorage := r.getStorageConfOrDefault(r.cr.Spec.Nodepool.Builder.Storage)
 	nb := r.mkStatefulSet(
 		BuilderIdent, base.NodepoolBuilderImage(), nbStorage,
-		apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+		apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.IsOpenShift)
 
 	nb.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nb.Spec.Template.Spec.Volumes = volumes
@@ -622,14 +622,14 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	// Append statsd exporter sidecar
 	nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers,
-		monitoring.MkStatsdExporterSideCarContainer(shortIdent, "statsd-config", relayAddress, r.isOpenShift),
+		monitoring.MkStatsdExporterSideCarContainer(shortIdent, "statsd-config", relayAddress, r.IsOpenShift),
 	)
 
-	diskUsageExporter := monitoring.MkNodeExporterSideCarContainer(BuilderIdent, nodeExporterVolumeMount, r.isOpenShift)
+	diskUsageExporter := monitoring.MkNodeExporterSideCarContainer(BuilderIdent, nodeExporterVolumeMount, r.IsOpenShift)
 	nb.Spec.Template.Spec.Containers = append(nb.Spec.Template.Spec.Containers, diskUsageExporter)
 
 	// Append image build logs HTTPD sidecar
-	buildLogsContainer := base.MkContainer("build-logs-httpd", base.HTTPDImage(), r.isOpenShift)
+	buildLogsContainer := base.MkContainer("build-logs-httpd", base.HTTPDImage(), r.IsOpenShift)
 	buildLogsContainer.VolumeMounts = []apiv1.VolumeMount{
 		{
 			Name:      BuilderIdent,
@@ -654,7 +654,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 	nb.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	svc := base.MkServicePod(
-		BuilderIdent, r.ns, BuilderIdent+"-0", []int32{buildLogsHttpdPort}, BuilderIdent, r.cr.Spec.ExtraLabels)
+		BuilderIdent, r.Ns, BuilderIdent+"-0", []int32{buildLogsHttpdPort}, BuilderIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
 
 	current, changed := r.ensureStatefulset(nbStorage.StorageClassName, nb, nil)
@@ -756,7 +756,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		annotations["config-repo-info-hash"] = r.configBaseURL + r.cr.Spec.ConfigRepositoryLocation.Name
 	}
 
-	initContainer := base.MkContainer("nodepool-launcher-init", base.NodepoolLauncherImage(), r.isOpenShift)
+	initContainer := base.MkContainer("nodepool-launcher-init", base.NodepoolLauncherImage(), r.IsOpenShift)
 	base.SetContainerLimitsLowProfile(&initContainer)
 
 	initContainer.Command = []string{"/usr/local/bin/init-container.sh"}
@@ -788,9 +788,9 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		initContainer.VolumeMounts = AppendCorporateCACertsVolumeMount(initContainer.VolumeMounts, "nodepool-launcher-corporate-ca-certs")
 	}
 
-	nl := base.MkDeployment("nodepool-launcher", r.ns, "", r.cr.Spec.ExtraLabels, r.isOpenShift)
+	nl := base.MkDeployment("nodepool-launcher", r.Ns, "", r.cr.Spec.ExtraLabels, r.IsOpenShift)
 
-	container := base.MkContainer("launcher", base.NodepoolLauncherImage(), r.isOpenShift)
+	container := base.MkContainer("launcher", base.NodepoolLauncherImage(), r.IsOpenShift)
 	container.VolumeMounts = volumeMounts
 	container.Command = []string{
 		"/usr/local/bin/dumb-init", "-c", "--",
@@ -809,7 +809,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	nl.Spec.Template.Spec.InitContainers = []apiv1.Container{initContainer}
 	nl.Spec.Template.Spec.Containers = []apiv1.Container{
 		container,
-		monitoring.MkStatsdExporterSideCarContainer(shortIdent, "statsd-config", relayAddress, r.isOpenShift)}
+		monitoring.MkStatsdExporterSideCarContainer(shortIdent, "statsd-config", relayAddress, r.IsOpenShift)}
 	nl.Spec.Template.ObjectMeta.Annotations = annotations
 	nl.Spec.Template.Spec.Containers[0].ReadinessProbe = base.MkReadinessHTTPProbe("/ready", launcherPort)
 	nl.Spec.Template.Spec.Containers[0].LivenessProbe = base.MkLiveHTTPProbe("/ready", launcherPort)
@@ -821,10 +821,10 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	if hasProviderSecret(initialVolumeMounts) {
 		// Append zuul-capacity sidecar
 		nl.Spec.Template.Spec.Containers = append(nl.Spec.Template.Spec.Containers,
-			MkZuulCapacityContainer(r.isOpenShift, corporateCMExists),
+			MkZuulCapacityContainer(r.IsOpenShift, corporateCMExists),
 		)
 		// Setup zuul-capacity service
-		zcSrv := base.MkService("zuul-capacity", r.ns, "nodepool-launcher", []int32{9100}, "zuul-capacity", r.cr.Spec.ExtraLabels)
+		zcSrv := base.MkService("zuul-capacity", r.Ns, "nodepool-launcher", []int32{9100}, "zuul-capacity", r.cr.Spec.ExtraLabels)
 		r.GetOrCreate(&zcSrv)
 	}
 	nl.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
@@ -834,7 +834,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 		return false
 	}
 
-	srv := base.MkService(LauncherIdent, r.ns, LauncherIdent, []int32{launcherPort}, LauncherIdent, r.cr.Spec.ExtraLabels)
+	srv := base.MkService(LauncherIdent, r.Ns, LauncherIdent, []int32{launcherPort}, LauncherIdent, r.cr.Spec.ExtraLabels)
 	r.GetOrCreate(&srv)
 
 	isDeploymentReady := r.IsDeploymentReady(current)

@@ -64,7 +64,7 @@ func (r *SFController) ensureLogserverPodMonitor() bool {
 		MatchLabels: labels,
 	}
 	nePort := sfmonitoring.GetTruncatedPortName(logserverIdent, sfmonitoring.NodeExporterPortNameSuffix)
-	desiredLsPodmonitor := sfmonitoring.MkPodMonitor(logserverIdent+"-monitor", r.ns, []string{nePort}, selector)
+	desiredLsPodmonitor := sfmonitoring.MkPodMonitor(logserverIdent+"-monitor", r.Ns, []string{nePort}, selector)
 	// add annotations so we can handle lifecycle
 	annotations := map[string]string{
 		"version": "1",
@@ -87,9 +87,9 @@ func (r *SFController) ensureLogserverPodMonitor() bool {
 }
 
 func (r *SFController) ensureLogserverPromRule() bool {
-	lsDiskRuleGroup := sfmonitoring.MkDiskUsageRuleGroup(r.ns, logserverIdent)
+	lsDiskRuleGroup := sfmonitoring.MkDiskUsageRuleGroup(r.Ns, logserverIdent)
 	// We keep the logserver's PromRule management here for standalone logservers
-	desiredLsPromRule := sfmonitoring.MkPrometheusRuleCR(logserverIdent+"-default.rules", r.ns)
+	desiredLsPromRule := sfmonitoring.MkPrometheusRuleCR(logserverIdent+"-default.rules", r.Ns)
 	desiredLsPromRule.Spec.Groups = append(desiredLsPromRule.Spec.Groups, lsDiskRuleGroup)
 
 	var checksumable string
@@ -137,7 +137,7 @@ func (r *SFController) DeployLogserver() bool {
 
 	// Create service exposed by logserver
 	svc := base.MkServicePod(
-		logserverIdent, r.ns, logserverIdent+"-0",
+		logserverIdent, r.Ns, logserverIdent+"-0",
 		[]int32{httpdPort, sshdPort, sfmonitoring.NodeExporterPort}, logserverIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
 
@@ -162,13 +162,13 @@ func (r *SFController) DeployLogserver() bool {
 	// Create the statefulset
 	storage := BaseGetStorageConfOrDefault(r.cr.Spec.Logserver.Storage, r.cr.Spec.StorageDefault)
 	sts := r.mkStatefulSet(logserverIdent, base.HTTPDImage(),
-		storage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.isOpenShift)
+		storage, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.IsOpenShift)
 
 	// Setup the main container
 	sts.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
 	defaultMode := &utils.Readmod
-	if !r.isOpenShift {
+	if !r.IsOpenShift {
 		// That's odd, with vanilla kubernetes, when the default mode is Read,
 		// then the logserver-sshd process fails with:
 		//  cat: /var/ssh-keys/priv: permission denied
@@ -211,9 +211,9 @@ func (r *SFController) DeployLogserver() bool {
 	}
 
 	// Setup the sidecar container for sshd
-	sshdContainer := base.MkContainer(sshdPortName, base.SSHDImage(), r.isOpenShift)
+	sshdContainer := base.MkContainer(sshdPortName, base.SSHDImage(), r.IsOpenShift)
 	sshdContainer.Command = []string{"bash", "/conf/run.sh"}
-	if !r.isOpenShift {
+	if !r.IsOpenShift {
 		sshdContainer.SecurityContext.RunAsUser = ptr.To[int64](1000)
 		sshdContainer.SecurityContext.RunAsGroup = ptr.To[int64](1000)
 	}
@@ -267,7 +267,7 @@ func (r *SFController) DeployLogserver() bool {
 		loopDelay = 3600
 	}
 
-	purgelogsContainer := base.MkContainer(purgelogIdent, base.PurgelogsImage(), r.isOpenShift)
+	purgelogsContainer := base.MkContainer(purgelogIdent, base.PurgelogsImage(), r.IsOpenShift)
 	purgelogsContainer.Command = []string{
 		"/usr/local/bin/purgelogs",
 		"--retention-days",
@@ -293,7 +293,7 @@ func (r *SFController) DeployLogserver() bool {
 		},
 	}
 
-	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(logserverIdent, volumeMountsStatsExporter, r.isOpenShift)
+	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(logserverIdent, volumeMountsStatsExporter, r.IsOpenShift)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
 
 	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
