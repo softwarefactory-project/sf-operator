@@ -1,41 +1,20 @@
 ---
-- name: "Update CRD"
-  when: mode == 'olm'
-  block:
-    - name: "Update SoftwareFactory resource (using k8s module)"
-      kubernetes.core.k8s:
-        kubeconfig: "{{ kubeconfig }}"
-        definition:
-          kind: "{{ cr_kind }}"
-          namespace: "{{ cr_namespace }}"
-          metadata:
-            name: "{{ cr_name }}"
-            namespace: "{{ cr_namespace }}"
-          spec: "{{ cr_spec }}"
+- name: read current crd
+  ansible.builtin.slurp:
+    src: "/tmp/current_cr.yaml"
+  register: base_cr
 
-    - ansible.builtin.include_role:
-        name: "health-check/check-sf-resource-ready"
-      when: check_sf_resource_ready | default(true)
+- name: merge the new cr
+  ansible.builtin.copy:
+    content: "{{ base_cr['content'] | b64decode | from_yaml | combine(new_cr, recursive=true) }}"
+    dest: "/tmp/current_cr.yaml"
+  vars:
+    new_cr:
+      spec: "{{ cr_spec }}"
 
-- name: "Update standalone"
-  when: mode == 'standalone'
-  block:
-    - name: read current crd
-      ansible.builtin.slurp:
-        src: "/tmp/current_cr.yaml"
-      register: base_cr
-
-    - name: merge the new cr
-      ansible.builtin.copy:
-        content: "{{ base_cr['content'] | b64decode | from_yaml | combine(new_cr, recursive=true) }}"
-        dest: "/tmp/current_cr.yaml"
-      vars:
-        new_cr:
-          spec: "{{ cr_spec }}"
-
-    - name: run the operator in standalone mode
-      ansible.builtin.include_role:
-        name: run-operator-standalone
-      vars:
-        cr_path: /tmp/current_cr.yaml
-        glue: false
+- name: run the operator in standalone mode
+  ansible.builtin.include_role:
+    name: run-operator-standalone
+  vars:
+    cr_path: /tmp/current_cr.yaml
+    glue: false

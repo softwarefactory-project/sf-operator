@@ -38,23 +38,12 @@
     - zuul-keystore-password
 
 - name: "Deploy the external Zuul executor"
-  when: mode == 'standalone'
   ansible.builtin.include_role:
     name: run-operator-standalone
   vars:
     cr_path: playbooks/files/ext-ze.yaml
-    context: ext-ze
+    cli_global_flags: "--namespace ext-ze"
     log_file: sf-operator_ext-ze.log
-    current_cr_path: /tmp/current_cr_ext-ze.yaml
-
-- name: "Deploy the external Zuul executor"
-  when: mode == 'olm'
-  ansible.builtin.include_role:
-    name: apply-custom-resources
-  vars:
-    cr_path: playbooks/files/ext-ze.yaml
-    namespace: ext-ze
-    cr_name: my-ext-ze
 
 ### Real proof that external executor is running as expected
 
@@ -82,3 +71,4 @@
       zuul:
         executor:
           enabled: true
+          standalone: null

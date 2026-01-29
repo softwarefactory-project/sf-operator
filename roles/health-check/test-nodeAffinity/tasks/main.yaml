@@ -22,7 +22,6 @@
   ansible.builtin.include_role:
     name: update-custom-resource
   vars:
-    mode: standalone
     cr_spec:
       storageDefault:
         nodeAffinity: true

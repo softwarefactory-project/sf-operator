@@ -10,10 +10,3 @@
     content: "{{ yaml_data | combine({'spec': {'hostaliases': hostaliases }}, recursive=True) | to_nice_yaml(indent=2) }}"
     dest: "{{ yaml_file }}"
     mode: '0644'
-
-- name: Update contexts.ci and add hostAliases
-  when: "'contexts' in yaml_data and 'ci' in yaml_data.contexts"
-  ansible.builtin.copy:
-    content: "{{ yaml_data | combine({'contexts': {'ci': {'hostaliases': hostaliases }}}, recursive=True) | to_nice_yaml(indent=2) }}"
-    dest: "{{ yaml_file }}"
-    mode: '0644'

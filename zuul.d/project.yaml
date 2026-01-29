@@ -1,29 +1,27 @@
 - project:
     check:
       jobs:
-        - sf-operator-upgrade-minikube
-        - sf-operator-minikube
+        - sf-operator-minikube-integration
+        - sf-operator-minikube-upgrade
+        - sf-operator-microshift-integration
+        - sf-operator-microshift-upgrade
         - sf-operator-vuln-check
         - sf-operator-ansible-lint
         - sf-operator-go-test
         - sf-operator-doc-check
-        - sf-operator-olm-rhel
-        - sf-operator-upgrade-rhel
     gate:
       fail-fast: true
       jobs:
-        - sf-operator-minikube
+        - sf-operator-minikube-integration
+        - sf-operator-minikube-upgrade
+        - sf-operator-microshift-integration
+        - sf-operator-microshift-upgrade
         - sf-operator-vuln-check
         - sf-operator-ansible-lint
         - sf-operator-go-test
         - sf-operator-doc-check
-        - sf-operator-olm-rhel
-        - sf-operator-upgrade-rhel
-    release:
-      jobs:
-        - sf-operator-publish-olm-bundle-image
     periodic:
       jobs:
-        - sf-operator-olm-rhel
-        - sf-operator-upgrade-rhel
         - sf-operator-minikube
+        - sf-operator-microshift-integration
+        - sf-operator-microshift-upgrade

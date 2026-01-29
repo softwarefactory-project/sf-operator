@@ -6,10 +6,8 @@
   loop:
     - name: setup-variables
     - name: run-operator-standalone
-      when: "{{ mode == 'standalone' }}"
     - name: setup-nodepool-ns
     - name: run-operator-standalone
-      when: "{{ mode == 'standalone' }}"
     - name: utils/manage-hosts
     - name: utils/get-gerrit-admin-user-api-key
     - name: utils/config-repo-reset
@@ -39,17 +37,13 @@
     - name: test-nodepool-launcher-pod
     - name: test-volumestats-sidecar
     - name: validate-purgelogs
-      when: "{{ mode == 'olm' }}"
     - name: zuul-client-api
     - name: zuul-client-from-zuul-pod
     - name: test-external-ze
     - name: test-log-forwarding
     - name: test-nodeAffinity
-      when: "{{ mode == 'standalone' }}"
     - name: test-dry-run-lifecycle
-      when: "{{ mode == 'standalone' }}"
     - name: test-standalone-update
-      when: "{{ mode == 'standalone' }}"
     # Always ensure this test is done last, since whenever a reconcile is done with
     # the sample my-sf.yaml CR as base, it'll attempt to shrink storage back to 2Gi.
     - name: expand-volume

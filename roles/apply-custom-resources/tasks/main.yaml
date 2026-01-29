@@ -1,8 +1,0 @@
----
-- name: Apply the custom resources
-  ansible.builtin.command: kubectl -n {{ namespace }} apply -f {{ cr_path }}
-  args:
-    chdir: "{{ zuul.project.src_dir }}"
-
-- ansible.builtin.include_role:
-    name: "health-check/check-sf-resource-ready"

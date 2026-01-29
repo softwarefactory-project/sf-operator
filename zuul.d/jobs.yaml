@@ -1,62 +1,4 @@
 ---
-- semaphore:
-    name: sf-operator-publish-semaphore
-    max: 1
-
-# Base CI job
-- job:
-    name: sf-operator-rhel
-    parent: sf-operator-microshift-rhel
-    pre-run: &pre-run
-      - playbooks/health-check/dstat-pre.yaml
-    post-run: &post-run
-      - playbooks/health-check/dstat-post.yaml
-      - playbooks/post.yaml
-    timeout: 7200
-    run: playbooks/main.yaml
-    abstract: true
-    irrelevant-files: &irrelevant-files
-      - ".*.md$"
-      - "doc/.*"
-      - ".github/.*"
-    vars: &vars
-      logreduce_optin: true
-      # post tasks artifacts directory
-      output_logs_dir: ~/zuul-output/logs
-      inject_dev_ssh_keys: true
-
-- secret:
-    name: zuul_quay_sf
-    data:
-      registry: "quay.io"
-      username: "software-factory+zuul"
-      password: !encrypted/pkcs1-oaep
-        - kysFA16AGr8xwIw4dfax+1TXRLoi2DO4LDKp6SMUYlnWHIcykfjnaduOpdEY6yc6AWqsF
-          274Bm5qSGnEPRlDgGSPWz5kJKeyCnZgK9BVqkSBI8Ks6BdQPzGaOuMXOi3zIuuR9i2VYy
-          YScM3WPfVeSmilBn7k2P5YU1gLcwubbYUT4G7OHIIFxIise+2pGNbZlN7yGtlefdK9cMi
-          jOoq1cE9KpeJLOJFO1PbqteVMqMzMDhwS42HkBRailKb9UiHAlvMGjIFWvKESvTwhU+0b
-          Fx16NCrNYvk7mESHoCkn9TG23yEoNhCX7CozOlRuzxrn4xQBZWw8EbCWvBFOL3+FMyjpc
-          gRPOFWLVOk9K+4abjySN+EfWn+Ktfqd0WyYI3zr7kBJRSj/qcdiQoi8GwppbEXp9hG5B3
-          /fJrudyJUNhcWOPufZbuNOPH8OIFGsSg0s90qSKmM70ObsktMXYqeKIrfRwaMBAnoYukq
-          WhsJAHl4xKCip9xl4yguf4Ojt1KharJtvpNhalKNymN1ApztcuZm+ynZxsNMlHZPzWtxN
-          zS2m/j9+5pRBx4wHSNrwB+aSSHd++B8qv+ykjgH3sCENe/AS6vp0+PXEKKXYxz0fSy8jc
-          mv1Ir3I4Ooql0op1zl56c2tgdkguRH4koVYlP12Mj6+obxBmJ2LDnU17c6yQIg=
-
-# Images publication job
-- job:
-    name: sf-operator-publish-olm-bundle-image
-    description: Publish operator's olm bundle image
-    semaphore: sf-operator-publish-semaphore
-    run: playbooks/publish.yaml
-    timeout: 1200
-    nodeset:
-      nodes:
-        name: controller
-        label: cloud-centos-9
-    secrets:
-      - name: final_registry_secret
-        secret: zuul_quay_sf
-
 # Linting jobs
 - job:
     name: sf-operator-ansible-lint
@@ -89,7 +31,10 @@
     description: Run Go unit and integration tests via 'make test'
     pre-run: playbooks/install-golang.yaml
     timeout: 900
-    irrelevant-files: *irrelevant-files
+    irrelevant-files: &irrelevant-files
+      - ".*.md$"
+      - "doc/.*"
+      - ".github/.*"
     nodeset:
       nodes:
         - name: controller
@@ -115,24 +60,39 @@
 
 # sf-operator on microshift jobs
 - job:
-    name: sf-operator-olm-rhel
-    description: Validates a sf-operator deployment via OLM on RHEL
-    parent: sf-operator-rhel
+    name: sf-operator-microshift
+    parent: sf-operator-microshift-rhel
+    pre-run: &pre-run
+      - playbooks/health-check/dstat-pre.yaml
+    post-run: &post-run
+      - playbooks/health-check/dstat-post.yaml
+      - playbooks/post.yaml
+    timeout: 7200
+    abstract: true
+    irrelevant-files: *irrelevant-files
     vars:
-      mode: "olm"
+      # post tasks artifacts directory
+      output_logs_dir: ~/zuul-output/logs
+      inject_dev_ssh_keys: true
 
 - job:
-    name: sf-operator-upgrade-rhel
-    description: Validates a sf-operator upgrade via OLM on RHEL
-    parent: sf-operator-rhel
+    name: sf-operator-microshift-upgrade
+    description: Validates a sf-operator upgrade on microshift
+    parent: sf-operator-microshift
     run: playbooks/upgrade.yaml
     vars:
-      mode: "olm"
+      sf_operator_stable_version: v0.0.64
+
+- job:
+    name: sf-operator-microshift-integration
+    parent: sf-operator-microshift
+    run: playbooks/run-all-tests.yaml
 
 # minikube sf-operator jobs
 - job:
-    name: minikube-env
+    name: sf-operator-minikube
     abstract: true
+    irrelevant-files: *irrelevant-files
     pre-run:
       - playbooks/install-minikube.yaml
       - playbooks/prepare-minikube.yaml
@@ -148,18 +108,15 @@
           label: cloud-centos-9-big
 
 - job:
-    name: sf-operator-minikube
-    parent: minikube-env
-    irrelevant-files: *irrelevant-files
+    name: sf-operator-minikube-integration
+    parent: sf-operator-minikube
     run:
       - playbooks/run-deploy.yaml
       - playbooks/run-tests.yaml
 
 - job:
-    name: sf-operator-upgrade-minikube
-    parent: minikube-env
-    irrelevant-files: *irrelevant-files
-    run:
-      - playbooks/minikube-upgrade.yaml
+    name: sf-operator-minikube-upgrade
+    parent: sf-operator-minikube
+    run: playbooks/minikube-upgrade.yaml
     vars:
       with_loki: false

@@ -1,3 +1,0 @@
----
-microshift_host: "microshift.sfci"
-sf_operator_quay_url: https://quay.io/api/v1/repository/software-factory/sf-operator-bundle/tag/?onlyActivetags=true

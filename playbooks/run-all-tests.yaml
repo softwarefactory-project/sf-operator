@@ -22,22 +22,9 @@
       loop:
         - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/ext-ze.yaml"
         - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/sf.yaml"
-        - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/sf-minimal.yaml"
       loop_control:
         loop_var: yaml_file
 
-    - name: Deploy last stable version
-      command: ./hack/deploy-version.sh "{{ sf_operator_stable_version }}"
-      args:
-        chdir: "{{ zuul.project.src_dir }}"
-
-    - name: Deploy current version
-      ansible.builtin.include_role:
-        name: run-operator-standalone
-      vars:
-        glue: false
-        cr_path: playbooks/files/sf-minimal.yaml
-
-    - name: Upgrade operator and run tests
+    - name: Run tests
       ansible.builtin.include_role:
         name: run-tests
