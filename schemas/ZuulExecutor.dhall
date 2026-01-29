@@ -1,5 +1,5 @@
 { Type =
-    { TerminationGracePeriodSeconds : Natural
+    { TerminationGracePeriodSeconds : Optional Natural
     , diskLimitPerJob : Optional Integer
     , enabled : Optional Bool
     , limits : Optional (./Limits.dhall).Type
@@ -9,11 +9,13 @@
           { controlPlanePublicGSHostname : Text
           , controlPlanePublicZKHostname : Text
           , publicHostname : Text
+          , controlPlanePublicZKHostnames : Optional (List Text)
           }
     , storage : Optional (./Storage.dhall).Type
     }
 , default =
-  { diskLimitPerJob = None Integer
+  { TerminationGracePeriodSeconds = None Natural
+  , diskLimitPerJob = None Integer
   , enabled = None Bool
   , limits = None (./Limits.dhall).Type
   , logLevel = None Text
@@ -22,6 +24,7 @@
         { controlPlanePublicGSHostname : Text
         , controlPlanePublicZKHostname : Text
         , publicHostname : Text
+        , controlPlanePublicZKHostnames : Optional (List Text)
         }
   , storage = None (./Storage.dhall).Type
   }

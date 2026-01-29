@@ -76,6 +76,8 @@ splitModels hierarchy def
         -- The top level .spec attribute is moved into SoftwareFactorySpec
         [ModelName "sf.softwarefactory-project.io.SoftwareFactory", ModelName "spec"] ->
             Just $ ModelName "Spec"
+        -- Adapt LogJuicer storage
+        [ModelName "Spec", ModelName "logjuicer"] -> Just $ ModelName "Storage"
         -- Spec attributes are moved into dedicated models
         [ModelName "Spec", ModelName attr] ->
             Just $ ModelName $ adjustName attr
