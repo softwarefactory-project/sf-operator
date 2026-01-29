@@ -54,6 +54,8 @@ func deployCmd(kmd *cobra.Command, args []string) {
 	ns, _ := kmd.Flags().GetString("namespace")
 	kubeContext, _ := kmd.Flags().GetString("kube-context")
 
+	remotePath, _ := kmd.Flags().GetString("remote")
+
 	crPath := args[0]
 
 	if crPath == "" {
@@ -61,7 +63,7 @@ func deployCmd(kmd *cobra.Command, args []string) {
 		fmt.Printf("usage: deploy <path-to-cr>\n")
 		os.Exit(1)
 	}
-	controllers.Standalone(ns, kubeContext, dryRun, crPath)
+	controllers.Standalone(ns, kubeContext, dryRun, crPath, remotePath)
 }
 
 func main() {

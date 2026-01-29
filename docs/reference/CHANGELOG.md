@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- A new "--remote" argument is available for the deploy command to manage external executor config:
+    sf-operator apply ./prod/sf.yaml --remote prod/executors/$hostname/sf.yaml
+  It is no longer necessary to manually synchronize the zuul ssh key or the zuul connection secrets for example.
+
 ### Changed
 
 - A file name kubeconfig next to the resource file will be used instead of the global config.

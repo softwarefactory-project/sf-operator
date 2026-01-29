@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -151,7 +152,16 @@ func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection 
 	}
 }
 
-func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string) error {
+func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string, remotePath string) error {
+	var copyFrom string
+	if remotePath != "" {
+		// When deploying a remote executor, we need to copy some configuration from
+		// the control plane:
+		copyFrom = crPath
+		// … and the resources to be deployed is the remote one:
+		crPath = remotePath
+	}
+
 	var sf sfv1.SoftwareFactory
 	sf, err := ReadSFYAML(crPath)
 	if err != nil {
@@ -171,6 +181,17 @@ func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string) er
 	if err != nil {
 		ctrl.Log.Error(err, "unable to create a client")
 		os.Exit(1)
+	}
+
+	if copyFrom != "" {
+		if sf.Spec.Zuul.Executor.Standalone == nil {
+			fmt.Printf("%s: The remote CR is not standalone\n", remotePath)
+			os.Exit(1)
+		}
+		if err := sfkctx.setupRemoteExecutorConfig(copyFrom, sf); err != nil {
+			ctrl.Log.Error(err, "unable to setup remote executor config")
+			os.Exit(1)
+		}
 	}
 
 	restClient := getPodRESTClient(sfkctx.RESTConfig)
