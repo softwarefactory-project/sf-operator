@@ -150,7 +150,14 @@ func Main(ns string, metricsAddr string, probeAddr string, enableLeaderElection 
 	}
 }
 
-func Standalone(sf sfv1.SoftwareFactory, cliNS string, kubeContext string, dryRun bool) error {
+func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string) error {
+	var sf sfv1.SoftwareFactory
+	sf, err := ReadSFYAML(crPath)
+	if err != nil {
+		ctrl.Log.Error(err, "Could not read resource")
+		os.Exit(1)
+	}
+
 	sfkctx, err := MkSFKubeContext(cliNS, kubeContext)
 	ns := sfkctx.Ns
 	if err != nil {

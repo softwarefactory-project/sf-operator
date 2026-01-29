@@ -50,19 +50,18 @@ func operatorCmd(kmd *cobra.Command, args []string) {
 
 func deployCmd(kmd *cobra.Command, args []string) {
 	cliutils.SetLogger(kmd)
-	var sfResource string
 
 	ns, _ := kmd.Flags().GetString("namespace")
 	kubeContext, _ := kmd.Flags().GetString("kube-context")
 
-	sfResource = args[0]
+	crPath := args[0]
 
-	if sfResource == "" {
+	if crPath == "" {
 		fmt.Printf("Missing CR to deploy!\n")
 		fmt.Printf("usage: deploy <path-to-cr>\n")
 		os.Exit(1)
 	}
-	dev.ApplyStandalone(ns, sfResource, kubeContext, dryRun)
+	controllers.Standalone(ns, kubeContext, dryRun, crPath)
 }
 
 func main() {
