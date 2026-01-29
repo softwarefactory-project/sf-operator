@@ -1,6 +1,6 @@
 module github.com/softwarefactory-project/sf-operator
 
-go 1.24.11
+go 1.24.12
 
 require (
 	github.com/fatih/color v1.17.0
