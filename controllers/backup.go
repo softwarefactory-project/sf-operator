@@ -103,7 +103,7 @@ func (r *SFKubeContext) createZuulKeypairBackup(backupDir string) error {
 		"/tmp/zuul-backup",
 	}
 
-	WaitFor(r.EnsureKazooPod)
+	WaitFor(r.EnsureKazooPod, false)
 	defer r.DeleteKazooPod()
 
 	// Execute command for backup
@@ -291,13 +291,13 @@ func (r *SFKubeContext) DoRestore(backupDir string, cr sfv1.SoftwareFactory) err
 	sfCtrl.DeployMariadb()
 	sfCtrl.DeployZookeeper()
 	ctrl.Log.Info("Waiting for backend services...")
-	WaitFor(sfCtrl.DeployMariadb)
-	WaitFor(sfCtrl.DeployZookeeper)
+	WaitFor(sfCtrl.DeployMariadb, false)
+	WaitFor(sfCtrl.DeployZookeeper, false)
 
 	sfCtrl.DeployZuulSecrets()
 	sfCtrl.EnsureZuulConfigSecret(false)
 	sfCtrl.EnsureToolingVolume()
-	WaitFor(sfCtrl.EnsureKazooPod)
+	WaitFor(sfCtrl.EnsureKazooPod, false)
 
 	if err := r.restoreZuul(backupDir); err != nil {
 		return err
@@ -310,7 +310,7 @@ func (r *SFKubeContext) DoRestore(backupDir string, cr sfv1.SoftwareFactory) err
 
 	// Run deployment to ensure everything is running as expected.
 	if err := r.StandaloneReconcile(cr); err != nil {
-		ctrl.Log.Error(err, "Reconcille failed")
+		ctrl.Log.Error(err, "Reconcile failed")
 		return err
 	}
 	return nil

@@ -23,7 +23,7 @@ var rotateProjectsPrivateKeys string
 
 func (r *SFKubeContext) RotateProjectPrivateKey(sshKey string, unixAge int64, authorName string, authorMail string) error {
 	var err error
-	WaitFor(r.EnsureKazooPod)
+	WaitFor(r.EnsureKazooPod, false)
 
 	// Clear config state to ensure the internal git is refreshed
 	r.ClearConfigJob()
@@ -129,7 +129,7 @@ func (r *SFKubeContext) rotateKeystorePassword() error {
 	oldPassword := string(secret.Data["zuul-keystore-password"])
 	newPassword := string(tmpSecret.Data["zuul-keystore-password-new"])
 
-	WaitFor(r.EnsureKazooPod)
+	WaitFor(r.EnsureKazooPod, false)
 	defer r.DeleteKazooPod()
 
 	// Perform rotation

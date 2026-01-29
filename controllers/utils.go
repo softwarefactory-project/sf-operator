@@ -388,9 +388,11 @@ func (r *SFKubeContext) EnsureService(service *apiv1.Service) {
 // - self-signed root certificate authority
 // - client certificate for zookeeper, localhost (so we can use zkClient locally from the pod)
 // - server certificates for each zookeeper replica
-func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, ZookeeperReplicas int) {
+// returns a boolean set to true if certs changed, meaning we need to nuke clients.
+func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, ZookeeperReplicas int) bool {
 	annotations := map[string]string{
-		"serial": "2",
+		// Bump to 3: trigger a cert regeneration with the updated zk replica count
+		"serial": "3",
 	}
 
 	secretReady := func(name string) bool {
@@ -399,7 +401,7 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 	}
 
 	if secretReady("zookeeper-client-tls") && secretReady("zookeeper-server-tls") {
-		return
+		return false
 	}
 
 	// Ensure any previous secret are removed, this is because Secret Update doesn't work as-is (Type is immutable, and removing Data keys fails, for example:
@@ -464,6 +466,7 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 		},
 	}
 	r.CreateR(&zkServersCertificateSecret)
+	return true
 }
 
 // mkStatefulSet Create a default statefulset.
@@ -887,6 +890,20 @@ func (r *SFController) ensureDeployment(dep appsv1.Deployment, desiredReplicaCou
 	return &current, false
 }
 
+func (r *SFController) checkStatefulsetReplicaCount(sts appsv1.StatefulSet, desiredReplicaCount *int32) bool {
+	current := appsv1.StatefulSet{}
+	name := sts.ObjectMeta.Name
+	if r.GetOrDie(name, &current) {
+		currentReplicas := int32(1)
+		if current.Spec.Replicas != nil {
+			currentReplicas = *current.Spec.Replicas
+		}
+		return currentReplicas == *desiredReplicaCount
+	} else {
+		return false
+	}
+}
+
 // ensureStatefulSet ensures that a StatefulSet object is as expected.
 // The function takes the expected StatefulSet and returns a tuple with the current object on
 // the cluster and a boolean indicating whether the function performed a create or update on the object.
@@ -979,24 +996,32 @@ func AppendToolingVolume(volumeMounts []apiv1.Volume) []apiv1.Volume {
 	return append(volumeMounts, mkToolingVolume())
 }
 
-func RunPodCmdRaw(restConfig *rest.Config, kubeClientset *kubernetes.Clientset, namespace string, podName string, containerName string, cmdArgs []string) (*bytes.Buffer, error) {
+func RunPodCmdRaw(restConfig *rest.Config, kubeClientset *kubernetes.Clientset, namespace string, podName string, containerName string, cmdArgs []string, stdinBuffer *bytes.Buffer) (*bytes.Buffer, error) {
 	buffer := &bytes.Buffer{}
 	errorBuffer := &bytes.Buffer{}
+	podExecOptions := apiv1.PodExecOptions{
+		Container: containerName,
+		Command:   cmdArgs,
+		Stdin:     false,
+		Stdout:    true,
+		Stderr:    true,
+	}
+	if stdinBuffer != nil {
+		podExecOptions.Stdin = true
+	}
 	request := kubeClientset.CoreV1().RESTClient().Post().Resource("Pods").Namespace(namespace).Name(podName).SubResource("exec").VersionedParams(
-		&apiv1.PodExecOptions{
-			Container: containerName,
-			Command:   cmdArgs,
-			Stdin:     false,
-			Stdout:    true,
-			Stderr:    true,
-		},
+		&podExecOptions,
 		scheme.ParameterCodec,
 	)
 	exec, _ := remotecommand.NewSPDYExecutor(restConfig, "POST", request.URL())
-	err := exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
+	streamOptions := remotecommand.StreamOptions{
 		Stdout: buffer,
 		Stderr: errorBuffer,
-	})
+	}
+	if stdinBuffer != nil {
+		streamOptions.Stdin = stdinBuffer
+	}
+	err := exec.StreamWithContext(context.Background(), streamOptions)
 	if err != nil {
 		errMsg := fmt.Sprintf("Command \"%s\" [Pod: %s - Container: %s] failed with the following stderr: %s",
 			strings.Join(cmdArgs, " "), podName, containerName, errorBuffer.String())
@@ -1007,10 +1032,18 @@ func RunPodCmdRaw(restConfig *rest.Config, kubeClientset *kubernetes.Clientset, 
 }
 
 func (r *SFKubeContext) RunPodCmd(podName string, containerName string, cmdArgs []string) (*bytes.Buffer, error) {
-	return RunPodCmdRaw(r.RESTConfig, r.ClientSet, r.Ns, podName, containerName, cmdArgs)
+	return RunPodCmdRaw(r.RESTConfig, r.ClientSet, r.Ns, podName, containerName, cmdArgs, nil)
 }
 
-func WaitFor(ensureFun func() bool) bool {
+func (r *SFKubeContext) CopyFileToContainer(podName string, containerName string, dest string, data *bytes.Buffer) (*bytes.Buffer, error) {
+	cmdArgs := []string{
+		"tee",
+		dest,
+	}
+	return RunPodCmdRaw(r.RESTConfig, r.ClientSet, r.Ns, podName, containerName, cmdArgs, data)
+}
+
+func WaitFor(ensureFun func() bool, linear bool) bool {
 	attempt := 0
 	for {
 		if ensureFun() {
@@ -1020,6 +1053,10 @@ func WaitFor(ensureFun func() bool) bool {
 		if attempt > 300 {
 			return false
 		}
-		time.Sleep(time.Second)
+		duration := time.Second * time.Duration(1)
+		if linear {
+			duration = time.Second * time.Duration(attempt)
+		}
+		time.Sleep(duration)
 	}
 }

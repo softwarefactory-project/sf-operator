@@ -4,14 +4,19 @@
 package controllers
 
 import (
+	"bytes"
 	_ "embed"
 	"fmt"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	logging "github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -35,7 +40,7 @@ const zkElectionPort = 3888
 const zkServerPort = 2888
 
 const ZookeeperIdent = "zookeeper"
-const ZookeeperReplicas = 1
+const ZookeeperReplicas = 3
 
 const zkPIMountPath = "/config-scripts"
 
@@ -73,7 +78,11 @@ func createZKLogForwarderSidecar(r *SFController, annotations map[string]string)
 
 func (r *SFController) DeployZookeeper() bool {
 	// Setup the Certificate Authority for Zookeeper/Zuul/Nodepool usage
-	r.EnsureZookeeperCertificates(ZookeeperIdent, ZookeeperReplicas)
+	hasChanged := r.EnsureZookeeperCertificates(ZookeeperIdent, ZookeeperReplicas)
+	if hasChanged {
+		logging.LogI("Zookeeper certs were updated, nuking ZK clients...")
+		r.nukeZKClients()
+	}
 
 	cmData := make(map[string]string)
 	cmData["probe.sh"] = zookeeperProbe
@@ -241,7 +250,44 @@ func (r *SFController) DeployZookeeper() bool {
 	zk.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	replicaCount := int32(ZookeeperReplicas)
+
+	// If we are bumping from 1 to 3 replicas we need to backup zookeeper first.
+	// We also need to do it **only** if the zookeeper statefulset is present.
+	// TODO(v0.0.67 or above) The section below should be removed once the replica bump is effective.
+	crt := appsv1.StatefulSet{}
+	if r.GetOrDie(zk.ObjectMeta.Name, &crt) && !r.checkStatefulsetReplicaCount(zk, &replicaCount) {
+		logging.LogI("Zookeeper data must be dumped before replica count increase. Fetching data...")
+		buff, errDump := r.dumpAllZKData()
+		if errDump != nil {
+			logging.LogE(errDump, "Please fix issue with dumping process before reconciling SF resource")
+			os.Exit(1)
+		}
+		logging.LogI("Data successfully dumped. Waiting for zookeeper ensemble to be up...")
+		if isZookeeperUp := WaitFor(func() bool {
+			sts, changed := r.ensureStatefulset(zk, &replicaCount)
+			// wait until sts has been applied, then for all pods to be up
+			if changed {
+				return false
+			}
+			readyPods := sts.Status.AvailableReplicas
+			return readyPods == replicaCount
+		}, true); !isZookeeperUp {
+			panic("Zookeeper statefulset failed to deploy. Check kubectl logs to find out why")
+		}
+
+		logging.LogI("Re-injecting original data into all replicas...")
+		saved := make([]byte, len(buff.Bytes()))
+		copy(saved, buff.Bytes())
+		if err := r.restoreAllZKData(buff.Bytes()); err != nil {
+			logging.LogE(err, "A copy of the original snapshot will be saved to `/tmp/zk-snapshot` before exiting.")
+			os.WriteFile("/tmp/zk-snapshot", saved, 0644)
+			os.Exit(1)
+		}
+	}
+	// TODO remove above
+
 	current, changed := r.ensureStatefulset(zk, &replicaCount)
+
 	if changed {
 		return false
 	}
@@ -264,4 +310,92 @@ func (r *SFController) DeployZookeeper() bool {
 	conds.UpdateConditions(&r.cr.Status.Conditions, ZookeeperIdent, isReady)
 
 	return isReady
+}
+
+func (r *SFController) dumpAllZKData() (*bytes.Buffer, error) {
+	// TODO the admin server is running with default auth values! This is however not a big issue since the admin port is
+	// not available from outside of the container.
+	cmdArgs := []string{
+		"curl",
+		"-s",
+		"-H",
+		"Authorization: digest admin:admin",
+		"http://localhost:8080/commands/snapshot?streaming=true",
+		"--output",
+		"-",
+	}
+	return r.RunPodCmd(ZookeeperIdent+"-0", ZookeeperIdent, cmdArgs)
+}
+
+func (r *SFController) restoreAllZKData(data []byte) error {
+	cmdArgs := []string{
+		"curl",
+		"-s",
+		"-H",
+		"Authorization: digest admin:admin",
+		"-H",
+		"Content-Type: application/octet-stream",
+		"-X",
+		"POST",
+		"http://localhost:8080/commands/restore",
+		"--data-binary",
+		"@/tmp/backup",
+	}
+
+	for i := range ZookeeperReplicas {
+		var pod = fmt.Sprintf("%s-%d", ZookeeperIdent, i)
+		var errCopy error
+		copyDone := false
+		copyAttempt := 0
+		// Give some time to the container to be ready
+		for !copyDone {
+			copyAttempt += 1
+			// There's no "seek" for bytes.buffers and the byte slice is fully consumed each time
+			// we read the buffer, so we have to recreate a new buffer with a copy of the data.
+			buffer := bytes.NewBuffer(data)
+			_, errCopy = r.CopyFileToContainer(pod, ZookeeperIdent, "/tmp/backup", buffer)
+			if errCopy != nil {
+				logging.LogE(errCopy, fmt.Sprintf("Attempt %d/60 for pod %s...", copyAttempt, pod))
+				time.Sleep(time.Second)
+			} else {
+				copyDone = true
+			}
+			if copyAttempt >= 60 {
+				copyDone = true
+			}
+		}
+		if errCopy != nil {
+			return errCopy
+		}
+		logging.LogI(fmt.Sprintf("Pod %s dump copy operation complete", pod))
+		// Zookeeper-0 might not be ready to listen on the admin interface, give it some time
+		attempt := 0
+		stdoutFlag := ""
+		// the restore operation returns a json like
+		// {
+		//		"last_zxid": 1234,
+		//		"command": "restore",
+		//		"error": null,
+		// }
+		// the "error" field is unreliable and can be null despite a failure, for example when attempting
+		// a restore during a rate limiting period (5 mins default, see https://zookeeper.apache.org/doc/current/zookeeperSnapshotAndRestore.html)
+		// so "last_zxid" is a much better indicator that the restore transaction succeeded.
+		for !strings.Contains(stdoutFlag, "last_zxid") {
+			attempt += 1
+			stdout, err := r.RunPodCmd(pod, ZookeeperIdent, cmdArgs)
+			stdoutFlag = stdout.String()
+			if err != nil {
+				logging.LogE(err, fmt.Sprintf("Pod %s restore operation failed (attempt %d/50): %s, retrying...", pod, attempt, stdoutFlag))
+			} else {
+				logging.LogD(fmt.Sprintf("Pod %s restore operation returned: %s", pod, stdoutFlag))
+			}
+			if attempt > 50 {
+				panic(fmt.Sprintf("pod %s is not ready", pod))
+			}
+			time.Sleep(time.Second * time.Duration(attempt))
+		}
+		r.RunPodCmd(pod, ZookeeperIdent, []string{"rm", "/tmp/backup"})
+		logging.LogI(fmt.Sprintf("Pod %s restore operation operation complete", pod))
+	}
+	return nil
 }

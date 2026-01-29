@@ -20,11 +20,3 @@ func zuulConfMatchSecret() string {
 
 	return config
 }
-
-func readZuulCommand(command string) string {
-	return readCommand("zuul-scheduler-0", "zuul-scheduler", command)
-}
-
-func readZuulCommandArgs(args []string) string {
-	return readCommandArgs("zuul-scheduler-0", "zuul-scheduler", args)
-}
