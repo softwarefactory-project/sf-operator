@@ -7,6 +7,7 @@ package controllers
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -158,7 +159,14 @@ func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string) er
 		os.Exit(1)
 	}
 
-	sfkctx, err := MkSFKubeContext(cliNS, kubeContext)
+	kubeConfig := filepath.Dir(crPath) + "/kubeconfig"
+	if _, err := os.Stat(kubeConfig); err == nil {
+		ctrl.Log.Info("Using default kubeconfig", "path", kubeConfig)
+	} else {
+		kubeConfig = ""
+	}
+
+	sfkctx, err := MkSFKubeContext(kubeConfig, cliNS, kubeContext)
 	ns := sfkctx.Ns
 	if err != nil {
 		ctrl.Log.Error(err, "unable to create a client")

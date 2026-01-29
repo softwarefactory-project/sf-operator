@@ -41,8 +41,14 @@ type SFKubeContext struct {
 	hasProcMount bool
 }
 
-func MkSFKubeContext(namespace string, kubecontext string) (SFKubeContext, error) {
-	kubeconfig := os.Getenv("KUBECONFIG")
+func MkSFKubeContext(kubeconfig string, namespace string, kubecontext string) (SFKubeContext, error) {
+	if kubeconfig != "" {
+		if _, err := os.Stat(kubeconfig); err != nil {
+			return SFKubeContext{}, fmt.Errorf("%s: missing kubeconfig", kubeconfig)
+		}
+	} else {
+		kubeconfig = os.Getenv("KUBECONFIG")
+	}
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	if kubeconfig != "" {
 		loadingRules.ExplicitPath = kubeconfig

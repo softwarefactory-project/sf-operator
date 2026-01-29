@@ -7,6 +7,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+- A file name kubeconfig next to the resource file will be used instead of the global config.
+  For example, instead of using the following command:
+    KUBECONFIG=./prod/kubeconfig sf-operator apply ./prod/sf.yaml
+  the operator can be used like so:
+    sf-operator apply ./prod/sf.yaml
+
 ### Deprecated
 ### Removed
 ### Fixed
