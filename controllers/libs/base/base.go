@@ -13,6 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -25,6 +26,23 @@ var DefaultPodSecurityContext = apiv1.PodSecurityContext{
 	SeccompProfile: &apiv1.SeccompProfile{
 		Type: "RuntimeDefault",
 	},
+}
+
+// MkPodDisruptionBudget produces a PodDisruptionBudget.
+func MkPodDisruptionBudget(name, ns string, maxUnavailable int32, selector, annotations map[string]string) policyv1.PodDisruptionBudget {
+	return policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   ns,
+			Annotations: annotations,
+		},
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MaxUnavailable: utils.IntOrStringPtr(maxUnavailable),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: selector,
+			},
+		},
+	}
 }
 
 // MkSecurityContext produces a SecurityContext
