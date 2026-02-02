@@ -1,0 +1,14 @@
+---
+# This playbook is meant to check locally that the custom timestamp callback we inject in nodepool-builder works as intended.
+# To test it, run:
+#   podman run -it --rm --name test_builder \
+#   -v ./controllers/static/nodepool/ansible/timestamp.py:/usr/share/ansible/plugins/callback/timestamp.py \
+#   -v ./hack/tests/timestamp_callback/test_playbook.yaml:/var/lib/nodepool/dummy.yaml \
+#   -v ./controllers/static/nodepool/ansible/ansible.cfg:/etc/ansible/ansible.cfg \
+#   quay.io/software-factory/nodepool-builder /bin/sh -c "ansible-playbook -v /var/lib/nodepool/dummy.yaml"
+#
+- name: Dummy cloud image build playbook
+  hosts: localhost
+  tasks:
+    - ansible.builtin.debug:
+        msg: "Make sure that every line has a timestamp!"
