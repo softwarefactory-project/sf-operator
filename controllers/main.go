@@ -176,7 +176,7 @@ func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string, re
 		kubeConfig = ""
 	}
 
-	sfkctx, err := MkSFKubeContext(kubeConfig, cliNS, kubeContext)
+	sfkctx, err := MkSFKubeContext(kubeConfig, cliNS, kubeContext, dryRun)
 	ns := sfkctx.Ns
 	if err != nil {
 		ctrl.Log.Error(err, "unable to create a client")

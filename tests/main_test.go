@@ -54,7 +54,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	var err error
-	sfctx, err = sfop.MkSFKubeContext("", "", "")
+	sfctx, err = sfop.MkSFKubeContext("", "", "", false)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create SFKubeContext: %s", err))
 	}

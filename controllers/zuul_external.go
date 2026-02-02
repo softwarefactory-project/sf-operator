@@ -94,7 +94,7 @@ func (r *SFKubeContext) setupRemoteExecutorConfig(crPath string, eCR sfv1.Softwa
 
 	// Setup kubeconfig
 	cConfig := filepath.Dir(crPath) + "/kubeconfig"
-	controlEnv, err := MkSFKubeContext(cConfig, "", "")
+	controlEnv, err := MkSFKubeContext(cConfig, "", "", false)
 	if err != nil {
 		return err
 	}

@@ -41,7 +41,7 @@ type SFKubeContext struct {
 	hasProcMount bool
 }
 
-func MkSFKubeContext(kubeconfig string, namespace string, kubecontext string) (SFKubeContext, error) {
+func MkSFKubeContext(kubeconfig string, namespace string, kubecontext string, dryRun bool) (SFKubeContext, error) {
 	if kubeconfig != "" {
 		if _, err := os.Stat(kubeconfig); err != nil {
 			return SFKubeContext{}, fmt.Errorf("%s: missing kubeconfig", kubeconfig)
@@ -95,6 +95,7 @@ func MkSFKubeContext(kubeconfig string, namespace string, kubecontext string) (S
 		Cancel:       cancel,
 		IsOpenShift:  CheckOpenShift(restconfig),
 		hasProcMount: os.Getenv("HAS_PROC_MOUNT") == "true",
+		DryRun:       dryRun,
 	}, nil
 }
 

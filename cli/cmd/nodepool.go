@@ -67,7 +67,7 @@ func npCreate(kmd *cobra.Command, args []string) {
 }
 
 func CreateNamespaceForNodepool(sfEnv *controllers.SFKubeContext, nodepoolContext, nodepoolNamespace string, skipProvidersSecrets bool) {
-	npEnv, err := controllers.MkSFKubeContext("", nodepoolNamespace, nodepoolContext)
+	npEnv, err := controllers.MkSFKubeContext("", nodepoolNamespace, nodepoolContext, false)
 	if err != nil {
 		logging.LogE(err, "Could not create nodepool kube client")
 		os.Exit(1)
@@ -209,7 +209,7 @@ func ensureNodepoolServiceAccountSecret(env *controllers.SFKubeContext) string {
 }
 
 func createNodepoolKubeConfigOrDie(contextName string, ns string, token string) cliapi.Config {
-	ctx, err := controllers.MkSFKubeContext("", ns, contextName)
+	ctx, err := controllers.MkSFKubeContext("", ns, contextName, false)
 	if err != nil {
 		logging.LogE(err, "Could not build kube context")
 		os.Exit(1)
