@@ -96,6 +96,7 @@ func MkSFKubeContext(kubeconfig string, namespace string, kubecontext string, dr
 		IsOpenShift:  CheckOpenShift(restconfig),
 		hasProcMount: os.Getenv("HAS_PROC_MOUNT") == "true",
 		DryRun:       dryRun,
+		Standalone:   true,
 	}, nil
 }
 

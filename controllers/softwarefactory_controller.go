@@ -699,19 +699,20 @@ func EnsureStandaloneOwner(ctx context.Context, cl client.Client, ns string, spe
 	return controllerCM, nil
 }
 
-func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns string, sf sfv1.SoftwareFactory) error {
+func (r *SFKubeContext) StandaloneReconcile(sf sfv1.SoftwareFactory) error {
 	d, _ := time.ParseDuration("5s")
 	maxAttempt := 60
-	log := log.FromContext(ctx)
+	log := log.FromContext(r.Ctx)
 	controllerAnnotations := map[string]string{
 		"sf-operator-version": utils.GetVersion(),
 		"last-reconcile":      strconv.FormatInt(time.Now().Unix(), 10),
 	}
-	controllerCM, err := EnsureStandaloneOwner(ctx, r.Client, ns, sf.Spec)
+	controllerCM, err := EnsureStandaloneOwner(r.Ctx, r.Client, r.Ns, sf.Spec)
 	if err != nil {
 		return err
 	}
-	sfCtrl := r.mkSFController(ctx, ns, &controllerCM, sf, true)
+	sfCtrl := MkSFController(*r, sf)
+	sfCtrl.Owner = &controllerCM
 	attempt := 0
 
 	for {
@@ -728,12 +729,12 @@ func (r *SoftwareFactoryReconciler) StandaloneReconcile(ctx context.Context, ns 
 			log.Info("Updating controller configmap ...")
 			marshaledSpec, _ := yaml.Marshal(sf.Spec)
 			if err := r.Client.Get(
-				ctx, client.ObjectKey{Name: controllerCMName, Namespace: ns}, &controllerCM); err == nil {
+				r.Ctx, client.ObjectKey{Name: controllerCMName, Namespace: r.Ns}, &controllerCM); err == nil {
 				controllerCM.Data = map[string]string{
 					"spec": string(marshaledSpec),
 				}
 				controllerCM.ObjectMeta.Annotations = controllerAnnotations
-				if err := r.Update(ctx, &controllerCM); err != nil {
+				if err := r.Client.Update(r.Ctx, &controllerCM); err != nil {
 					log.Error(err, "Unable to update configMap", "name", controllerCMName)
 					return err
 				}
