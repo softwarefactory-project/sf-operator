@@ -6,7 +6,7 @@ From the project root:
 
 - Run the tests:
 ```
-go test -v ./tests/... -args --ginkgo.v
+go test -timeout 0 -v ./tests/... -args --ginkgo.v
 ```
 
 - Run a specific test:

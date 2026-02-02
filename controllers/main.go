@@ -195,3 +195,36 @@ func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string, re
 
 	return env.StandaloneReconcile(sf)
 }
+
+func RotateSecrets(cliNS string, kubeContext string, dryRun bool, crPath string) error {
+	var sf sfv1.SoftwareFactory
+	sf, err := ReadSFYAML(crPath)
+	if err != nil {
+		ctrl.Log.Error(err, "Could not read resource")
+		os.Exit(1)
+	}
+
+	kubeConfig := filepath.Dir(crPath) + "/kubeconfig"
+	if _, err := os.Stat(kubeConfig); err == nil {
+		ctrl.Log.Info("Using default kubeconfig", "path", kubeConfig)
+	} else {
+		kubeConfig = ""
+	}
+
+	env, err := MkSFKubeContext(kubeConfig, cliNS, kubeContext, dryRun)
+	if err != nil {
+		ctrl.Log.Error(err, "unable to create a client")
+		os.Exit(1)
+	}
+
+	controllerCM, err := EnsureStandaloneOwner(env.Ctx, env.Client, env.Ns, sf.Spec)
+	if err != nil {
+		return err
+	}
+	env.Owner = &controllerCM
+
+	if err := env.DoRotateSecrets(); err != nil {
+		return nil
+	}
+	return env.StandaloneReconcile(sf)
+}

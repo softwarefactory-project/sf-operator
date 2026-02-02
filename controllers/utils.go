@@ -97,6 +97,19 @@ func (r *SFKubeContext) GetM(name string, obj client.Object) bool {
 	return true
 }
 
+func (r *SFKubeContext) ReadSecret(name string) map[string][]byte {
+	var sec apiv1.Secret
+	if r.GetM(name, &sec) {
+		return sec.Data
+	} else {
+		return make(map[string][]byte)
+	}
+}
+
+func (r *SFKubeContext) ReadSecretValue(name string, key string) string {
+	return string(r.ReadSecret(name)[key])
+}
+
 // CreateR creates a resource with the owner as the ownerReferences.
 func (r *SFKubeContext) CreateR(obj client.Object) {
 	r.setOwnerReference(obj)

@@ -13,7 +13,6 @@ import (
 	"github.com/google/shlex"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,12 +77,7 @@ func mkMeta(name string) metav1.ObjectMeta {
 }
 
 func readSecret(name string) map[string][]byte {
-	var sec apiv1.Secret
-	err := sfctx.Client.Get(sfctx.Ctx, client.ObjectKey{Name: name, Namespace: sfctx.Ns}, &sec)
-	if err != nil {
-		return make(map[string][]byte)
-	}
-	return sec.Data
+	return sfctx.ReadSecret(name)
 }
 
 func readSecretValue(name string, key string) string {

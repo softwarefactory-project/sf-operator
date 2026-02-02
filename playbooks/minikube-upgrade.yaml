@@ -14,6 +14,6 @@
         chdir: "{{ zuul.project.src_dir }}"
 
     - name: Validate upgrade to latest release
-      command: go test -v ./tests/... -args --ginkgo.v --ginkgo.focus "Secret Rotations"
+      command: make integration-tests
       args:
         chdir: "{{ zuul.project.src_dir }}"

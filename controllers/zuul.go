@@ -60,6 +60,9 @@ var (
 	//go:embed static/zuul/reconnect-zk.py
 	zuulReconnectZK string
 
+	//go:embed static/zuul/rotate-keystore.py
+	zuulRotateKeystore string
+
 	//go:embed static/zuul/logging.yaml.tmpl
 	zuulLoggingConfig string
 
@@ -227,6 +230,12 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 				Name:      "tooling-vol",
 				SubPath:   "reconnect-zk.py",
 				MountPath: "/usr/local/bin/reconnect-zk.py",
+				ReadOnly:  true,
+			},
+			apiv1.VolumeMount{
+				Name:      "tooling-vol",
+				SubPath:   "rotate-keystore.py",
+				MountPath: "/usr/local/bin/rotate-keystore.py",
 				ReadOnly:  true,
 			},
 		)
@@ -454,7 +463,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
 		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
 		"statsd_mapping":             utils.Checksum([]byte(zuulStatsdMappingConfig)),
-		"serial":                     "12",
+		"serial":                     "13",
 		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-scheduler"))),
 		"zuul-extra":                 utils.Checksum([]byte(sshConfig)),
 		"zuul-connections":           utils.IniSectionsChecksum(cfg, utils.IniGetSectionNamesByPrefix(cfg, "connection")),
