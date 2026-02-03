@@ -22,7 +22,7 @@ go version > /dev/null || {
 }
 
 # TODO: add a SF_OPERATOR_DEMO environment variable to skip gerrit deployment
-grep -q " gerrit\." /etc/hosts > /dev/null || {
+kubectl get pods gerrit-0 > /dev/null || {
     echo "[+] Setting up gerrit"
     sudo chown $USER /etc/hosts
     go run main.go dev create demo-env --repos-path deploy
