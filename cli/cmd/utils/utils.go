@@ -47,6 +47,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 )
 
@@ -79,6 +80,28 @@ func GetCLIContext(command *cobra.Command) *controllers.SFKubeContext {
 		os.Exit(1)
 	}
 	return &ctx
+}
+
+// GetCLICRContext setup the SFKubeContext and read the CR from the args.
+func GetCLICRContext(command *cobra.Command, args []string) (*controllers.SFKubeContext, sfv1.SoftwareFactory) {
+	env := GetCLIContext(command)
+	if len(args) == 0 {
+		ctrl.Log.Error(errors.New("no custom resource provided"), "You need to pass the CR!")
+		os.Exit(1)
+	}
+	crPath := args[0]
+
+	var sf sfv1.SoftwareFactory
+	sf, err := controllers.ReadSFYAML(crPath)
+	if err != nil {
+		ctrl.Log.Error(err, "Could not read resource")
+		os.Exit(1)
+	}
+
+	// Discover the cr owner.
+	env.GetStandaloneOwner()
+
+	return env, sf
 }
 
 func GetCRUDSubcommands() (*cobra.Command, *cobra.Command, *cobra.Command) {

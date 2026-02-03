@@ -193,7 +193,7 @@ func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string, re
 		}
 	}
 
-	return env.StandaloneReconcile(sf)
+	return env.StandaloneReconcile(sf, false)
 }
 
 func RotateSecrets(cliNS string, kubeContext string, dryRun bool, crPath string) error {
@@ -217,14 +217,10 @@ func RotateSecrets(cliNS string, kubeContext string, dryRun bool, crPath string)
 		os.Exit(1)
 	}
 
-	controllerCM, err := EnsureStandaloneOwner(env.Ctx, env.Client, env.Ns, sf.Spec)
-	if err != nil {
-		return err
-	}
-	env.Owner = &controllerCM
+	env.EnsureStandaloneOwner(sf.Spec)
 
 	if err := env.DoRotateSecrets(); err != nil {
 		return nil
 	}
-	return env.StandaloneReconcile(sf)
+	return env.StandaloneReconcile(sf, false)
 }

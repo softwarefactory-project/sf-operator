@@ -63,11 +63,7 @@ var _ = BeforeSuite(func() {
 		panic(fmt.Sprintf("sf resource read fail: %s", err))
 	}
 
-	owner, err := sfop.EnsureStandaloneOwner(sfctx.Ctx, sfctx.Client, sfctx.Ns, sf.Spec)
-	if err != nil {
-		panic("sf owner resource creation failed")
-	}
-	sfctx.Owner = &owner
+	sfctx.EnsureStandaloneOwner(sf.Spec)
 
 })
 

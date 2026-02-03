@@ -25,8 +25,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 
@@ -39,34 +39,28 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func restoreSecret(backupDir string, env *controllers.SFKubeContext) {
+func restoreSecret(backupDir string, env *controllers.SFKubeContext, cr sfv1.SoftwareFactory) {
 	ctrl.Log.Info("Restoring secrets...")
 
-	for _, sec := range SecretsToBackup {
+	for _, sec := range append(SecretsToBackup, controllers.CRSecrets(cr)...) {
 		pathToSecret := backupDir + "/" + SecretsBackupPath + "/" + sec + ".yaml"
 		secretContent := cliutils.ReadYAMLToMapOrDie(pathToSecret)
 
-		secret := apiv1.Secret{}
-		if env.GetM(sec, &secret) {
-			secretMap := secretContent["data"].(map[string]interface{})
-			secretMapKeys := maps.Keys(secretMap)
-			sort.Strings(secretMapKeys)
-			for _, key := range secretMapKeys {
-				stringValue, ok := secretMap[key].(string)
-				if !ok {
-					ctrl.Log.Error(errors.New("can not convert secret data value to string"),
-						"Can not restore secret "+sec)
-					os.Exit(1)
-				}
-				secret.Data[key] = []byte(stringValue)
+		typeValue, _ := secretContent["type"].(apiv1.SecretType)
+		secret := apiv1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: sec, Namespace: env.Ns},
+			Data:       map[string][]byte{}, Type: typeValue}
+		secretMap := secretContent["data"].(map[string]any)
+		for _, key := range maps.Keys(secretMap) {
+			stringValue, ok := secretMap[key].(string)
+			if !ok {
+				ctrl.Log.Error(errors.New("can not convert secret data value to string"),
+					"Can not restore secret "+sec)
+				os.Exit(1)
 			}
-		} else {
-			ctrl.Log.Error(errors.New("the secret does not exist"),
-				"The secret: "+sec+" should be available before continuing restore")
-			os.Exit(1)
+			secret.Data[key] = []byte(stringValue)
 		}
-
-		env.UpdateROrDie(&secret)
+		env.CreateR(&secret)
 	}
 
 }
@@ -145,17 +139,13 @@ func clearComponents(env *controllers.SFKubeContext) {
 	}
 
 	// --- Stop all STS now
-	for _, stsName := range []string{
-		"zuul-executor", "zuul-merger", "zuul-scheduler",
-		"nodepool-builder", "zookeeper", "logserver"} {
+	for _, stsName := range []string{"zuul-executor", "zuul-merger", "zuul-scheduler"} {
 		env.DeleteOrDie(&appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      stsName,
 				Namespace: env.Ns,
 			},
-		},
-		)
-
+		})
 	}
 
 	// --- Stop deployments
@@ -187,18 +177,34 @@ func restoreCmd(kmd *cobra.Command, args []string) {
 
 	}
 
-	env := cliutils.GetCLIContext(kmd)
+	env, cr := cliutils.GetCLICRContext(kmd, args)
 
 	if env.Ns == "" {
 		ctrl.Log.Info("You did not specify the namespace!")
 		os.Exit(1)
 	}
 
+	if env.Owner.GetName() != "" {
+		ctrl.Log.Error(errors.New("sf owner exist"), "Software Factory should not be running")
+		os.Exit(1)
+	}
+
+	env.EnsureStandaloneOwner(cr.Spec)
+
+	restoreSecret(backupDir, env, cr)
+
+	if err := env.StandaloneReconcile(cr, true); err != nil {
+		ctrl.Log.Error(err, "Deployment failed")
+	}
+
 	restoreZuul(backupDir, env)
-	restoreSecret(backupDir, env)
 	restoreDB(backupDir, env)
 	clearComponents(env)
 
+	// Re-run deployment to ensure everything is running as expected.
+	if err := env.StandaloneReconcile(cr, false); err != nil {
+		ctrl.Log.Error(err, "Reconcille failed")
+	}
 }
 
 func MkRestoreCmd() *cobra.Command {

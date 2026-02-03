@@ -39,6 +39,7 @@
     - health-check/test-nodeAffinity
     - health-check/test-deploy-zero-replica
     - health-check/test-dry-run-lifecycle
+    - health-check/test-backup-restore
 
     # FIXME: add more health-check
     # - health-check/config-update-nodepool-builder

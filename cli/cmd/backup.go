@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/spf13/cobra"
@@ -65,13 +66,13 @@ var SecretsToBackup = []string{
 	"logserver-keys",
 }
 
-func createSecretBackup(backupDir string, env *controllers.SFKubeContext) {
+func createSecretBackup(backupDir string, env *controllers.SFKubeContext, cr sfv1.SoftwareFactory) {
 	ctrl.Log.Info("Creating secrets backup...")
 
 	secretsDir := backupDir + "/" + SecretsBackupPath
 	cliutils.CreateDirectory(secretsDir, 0755)
 
-	for _, secName := range SecretsToBackup {
+	for _, secName := range append(SecretsToBackup, controllers.CRSecrets(cr)...) {
 		secret := apiv1.Secret{}
 		env.GetM(secName, &secret)
 
@@ -181,17 +182,23 @@ func backupCmd(kmd *cobra.Command, args []string) {
 
 	cliutils.CreateDirectory(backupDir, 0755)
 
-	env := cliutils.GetCLIContext(kmd)
+	env, cr := cliutils.GetCLICRContext(kmd, args)
 
 	if env.Ns == "" {
 		ctrl.Log.Error(errors.New("no namespace set"), "You need to specify the namespace!")
 		os.Exit(1)
 	}
 
+	if env.Owner.GetName() == "" {
+		ctrl.Log.Error(errors.New("no owner found"), "Software Factory doesn't seem to be running?!")
+		os.Exit(1)
+	}
+
+	// TODO: check that the CR name and the FQDN match the cr being backuped
 	ctrl.Log.Info("Starting backup process for services in namespace: " + env.Ns)
 
 	// create secret backup
-	createSecretBackup(backupDir, env)
+	createSecretBackup(backupDir, env, cr)
 
 	// create zuul backup
 	createZuulKeypairBackup(backupDir, env)

@@ -27,7 +27,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -72,6 +71,8 @@ type SFController struct {
 	ZkChanged     bool
 	configBaseURL string
 	needOpendev   bool
+	// Skip config when restoring a backup, to wait for the key import before setting secrets
+	skipConfig bool
 }
 
 func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
@@ -432,7 +433,7 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 
 	// 5. Zuul and the LogServer are up and running, then we can ensure that the config jobs are setup
 	// -----------------------------------------------------------------------------------------------
-	services["Config"] = r.SetupConfigJob()
+	services["Config"] = r.skipConfig || r.SetupConfigJob()
 	if services["Config"] {
 		conds.RefreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
 	}
@@ -594,6 +595,7 @@ func MkSFController(r SFKubeContext, cr sfv1.SoftwareFactory) SFController {
 		ZkChanged:     false,
 		configBaseURL: resolveConfigBaseURL(cr),
 		needOpendev:   !slices.Contains(conns, "opendev.org"),
+		skipConfig:    false,
 	}
 }
 
@@ -674,33 +676,40 @@ func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 var controllerCMName = "sf-standalone-owner"
 
-func EnsureStandaloneOwner(ctx context.Context, cl client.Client, ns string, spec sfv1.SoftwareFactorySpec) (corev1.ConfigMap, error) {
+func (r *SFKubeContext) GetStandaloneOwner() bool {
+	var cm corev1.ConfigMap
+	if r.GetM(controllerCMName, &cm) {
+		r.Owner = &cm
+		return true
+	} else {
+		// Note that Owner is an interface, and we can't assign nil here.
+		return false
+	}
+}
+
+func (r *SFKubeContext) EnsureStandaloneOwner(spec sfv1.SoftwareFactorySpec) {
 	// Create a fake resource that simulate the Resource Owner.
 	// A deletion to that resource Owner will cascade delete owned resources
-	controllerCM := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      controllerCMName,
-			Namespace: ns,
-		}}
-	err := cl.Get(
-		ctx, client.ObjectKey{Name: controllerCMName, Namespace: ns}, &controllerCM)
-	if err != nil && k8s_errors.IsNotFound(err) {
+	if !r.GetStandaloneOwner() {
+		controllerCM := corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      controllerCMName,
+				Namespace: r.Ns,
+			}}
 		marshaledSpec, _ := yaml.Marshal(spec)
 		controllerCM.Data = map[string]string{
 			"spec": string(marshaledSpec),
 		}
-		logging.LogI("Creating ConfigMap, name: " + controllerCMName)
-		// Create the fake controller configMap
-		if err := cl.Create(ctx, &controllerCM); err != nil {
-			log := log.FromContext(ctx)
-			log.Error(err, "Unable to create configMap", "name", controllerCMName)
-			return controllerCM, err
+		// We can't use CreateR here because it requires an Owner.
+		if err := r.Client.Create(r.Ctx, &controllerCM); err != nil {
+			ctrl.Log.Error(err, "Unable to create configMap", "name", controllerCMName)
+			os.Exit(1)
 		}
+		r.Owner = &controllerCM
 	}
-	return controllerCM, nil
 }
 
-func (r *SFKubeContext) StandaloneReconcile(sf sfv1.SoftwareFactory) error {
+func (r *SFKubeContext) StandaloneReconcile(sf sfv1.SoftwareFactory, skipConfig bool) error {
 	d, _ := time.ParseDuration("5s")
 	maxAttempt := 60
 	log := log.FromContext(r.Ctx)
@@ -708,12 +717,9 @@ func (r *SFKubeContext) StandaloneReconcile(sf sfv1.SoftwareFactory) error {
 		"sf-operator-version": utils.GetVersion(),
 		"last-reconcile":      strconv.FormatInt(time.Now().Unix(), 10),
 	}
-	controllerCM, err := EnsureStandaloneOwner(r.Ctx, r.Client, r.Ns, sf.Spec)
-	if err != nil {
-		return err
-	}
+	r.EnsureStandaloneOwner(sf.Spec)
 	sfCtrl := MkSFController(*r, sf)
-	sfCtrl.Owner = &controllerCM
+	sfCtrl.skipConfig = skipConfig
 	attempt := 0
 
 	for {
@@ -729,8 +735,8 @@ func (r *SFKubeContext) StandaloneReconcile(sf sfv1.SoftwareFactory) error {
 		if status.Ready {
 			log.Info("Updating controller configmap ...")
 			marshaledSpec, _ := yaml.Marshal(sf.Spec)
-			if err := r.Client.Get(
-				r.Ctx, client.ObjectKey{Name: controllerCMName, Namespace: r.Ns}, &controllerCM); err == nil {
+			var controllerCM corev1.ConfigMap
+			if r.GetM(controllerCMName, &controllerCM) {
 				controllerCM.Data = map[string]string{
 					"spec": string(marshaledSpec),
 				}
@@ -741,7 +747,7 @@ func (r *SFKubeContext) StandaloneReconcile(sf sfv1.SoftwareFactory) error {
 				}
 				log.Info("Standalone reconcile done.")
 			} else {
-				log.Error(err, "Controller configmap not found")
+				log.Error(errors.New(controllerCMName+" not found"), "Controller configmap not found")
 			}
 			return nil
 		}
