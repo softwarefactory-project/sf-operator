@@ -30,4 +30,4 @@ Tests are written using:
 - https://onsi.github.io/ginkgo/#spec-subjects-it
 - https://onsi.github.io/gomega/#working-with-strings-json-and-yaml
 
-The test library and entrypoint is defined in the [main_test.go](main_test.go) package.
+The test library and entrypoint is defined in the main_test.go package.

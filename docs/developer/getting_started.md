@@ -47,19 +47,6 @@ kubectl create namespace sf
 kubectl config set-context microshift --namespace=sf
 ```
 
-Ensure the following minimal settings in your sf-operator CLI file:
-
-```yaml
-contexts:
-  my-context:
-    namespace: sf
-    fqdn: sfop.me
-default-context: my-context
-```
-
-Consult [Create a sf-operator configuration file](../reference/cli/index.md#config) and
-[The configuration file schema](../reference/cli/index.md#configuration-file) if needed.
-
 Then run the `sf-operator` command:
 
 ```sh
