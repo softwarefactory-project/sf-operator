@@ -27,6 +27,7 @@ var _ = Describe("Secret Rotations", Ordered, func() {
 		secrets := []Secret{
 			{name: "zuul-auth-secret", key: "zuul-auth-secret"},
 			{name: "zuul-db-connection", key: "password"},
+			{name: "ca-cert", key: "ca.crt"},
 			{name: "zookeeper-server-tls", key: "0-tls.key"},
 			{name: "zookeeper-client-tls", key: "tls.key"},
 		}
