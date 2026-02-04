@@ -97,7 +97,7 @@ test: manifests generate fmt vet envtest vendor-crds ## Run tests.
 
 .PHONY: integration-test
 integration-tests: ## Run golang integration tests.
-	go test -timeout 0 -v ./tests/... -args --ginkgo.v
+	go test -timeout 0 -v ./tests/... -args --ginkgo.v --ginkgo.no-color
 
 ##@ Build
 
