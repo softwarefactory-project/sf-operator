@@ -176,8 +176,7 @@ func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string, re
 		kubeConfig = ""
 	}
 
-	sfkctx, err := MkSFKubeContext(kubeConfig, cliNS, kubeContext, dryRun)
-	ns := sfkctx.Ns
+	env, err := MkSFKubeContext(kubeConfig, cliNS, kubeContext, dryRun)
 	if err != nil {
 		ctrl.Log.Error(err, "unable to create a client")
 		os.Exit(1)
@@ -188,21 +187,11 @@ func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string, re
 			fmt.Printf("%s: The remote CR is not standalone\n", remotePath)
 			os.Exit(1)
 		}
-		if err := sfkctx.setupRemoteExecutorConfig(copyFrom, sf); err != nil {
+		if err := env.setupRemoteExecutorConfig(copyFrom, sf); err != nil {
 			ctrl.Log.Error(err, "unable to setup remote executor config")
 			os.Exit(1)
 		}
 	}
 
-	restClient := getPodRESTClient(sfkctx.RESTConfig)
-	ctx, cancelFunc := context.WithCancel(ctrl.SetupSignalHandler())
-	sfr := &SoftwareFactoryReconciler{
-		Client:     sfkctx.Client,
-		Scheme:     controllerScheme,
-		RESTClient: restClient,
-		RESTConfig: sfkctx.RESTConfig,
-		CancelFunc: cancelFunc,
-		DryRun:     dryRun,
-	}
-	return sfr.StandaloneReconcile(ctx, ns, sf)
+	return env.StandaloneReconcile(sf)
 }
