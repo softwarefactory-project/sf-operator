@@ -73,7 +73,7 @@ func GetCLIContext(command *cobra.Command) *controllers.SFKubeContext {
 	namespace, _ := command.Flags().GetString("namespace")
 	kubeContext, _ := command.Flags().GetString("kube-context")
 
-	ctx, err := controllers.MkSFKubeContext("", namespace, kubeContext)
+	ctx, err := controllers.MkSFKubeContext("", namespace, kubeContext, false)
 	if err != nil {
 		logging.LogE(err, "Error creating Kubernetes client")
 		os.Exit(1)
