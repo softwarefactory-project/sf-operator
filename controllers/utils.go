@@ -162,8 +162,7 @@ func (r *SFKubeContext) UpdateR(obj client.Object) bool {
 			logging.LogI("Object not found during dry-run update, name: " + obj.GetName())
 			return true
 		}
-		logging.LogE(err, "Unable to update the object")
-		return false
+		panic(err.Error())
 	}
 	return true
 }
@@ -379,7 +378,6 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 			Namespace:   r.Ns,
 			Annotations: annotations,
 		},
-		Type: "kubernetes.io/tls",
 	}
 	currentCASecret := apiv1.Secret{}
 	if r.GetM(certificateCASecret.Name, &currentCASecret) {
@@ -418,7 +416,6 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 			Namespace:   r.Ns,
 			Annotations: annotations,
 		},
-		Type: "kubernetes.io/tls",
 	}
 	currentClientSecret := apiv1.Secret{}
 	if r.GetM(zkClientCertificateSecret.Name, &currentClientSecret) {
