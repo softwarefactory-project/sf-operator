@@ -34,6 +34,9 @@ var _ = Describe("Secret Rotations", Ordered, func() {
 		By("Checking build database")
 		builds = readZuulCommand("curl zuul-web:9000/api/tenant/demo-tenant/builds")
 
+		By("Running secret rotation CLI")
+		Ω(sfctx.DoRotateSecrets()).Should(BeNil())
+
 		By("Deleting secrets")
 		prevValues := make(map[string]map[string][]byte)
 		for _, secret := range secrets {

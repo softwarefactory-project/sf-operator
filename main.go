@@ -66,6 +66,25 @@ func deployCmd(kmd *cobra.Command, args []string) {
 	controllers.Standalone(ns, kubeContext, dryRun, crPath, remotePath)
 }
 
+func rotateCmd(kmd *cobra.Command, args []string) {
+	cliutils.SetLogger(kmd)
+
+	ns, _ := kmd.Flags().GetString("namespace")
+	kubeContext, _ := kmd.Flags().GetString("kube-context")
+
+	crPath := args[0]
+
+	if crPath == "" {
+		fmt.Printf("Missing CR to deploy!\n")
+		fmt.Printf("usage: rotate-secrest <path-to-cr>\n")
+		os.Exit(1)
+	}
+	if err := controllers.RotateSecrets(ns, kubeContext, dryRun, crPath); err != nil {
+		fmt.Printf("Rotation failed: %s\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
 
 	var (
@@ -92,6 +111,13 @@ func main() {
 			Short: "Start SF Operator as standalone",
 			Long:  `This command starts a sf-operator deployment locally, without the need to install or run the software factory operator controller`,
 			Run:   deployCmd,
+		}
+
+		rotateCmd = &cobra.Command{
+			Use:   "rotate-secrets [The path to the CR defining the Software Factory deployment.]",
+			Short: "Perform secret rotations",
+			Long:  `This command rotates the internal secret used by the services`,
+			Run:   rotateCmd,
 		}
 	)
 
@@ -121,6 +147,7 @@ func main() {
 		dev.MkDevCmd(),
 		zuul.MkZuulCmd(),
 		deployCmd,
+		rotateCmd,
 	}
 	for _, c := range subcommands {
 		rootCmd.AddCommand(c)
