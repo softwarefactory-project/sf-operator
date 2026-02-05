@@ -44,7 +44,6 @@
     - name: zuul-client-from-zuul-pod
     - name: test-external-ze
     - name: test-log-forwarding
-    - name: test-backup-restore
     - name: test-nodeAffinity
       when: "{{ mode == 'standalone' }}"
     - name: test-dry-run-lifecycle

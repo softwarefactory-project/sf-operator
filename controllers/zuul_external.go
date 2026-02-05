@@ -16,33 +16,35 @@ import (
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 )
 
-func (r *SFKubeContext) copySecrets(eCR sfv1.SoftwareFactory, controlEnv *SFKubeContext) error {
-	secrets := []string{"ca-cert", "zookeeper-client-tls", "zuul-ssh-key"}
-
-	// Collect zuul connections secret
-	for _, conn := range eCR.Spec.Zuul.GerritConns {
+// CRSecrets returns the list of secret name used by the CR.
+func CRSecrets(cr sfv1.SoftwareFactory) []string {
+	secrets := []string{}
+	for _, conn := range cr.Spec.Zuul.GerritConns {
 		if conn.Sshkey != "" {
 			secrets = append(secrets, conn.Sshkey)
 		}
 	}
-	for _, conn := range eCR.Spec.Zuul.GitHubConns {
+	for _, conn := range cr.Spec.Zuul.GitHubConns {
 		if conn.Secrets != "" {
 			secrets = append(secrets, conn.Secrets)
 		}
 	}
-	for _, conn := range eCR.Spec.Zuul.PagureConns {
+	for _, conn := range cr.Spec.Zuul.PagureConns {
 		if conn.Secrets != "" {
 			secrets = append(secrets, conn.Secrets)
 		}
 	}
-	for _, conn := range eCR.Spec.Zuul.GitLabConns {
+	for _, conn := range cr.Spec.Zuul.GitLabConns {
 		if conn.Secrets != "" {
 			secrets = append(secrets, conn.Secrets)
 		}
 	}
+	return secrets
+}
 
-	// Copy the secrets
-	for _, secret := range secrets {
+func (r *SFKubeContext) copySecrets(eCR sfv1.SoftwareFactory, controlEnv *SFKubeContext) error {
+	secrets := []string{"ca-cert", "zookeeper-client-tls", "zuul-ssh-key"}
+	for _, secret := range append(secrets, CRSecrets(eCR)...) {
 		var sec apiv1.Secret
 		if !controlEnv.GetM(secret, &sec) {
 			return fmt.Errorf("failed to read secret %s", secret)
@@ -50,7 +52,6 @@ func (r *SFKubeContext) copySecrets(eCR sfv1.SoftwareFactory, controlEnv *SFKube
 		sec.SetNamespace(r.Ns)
 		r.EnsureSecret(&sec)
 	}
-
 	return nil
 }
 

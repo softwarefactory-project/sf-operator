@@ -93,6 +93,7 @@ func MkSFKubeContext(kubeconfig string, namespace string, kubecontext string, dr
 		Ns:           namespace,
 		Ctx:          ctx,
 		Cancel:       cancel,
+		Owner:        &apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: ""}},
 		IsOpenShift:  CheckOpenShift(restconfig),
 		hasProcMount: os.Getenv("HAS_PROC_MOUNT") == "true",
 		DryRun:       dryRun,
