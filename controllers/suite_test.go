@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	opv1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	monitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	//+kubebuilder:scaffold:imports
 )
@@ -99,8 +98,6 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	err = sfv1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-	err = monitoring.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = opv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())

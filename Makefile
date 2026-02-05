@@ -149,6 +149,7 @@ staticcheck:
 	mkdir -p $(GOBIN)
 	test -L $(GOBIN)/staticcheck || ln -s $(LOCALBIN)/staticcheck $(GOBIN)/staticcheck
 
+# TODO: remove this when the last stable version doesn't use the prometheus operator
 .PHONY: vendor-crds
 vendor-crds:
 	@mkdir -p config/crd/vendor/

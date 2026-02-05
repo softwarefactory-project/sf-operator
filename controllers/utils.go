@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -41,7 +40,6 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
-	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
@@ -803,59 +801,6 @@ func (r *SFController) MkClientDNSNames(serviceName string) []string {
 		fmt.Sprintf("%s.%s", serviceName, r.cr.Spec.FQDN),
 		r.cr.GetName(),
 	}
-}
-
-// EnsureDiskUsagePromRule sync Prometheus Rules
-func (r *SFController) EnsureDiskUsagePromRule(ruleGroups []monitoringv1.RuleGroup) bool {
-	desiredDUPromRule := sfmonitoring.MkDiskUsagePromRule(ruleGroups, r.Ns)
-	currentPromRule := monitoringv1.PrometheusRule{}
-	if !r.GetM(desiredDUPromRule.Name, &currentPromRule) {
-		r.CreateR(&desiredDUPromRule)
-		return false
-	} else {
-		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &desiredDUPromRule.ObjectMeta.Annotations) {
-			if !r.DryRun {
-				logging.LogI("Default disk usage Prometheus rules changed, updating...")
-			}
-			currentPromRule.Spec = desiredDUPromRule.Spec
-			currentPromRule.ObjectMeta.Annotations = desiredDUPromRule.ObjectMeta.Annotations
-			r.UpdateR(&currentPromRule)
-			return false
-		}
-	}
-	return true
-}
-
-// EnsureSFPodMonitor Create or Updates Software Factory Monitor for metrics
-func (r *SFController) EnsureSFPodMonitor(ports []string, selector metav1.LabelSelector) bool {
-	desiredPodMonitor := sfmonitoring.MkPodMonitor("sf-monitor", r.Ns, ports, selector)
-	// add annotations so we can handle lifecycle
-	var portsChecksumable string
-	sort.Strings(ports)
-	for _, port := range ports {
-		portsChecksumable += port + " "
-	}
-	annotations := map[string]string{
-		"version": "1",
-		"ports":   utils.Checksum([]byte(portsChecksumable)),
-	}
-	desiredPodMonitor.ObjectMeta.Annotations = annotations
-	currentPodMonitor := monitoringv1.PodMonitor{}
-	if !r.GetM(desiredPodMonitor.Name, &currentPodMonitor) {
-		r.CreateR(&desiredPodMonitor)
-		return false
-	} else {
-		if !utils.MapEquals(&currentPodMonitor.ObjectMeta.Annotations, &annotations) {
-			if !r.DryRun {
-				logging.LogI("SF PodMonitor configuration changed, updating...")
-			}
-			currentPodMonitor.Spec = desiredPodMonitor.Spec
-			currentPodMonitor.ObjectMeta.Annotations = annotations
-			r.UpdateR(&currentPodMonitor)
-			return false
-		}
-	}
-	return true
 }
 
 // injectStorageNodeAffinity injects the node affinity setting when the StatefulSet uses a given storageClass.

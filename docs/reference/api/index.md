@@ -449,7 +449,6 @@ _Appears in:_
 | `FluentBitLogForwarding` _[FluentBitForwarderSpec](#fluentbitforwarderspec)_ | Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http) | -|
 | `storageDefault` _[StorageDefaultSpec](#storagedefaultspec)_ | Default setting to use by Persistent Volume Claims | -|
 | `extraLabels` _object (keys:string, values:string)_ | Whether you need to add extra labels on all managed resources | -|
-| `prometheusMonitorsDisabled` _boolean_ | Set to true to disable deployment of PodMonitors and related Prometheus resource | {false}|
 | `config-location` _[ConfigRepositoryLocationSpec](#configrepositorylocationspec)_ | Config repository spec | -|
 | `zuul` _[ZuulSpec](#zuulspec)_ | Zuul service spec | -|
 | `nodepool` _[NodepoolSpec](#nodepoolspec)_ | Nodepool services spec | -|

@@ -17,11 +17,9 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"k8s.io/utils/strings/slices"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
@@ -860,10 +858,6 @@ func (r *SFController) EnsureZuulComponents() map[string]bool {
 	componentStatus["|_ Web"] = false
 	componentStatus["|_ Merger"] = false
 
-	if !r.cr.Spec.PrometheusMonitorsDisabled {
-		r.ensureZuulPromRule()
-	}
-
 	// Install Services resources
 	r.EnsureZuulComponentsFrontServices()
 
@@ -881,110 +875,6 @@ func (r *SFController) EnsureZuulComponents() map[string]bool {
 	}
 
 	return componentStatus
-}
-
-// create default alerts
-func (r *SFController) ensureZuulPromRule() bool {
-	/* Alert when a config-update job fails on the config repository */
-	configUpdateFailureInPostAnnotations := map[string]string{
-		"description": "A config-update job failed in the post pipeline. Latest changes might not have been applied. Please check services configurations",
-		"summary":     "config-update failure post merge",
-	}
-	configUpdateFailureInPost := monitoring.MkPrometheusAlertRule(
-		"ConfigUpdateFailureInPostPipeline",
-		intstr.FromString(
-			"increase(zuul_tenant_pipeline_project_job_count"+
-				"{jobname=\"config-update\",tenant=\"internal\",pipeline=\"post\",result!~\"SUCCESS|wait_time\"}[1m]) > 0"),
-		"0m",
-		monitoring.CriticalSeverityLabel,
-		configUpdateFailureInPostAnnotations,
-	)
-	configRepoRuleGroup := monitoring.MkPrometheusRuleGroup(
-		"config-repository_default.rules",
-		[]monitoringv1.Rule{configUpdateFailureInPost})
-
-	/* Alert when executors are saturated */
-	notEnoughExecutorsAnnotations := map[string]string{
-		"description": "Some jobs have been waiting for an executor to run on in the last hour",
-		"summary":     "Not enough executors",
-	}
-	notEnoughExecutors := monitoring.MkPrometheusAlertRule(
-		"NotEnoughExecutors",
-		intstr.FromString(
-			"increase(zuul_executors_jobs_queued[1h]) > 0"),
-		"1h",
-		monitoring.WarningSeverityLabel,
-		notEnoughExecutorsAnnotations,
-	)
-
-	/* Alert when mergers are saturated */
-	notEnoughMergersAnnotations := map[string]string{
-		"description": "Some merge jobs have been waiting for a merger to run on in the last hour",
-		"summary":     "Not enough mergers",
-	}
-	notEnoughMergers := monitoring.MkPrometheusAlertRule(
-		"NotEnoughMergers",
-		intstr.FromString(
-			"increase(zuul_mergers_jobs_queued[1h]) > 0"),
-		"1h",
-		monitoring.WarningSeverityLabel,
-		notEnoughMergersAnnotations,
-	)
-
-	/* Alert when node requests are saturated */
-	notEnoughNodesAnnotations := map[string]string{
-		"description": "Nodepool had outstanding node requests in the last hour",
-		"summary":     "Not enough testing nodes",
-	}
-	notEnoughNodes := monitoring.MkPrometheusAlertRule(
-		"NotEnoughTestNodes",
-		intstr.FromString(
-			"increase(zuul_nodepool_current_requests[1h]) > 0"),
-		"1h",
-		monitoring.WarningSeverityLabel,
-		notEnoughNodesAnnotations,
-	)
-
-	zuulRuleGroup := monitoring.MkPrometheusRuleGroup(
-		"zuul_default.rules",
-		[]monitoringv1.Rule{
-			notEnoughExecutors,
-			notEnoughMergers,
-			notEnoughNodes,
-		})
-
-	desiredZuulPromRule := monitoring.MkPrometheusRuleCR("zuul-default.rules", r.Ns)
-	desiredZuulPromRule.Spec.Groups = append(
-		desiredZuulPromRule.Spec.Groups,
-		configRepoRuleGroup,
-		zuulRuleGroup)
-
-	var checksumable string
-	for _, group := range desiredZuulPromRule.Spec.Groups {
-		for _, rule := range group.Rules {
-			checksumable += monitoring.MkAlertRuleChecksumString(rule)
-		}
-	}
-
-	annotations := map[string]string{
-		"version":       "2",
-		"rulesChecksum": utils.Checksum([]byte(checksumable)),
-	}
-	desiredZuulPromRule.ObjectMeta.Annotations = annotations
-	currentPromRule := monitoringv1.PrometheusRule{}
-	if !r.GetM(desiredZuulPromRule.Name, &currentPromRule) {
-		r.CreateR(&desiredZuulPromRule)
-		return false
-	} else {
-		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &annotations) {
-			logging.LogI("Zuul default Prometheus rules changed, updating...")
-			currentPromRule.Spec = desiredZuulPromRule.Spec
-			currentPromRule.ObjectMeta.Annotations = annotations
-			r.UpdateR(&currentPromRule)
-			return false
-		}
-	}
-	return true
 }
 
 func (r *SFController) IsExternalExecutorEnabled() bool {

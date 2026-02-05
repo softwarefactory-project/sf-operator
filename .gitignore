@@ -24,8 +24,6 @@ testbin/*
 *.swo
 *~
 
-config/crd/vendor/
-
 # python sf_operator
 .eggs
 .tox

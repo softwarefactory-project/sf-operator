@@ -29,7 +29,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	//+kubebuilder:scaffold:imports
 )
@@ -46,7 +45,6 @@ func InitScheme() *runtime.Scheme {
 	utilruntime.Must(clientgoscheme.AddToScheme(controllerScheme))
 	utilruntime.Must(sfv1.AddToScheme(controllerScheme))
 	utilruntime.Must(apiroutev1.AddToScheme(controllerScheme))
-	utilruntime.Must(monitoringv1.AddToScheme(controllerScheme))
 	return controllerScheme
 }
 

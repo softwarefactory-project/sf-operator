@@ -7,6 +7,7 @@
     # curl -s https://api.github.com/repos/prometheus-operator/prometheus-operator/releases/latest | jq -cr .tag_name
     prometheus_operator: https://github.com/prometheus-operator/prometheus-operator/releases/download/v0.80.1/bundle.yaml
   tasks:
+    # TODO: remove this when the last stable version doesn't use the prometheus operator
     - name: Install CRDs
       ansible.builtin.command:
         cmd: "{{ kubectl }} create -f {{ prometheus_operator }}"

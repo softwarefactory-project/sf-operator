@@ -28,10 +28,11 @@
     - name: Set default kubectl context to sf namespace
       ansible.builtin.command: kubectl config set-context microshift --namespace=sf
 
+    # TODO: remove this when the last stable version doesn't use the prometheus operator
     - name: Ensure prometheus operator is installed
       block:
         - name: Apply prometheus-operator subscription
-          ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/softwarefactory-project/sf-operator/master/olm-deps/prometheus/prometheus-subscription.yaml
+          ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/softwarefactory-project/sf-operator/892103e2d1e47cfc54b950105baaf71eb5217d0c/olm-deps/prometheus/prometheus-subscription.yaml
         - name: Wait for pod to be ready
           ansible.builtin.command: >
             kubectl wait --for=condition=Ready --timeout 5s pods

@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"gopkg.in/yaml.v3"
 
 	"k8s.io/client-go/kubernetes"
@@ -40,7 +39,6 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
-	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 
 	discovery "k8s.io/client-go/discovery"
@@ -331,33 +329,6 @@ func (r *SFController) deployStandaloneExectorStep(services map[string]bool) map
 	return services
 }
 
-func (r *SFController) setupMonitoring() ([]string, []string) {
-	monitoredPorts := []string{}
-	selectorRunList := []string{}
-	monitoredPorts = append(monitoredPorts,
-		sfmonitoring.GetTruncatedPortName(GitServerIdent, sfmonitoring.NodeExporterPortNameSuffix),
-		sfmonitoring.GetTruncatedPortName(MariaDBIdent, sfmonitoring.NodeExporterPortNameSuffix),
-		sfmonitoring.GetTruncatedPortName(ZookeeperIdent, sfmonitoring.NodeExporterPortNameSuffix),
-		sfmonitoring.GetTruncatedPortName(BuilderIdent, sfmonitoring.NodeExporterPortNameSuffix),
-		NodepoolStatsdExporterPortName,
-		sfmonitoring.GetTruncatedPortName("zuul-scheduler", sfmonitoring.NodeExporterPortNameSuffix),
-		sfmonitoring.GetTruncatedPortName("zuul-merger", sfmonitoring.NodeExporterPortNameSuffix),
-		sfmonitoring.GetTruncatedPortName("zuul-web", sfmonitoring.NodeExporterPortNameSuffix),
-		ZuulPrometheusPortName,
-		ZuulStatsdExporterPortName,
-	)
-
-	selectorRunList = append(selectorRunList, LauncherIdent, BuilderIdent, "zuul-scheduler", "zuul-merger", "zuul-web", GitServerIdent, MariaDBIdent, ZookeeperIdent)
-
-	if r.IsExecutorEnabled() {
-		monitoredPorts = append(monitoredPorts,
-			sfmonitoring.GetTruncatedPortName("zuul-executor", sfmonitoring.NodeExporterPortNameSuffix))
-		selectorRunList = append(selectorRunList, "zuul-executor")
-	}
-
-	return monitoredPorts, selectorRunList
-}
-
 func (r *SFController) deployZKAndZuulAndNodepool(services map[string]bool) map[string]bool {
 	// 1. Ensure Zookeeper is reconciled
 	// ---------------------------------
@@ -464,28 +435,6 @@ func (r *SFController) Step() sfv1.SoftwareFactoryStatus {
 	logging.LogI(messageInfo(services))
 
 	isReady := isOperatorReady(services)
-
-	// TODO? we could add this to the readiness computation.
-	if !r.cr.Spec.PrometheusMonitorsDisabled && isReady {
-		DURuleGroups := []monitoringv1.RuleGroup{
-			sfmonitoring.MkDiskUsageRuleGroup(r.Ns, "sf"),
-		}
-		monitoredPorts, selectorRunList := r.setupMonitoring()
-		podMonitorSelector := metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				"app": "sf",
-			},
-			MatchExpressions: []metav1.LabelSelectorRequirement{
-				{
-					Key:      "run",
-					Operator: metav1.LabelSelectorOpIn,
-					Values:   selectorRunList,
-				},
-			},
-		}
-		r.EnsureSFPodMonitor(monitoredPorts, podMonitorSelector)
-		r.EnsureDiskUsagePromRule(DURuleGroups)
-	}
 
 	return sfv1.SoftwareFactoryStatus{
 		Ready:              isReady,

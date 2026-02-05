@@ -8,22 +8,18 @@ package controllers
 import (
 	_ "embed"
 	"encoding/base64"
+	"strconv"
+
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
-	"maps"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
-
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	sfmonitoring "github.com/softwarefactory-project/sf-operator/controllers/libs/monitoring"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
@@ -54,74 +50,6 @@ type LogServerReconciler struct {
 	RESTConfig *rest.Config
 }
 
-func (r *SFController) ensureLogserverPodMonitor() bool {
-	var labels = map[string]string{
-		"app": "sf",
-		"run": logserverIdent,
-	}
-	maps.Copy(labels, r.cr.Spec.ExtraLabels)
-	selector := metav1.LabelSelector{
-		MatchLabels: labels,
-	}
-	nePort := sfmonitoring.GetTruncatedPortName(logserverIdent, sfmonitoring.NodeExporterPortNameSuffix)
-	desiredLsPodmonitor := sfmonitoring.MkPodMonitor(logserverIdent+"-monitor", r.Ns, []string{nePort}, selector)
-	// add annotations so we can handle lifecycle
-	annotations := map[string]string{
-		"version": "1",
-	}
-	desiredLsPodmonitor.ObjectMeta.Annotations = annotations
-	currentLspm := monitoringv1.PodMonitor{}
-	if !r.GetM(desiredLsPodmonitor.Name, &currentLspm) {
-		r.CreateR(&desiredLsPodmonitor)
-		return false
-	} else {
-		if !utils.MapEquals(&currentLspm.ObjectMeta.Annotations, &annotations) {
-			logging.LogI("Logserver PodMonitor configuration changed, updating...")
-			currentLspm.Spec = desiredLsPodmonitor.Spec
-			currentLspm.ObjectMeta.Annotations = annotations
-			r.UpdateR(&currentLspm)
-			return false
-		}
-	}
-	return true
-}
-
-func (r *SFController) ensureLogserverPromRule() bool {
-	lsDiskRuleGroup := sfmonitoring.MkDiskUsageRuleGroup(r.Ns, logserverIdent)
-	// We keep the logserver's PromRule management here for standalone logservers
-	desiredLsPromRule := sfmonitoring.MkPrometheusRuleCR(logserverIdent+"-default.rules", r.Ns)
-	desiredLsPromRule.Spec.Groups = append(desiredLsPromRule.Spec.Groups, lsDiskRuleGroup)
-
-	var checksumable string
-	for _, group := range desiredLsPromRule.Spec.Groups {
-		for _, rule := range group.Rules {
-			checksumable += sfmonitoring.MkAlertRuleChecksumString(rule)
-		}
-	}
-
-	// add annotations so we can handle lifecycle
-	annotations := map[string]string{
-		"version":       "2",
-		"rulesChecksum": utils.Checksum([]byte(checksumable)),
-	}
-
-	desiredLsPromRule.ObjectMeta.Annotations = annotations
-	currentPromRule := monitoringv1.PrometheusRule{}
-	if !r.GetM(desiredLsPromRule.Name, &currentPromRule) {
-		r.CreateR(&desiredLsPromRule)
-		return false
-	} else {
-		if !utils.MapEquals(&currentPromRule.ObjectMeta.Annotations, &annotations) {
-			logging.LogI("Logserver default Prometheus rules changed, updating...")
-			currentPromRule.Spec = desiredLsPromRule.Spec
-			currentPromRule.ObjectMeta.Annotations = annotations
-			r.UpdateR(&currentPromRule)
-			return false
-		}
-	}
-	return true
-}
-
 func (r *SFController) DeployLogserver() bool {
 
 	r.EnsureSSHKeySecret(logserverIdent + "-keys")
@@ -138,7 +66,7 @@ func (r *SFController) DeployLogserver() bool {
 	// Create service exposed by logserver
 	svc := base.MkServicePod(
 		logserverIdent, r.Ns, logserverIdent+"-0",
-		[]int32{httpdPort, sshdPort, sfmonitoring.NodeExporterPort}, logserverIdent, r.cr.Spec.ExtraLabels)
+		[]int32{httpdPort, sshdPort, 9100}, logserverIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
 
 	volumeMounts := []apiv1.VolumeMount{
@@ -314,13 +242,6 @@ func (r *SFController) DeployLogserver() bool {
 	}
 
 	pvcReadiness := r.reconcileExpandPVC(logserverIdent+"-"+logserverIdent+"-0", r.cr.Spec.Logserver.Storage)
-
-	// TODO(mhu) We may want to open an ingress to port 9100 for an external prometheus instance.
-	// TODO(mhu) we may want to include monitoring objects' status in readiness computation
-	if !r.cr.Spec.PrometheusMonitorsDisabled {
-		r.ensureLogserverPodMonitor()
-		r.ensureLogserverPromRule()
-	}
 
 	isReady := r.IsStatefulSetReady(current) && !stsUpdated && pvcReadiness
 	conds.UpdateConditions(&r.cr.Status.Conditions, logserverIdent, isReady)

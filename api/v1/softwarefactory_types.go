@@ -585,10 +585,6 @@ type SoftwareFactorySpec struct {
 	// Whether you need to add extra labels on all managed resources
 	ExtraLabels map[string]string `json:"extraLabels,omitempty"`
 
-	// Set to true to disable deployment of PodMonitors and related Prometheus resource
-	// +kubebuilder:default:=false
-	PrometheusMonitorsDisabled bool `json:"prometheusMonitorsDisabled,omitempty"`
-
 	// Config repository spec
 	ConfigRepositoryLocation ConfigRepositoryLocationSpec `json:"config-location,omitempty"`
 

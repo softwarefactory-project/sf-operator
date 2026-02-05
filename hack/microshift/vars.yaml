@@ -3,6 +3,7 @@ fqdn: microshift.sfci
 sf_fqdn: sfop.me
 disk_file_sparsed: true
 disk_file_size: 30G
+# TODO: remove this when the last stable version doesn't use the prometheus operator
 setup_olm: true
 enable_ramdisk: true
 ramdisk_size: 1G
