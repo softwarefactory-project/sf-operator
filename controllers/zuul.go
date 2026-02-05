@@ -36,7 +36,6 @@ const (
 
 	zuulPrometheusPort       = 9090
 	ZuulPrometheusPortName   = "zuul-metrics"
-	ZuulSchedulerIdent       = "zuul-scheduler"
 	ZuulKeystorePasswordName = "zuul-keystore-password"
 )
 
@@ -136,6 +135,58 @@ func getZuulImage(service string) string {
 		return base.ZuulWebImage()
 	default:
 		panic("unsupported zuul service")
+	}
+}
+
+func (r *SFKubeContext) mkKazooPod() *apiv1.Pod {
+	return &apiv1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "zuul-kazoo", Namespace: r.Ns},
+		Spec: apiv1.PodSpec{
+			Volumes: []apiv1.Volume{
+				base.MkVolumeSecret("zuul-config"),
+				base.MkVolumeSecret("zookeeper-client-tls"),
+			},
+			Containers: []apiv1.Container{
+				{
+					Name:    "zuul-kazoo",
+					Image:   getZuulImage("zuul-scheduler"),
+					Command: []string{"sleep", "inf"},
+					VolumeMounts: []apiv1.VolumeMount{
+						{
+							Name:      "zuul-config",
+							MountPath: "/etc/zuul",
+							ReadOnly:  true,
+						},
+						{
+							Name:      "zookeeper-client-tls",
+							MountPath: "/tls/client",
+							ReadOnly:  true,
+						},
+					},
+					SecurityContext: base.MkSecurityContext(false, r.IsOpenShift),
+				},
+			},
+		},
+	}
+}
+
+// EnsureKazooPod setups a kazoo client pod that can be used to access ZooKeeper directly
+func (r *SFKubeContext) EnsureKazooPod() bool {
+	var current apiv1.Pod
+	if r.GetM("zuul-kazoo", &current) {
+		if current.Status.Phase == "Running" {
+			return true
+		}
+	} else {
+		r.CreateR(r.mkKazooPod())
+	}
+	return false
+}
+
+func (r *SFKubeContext) DeleteKazooPod() {
+	var current apiv1.Pod
+	if r.GetM("zuul-kazoo", &current) {
+		r.DeleteR(&current)
 	}
 }
 
@@ -480,7 +531,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		relayAddress = &r.cr.Spec.Zuul.Scheduler.StatsdTarget
 	}
 
-	zuulContainer := r.mkZuulContainer(ZuulSchedulerIdent, corporateCMExists)
+	zuulContainer := r.mkZuulContainer("zuul-scheduler", corporateCMExists)
 	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Scheduler.Limits, &zuulContainer)
 
 	zsFluentBitLabels := append(zuulFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: "zuul-scheduler"})
@@ -847,7 +898,7 @@ func (r *SFController) EnsureZuulComponents() map[string]bool {
 	zuulServices := map[string]bool{}
 
 	// Setup zuul.conf Secret
-	cfg := r.EnsureZuulConfigSecret(false, false)
+	cfg := r.EnsureZuulConfigSecret(false)
 	if cfg == nil {
 		return componentStatus
 	} else {
@@ -883,7 +934,7 @@ func (r *SFController) IsExternalExecutorEnabled() bool {
 
 // EnsureZuulConfigSecret build and install the zuul.conf Secret resource
 // If the resource cannot be built then the returned value is nil
-func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSettings bool) *ini.File {
+func (r *SFController) EnsureZuulConfigSecret(remoteExecutor bool) *ini.File {
 
 	// Update base config to add connections
 	cfgINI := LoadConfigINI(zuulDotconf)
@@ -980,7 +1031,7 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 		cfgINI.Section("merger").NewKey("git_timeout", fmt.Sprint(r.cr.Spec.Zuul.Merger.GitTimeout))
 	}
 
-	if !skipDBSettings {
+	if !remoteExecutor {
 		// Set Database DB URI
 		dbSettings := apiv1.Secret{}
 		if !r.GetM(zuulDBConfigSecret, &dbSettings) {
@@ -1027,7 +1078,7 @@ func (r *SFController) EnsureZuulConfigSecret(skipDBSettings bool, skipAuthSetti
 	}
 	cfgINI.Section("keystore").NewKey("password", string(keystorePass))
 
-	if !skipAuthSettings {
+	if !remoteExecutor {
 		// Set CLI auth
 		cliAuthSecret, err := r.getSecretData("zuul-auth-secret")
 		if err != nil {

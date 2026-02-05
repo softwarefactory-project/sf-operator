@@ -72,6 +72,9 @@ func createZKLogForwarderSidecar(r *SFController, annotations map[string]string)
 }
 
 func (r *SFController) DeployZookeeper() bool {
+	// Setup the Certificate Authority for Zookeeper/Zuul/Nodepool usage
+	r.EnsureZookeeperCertificates(ZookeeperIdent, ZookeeperReplicas)
+
 	cmData := make(map[string]string)
 	cmData["probe.sh"] = zookeeperProbe
 	cmData["run.sh"] = zookeeperRun
@@ -240,7 +243,6 @@ func (r *SFController) DeployZookeeper() bool {
 	replicaCount := int32(ZookeeperReplicas)
 	current, changed := r.ensureStatefulset(storageConfig.StorageClassName, zk, &replicaCount)
 	if changed {
-		r.ZkChanged = true
 		return false
 	}
 

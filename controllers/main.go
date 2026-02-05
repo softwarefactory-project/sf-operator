@@ -94,7 +94,7 @@ func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string, re
 		}
 	}
 
-	return env.StandaloneReconcile(sf, false)
+	return env.StandaloneReconcile(sf)
 }
 
 func RotateSecrets(cliNS string, kubeContext string, dryRun bool, crPath string) error {
@@ -123,5 +123,5 @@ func RotateSecrets(cliNS string, kubeContext string, dryRun bool, crPath string)
 	if err := env.DoRotateSecrets(); err != nil {
 		return nil
 	}
-	return env.StandaloneReconcile(sf, false)
+	return env.StandaloneReconcile(sf)
 }

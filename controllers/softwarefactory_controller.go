@@ -40,11 +40,8 @@ import (
 type SFController struct {
 	SFKubeContext
 	cr            sfv1.SoftwareFactory
-	ZkChanged     bool
 	configBaseURL string
 	needOpendev   bool
-	// Skip config when restoring a backup, to wait for the key import before setting secrets
-	skipConfig bool
 }
 
 func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
@@ -289,7 +286,7 @@ func (r *SFController) deployStandaloneExectorStep(services map[string]bool) map
 	}
 
 	// Setup zuul.conf Secret
-	cfg := r.EnsureZuulConfigSecret(true, true)
+	cfg := r.EnsureZuulConfigSecret(true)
 	if cfg == nil {
 		return services
 	}
@@ -334,11 +331,8 @@ func (r *SFController) deployZKAndZuulAndNodepool(services map[string]bool) map[
 }
 
 func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
-
 	// 1. Ensure some content resources
 	// --------------------------------
-	// Setup the Certificate Authority for Zookeeper/Zuul/Nodepool usage
-	r.EnsureZookeeperCertificates(ZookeeperIdent, ZookeeperReplicas)
 	// Ensure SF Admin ssh key pair
 	r.DeployZuulSecrets()
 	// Setup custom tools used by zuul and code-search
@@ -378,7 +372,7 @@ func (r *SFController) deploySFStep(services map[string]bool) map[string]bool {
 
 	// 5. Zuul and the LogServer are up and running, then we can ensure that the config jobs are setup
 	// -----------------------------------------------------------------------------------------------
-	services["Config"] = r.skipConfig || r.SetupConfigJob()
+	services["Config"] = r.SetupConfigJob()
 	if services["Config"] {
 		conds.RefreshCondition(&r.cr.Status.Conditions, "ConfigReady", metav1.ConditionTrue, "Ready", "Config is ready")
 	}
@@ -515,10 +509,8 @@ func MkSFController(r SFKubeContext, cr sfv1.SoftwareFactory) SFController {
 	return SFController{
 		SFKubeContext: r,
 		cr:            cr,
-		ZkChanged:     false,
 		configBaseURL: resolveConfigBaseURL(cr),
 		needOpendev:   !slices.Contains(conns, "opendev.org"),
-		skipConfig:    false,
 	}
 }
 
@@ -557,7 +549,7 @@ func (r *SFKubeContext) EnsureStandaloneOwner(spec sfv1.SoftwareFactorySpec) {
 	}
 }
 
-func (r *SFKubeContext) StandaloneReconcile(sf sfv1.SoftwareFactory, skipConfig bool) error {
+func (r *SFKubeContext) StandaloneReconcile(sf sfv1.SoftwareFactory) error {
 	d, _ := time.ParseDuration("5s")
 	maxAttempt := 60
 	log := log.FromContext(r.Ctx)
@@ -567,7 +559,6 @@ func (r *SFKubeContext) StandaloneReconcile(sf sfv1.SoftwareFactory, skipConfig 
 	}
 	r.EnsureStandaloneOwner(sf.Spec)
 	sfCtrl := MkSFController(*r, sf)
-	sfCtrl.skipConfig = skipConfig
 	attempt := 0
 
 	for {
