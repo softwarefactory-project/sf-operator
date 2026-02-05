@@ -24,13 +24,6 @@ testbin/*
 *.swo
 *~
 
-#Operator SDK generated files
-/bundle/
-bundle.Dockerfile
-config/manager/kustomization.yaml
-
-my-sf.yaml
-config/crd/bases/_.yaml
 config/crd/vendor/
 
 # python sf_operator
