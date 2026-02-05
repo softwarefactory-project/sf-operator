@@ -143,6 +143,10 @@ func (r *SFKubeContext) DeleteR(obj client.Object) {
 	}
 }
 
+func (r *SFController) DeleteSecret(name string) {
+	r.DeleteR(&apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.Ns}})
+}
+
 // UpdateR updates resource with the owner as the ownerReferences.
 func (r *SFKubeContext) UpdateR(obj client.Object) bool {
 	r.setOwnerReference(obj)
@@ -366,6 +370,21 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 		"serial": "2",
 	}
 
+	secretReady := func(name string) bool {
+		var current apiv1.Secret
+		return r.GetM(name, &current) && utils.MapEquals(&current.ObjectMeta.Annotations, &annotations)
+	}
+
+	if secretReady("ca-cert") && secretReady("zookeeper-client-tls") && secretReady("zookeeper-server-tls") {
+		return
+	}
+
+	// Ensure any previous secret are removed, this is because Secret Update doesn't work as-is (Type is immutable, and removing Data keys fails, for example:
+	//   Secret "zookeeper-server-tls" is invalid: [data[tls.crt]: Required value, data[tls.key]: Required value]
+	r.DeleteSecret("ca-cert")
+	r.DeleteSecret("zookeeper-client-tls")
+	r.DeleteSecret("zookeeper-server-tls")
+
 	caCert, caPrivKey, caPEM, caPrivKeyPEM := cert.X509CA()
 	certificateCASecret := apiv1.Secret{
 		Data: map[string][]byte{
@@ -379,14 +398,7 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 			Annotations: annotations,
 		},
 	}
-	currentCASecret := apiv1.Secret{}
-	if r.GetM(certificateCASecret.Name, &currentCASecret) {
-		if !utils.MapEquals(&currentCASecret.ObjectMeta.Annotations, &annotations) {
-			r.UpdateR(&certificateCASecret)
-		}
-	} else {
-		r.GetOrCreate(&certificateCASecret)
-	}
+	r.CreateR(&certificateCASecret)
 
 	// client cert
 	clientDNSNames := []string{
@@ -417,14 +429,7 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 			Annotations: annotations,
 		},
 	}
-	currentClientSecret := apiv1.Secret{}
-	if r.GetM(zkClientCertificateSecret.Name, &currentClientSecret) {
-		if !utils.MapEquals(&currentClientSecret.ObjectMeta.Annotations, &annotations) {
-			r.UpdateR(&zkClientCertificateSecret)
-		}
-	} else {
-		r.GetOrCreate(&zkClientCertificateSecret)
-	}
+	r.CreateR(&zkClientCertificateSecret)
 
 	// servers certificates
 	var serversSecretData = make(map[string][]byte)
@@ -448,16 +453,8 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 			Namespace:   r.Ns,
 			Annotations: annotations,
 		},
-		Type: "Opaque",
 	}
-	currentServersSecret := apiv1.Secret{}
-	if r.GetM(zkServersCertificateSecret.Name, &currentServersSecret) {
-		if !utils.MapEquals(&currentServersSecret.ObjectMeta.Annotations, &annotations) {
-			r.UpdateR(&zkServersCertificateSecret)
-		}
-	} else {
-		r.GetOrCreate(&zkServersCertificateSecret)
-	}
+	r.CreateR(&zkServersCertificateSecret)
 }
 
 // mkStatefulSet Create a default statefulset.

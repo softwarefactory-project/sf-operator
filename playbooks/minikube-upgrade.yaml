@@ -13,6 +13,11 @@
       args:
         chdir: "{{ zuul.project.src_dir }}"
 
+    - name: Deploy current version
+      command: ./hack/deploy.sh
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
+
     - name: Validate upgrade to latest release
       command: make integration-tests
       args:
