@@ -57,7 +57,6 @@ const (
 // - zuul-auth-secret - this contains the secret for the zuul-client connection
 
 var SecretsToBackup = []string{
-	"ca-cert",
 	"zookeeper-client-tls",
 	"zookeeper-server-tls",
 	"nodepool-builder-ssh-key",

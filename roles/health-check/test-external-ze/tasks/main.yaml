@@ -32,7 +32,6 @@
   ansible.builtin.shell: |
     kubectl get secrets {{ item }} -o json | jq --arg name {{ item }} '. + {metadata: {name: $name}}' | kubectl apply -n ext-ze -f -
   loop:
-    - ca-cert
     - zookeeper-client-tls
     - zuul-ssh-key
     - zuul-keystore-password

@@ -43,7 +43,7 @@ func CRSecrets(cr sfv1.SoftwareFactory) []string {
 }
 
 func (r *SFKubeContext) copySecrets(eCR sfv1.SoftwareFactory, controlEnv *SFKubeContext) error {
-	secrets := []string{"ca-cert", "zookeeper-client-tls", "zuul-ssh-key"}
+	secrets := []string{"zookeeper-client-tls", "zuul-ssh-key"}
 	for _, secret := range append(secrets, CRSecrets(eCR)...) {
 		var sec apiv1.Secret
 		if !controlEnv.GetM(secret, &sec) {
