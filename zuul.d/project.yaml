@@ -20,6 +20,9 @@
         - sf-operator-ansible-lint
         - sf-operator-go-test
         - sf-operator-doc-check
+    release:
+      jobs:
+        - sf-operator-publish
     periodic:
       jobs:
         - sf-operator-minikube

@@ -1,4 +1,40 @@
 ---
+- semaphore:
+    name: sf-operator-publish-semaphore
+    max: 1
+
+- secret:
+    name: zuul_quay_sf
+    data:
+      registry: "quay.io"
+      username: "software-factory+zuul"
+      password: !encrypted/pkcs1-oaep
+        - kysFA16AGr8xwIw4dfax+1TXRLoi2DO4LDKp6SMUYlnWHIcykfjnaduOpdEY6yc6AWqsF
+          274Bm5qSGnEPRlDgGSPWz5kJKeyCnZgK9BVqkSBI8Ks6BdQPzGaOuMXOi3zIuuR9i2VYy
+          YScM3WPfVeSmilBn7k2P5YU1gLcwubbYUT4G7OHIIFxIise+2pGNbZlN7yGtlefdK9cMi
+          jOoq1cE9KpeJLOJFO1PbqteVMqMzMDhwS42HkBRailKb9UiHAlvMGjIFWvKESvTwhU+0b
+          Fx16NCrNYvk7mESHoCkn9TG23yEoNhCX7CozOlRuzxrn4xQBZWw8EbCWvBFOL3+FMyjpc
+          gRPOFWLVOk9K+4abjySN+EfWn+Ktfqd0WyYI3zr7kBJRSj/qcdiQoi8GwppbEXp9hG5B3
+          /fJrudyJUNhcWOPufZbuNOPH8OIFGsSg0s90qSKmM70ObsktMXYqeKIrfRwaMBAnoYukq
+          WhsJAHl4xKCip9xl4yguf4Ojt1KharJtvpNhalKNymN1ApztcuZm+ynZxsNMlHZPzWtxN
+          zS2m/j9+5pRBx4wHSNrwB+aSSHd++B8qv+ykjgH3sCENe/AS6vp0+PXEKKXYxz0fSy8jc
+          mv1Ir3I4Ooql0op1zl56c2tgdkguRH4koVYlP12Mj6+obxBmJ2LDnU17c6yQIg=
+
+# Images publication job
+- job:
+    name: sf-operator-publish
+    description: Publish operator image
+    semaphore: sf-operator-publish-semaphore
+    run: playbooks/publish.yaml
+    timeout: 1200
+    nodeset:
+      nodes:
+        name: controller
+        label: cloud-centos-9
+    secrets:
+      - name: final_registry_secret
+        secret: zuul_quay_sf
+
 # Linting jobs
 - job:
     name: sf-operator-ansible-lint
