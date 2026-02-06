@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	// "sigs.k8s.io/controller-runtime/pkg/client"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var _ = Describe("SoftwareFactory controller", func() {
@@ -65,20 +64,6 @@ var _ = Describe("SoftwareFactory controller", func() {
 		})
 		AfterEach(func() {
 			k8sClient.Delete(context.TODO(), sf)
-		})
-
-		It("Should use reconcile", func() {
-			sfReconciler := &SoftwareFactoryReconciler{
-				Client:     k8sClient,
-				Scheme:     k8sClient.Scheme(),
-				RESTConfig: cfg,
-				CancelFunc: cancel,
-			}
-
-			sfReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespaceName,
-			})
-
 		})
 	})
 })

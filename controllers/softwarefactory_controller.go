@@ -6,7 +6,6 @@
 package controllers
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"maps"
@@ -19,7 +18,6 @@ import (
 	"github.com/fatih/color"
 	"gopkg.in/yaml.v3"
 
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/strings/slices"
 
@@ -27,13 +25,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
@@ -43,25 +36,6 @@ import (
 
 	discovery "k8s.io/client-go/discovery"
 )
-
-type SoftwareFactoryReconciler struct {
-	client.Client
-	Scheme     *runtime.Scheme
-	RESTClient rest.Interface
-	RESTConfig *rest.Config
-	CancelFunc context.CancelFunc
-	Completed  bool
-	DryRun     bool
-}
-
-// Run `make manifests` to apply rbac change
-//
-//+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=softwarefactories,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=softwarefactories/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=sf.softwarefactory-project.io,resources=softwarefactories/finalizers,verbs=update
-//+kubebuilder:rbac:groups=*,resources=jobs;pods;pods/exec;services;statefulsets;deployments;configmaps;secrets;persistentvolumeclaims;serviceaccounts;roles;rolebindings;storageclasses,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=*,resources=jobs/status;pods/status;services/status;statefulsets/status;deployments/status;configmaps/status;secrets/status;persistentvolumeclaims/status;serviceaccounts/status;roles/status,verbs=get
-//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors;prometheusrules,verbs=get;list;watch;create;update;patch;delete
 
 type SFController struct {
 	SFKubeContext
@@ -548,81 +522,6 @@ func MkSFController(r SFKubeContext, cr sfv1.SoftwareFactory) SFController {
 	}
 }
 
-func (r *SoftwareFactoryReconciler) mkSFController(
-	ctx context.Context, ns string, owner client.Object, cr sfv1.SoftwareFactory,
-	standalone bool) SFController {
-	clientSet, err := kubernetes.NewForConfig(r.RESTConfig)
-	if err != nil {
-		ctrl.Log.Error(err, "Invalid client")
-		os.Exit(1)
-	}
-	return MkSFController(
-		SFKubeContext{
-			Client:     r.Client,
-			Scheme:     r.Scheme,
-			RESTClient: r.RESTClient,
-			RESTConfig: r.RESTConfig,
-			ClientSet:  clientSet,
-			Ns:         ns,
-			Ctx:        ctx,
-			Owner:      owner,
-			Standalone: standalone,
-			DryRun:     r.DryRun,
-			// cluster settings
-			IsOpenShift:  CheckOpenShift(r.RESTConfig),
-			hasProcMount: os.Getenv("HAS_PROC_MOUNT") == "true",
-		},
-		cr,
-	)
-}
-
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
-func (r *SoftwareFactoryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	if r.Completed {
-		// Special case for OneShot mode where we want to prevent re-entering the Step function
-		// and get such error: panic: client rate limiter Wait returned an error: context canceled
-		return ctrl.Result{}, nil
-	}
-	log := log.FromContext(ctx)
-
-	log.V(1).Info("SoftwareFactory CR - Entering reconcile loop")
-
-	var sf sfv1.SoftwareFactory
-	if err := r.Get(ctx, req.NamespacedName, &sf); err != nil {
-		log.Error(err, "unable to fetch SoftwareFactory resource")
-		// we'll ignore not-found errors, since they can't be fixed by an immediate
-		// requeue (we'll need to wait for a new notification), and we can get them
-		// on deleted requests.
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
-	sfCtrl := r.mkSFController(ctx, req.Namespace, &sf, sf, false)
-	sf.Status = sfCtrl.Step()
-
-	if err := r.Status().Update(ctx, &sf); err != nil {
-		log.Error(err, "unable to update Software Factory status")
-		return ctrl.Result{}, err
-	}
-	if !sf.Status.Ready {
-		log.V(1).Info("SoftwareFactory CR - Reconcile running...")
-		delay, _ := time.ParseDuration("20s")
-		return ctrl.Result{RequeueAfter: delay}, nil
-	} else {
-		log.V(1).Info("SoftwareFactory CR - Reconcile completed!")
-		if r.CancelFunc != nil {
-			log.V(1).Info("Exiting!")
-			r.CancelFunc()
-			r.Completed = true
-		}
-		return ctrl.Result{}, nil
-	}
-
-}
-
 var controllerCMName = "sf-standalone-owner"
 
 func (r *SFKubeContext) GetStandaloneOwner() bool {
@@ -703,75 +602,4 @@ func (r *SFKubeContext) StandaloneReconcile(sf sfv1.SoftwareFactory, skipConfig 
 		log.Info("[attempt #" + strconv.Itoa(attempt) + "] Waiting 5s for the next reconcile call ...")
 		time.Sleep(d)
 	}
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *SoftwareFactoryReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	mkReconcileRequest := func(softwareFactory sfv1.SoftwareFactory, a client.Object) []reconcile.Request {
-		return []reconcile.Request{
-			{NamespacedName: types.NamespacedName{
-				Name:      softwareFactory.Name,
-				Namespace: a.GetNamespace(),
-			}}}
-
-	}
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&sfv1.SoftwareFactory{}).
-		// Watch only specific Secrets resources
-		Watches(
-			&corev1.ConfigMap{},
-			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, a client.Object) []reconcile.Request {
-				softwareFactories := sfv1.SoftwareFactoryList{}
-				r.Client.List(ctx, &softwareFactories, &client.ListOptions{
-					Namespace: a.GetNamespace(),
-				})
-				if len(softwareFactories.Items) > 0 {
-					// We take the first one of the list
-					// sf-operator only manages one SoftwareFactory instance by namespace
-					softwareFactory := softwareFactories.Items[0]
-					req := mkReconcileRequest(softwareFactory, a)
-					switch updatedResourceName := a.GetName(); updatedResourceName {
-					case CorporateCACerts:
-						return req
-					default:
-						// All others ConfigMap must not trigger reconcile
-						return []reconcile.Request{}
-					}
-				}
-				return []reconcile.Request{}
-			}),
-		).
-		// Watch only specific Secrets resources
-		Watches(
-			&corev1.Secret{},
-			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, a client.Object) []reconcile.Request {
-				softwareFactories := sfv1.SoftwareFactoryList{}
-				r.Client.List(ctx, &softwareFactories, &client.ListOptions{
-					Namespace: a.GetNamespace(),
-				})
-				if len(softwareFactories.Items) > 0 {
-					// We take the first one of the list
-					// sf-operator only manages one SoftwareFactory instance by namespace
-					softwareFactory := softwareFactories.Items[0]
-					req := mkReconcileRequest(softwareFactory, a)
-					switch updatedResourceName := a.GetName(); updatedResourceName {
-					case NodepoolProvidersSecretsName:
-						return req
-					default:
-						// Discover secrets for GitHub, GitLab and Pagure connections
-						otherSecretNames := []string{}
-						otherSecretNames = append(otherSecretNames, sfv1.GetGitHubConnectionsSecretName(&softwareFactory.Spec.Zuul)...)
-						otherSecretNames = append(otherSecretNames, sfv1.GetGitLabConnectionsSecretName(&softwareFactory.Spec.Zuul)...)
-						otherSecretNames = append(otherSecretNames, sfv1.GetPagureConnectionsSecretName(&softwareFactory.Spec.Zuul)...)
-						if slices.Contains(otherSecretNames, a.GetName()) {
-							return req
-						}
-						// All others secrets must not trigger reconcile
-						return []reconcile.Request{}
-					}
-				}
-				return []reconcile.Request{}
-			}),
-		).
-		Complete(r)
 }

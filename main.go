@@ -15,38 +15,9 @@ import (
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	zuul "github.com/softwarefactory-project/sf-operator/cli/cmd/zuul"
 	"github.com/softwarefactory-project/sf-operator/controllers"
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
 )
 
 var dryRun bool
-
-// getWatchNamespace returns the Namespace the operator should be watching for changes
-func getWatchNamespace() (string, error) {
-	// WatchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
-	// which specifies the Namespace to watch.
-	// An empty value means the operator is running with cluster scope.
-	return utils.GetEnvVarValue("WATCH_NAMESPACE")
-}
-
-func operatorCmd(kmd *cobra.Command, args []string) {
-	cliutils.SetLogger(kmd)
-	ns, _ := kmd.Flags().GetString("namespace")
-	metricsAddr, _ := kmd.Flags().GetString("metrics-bind-address")
-	probeAddr, _ := kmd.Flags().GetString("health-probe-bind-address")
-	enableLeaderElection, _ := kmd.Flags().GetBool("leader-elect")
-	if ns == "" {
-		var err error
-		ns, err = getWatchNamespace()
-		if err != nil {
-			controllers.SetupLog.Info("Unable to get WATCH_NAMESPACE env, " +
-				"the manager will watch and manage resources in all namespaces")
-		} else {
-			controllers.SetupLog.Info("Got WATCH_NAMESPACE env, " +
-				"the manager will watch and manage resources in " + ns + " namespace")
-		}
-	}
-	controllers.Main(ns, metricsAddr, probeAddr, enableLeaderElection, false)
-}
 
 func deployCmd(kmd *cobra.Command, args []string) {
 	cliutils.SetLogger(kmd)
@@ -88,22 +59,12 @@ func rotateCmd(kmd *cobra.Command, args []string) {
 func main() {
 
 	var (
-		metricsAddr          string
-		enableLeaderElection bool
-		probeAddr            string
-		ns                   string
-		kubeContext          string
-		fqdn                 string
+		ns          string
+		kubeContext string
+		fqdn        string
 
 		rootCmd = &cobra.Command{Short: "SF Operator CLI",
 			Long: `Multi-purpose command line utility related to sf-operator, SF instances management, and development tools.`,
-		}
-
-		operatorCmd = &cobra.Command{
-			Use:   "operator",
-			Short: "Start the SF Operator",
-			Long:  `This command starts the sf-operator service locally, for the cluster defined in the current kube context. The SF CRDs must be installed on the cluster.`,
-			Run:   operatorCmd,
 		}
 
 		deployCmd = &cobra.Command{
@@ -130,20 +91,12 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&fqdn, "fqdn", "d", "", "The FQDN of the deployment (if no manifest is provided).")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable DEBUG logs")
 
-	// Flags for the operator command
-	operatorCmd.Flags().StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	operatorCmd.Flags().StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	operatorCmd.Flags().BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-
 	// Add sub commands
 	subcommands := []*cobra.Command{
 		cmd.MkInitCmd(),
 		cmd.MkSFCmd(),
 		cmd.MkNodepoolCmd(),
 		cmd.MkVersionCmd(),
-		operatorCmd,
 		dev.MkDevCmd(),
 		zuul.MkZuulCmd(),
 		deployCmd,
