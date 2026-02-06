@@ -120,3 +120,4 @@
     run: playbooks/minikube-upgrade.yaml
     vars:
       with_loki: false
+      sf_operator_stable_version: v0.0.64

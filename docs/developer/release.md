@@ -42,6 +42,7 @@ git tag v0.0.20 HEAD
 git push gerrit v0.0.20
 ```
 
+Once the new release is deployed, update the "sf_operator_stable_version" variable in zuul.d/jobs.yaml.
 
 # Release Automation
 
