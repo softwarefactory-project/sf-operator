@@ -98,24 +98,14 @@ spec:
         publicHostname: <hostname-or-ip-of-executor>
 ```
 
-Some secrets must be synchronized between the control plane's namespace and the zuul-executor namespace. Here is the list
-of secrets that must be synchronized:
-
-- ca-cert
-- zookeeper-client-tls
-- zuul-ssh-key
-- zuul-keystore-password
-
-The following command shows how to synchronize a secret:
-
-```sh
-kubectl --config ~/.kube/control-plan.yaml get secrets ca-cert -o json | \
-  jq --arg name ca-cert '. + {metadata: {name: $name}}' | \
-  kubectl --config ~/.kube/external-ze-01.yaml apply -n ext-ze -f
-```
-
 Zuul's connection definition must be similar in both Custom Resources, and the connection's secrets must be synchronized between
 the control plane's namespace and the zuul-executor namespace.
+
+External executor deployment can be performed using the following command:
+
+```
+go run main.go deploy main-sf.yaml --remote external-executor.yaml
+```
 
 The control plane `zuul-web` must be able to access the `zuul-executor` component(s) finger port 7900.
 To do so, the following service can be defined:

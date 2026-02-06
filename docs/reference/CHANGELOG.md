@@ -22,6 +22,11 @@ All notable changes to this project will be documented in this file.
 
 ### Deprecated
 ### Removed
+
+- Prometheus operator dependency and related resources are no longer provided or managed by the sf-operator.
+  Monitoring alert must be setup separately.
+- Operator bundle and OLM images are no longer provided.
+
 ### Fixed
 
 - nodepool-builder: fixed default configuration issues in ansible's custom timestamped output callback plugin

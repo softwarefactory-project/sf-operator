@@ -21,7 +21,6 @@ deployments, beyond what can be defined in a custom resource manifest.
   - [Nodepool](#nodepool)
     - [create openshiftpods-namespace](#create-openshiftpods-namespace)
     - [get builder-ssh-key](#get-builder-ssh-key)
-  1. [Operator](#operator)
   1. [SF](#sf)
     1. [backup](#backup)
     1. [bootstrap-tenant](#bootstrap-tenant)
@@ -339,22 +338,6 @@ Flags:
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 | --pubkey | string | The destination file where to save the builder's public key | yes | - |
-
-### Operator
-
-To start the operator controller locally, run:
-
-```sh
-sf-operator operator [FLAGS]
-```
-
-Flags:
-
-| Argument | Type | Description | Optional | Default |
-|----------|------|-------|----|----|
-|--metrics-bind-address |string  | The address the metric endpoint binds to. | Yes | :8080 |
-|--health-probe-bind-address |string  | The address the probe endpoint binds to. | Yes | :8081 |
-|--leader-elect |boolean  | Enable leader election for controller manager. | Yes | false |
 
 ### SF
 

@@ -73,30 +73,6 @@ To iterate on the development of the `sf-operator` you can either start the oper
   client is used to perform a `SoftwareFactory` deployment based on a `yaml` definition passed
   as a parameter.
 
-=== "manager mode"
-
-    First, apply the `SoftwareFactory` `CR`:
-
-    ```sh
-    kubectl apply -n sf -f playbooks/files/sf.yaml
-    ```
-
-    then run the operator with the following command:
-
-    ```sh
-    go run main.go --namespace sf operator
-    ```
-
-    !!! note
-        The command does not return and waits for events to run the reconcile.
-
-    You can kill and restart this process every time you modify the codebase
-    to see your changes applied to the deployed resources.
-
-    Any change to the applied `SoftwareFactory` `CR` will re-trigger the reconcile.
-
-=== "standalone mode"
-
     Run the operator with the following command:
 
     ```sh

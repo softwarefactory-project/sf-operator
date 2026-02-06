@@ -48,7 +48,6 @@ Delete `secret` resources named:
 
 - zookeeper-server-tls
 - zookeeper-client-tls
-- ca-cert
 
 Roll out the following `Statefulset` and `Deployment` resources:
 

@@ -91,12 +91,7 @@ SF-Operator supports OpenShift and Kubernetes, and it is tested with the followi
 - MicroShift for OpenShift
 - Minikube for Kubernetes
 
-Besides the Getting Started process, here are the available installation modes:
-
-- Run the SF-Operator in standalone mode (recommended).
-- Install the CRD and deploy the SF-Operator on the cluster to manage the SF resources with kubectl.
-
-For example, here is a standard configuration resource (CR), adapted from the getting started one, which is available in [sf.yaml](https://github.com/softwarefactory-project/sf-operator/blob/master/playbooks/files/sf.yaml):
+Here is a standard configuration resource (CR), adapted from the getting started one, which is available in [sf.yaml](https://github.com/softwarefactory-project/sf-operator/blob/master/playbooks/files/sf.yaml):
 
 ```yaml
 apiVersion: sf.softwarefactory-project.io/v1
