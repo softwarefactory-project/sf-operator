@@ -7,9 +7,25 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	apiv1 "k8s.io/api/core/v1"
 )
 
+// RotateZuulAuthenticatorSecret requires a restart of zuul-web and zuul-scheduler
+func (r *SFKubeContext) RotateZuulAuthenticatorSecret() error {
+	// Delete and recreate
+	var secret apiv1.Secret
+	if !r.GetM("zuul-auth-secret", &secret) {
+		return errors.New("missing zuul-auth-secret secret")
+	}
+	r.DeleteR(&secret)
+	r.EnsureSecretUUID("zuul-auth-secret")
+
+	return nil
+
+}
+
+// RotateKeystorePassword requires a restart of zuul-web and zuul-scheduler
 func (r *SFKubeContext) RotateKeystorePassword() error {
 	// Check resources
 	var secret apiv1.Secret
@@ -37,24 +53,28 @@ func (r *SFKubeContext) RotateKeystorePassword() error {
 		return errors.New("couldn't save the new secret")
 	}
 	r.DeleteR(&tmpSecret)
+	return nil
+}
 
-	// Restart services
+func (r *SFKubeContext) DoRotateSecrets() error {
+
+	logging.LogI("Rotating Keystore password...")
+	if err := r.RotateKeystorePassword(); err != nil {
+		return err
+	}
+	logging.LogI("Rotating Zuul Client Authenticator secret...")
+	if err := r.RotateZuulAuthenticatorSecret(); err != nil {
+		return err
+	}
+	logging.LogI("Restarting impacted services...")
 	var podList apiv1.PodList
 	if err := r.Client.List(r.Ctx, &podList); err != nil {
 		return err
 	}
 	for _, pod := range podList.Items {
-		if pod.Name == "zuul-scheduler-0" || strings.HasPrefix(pod.Name, "zuul-web-") {
+		if strings.HasPrefix(pod.Name, "zuul-scheduler") || strings.HasPrefix(pod.Name, "zuul-web-") {
 			r.DeleteR(&pod)
 		}
 	}
-	return nil
-}
-
-func (r *SFKubeContext) DoRotateSecrets() error {
-	if err := r.RotateKeystorePassword(); err != nil {
-		return err
-	}
-
 	return nil
 }

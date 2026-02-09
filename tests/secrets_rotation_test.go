@@ -11,8 +11,9 @@ import (
 )
 
 type Secret struct {
-	name string
-	key  string
+	name         string
+	key          string
+	rotatedByCLI bool
 }
 
 // run with go test -v ./tests/... -args --ginkgo.v --ginkgo.focus "Secret Rotations"
@@ -25,25 +26,26 @@ var _ = Describe("Secret Rotations", Ordered, func() {
 		ensureDelete(&appsv1.StatefulSet{ObjectMeta: mkMeta("zuul-executor")})
 
 		secrets := []Secret{
-			{name: "zuul-auth-secret", key: "zuul-auth-secret"},
-			{name: "zuul-db-connection", key: "password"},
-			{name: "ca-cert", key: "ca.crt"},
-			{name: "zookeeper-server-tls", key: "0-tls.key"},
-			{name: "zookeeper-client-tls", key: "tls.key"},
+			{name: "zuul-auth-secret", key: "zuul-auth-secret", rotatedByCLI: true},
+			{name: "zuul-db-connection", key: "password", rotatedByCLI: false},
+			{name: "zookeeper-server-tls", key: "0-tls.key", rotatedByCLI: false},
+			{name: "zookeeper-client-tls", key: "tls.key", rotatedByCLI: false},
 		}
 
 		By("Checking build database")
 		builds = readZuulCommand("curl zuul-web:9000/api/tenant/demo-tenant/builds")
 
-		By("Running secret rotation CLI")
-		Ω(sfctx.DoRotateSecrets()).Should(BeNil())
-
-		By("Deleting secrets")
+		By("Deleting secrets not rotated by the CLI")
 		prevValues := make(map[string]map[string][]byte)
 		for _, secret := range secrets {
 			prevValues[secret.name] = readSecret(secret.name)
-			ensureDelete(&apiv1.Secret{ObjectMeta: mkMeta(secret.name)})
+			if !secret.rotatedByCLI {
+				ensureDelete(&apiv1.Secret{ObjectMeta: mkMeta(secret.name)})
+			}
 		}
+
+		By("Running secret rotation CLI")
+		Ω(sfctx.DoRotateSecrets()).Should(BeNil())
 
 		By("Reconciling")
 		runReconcile(sf)
