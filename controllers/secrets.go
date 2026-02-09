@@ -11,27 +11,43 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-// RotateZuulDBConnectionSecret requires a reconcile to regenerate the credentials and update the database
-func (r *SFKubeContext) rotateZuulDBConnectionSecret() error {
+func (r *SFKubeContext) _DeleteSecretOrError(name string) error {
 	// Delete and recreate
 	var secret apiv1.Secret
-	if !r.GetM("zuul-db-connection", &secret) {
-		return errors.New("missing zuul-db-connection secret")
+	if !r.GetM(name, &secret) {
+		return errors.New("missing secret: " + name)
 	}
 	r.DeleteR(&secret)
 	return nil
 }
 
+// RotateZookeeperTLSSecrets requires a reconcile, stopping executors prior to the rotation is advised
+func (r *SFKubeContext) rotateZookeeperTLSSecrets() error {
+	var secretClient apiv1.Secret
+	var secretServer apiv1.Secret
+	if !r.GetM("zookeeper-server-tls", &secretServer) {
+		return errors.New("missing zookeeper server secret")
+	}
+	if !r.GetM("zookeeper-client-tls", &secretClient) {
+		return errors.New("missing zookeeper client secret")
+	}
+	r.DeleteR(&secretClient)
+	r.DeleteR(&secretServer)
+	return nil
+}
+
+// RotateZuulDBConnectionSecret requires a reconcile to regenerate the credentials and update the database
+func (r *SFKubeContext) rotateZuulDBConnectionSecret() error {
+	return r._DeleteSecretOrError("zuul-db-connection")
+}
+
 // RotateZuulAuthenticatorSecret requires a restart of zuul-web and zuul-scheduler
 func (r *SFKubeContext) rotateZuulAuthenticatorSecret() error {
 	// Delete and recreate
-	var secret apiv1.Secret
-	if !r.GetM("zuul-auth-secret", &secret) {
-		return errors.New("missing zuul-auth-secret secret")
+	if err := r._DeleteSecretOrError("zuul-auth-secret"); err != nil {
+		return err
 	}
-	r.DeleteR(&secret)
 	r.EnsureSecretUUID("zuul-auth-secret")
-
 	return nil
 
 }
@@ -68,7 +84,16 @@ func (r *SFKubeContext) rotateKeystorePassword() error {
 }
 
 func (r *SFKubeContext) DoRotateSecrets() error {
-
+	var podList apiv1.PodList
+	if err := r.Client.List(r.Ctx, &podList); err != nil {
+		return err
+	}
+	for _, pod := range podList.Items {
+		if strings.HasPrefix(pod.Name, "zuul-executor") {
+			logging.LogW("At least one executor running, this may cause issues when rotating Zookeeper secrets.")
+			break
+		}
+	}
 	logging.LogI("Rotating Keystore password...")
 	if err := r.rotateKeystorePassword(); err != nil {
 		return err
@@ -81,11 +106,11 @@ func (r *SFKubeContext) DoRotateSecrets() error {
 	if err := r.rotateZuulDBConnectionSecret(); err != nil {
 		return err
 	}
-	logging.LogI("Force Restart impacted services...")
-	var podList apiv1.PodList
-	if err := r.Client.List(r.Ctx, &podList); err != nil {
+	logging.LogI("Rotating Zookeeper certificates...")
+	if err := r.rotateZookeeperTLSSecrets(); err != nil {
 		return err
 	}
+	logging.LogI("Force Restart impacted services...")
 	for _, pod := range podList.Items {
 		if strings.HasPrefix(pod.Name, "zuul-scheduler") || strings.HasPrefix(pod.Name, "zuul-web-") {
 			r.DeleteR(&pod)
