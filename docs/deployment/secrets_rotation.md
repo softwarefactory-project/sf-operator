@@ -30,7 +30,7 @@ Most services need to restart to acknowledge a secret rotation; make sure to pla
 | zookeeper-client-tls | zookeeper, zuul, nodepool-launcher | ❌ | **medium** if zookeeper is accessible to the attacker, **low** if not - grants read/write access to encrypted data in zookeeper |
 | zookeeper-server-tls | zookeeper | ❌ | **low** - used to identify zookeeper servers, impersonation is unlikely |
 | zuul-auth-secret | zuul | ✅ | **medium** - grants ability to disrupt jobs execution, saturate resources with autoholds |
-| zuul-db-connection | zuul, mariadb | ❌ | **low** - access to mariadb component is limited to deployment's namespace, would only allow tampering builds/buildsets reports (but not results) |
+| zuul-db-connection | zuul, mariadb | ✅ | **low** - access to mariadb component is limited to deployment's namespace, would only allow tampering builds/buildsets reports (but not results) |
 | zuul-keystore-password | zuul, zookeeper | ✅ | **high** if zookeeper is accessible to the attacker, **low** if not - allows to decrypt secrets and private keys known to zuul |
 | zuul-ssh-key | zuul, nodepool-builder | ❌ | **high** - Grants access to job nodes as the zuul user; allows tampering with jobs' execution and/or results |
 
