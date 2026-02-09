@@ -91,6 +91,7 @@ nav:
           - Adding third-party certificates into the CA trust chain: deployment/corporate-certificates.md
       - Logging: deployment/logging.md
       - Backup and Restore: deployment/backup-restore.md
+      - Secrets Rotation: deployment/secrets_rotation.md
       - General upgrade guidelines: deployment/upgrades.md
   - User:
       - user/index.md
