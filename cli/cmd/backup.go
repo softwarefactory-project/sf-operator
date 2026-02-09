@@ -23,145 +23,11 @@ package cmd
 import (
 	"errors"
 	"os"
-	"path/filepath"
 
-	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
-	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/spf13/cobra"
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/yaml"
 )
-
-const (
-	zuulBackupPod     = "zuul-kazoo"
-	dbBackupPod       = "mariadb-0"
-	DBBackupPath      = "mariadb/db-zuul.sql"
-	ZuulBackupPath    = "zuul/zuul.keys"
-	SecretsBackupPath = "secrets/"
-)
-
-// Short legend what to backup
-// - ca-cert - this is the local CA root certificate material. We might need keep it because it is used to
-//             generate the zookeeper-client-tls and zookeeper-server-tls secrets.
-//             The zookeeper-client-tls will be used by external zuul component like the executor
-// - zookeeper-client-tls
-// - zookeeper-server-tls
-// - nodepool-builder-ssh-key - this key pair is used to connect on an image-builder machine. The builder machine
-//                              have the pub key part in the .ssh/authorized_keys file
-// - zuul-ssh-key This is the key pair used by Zuul to connect on external system - like gerrit.
-//                This key is added as authorized keys on external system
-// - zuul-keystore-password - this is the key used to encrypt/decrypt key pairs stored into zookeeper
-// - zuul-auth-secret - this contains the secret for the zuul-client connection
-
-var SecretsToBackup = []string{
-	"zookeeper-client-tls",
-	"zookeeper-server-tls",
-	"nodepool-builder-ssh-key",
-	"zuul-ssh-key",
-	"zuul-keystore-password",
-	"zuul-auth-secret",
-	"logserver-keys",
-}
-
-func createSecretBackup(backupDir string, env *controllers.SFKubeContext, cr sfv1.SoftwareFactory) {
-	ctrl.Log.Info("Creating secrets backup...")
-
-	secretsDir := backupDir + "/" + SecretsBackupPath
-	cliutils.CreateDirectory(secretsDir, 0755)
-
-	for _, secName := range append(SecretsToBackup, controllers.CRSecrets(cr)...) {
-		secret := apiv1.Secret{}
-		env.GetM(secName, &secret)
-
-		// create new map with important content
-		cleanSecret := apiv1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: secret.Name, Namespace: secret.Namespace, Annotations: secret.Annotations},
-			Data:       secret.Data,
-		}
-		// dump to yaml
-		yamlData, err := yaml.Marshal(cleanSecret)
-		if err != nil {
-			ctrl.Log.Error(err, "Can not dump to yaml for: "+secName)
-			os.Exit(1)
-		}
-
-		// write to file
-		cliutils.WriteContentToFile(secretsDir+"/"+secret.Name+".yaml", yamlData, 0640)
-	}
-	ctrl.Log.Info("Finished doing secret backup!")
-}
-
-func createZuulKeypairBackup(backupDir string, env *controllers.SFKubeContext) {
-
-	ctrl.Log.Info("Doing Zuul keys backup...")
-
-	// https://zuul-ci.org/docs/zuul/latest/client.html
-	zuulBackupPath := backupDir + "/" + ZuulBackupPath
-	zuulBackupDir := filepath.Dir(zuulBackupPath)
-	cliutils.CreateDirectory(zuulBackupDir, 0755)
-	backupZuulCMD := []string{
-		"zuul-admin",
-		"export-keys",
-		"/tmp/zuul-backup",
-	}
-	backupZuulPrintCMD := []string{
-		"cat",
-		"/tmp/zuul-backup",
-	}
-	backupZuulRemoveCMD := []string{
-		"rm",
-		"/tmp/zuul-backup",
-	}
-
-	controllers.WaitFor(env.EnsureKazooPod)
-	defer env.DeleteKazooPod()
-
-	// Execute command for backup
-	env.PodExecM("zuul-kazoo", "zuul-kazoo", backupZuulCMD)
-
-	// Take output of the backup
-	commandBuffer := env.PodExecBytes("zuul-kazoo", "zuul-kazoo", backupZuulPrintCMD)
-
-	// write stdout to file
-	cliutils.WriteContentToFile(zuulBackupPath, commandBuffer.Bytes(), 0640)
-
-	// Remove key file from the pod
-	env.PodExecM("zuul-kazoo", "zuul-kazoo", backupZuulRemoveCMD)
-
-	ctrl.Log.Info("Finished doing Zuul private keys backup!")
-}
-
-func createMySQLBackup(backupDir string, env *controllers.SFKubeContext) {
-	ctrl.Log.Info("Doing DB backup...")
-
-	// create MariaDB dir
-	mariadbBackupPath := backupDir + "/" + DBBackupPath
-	mariaDBBackupDir := filepath.Dir(mariadbBackupPath)
-
-	cliutils.CreateDirectory(mariaDBBackupDir, 0755)
-
-	pod := apiv1.Pod{}
-	env.GetM(dbBackupPod, &pod)
-
-	// NOTE: We use option: --single-transaction to avoid error:
-	// "The user specified as a definer ('mariadb.sys'@'localhost') does not exist" when using LOCK TABLES
-	backupZuulCMD := []string{
-		"mysqldump",
-		"--databases",
-		"zuul",
-		"--single-transaction",
-	}
-
-	// just create Zuul DB backup
-	commandBuffer := env.PodExecBytes(pod.Name, controllers.MariaDBIdent, backupZuulCMD)
-
-	// write stdout to file
-	cliutils.WriteContentToFile(mariadbBackupPath, commandBuffer.Bytes(), 0640)
-	ctrl.Log.Info("Finished doing DBs backup!")
-}
 
 func backupCmd(kmd *cobra.Command, args []string) {
 	backupDir, _ := kmd.Flags().GetString("backup_dir")
@@ -170,8 +36,6 @@ func backupCmd(kmd *cobra.Command, args []string) {
 		ctrl.Log.Error(errors.New("no backup dir set"), "You need to set --backup_dir parameter!")
 		os.Exit(1)
 	}
-
-	cliutils.CreateDirectory(backupDir, 0755)
 
 	env, cr := cliutils.GetCLICRContext(kmd, args)
 
@@ -186,17 +50,9 @@ func backupCmd(kmd *cobra.Command, args []string) {
 	}
 
 	// TODO: check that the CR name and the FQDN match the cr being backuped
-	ctrl.Log.Info("Starting backup process for services in namespace: " + env.Ns)
-
-	// create secret backup
-	createSecretBackup(backupDir, env, cr)
-
-	// create zuul backup
-	createZuulKeypairBackup(backupDir, env)
-
-	// create DB backup
-	createMySQLBackup(backupDir, env)
-
+	if err := env.DoBackup(backupDir, cr); err != nil {
+		os.Exit(1)
+	}
 }
 
 func MkBackupCmd() *cobra.Command {

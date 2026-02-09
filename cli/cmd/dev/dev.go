@@ -25,25 +25,17 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	"github.com/softwarefactory-project/sf-operator/cli/cmd/dev/gerrit"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	"github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
-	apiv1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 
 	apiroutev1 "github.com/openshift/api/route/v1"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var devCreateAllowedArgs = []string{"gerrit", "demo-env"}
@@ -122,215 +114,17 @@ func devCreate(kmd *cobra.Command, args []string) {
 	}
 }
 
-func getOperatorSelector() labels.Selector {
-	selector := labels.NewSelector()
-	req, err := labels.NewRequirement(
-		"operators.coreos.com/sf-operator.operators",
-		selection.Exists,
-		[]string{})
-	if err != nil {
-		ctrl.Log.Error(err, "could not set label selector to clean subscriptions")
-		os.Exit(1)
-	}
-	return selector.Add(*req)
-}
-
-func cleanSubscription(env *controllers.SFKubeContext) {
-	selector := getOperatorSelector()
-
-	subscriptionListOpts := []client.ListOption{
-		client.InNamespace("operators"),
-		client.MatchingLabelsSelector{
-			Selector: selector,
-		},
-	}
-
-	subsList := v1alpha1.SubscriptionList{}
-	if err := env.Client.List(env.Ctx, &subsList, subscriptionListOpts...); err != nil {
-		ctrl.Log.Error(err, "error listing subscriptions")
-		os.Exit(1)
-	}
-	if len(subsList.Items) > 0 {
-		subscriptionDeleteOpts := []client.DeleteAllOfOption{
-			client.InNamespace("operators"),
-			client.MatchingLabelsSelector{
-				Selector: selector,
-			},
-		}
-		sub := v1alpha1.Subscription{}
-		env.DeleteAllOfOrDie(&sub, subscriptionDeleteOpts...)
-	}
-}
-
-func cleanCatalogSource(env *controllers.SFKubeContext) {
-	cs := v1alpha1.CatalogSource{}
-	cs.SetName("sf-operator-catalog")
-	cs.SetNamespace("operators")
-	if !env.DeleteOrDie(&cs) {
-		ctrl.Log.Info("CatalogSource \"sf-operator-catalog\" not found")
-	}
-}
-
-func cleanClusterServiceVersion(env *controllers.SFKubeContext) {
-	selector := getOperatorSelector()
-
-	subscriptionListOpts := []client.ListOption{
-		client.InNamespace("operators"),
-		client.MatchingLabelsSelector{
-			Selector: selector,
-		},
-	}
-
-	csvsList := v1alpha1.ClusterServiceVersionList{}
-	if err := env.Client.List(env.Ctx, &csvsList, subscriptionListOpts...); err != nil {
-		ctrl.Log.Error(err, "error listing cluster service versions")
-		os.Exit(1)
-	}
-	if len(csvsList.Items) > 0 {
-		csvDeleteOpts := []client.DeleteAllOfOption{
-			client.InNamespace("operators"),
-			client.MatchingLabelsSelector{
-				Selector: selector,
-			},
-		}
-		csv := v1alpha1.ClusterServiceVersion{}
-		env.DeleteAllOfOrDie(&csv, csvDeleteOpts...)
-	}
-}
-
-func cleanSFInstance(env *controllers.SFKubeContext, ns string) {
-	// --- Scale down Zuul STS components
-	components := []string{"zuul-executor", "zuul-merger", "zuul-scheduler"}
-	ctrl.Log.Info("Scaling down StatefulSets before deletion...")
-	for _, comp := range components {
-		if err := env.ScaleDownSTSAndWait(comp); err != nil {
-			ctrl.Log.Error(err, "Could not scale down StatefulSet, continuing...", "name", comp)
-		}
-	}
-
-	// --- Detection and Deletion Logic ---
-	var sfList sfv1.SoftwareFactoryList
-	if err := env.Client.List(env.Ctx, &sfList, client.InNamespace(ns)); err != nil {
-		ctrl.Log.Error(err, "API error when checking for SoftwareFactory resource")
-	}
-
-	var cm apiv1.ConfigMap
-	cmKey := client.ObjectKey{Namespace: ns, Name: "sf-standalone-owner"}
-	cmErr := env.Client.Get(env.Ctx, cmKey, &cm)
-
-	const maxRetries = 60
-	const retryInterval = 2 * time.Second
-
-	if len(sfList.Items) > 0 {
-		// --- Operator Mode Deletion ---
-		ctrl.Log.Info("Operator mode detected. Deleting SoftwareFactory resource(s) with foreground propagation.")
-		var sf sfv1.SoftwareFactory
-		sfDeleteOpts := []client.DeleteAllOfOption{
-			client.InNamespace(ns),
-			client.PropagationPolicy(metav1.DeletePropagationForeground),
-		}
-		if err := env.Client.DeleteAllOf(env.Ctx, &sf, sfDeleteOpts...); err != nil {
-			ctrl.Log.Error(err, "Failed to initiate deletion of SoftwareFactory resources")
-			return
-		}
-
-		// Wait for SoftwareFactory resources to be fully deleted
-		ctrl.Log.Info("Waiting for SoftwareFactory resources to be fully deleted...")
-		deleted := false
-		for i := 0; i < maxRetries; i++ {
-			var currentSfList sfv1.SoftwareFactoryList
-			env.Client.List(env.Ctx, &currentSfList, client.InNamespace(ns))
-			if len(currentSfList.Items) == 0 {
-				ctrl.Log.Info("SoftwareFactory resources successfully deleted.")
-				deleted = true
-				break
-			}
-			time.Sleep(retryInterval)
-		}
-		if !deleted {
-			ctrl.Log.Info("Timed out waiting for SoftwareFactory resources to be deleted.")
-		}
-
-	} else if cmErr == nil {
-		// --- Standalone Mode Deletion ---
-		ctrl.Log.Info("Standalone mode detected. Deleting owner ConfigMap with foreground propagation.")
-		deleteOpts := &client.DeleteOptions{
-			PropagationPolicy: &[]metav1.DeletionPropagation{metav1.DeletePropagationForeground}[0],
-		}
-		if err := env.Client.Delete(env.Ctx, &cm, deleteOpts); err != nil {
-			ctrl.Log.Error(err, "Failed to initiate deletion of standalone ConfigMap")
-			return
-		}
-
-		// Wait for the ConfigMap to be fully deleted
-		ctrl.Log.Info("Waiting for the owner ConfigMap to be fully deleted...")
-		deleted := false
-		for i := 0; i < maxRetries; i++ {
-			var checkCm apiv1.ConfigMap
-			err := env.Client.Get(env.Ctx, cmKey, &checkCm)
-			if apierrors.IsNotFound(err) {
-				ctrl.Log.Info("Standalone owner ConfigMap successfully deleted.")
-				deleted = true
-				break
-			}
-			time.Sleep(retryInterval)
-		}
-		if !deleted {
-			ctrl.Log.Info("Timed out waiting for the owner ConfigMap to be deleted.")
-		}
-
-	} else {
-		ctrl.Log.Info("No SoftwareFactory resource or standalone ConfigMap found. Instance is already clean.")
-	}
-}
-
-func cleanPVCs(env *controllers.SFKubeContext, ns string) {
-	selector := labels.NewSelector()
-	appReq, err := labels.NewRequirement(
-		"app",
-		selection.In,
-		[]string{"sf"})
-	if err != nil {
-		ctrl.Log.Error(err, "could not set app label requirement to clean PVCs")
-		os.Exit(1)
-	}
-	runReq, err := labels.NewRequirement(
-		"run",
-		selection.NotIn,
-		[]string{"gerrit"})
-	if err != nil {
-		ctrl.Log.Error(err, "could not set run label requirement to clean PVCs")
-		os.Exit(1)
-	}
-	selector = selector.Add([]labels.Requirement{*appReq, *runReq}...)
-	pvcDeleteOpts := []client.DeleteAllOfOption{
-		client.InNamespace(ns),
-		client.MatchingLabelsSelector{
-			Selector: selector,
-		},
-	}
-	var pvc apiv1.PersistentVolumeClaim
-	env.DeleteAllOfOrDie(&pvc, pvcDeleteOpts...)
-}
-
 func devWipe(kmd *cobra.Command, args []string) {
 	env := cliutils.GetCLIContext(kmd)
 	target := args[0]
 	rmData, _ := kmd.Flags().GetBool("rm-data")
-	rmOp, _ := kmd.Flags().GetBool("rm-operator")
 	if target == "gerrit" {
 		gerrit.WipeGerrit(env, rmData)
 	} else if target == "sf" {
-		cleanSFInstance(env, env.Ns)
+		env.CleanSFInstance()
 		if rmData {
 			ctrl.Log.Info("Removing dangling persistent volume claims if any...")
-			cleanPVCs(env, env.Ns)
-		}
-		if rmOp {
-			ctrl.Log.Info("Removing SF Operator if present...")
-			cleanSubscription(env)
-			cleanCatalogSource(env)
-			cleanClusterServiceVersion(env)
+			env.CleanPVCs()
 		}
 	} else {
 		ctrl.Log.Error(errors.New("unsupported target"), "Invalid argument '"+target+"'")
@@ -541,7 +335,6 @@ func MkDevCmd() *cobra.Command {
 
 	var (
 		deleteData              bool
-		deleteOperator          bool
 		verifyCloneSSL          bool
 		msSkipPostInstall       bool
 		msDryRun                bool
@@ -577,7 +370,6 @@ func MkDevCmd() *cobra.Command {
 	)
 	// args
 	wipeCmd.Flags().BoolVar(&deleteData, "rm-data", false, "Delete also persistent data")
-	wipeCmd.Flags().BoolVar(&deleteOperator, "rm-operator", false, "[sf] Delete also the operator installation")
 
 	cloneAsAdminCmd.Flags().BoolVar(&verifyCloneSSL, "verify", false, "Verify SSL endpoint")
 
