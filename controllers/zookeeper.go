@@ -241,7 +241,7 @@ func (r *SFController) DeployZookeeper() bool {
 	zk.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
 	replicaCount := int32(ZookeeperReplicas)
-	current, changed := r.ensureStatefulset(storageConfig.StorageClassName, zk, &replicaCount)
+	current, changed := r.ensureStatefulset(zk, &replicaCount)
 	if changed {
 		return false
 	}

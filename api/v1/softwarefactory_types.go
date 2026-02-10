@@ -57,8 +57,6 @@ type StorageDefaultSpec struct {
 	ClassName string `json:"className,omitempty"`
 	// Whether you need to add extra annotations to the Persistent Volume Claims
 	ExtraAnnotations map[string]string `json:"extraAnnotations,omitempty"`
-	// Set node affinity to prevent the pod from being scheduled to a different host when using custom storage class which doesn't work nicely in that case, e.g. iSCSI
-	NodeAffinity bool `json:"nodeAffinity,omitempty"`
 }
 
 type ConfigRepositoryLocationSpec struct {

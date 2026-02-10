@@ -493,7 +493,6 @@ _Appears in:_
 | --- | --- | --- |
 | `className` _string_ | Default storage class to use with Persistent Volume Claims issued by this resource. Consult your cluster's configuration to see what storage classes are available and recommended for your use case. | -|
 | `extraAnnotations` _object (keys:string, values:string)_ | Whether you need to add extra annotations to the Persistent Volume Claims | -|
-| `nodeAffinity` _boolean_ | Set node affinity to prevent the pod from being scheduled to a different host when using custom storage class which doesn't work nicely in that case, e.g. iSCSI | -|
 
 
 #### StorageSpec

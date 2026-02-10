@@ -41,7 +41,6 @@
     - name: zuul-client-from-zuul-pod
     - name: test-external-ze
     - name: test-log-forwarding
-    - name: test-nodeAffinity
     - name: test-dry-run-lifecycle
     - name: test-standalone-update
     # Always ensure this test is done last, since whenever a reconcile is done with

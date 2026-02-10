@@ -123,7 +123,7 @@ func (r *SFController) DeployHoundSearch() bool {
 
 	sts.Spec.Template.ObjectMeta.Annotations = annotations
 
-	current, stsUpdated := r.ensureStatefulset(storage.StorageClassName, sts, nil)
+	current, stsUpdated := r.ensureStatefulset(sts, nil)
 
 	if stsUpdated {
 		return false

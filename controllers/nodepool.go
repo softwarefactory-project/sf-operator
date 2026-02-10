@@ -529,7 +529,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 		BuilderIdent, r.Ns, BuilderIdent+"-0", []int32{buildLogsHttpdPort}, BuilderIdent, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svc)
 
-	current, changed := r.ensureStatefulset(nbStorage.StorageClassName, nb, nil)
+	current, changed := r.ensureStatefulset(nb, nil)
 	if changed {
 		return false
 	}

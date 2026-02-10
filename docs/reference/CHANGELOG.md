@@ -26,6 +26,8 @@ All notable changes to this project will be documented in this file.
 - Prometheus operator dependency and related resources are no longer provided or managed by the sf-operator.
   Monitoring alert must be setup separately.
 - Operator bundle and OLM images are no longer provided.
+- Node affinity for storage issue workaround is no longer automatically applied. The logic was flawed because the hosting node may have changed between reconciles.
+  Any nodeAffinity previously set won't be removed from the statefulsets' definitions and should be removed manually.
 
 ### Fixed
 
