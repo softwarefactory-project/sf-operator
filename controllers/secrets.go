@@ -11,8 +11,19 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
+// RotateZuulDBConnectionSecret requires a reconcile to regenerate the credentials and update the database
+func (r *SFKubeContext) rotateZuulDBConnectionSecret() error {
+	// Delete and recreate
+	var secret apiv1.Secret
+	if !r.GetM("zuul-db-connection", &secret) {
+		return errors.New("missing zuul-db-connection secret")
+	}
+	r.DeleteR(&secret)
+	return nil
+}
+
 // RotateZuulAuthenticatorSecret requires a restart of zuul-web and zuul-scheduler
-func (r *SFKubeContext) RotateZuulAuthenticatorSecret() error {
+func (r *SFKubeContext) rotateZuulAuthenticatorSecret() error {
 	// Delete and recreate
 	var secret apiv1.Secret
 	if !r.GetM("zuul-auth-secret", &secret) {
@@ -26,7 +37,7 @@ func (r *SFKubeContext) RotateZuulAuthenticatorSecret() error {
 }
 
 // RotateKeystorePassword requires a restart of zuul-web and zuul-scheduler
-func (r *SFKubeContext) RotateKeystorePassword() error {
+func (r *SFKubeContext) rotateKeystorePassword() error {
 	// Check resources
 	var secret apiv1.Secret
 	if r.GetM("zuul-keystore-password-new", &secret) {
@@ -59,14 +70,18 @@ func (r *SFKubeContext) RotateKeystorePassword() error {
 func (r *SFKubeContext) DoRotateSecrets() error {
 
 	logging.LogI("Rotating Keystore password...")
-	if err := r.RotateKeystorePassword(); err != nil {
+	if err := r.rotateKeystorePassword(); err != nil {
 		return err
 	}
 	logging.LogI("Rotating Zuul Client Authenticator secret...")
-	if err := r.RotateZuulAuthenticatorSecret(); err != nil {
+	if err := r.rotateZuulAuthenticatorSecret(); err != nil {
 		return err
 	}
-	logging.LogI("Restarting impacted services...")
+	logging.LogI("Rotating Zuul DB Connection secret...")
+	if err := r.rotateZuulDBConnectionSecret(); err != nil {
+		return err
+	}
+	logging.LogI("Force Restart impacted services...")
 	var podList apiv1.PodList
 	if err := r.Client.List(r.Ctx, &podList); err != nil {
 		return err
