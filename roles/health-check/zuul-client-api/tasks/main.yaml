@@ -19,11 +19,14 @@
 - name: Ensure autohold was set properly
   ansible.builtin.command: |
     {{ zuul_client }} -c /tmp/zuul-client.conf --use-config internal autohold-list
+  environment:
+    PYTHONWARNINGS: "ignore"
   register: _ah_list
   failed_when: '"CI_TEST" not in _ah_list.stdout'
 
 - name: Remove autohold
   ansible.builtin.shell: >
     echo "{{ _ah_list.stdout }}" |
+    grep CI_TEST |
     grep -oE "0000[0-9]+" |
-    xargs {{ zuul_client }} -c /tmp/zuul-client.conf --use-config internal autohold-delete
+    xargs {{ zuul_client }} -c /tmp/zuul-client.conf --use-config internal autohold-delete --tenant internal

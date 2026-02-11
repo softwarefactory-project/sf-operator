@@ -15,14 +15,12 @@
     - utils/config-repo-reset
     - utils/setup-log-forwarding-stack
 
-    - golang-integration-tests
-
     # Apply the sf.yaml resources with the config repo on gerrit
     - run-operator-standalone
+    - golang-integration-tests
 
     # Validate services are working
     - health-check/test-standalone-update
-    - health-check/check-service-uri
     - health-check/check-zuul-weeder
     - health-check/enable-log-forward
     - health-check/scale-resources

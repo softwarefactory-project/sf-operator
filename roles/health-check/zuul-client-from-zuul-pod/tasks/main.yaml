@@ -15,5 +15,6 @@
 - name: Remove autohold
   ansible.builtin.shell: >
     echo "{{ _ah_list.stdout }}" |
+    grep CI_TEST |
     grep -oE "0000[0-9]+" |
     xargs kubectl exec -it zuul-scheduler-0 -c zuul-scheduler -- zuul-client autohold-delete --tenant internal

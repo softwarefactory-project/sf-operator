@@ -14,4 +14,7 @@ var _ = Describe("Deploy Tests", Ordered, func() {
 	It("Match zuul secrets", func() {
 		zuulConfMatchSecret()
 	})
+	It("Connect to services", func() {
+		testBasicURL(sf)
+	})
 })

@@ -12,6 +12,7 @@
     - name: utils/get-gerrit-admin-user-api-key
     - name: utils/config-repo-reset
     - name: utils/setup-log-forwarding-stack
+    - name: golang-integration-tests
   loop_control:
     loop_var: role
 
@@ -20,7 +21,6 @@
     name: "health-check/{{ role.name }}"
   when: role.when | default(true)
   loop:
-    - name: check-service-uri
     - name: check-zuul-weeder
     - name: enable-log-forward
     - name: scale-resources
