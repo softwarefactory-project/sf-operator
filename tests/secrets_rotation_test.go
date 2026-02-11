@@ -28,8 +28,8 @@ var _ = Describe("Secret Rotations", Ordered, func() {
 		secrets := []Secret{
 			{name: "zuul-auth-secret", key: "zuul-auth-secret", rotatedByCLI: true},
 			{name: "zuul-db-connection", key: "password", rotatedByCLI: true},
-			{name: "zookeeper-server-tls", key: "0-tls.key", rotatedByCLI: false},
-			{name: "zookeeper-client-tls", key: "tls.key", rotatedByCLI: false},
+			{name: "zookeeper-server-tls", key: "0-tls.key", rotatedByCLI: true},
+			{name: "zookeeper-client-tls", key: "tls.key", rotatedByCLI: true},
 		}
 
 		By("Checking build database")
