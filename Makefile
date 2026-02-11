@@ -1,8 +1,9 @@
-# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-# NOTE: MicroShift 4.13 got kubeAPI 1.26.
-# More info: https://docs.openshift.com/container-platform/4.13/release_notes/ocp-4-13-release-notes.html#ocp-4-13-about-this-release
-ENVTEST_K8S_VERSION = 1.29.0
-CERT_MANAGER_VERSION = v1.14.6
+## Tool Versions
+CONTROLLER_TOOLS_VERSION = v0.18.0
+SETUP_ENVTEST_VERSION = release-0.22
+STATICCHECK_VERSION = 2025.1.1
+MKDOCS_VERSION = 1.6.0
+ZUUL_CLIENT_VERSION = 10.0.0
 
 LDFLAGS = -ldflags="-X github.com/softwarefactory-project/sf-operator/controllers/libs/utils.version=$(VERSION)"
 
@@ -41,7 +42,7 @@ help: ## Display this help.
 
 .PHONY: clean
 clean: ## Cleanup the local env
-	@rm -f $(LOCALBIN)/staticcheck
+	@rm -Rf $(LOCALBIN)/*
 
 ##@ Development
 
@@ -115,13 +116,6 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 MKDOCS ?= $(LOCALBIN)/mkdocs/bin/mkdocs
 ZC ?= $(LOCALBIN)/zc/bin/zuul-client
-
-## Tool Versions
-CONTROLLER_TOOLS_VERSION ?= v0.15.0
-STATICCHECK_VERSION ?= 2025.1.1
-MKDOCS_VERSION ?= 1.6.0
-SETUP_ENVTEST_VERSION ?= v0.0.0-20240320141353-395cfc7486e6
-ZUUL_CLIENT_VERSION ?= 10.0.0
 
 .PHONY: mkdocs
 mkdocs: $(MKDOCS) ## Install material for mkdocs locally if necessary
