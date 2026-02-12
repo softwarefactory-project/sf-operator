@@ -268,6 +268,7 @@ func (r *SFKubeContext) DoRestore(backupDir string, cr sfv1.SoftwareFactory) err
 
 	sfCtrl.DeployZuulSecrets()
 	sfCtrl.EnsureZuulConfigSecret(false)
+	sfCtrl.EnsureToolingVolume()
 	WaitFor(sfCtrl.EnsureKazooPod)
 
 	if err := r.restoreZuul(backupDir); err != nil {

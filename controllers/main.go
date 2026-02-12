@@ -120,6 +120,9 @@ func RotateSecrets(cliNS string, kubeContext string, dryRun bool, crPath string)
 
 	env.EnsureStandaloneOwner(sf.Spec)
 
+	sfCtrl := MkSFController(env, sf)
+	sfCtrl.EnsureToolingVolume()
+
 	if err := env.DoRotateSecrets(); err != nil {
 		return nil
 	}
