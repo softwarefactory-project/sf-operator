@@ -110,6 +110,9 @@ func (r *SFKubeContext) DoRotateSecrets() error {
 	if err := r.rotateKeystorePassword(); err != nil {
 		return err
 	}
+	logging.LogI("Killing every kazoo client...")
+	r.nukeZKClients()
+
 	logging.LogI("Rotating Zuul Client Authenticator secret...")
 	if err := r.rotateZuulAuthenticatorSecret(); err != nil {
 		return err
