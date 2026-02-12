@@ -85,7 +85,7 @@ func (r *SFKubeContext) rotateKeystorePassword() error {
 
 func (r *SFKubeContext) DoRotateSecrets() error {
 	var podList apiv1.PodList
-	if err := r.Client.List(r.Ctx, &podList); err != nil {
+	if err := r.ListM(&podList); err != nil {
 		return err
 	}
 	for _, pod := range podList.Items {

@@ -96,6 +96,11 @@ func (r *SFKubeContext) GetM(name string, obj client.Object) bool {
 	return true
 }
 
+func (r *SFKubeContext) ListM(list client.ObjectList) error {
+	opts := []client.ListOption{client.InNamespace(r.Ns)}
+	return r.Client.List(r.Ctx, list, opts...)
+}
+
 func (r *SFKubeContext) ReadSecret(name string) map[string][]byte {
 	var sec apiv1.Secret
 	if r.GetM(name, &sec) {
