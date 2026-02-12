@@ -84,6 +84,8 @@ func main() {
 
 	// Flags for the deploy command
 	deployCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Shows what resources will be changed by a deploy operation")
+	var remote string
+	deployCmd.PersistentFlags().StringVarP(&remote, "remote", "r", "", "Remote CR")
 
 	// Global flags
 	rootCmd.PersistentFlags().StringVarP(&ns, "namespace", "n", "", "The namespace on which to perform actions.")

@@ -88,6 +88,7 @@ func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string, re
 			fmt.Printf("%s: The remote CR is not standalone\n", remotePath)
 			os.Exit(1)
 		}
+		env.EnsureStandaloneOwner(sf.Spec)
 		if err := env.setupRemoteExecutorConfig(copyFrom, sf); err != nil {
 			ctrl.Log.Error(err, "unable to setup remote executor config")
 			os.Exit(1)
