@@ -14,7 +14,7 @@ import (
 func (r *SFKubeContext) CleanPVCs() {
 	var pvcList apiv1.PersistentVolumeClaimList
 	for range 60 {
-		r.Client.List(r.Ctx, &pvcList)
+		r.ListM(&pvcList)
 		cleaned := true
 		for _, pvc := range pvcList.Items {
 			if pvc.Labels["app"] == "sf" && pvc.Labels["run"] != "gerrit" {
@@ -44,7 +44,7 @@ func (r *SFKubeContext) CleanSFInstance() {
 	// Delete the resource manually to ensure they are gone before this function ends
 	ctrl.Log.Info("Cleaning resources...")
 	var svcList apiv1.ServiceList
-	r.Client.List(r.Ctx, &svcList)
+	r.ListM(&svcList)
 	for _, svc := range svcList.Items {
 		if svc.Spec.Selector["app"] == "sf" && svc.Spec.Selector["run"] != "gerrit" {
 			r.DeleteR(&svc)
@@ -52,7 +52,7 @@ func (r *SFKubeContext) CleanSFInstance() {
 	}
 
 	var depList appsv1.DeploymentList
-	r.Client.List(r.Ctx, &depList)
+	r.ListM(&depList)
 	for _, dep := range depList.Items {
 		if dep.Spec.Selector.MatchLabels["app"] == "sf" && dep.Spec.Selector.MatchLabels["run"] != "gerrit" {
 			r.DeleteR(&dep)
@@ -60,7 +60,7 @@ func (r *SFKubeContext) CleanSFInstance() {
 	}
 
 	var stsList appsv1.StatefulSetList
-	r.Client.List(r.Ctx, &stsList)
+	r.ListM(&stsList)
 	for _, sts := range stsList.Items {
 		if sts.Spec.Selector.MatchLabels["app"] == "sf" && sts.Spec.Selector.MatchLabels["run"] != "gerrit" {
 			r.DeleteR(&sts)
@@ -69,7 +69,7 @@ func (r *SFKubeContext) CleanSFInstance() {
 
 	var podList apiv1.PodList
 	for range 60 {
-		r.Client.List(r.Ctx, &podList)
+		r.ListM(&podList)
 		cleaned := true
 		for _, pod := range podList.Items {
 			if pod.Labels["app"] == "sf" && pod.Labels["run"] != "gerrit" {
