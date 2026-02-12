@@ -97,7 +97,7 @@ func (r *SFController) cleanup() {
 }
 
 // Manually kill all the ZK process in last resort
-func (r *SFController) nukeZKClients() {
+func (r *SFKubeContext) nukeZKClients() {
 	podslist, _ := r.ClientSet.CoreV1().Pods(r.Ns).List(r.Ctx, metav1.ListOptions{})
 	for _, pod := range podslist.Items {
 		if strings.HasPrefix(pod.Name, "zuul-") || strings.HasPrefix(pod.Name, "nodepool-") {

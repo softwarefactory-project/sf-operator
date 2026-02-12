@@ -274,7 +274,6 @@ Flags:
 | Argument | Type | Description | Optional | Default |
 |----------|------|-------|----|----|
 | --rm-data | boolean | Delete also persistent data | yes | False |
-| --rm-operator | boolean | [sf] Delete also the operator installation | yes | False |
 
 ### Init
 
