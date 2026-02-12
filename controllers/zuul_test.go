@@ -57,7 +57,7 @@ var _ = Describe("Zuul controller", func() {
 			}
 
 			r.DeployZuulSecrets()
-			r.EnsureZuulConfigSecret(true, true)
+			r.EnsureZuulConfigSecret(true)
 
 			By("Checking if zuul-config was created with git connection to opendev.")
 			Eventually(func() error {
@@ -77,7 +77,7 @@ var _ = Describe("Zuul controller", func() {
 			// Ideally we should use the main reconciller to handle connection validation
 			// this is more like unit-testing for now...
 			r.needOpendev = false
-			r.EnsureZuulConfigSecret(true, true)
+			r.EnsureZuulConfigSecret(true)
 			Eventually(func() error {
 				found := &corev1.Secret{}
 				k8sClient.Get(ctx, secretKey, found)

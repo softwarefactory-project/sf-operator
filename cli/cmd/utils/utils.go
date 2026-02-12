@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"go.uber.org/zap/zapcore"
-	"gopkg.in/yaml.v3"
 	"io/fs"
 	"math/big"
 	"os"
@@ -190,43 +189,6 @@ func ConvertMapOfBytesToMapOfStrings(contentMap map[string][]byte) map[string]st
 		strMap[key] = strValue
 	}
 	return strMap
-}
-
-func ReadYAMLToMapOrDie(filePath string) map[string]interface{} {
-	readFile, _ := GetFileContent(filePath)
-	secretContent := make(map[string]interface{})
-	err := yaml.Unmarshal(readFile, &secretContent)
-	if err != nil {
-		logging.LogE(err, "Problem on reading the file content")
-	}
-	if len(secretContent) == 0 {
-		logging.LogE(errors.New("file is empty"), "The file is empty or it does not exist!")
-		os.Exit(1)
-	}
-	return secretContent
-}
-
-func GetKubectlPath() string {
-	kubectlPath, err := exec.LookPath("kubectl")
-	if err != nil {
-		logging.LogE(errors.New("no kubectl binary"),
-			"No 'kubectl' binary found. Please install the 'kubectl' binary before attempting a restore")
-		os.Exit(1)
-	}
-	return kubectlPath
-}
-
-func ExecuteKubectlClient(ns string, podName string, containerName string, executeCommand string) {
-	cmd := exec.Command("sh", "-c", executeCommand)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-
-	err := cmd.Run()
-	if err != nil {
-		logging.LogE(err, "There is an issue on executing command: "+executeCommand)
-		os.Exit(1)
-	}
-
 }
 
 func GetKubeConfig() *clientcmdapi.Config {

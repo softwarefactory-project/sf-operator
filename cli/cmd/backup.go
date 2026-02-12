@@ -29,13 +29,14 @@ import (
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/yaml"
 )
 
 const (
-	zuulBackupPod     = "zuul-scheduler-0"
+	zuulBackupPod     = "zuul-kazoo"
 	dbBackupPod       = "mariadb-0"
 	DBBackupPath      = "mariadb/db-zuul.sql"
 	ZuulBackupPath    = "zuul/zuul.keys"
@@ -76,24 +77,15 @@ func createSecretBackup(backupDir string, env *controllers.SFKubeContext, cr sfv
 		secret := apiv1.Secret{}
 		env.GetM(secName, &secret)
 
-		// convert secret content to string (was bytes)
-		strMap := cliutils.ConvertMapOfBytesToMapOfStrings(secret.Data)
-
 		// create new map with important content
-		dataMap := map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Secret",
-			"metadata": map[string]string{
-				"name": secret.Name,
-			},
-			"type": secret.Type,
-			"data": strMap,
+		cleanSecret := apiv1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: secret.Name, Namespace: secret.Namespace, Annotations: secret.Annotations},
+			Data:       secret.Data,
 		}
-
 		// dump to yaml
-		yamlData, err := yaml.Marshal(dataMap)
+		yamlData, err := yaml.Marshal(cleanSecret)
 		if err != nil {
-			ctrl.Log.Error(err, "Can not dump to yaml")
+			ctrl.Log.Error(err, "Can not dump to yaml for: "+secName)
 			os.Exit(1)
 		}
 
@@ -106,9 +98,6 @@ func createSecretBackup(backupDir string, env *controllers.SFKubeContext, cr sfv
 func createZuulKeypairBackup(backupDir string, env *controllers.SFKubeContext) {
 
 	ctrl.Log.Info("Doing Zuul keys backup...")
-
-	pod := apiv1.Pod{}
-	env.GetM(zuulBackupPod, &pod)
 
 	// https://zuul-ci.org/docs/zuul/latest/client.html
 	zuulBackupPath := backupDir + "/" + ZuulBackupPath
@@ -128,17 +117,20 @@ func createZuulKeypairBackup(backupDir string, env *controllers.SFKubeContext) {
 		"/tmp/zuul-backup",
 	}
 
+	controllers.WaitFor(env.EnsureKazooPod)
+	defer env.DeleteKazooPod()
+
 	// Execute command for backup
-	env.PodExecM(pod.Name, controllers.ZuulSchedulerIdent, backupZuulCMD)
+	env.PodExecM("zuul-kazoo", "zuul-kazoo", backupZuulCMD)
 
 	// Take output of the backup
-	commandBuffer := env.PodExecBytes(pod.Name, controllers.ZuulSchedulerIdent, backupZuulPrintCMD)
+	commandBuffer := env.PodExecBytes("zuul-kazoo", "zuul-kazoo", backupZuulPrintCMD)
 
 	// write stdout to file
 	cliutils.WriteContentToFile(zuulBackupPath, commandBuffer.Bytes(), 0640)
 
 	// Remove key file from the pod
-	env.PodExecM(pod.Name, controllers.ZuulSchedulerIdent, backupZuulRemoveCMD)
+	env.PodExecM("zuul-kazoo", "zuul-kazoo", backupZuulRemoveCMD)
 
 	ctrl.Log.Info("Finished doing Zuul private keys backup!")
 }

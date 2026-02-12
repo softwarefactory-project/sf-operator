@@ -18,6 +18,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -179,6 +180,43 @@ func (r *SFKubeContext) GetOrCreate(obj client.Object) bool {
 		return false
 	}
 	return true
+}
+
+// PodExecIn connects to a container's Pod and execute a command
+// Stderr is output on the caller's Stdout
+// The function returns an Error for any issue
+func (r *SFKubeContext) PodExecIn(pod string, container string, command []string, in io.Reader) error {
+	logging.LogI(fmt.Sprintf("Running pod execution pod: %s, command: %s", pod, command))
+	execReq := r.RESTClient.
+		Post().
+		Namespace(r.Ns).
+		Resource("pods").
+		Name(pod).
+		SubResource("exec").
+		VersionedParams(&apiv1.PodExecOptions{
+			Container: container,
+			Command:   command,
+			Stdin:     true,
+			Stdout:    true,
+			Stderr:    true,
+		}, runtime.NewParameterCodec(r.Scheme))
+
+	exec, err := remotecommand.NewSPDYExecutor(r.RESTConfig, "POST", execReq.URL())
+	if err != nil {
+		return err
+	}
+
+	// r.log.V(1).Info("Streaming start")
+	err = exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
+		Stdin:  in,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+		Tty:    false,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // PodExecOut connects to a container's Pod and execute a command
@@ -1083,4 +1121,18 @@ func RunPodCmdRaw(restConfig *rest.Config, kubeClientset *kubernetes.Clientset, 
 
 func (r *SFKubeContext) RunPodCmd(podName string, containerName string, cmdArgs []string) (*bytes.Buffer, error) {
 	return RunPodCmdRaw(r.RESTConfig, r.ClientSet, r.Ns, podName, containerName, cmdArgs)
+}
+
+func WaitFor(ensureFun func() bool) bool {
+	attempt := 0
+	for {
+		if ensureFun() {
+			return true
+		}
+		attempt += 1
+		if attempt > 300 {
+			return false
+		}
+		time.Sleep(time.Second)
+	}
 }

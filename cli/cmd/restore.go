@@ -21,22 +21,19 @@ package cmd
 */
 
 import (
+	"bytes"
 	"errors"
-	"fmt"
 	"os"
-	"path/filepath"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	cliutils "github.com/softwarefactory-project/sf-operator/cli/cmd/utils"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/maps"
 
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/yaml"
 )
 
 func restoreSecret(backupDir string, env *controllers.SFKubeContext, cr sfv1.SoftwareFactory) {
@@ -44,22 +41,17 @@ func restoreSecret(backupDir string, env *controllers.SFKubeContext, cr sfv1.Sof
 
 	for _, sec := range append(SecretsToBackup, controllers.CRSecrets(cr)...) {
 		pathToSecret := backupDir + "/" + SecretsBackupPath + "/" + sec + ".yaml"
-		secretContent := cliutils.ReadYAMLToMapOrDie(pathToSecret)
-
-		typeValue, _ := secretContent["type"].(apiv1.SecretType)
-		secret := apiv1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: sec, Namespace: env.Ns},
-			Data:       map[string][]byte{}, Type: typeValue}
-		secretMap := secretContent["data"].(map[string]any)
-		for _, key := range maps.Keys(secretMap) {
-			stringValue, ok := secretMap[key].(string)
-			if !ok {
-				ctrl.Log.Error(errors.New("can not convert secret data value to string"),
-					"Can not restore secret "+sec)
-				os.Exit(1)
-			}
-			secret.Data[key] = []byte(stringValue)
+		data, err := os.ReadFile(pathToSecret)
+		if err != nil {
+			ctrl.Log.Error(err, "Couldn't read secret: "+pathToSecret)
+			os.Exit(1)
 		}
+		var secret apiv1.Secret
+		if err := yaml.Unmarshal(data, &secret); err != nil {
+			ctrl.Log.Error(err, "Couldn't decode secret: "+pathToSecret)
+			os.Exit(1)
+		}
+		secret.SetNamespace(env.Ns)
 		env.CreateR(&secret)
 	}
 
@@ -70,93 +62,54 @@ func restoreDB(backupDir string, env *controllers.SFKubeContext) {
 	pod := apiv1.Pod{}
 	env.GetM(dbBackupPod, &pod)
 
-	kubectlPath := cliutils.GetKubectlPath()
 	dropDBCMD := []string{
 		"mysql",
 		"-e DROP DATABASE zuul;",
 	}
 	env.PodExecM(pod.Name, controllers.MariaDBIdent, dropDBCMD)
 
-	mariadbBackupPath := backupDir + "/" + DBBackupPath
+	data, err := os.ReadFile(backupDir + "/" + DBBackupPath)
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't read sql dump")
+		os.Exit(1)
+	}
 
-	// Below command is executing something like:
-	//     cat backup/mariadb/db-zuul.sql | kubectl -n sf exec -it mariadb-0 -c mariadb -- sh -c "mysql -h0"
-	// but in that case, we need to do it via system kubernetes client.
-	executeCommand := fmt.Sprintf(
-		"cat %s | %s -n %s exec -it %s -c %s -- sh -c \"mysql -h0\"",
-		mariadbBackupPath, kubectlPath, env.Ns, pod.Name, controllers.MariaDBIdent,
-	)
-
-	cliutils.ExecuteKubectlClient(env.Ns, pod.Name, controllers.MariaDBIdent, executeCommand)
+	err = env.PodExecIn("mariadb-0", "mariadb", []string{"mysql", "-h0"}, bytes.NewReader(data))
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't inject sql dump")
+		os.Exit(1)
+	}
 
 	ctrl.Log.Info("Finished restoring DB from backup!")
 }
 func restoreZuul(backupDir string, env *controllers.SFKubeContext) {
 	ctrl.Log.Info("Restoring Zuul...")
-	pod := apiv1.Pod{}
-	env.GetM(zuulBackupPod, &pod)
 
 	// ensure that pod does not have any restore file
 	cleanCMD := []string{
 		"bash", "-c", "rm -rf /tmp/zuul-import && mkdir -p /tmp/zuul-import"}
-	env.PodExecM(pod.Name, controllers.ZuulSchedulerIdent, cleanCMD)
+	env.PodExecM("zuul-kazoo", "zuul-kazoo", cleanCMD)
 
 	// copy the Zuul private keys backup to pod
-	// tar cf - -C /tmp/backup/zuul zuul.keys | /usr/bin/kubectl exec -i -n sf zuul-scheduler-0 -c zuul-scheduler -- tar xf -  -C /tmp
-	kubectlPath := cliutils.GetKubectlPath()
-	basePath := filepath.Dir(backupDir + "/" + ZuulBackupPath)
-	baseFile := filepath.Base(ZuulBackupPath)
-	executeCommand := fmt.Sprintf(
-		"tar cf - -C %s %s | %s exec -i -n %s %s -c %s -- tar xf - -C /tmp/zuul-import",
-		basePath, baseFile, kubectlPath, env.Ns, pod.Name, controllers.ZuulSchedulerIdent,
-	)
-	ctrl.Log.Info("Executing " + executeCommand)
-
-	cliutils.ExecuteKubectlClient(env.Ns, pod.Name, controllers.ZuulSchedulerIdent, executeCommand)
+	data, err := os.ReadFile(backupDir + "/" + ZuulBackupPath)
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't read zuul.keys")
+		os.Exit(1)
+	}
 
 	// https://zuul-ci.org/docs/zuul/latest/client.html
 	restoreCMD := []string{
-		"bash", "-c", "zuul-admin import-keys --force /tmp/zuul-import/" + baseFile + " && " +
-			"rm -rf /tmp/zuul-import"}
+		"bash", "-c", "cat > /tmp/zuul.keys && zuul-admin import-keys --force /tmp/zuul.keys"}
 
 	// Execute command for restore
-	env.PodExecM(pod.Name, controllers.ZuulSchedulerIdent, restoreCMD)
+	err = env.PodExecIn("zuul-kazoo", "zuul-kazoo", restoreCMD, bytes.NewReader(data))
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't inject zuul.keys")
+		os.Exit(1)
+	}
 
 	ctrl.Log.Info("Finished doing Zuul private keys restore!")
 
-}
-
-func clearComponents(env *controllers.SFKubeContext) {
-	ctrl.Log.Info("Removing components requiring a complete restart ...")
-
-	// --- Scale down Zuul STS components
-	components := []string{"zuul-executor", "zuul-merger", "zuul-scheduler"}
-	ctrl.Log.Info("Scaling down StatefulSets before deletion...")
-	for _, comp := range components {
-		if err := env.ScaleDownSTSAndWait(comp); err != nil {
-			ctrl.Log.Error(err, "Could not scale down StatefulSet, continuing...", "name", comp)
-		}
-	}
-
-	// --- Stop all STS now
-	for _, stsName := range []string{"zuul-executor", "zuul-merger", "zuul-scheduler"} {
-		env.DeleteOrDie(&appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      stsName,
-				Namespace: env.Ns,
-			},
-		})
-	}
-
-	// --- Stop deployments
-	for _, depName := range []string{"zuul-web", "zuul-weeder", "nodepool-launcher"} {
-		env.DeleteOrDie(&appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      depName,
-				Namespace: env.Ns,
-			},
-		})
-	}
 }
 
 func restoreCmd(kmd *cobra.Command, args []string) {
@@ -193,16 +146,26 @@ func restoreCmd(kmd *cobra.Command, args []string) {
 
 	restoreSecret(backupDir, env, cr)
 
-	if err := env.StandaloneReconcile(cr, true); err != nil {
-		ctrl.Log.Error(err, "Deployment failed")
-	}
+	ctrl.Log.Info("Spawning backend services...")
+	sfCtrl := controllers.MkSFController(*env, cr)
+	sfCtrl.DeployMariadb()
+	sfCtrl.DeployZookeeper()
+	ctrl.Log.Info("Waiting for backend services...")
+	controllers.WaitFor(sfCtrl.DeployMariadb)
+	controllers.WaitFor(sfCtrl.DeployZookeeper)
+	ctrl.Log.Info("Spawning zuul-kazoo...")
+	sfCtrl.DeployZuulSecrets()
+	sfCtrl.EnsureZuulConfigSecret(false)
+	sfCtrl.EnsureKazooPod()
+	controllers.WaitFor(sfCtrl.EnsureKazooPod)
 
 	restoreZuul(backupDir, env)
 	restoreDB(backupDir, env)
-	clearComponents(env)
 
-	// Re-run deployment to ensure everything is running as expected.
-	if err := env.StandaloneReconcile(cr, false); err != nil {
+	sfCtrl.DeleteKazooPod()
+
+	// Run deployment to ensure everything is running as expected.
+	if err := env.StandaloneReconcile(cr); err != nil {
 		ctrl.Log.Error(err, "Reconcille failed")
 	}
 }
