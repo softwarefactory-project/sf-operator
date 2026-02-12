@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -272,12 +273,13 @@ func (r *SFKubeContext) PodExecM(pod string, container string, command []string)
 	}
 }
 
-func (r *SFKubeContext) PodExecBytes(pod string, container string, command []string) bytes.Buffer {
+func (r *SFKubeContext) PodExecBytes(pod string, container string, command []string) (bytes.Buffer, error) {
 	var buf bytes.Buffer
 	if err := r.PodExecOut(pod, container, command, &buf); err != nil {
-		panic(fmt.Sprintf("Command exec failed: %s", err))
+		ctrl.Log.Error(err, "Command exec failed", "command", command, "pod", pod)
+		return buf, err
 	}
-	return buf
+	return buf, nil
 }
 
 // --- Ensure resources functions ---
@@ -1070,8 +1072,8 @@ func AppendCorporateCACertsVolumeMount(volumeMounts []apiv1.VolumeMount, volumeN
 	return volumeMounts
 }
 
-func AppendToolingVolume(volumeMounts []apiv1.Volume) []apiv1.Volume {
-	return append(volumeMounts, apiv1.Volume{
+func mkToolingVolume() apiv1.Volume {
+	return apiv1.Volume{
 		Name: "tooling-vol",
 		VolumeSource: apiv1.VolumeSource{
 			ConfigMap: &apiv1.ConfigMapVolumeSource{
@@ -1080,7 +1082,11 @@ func AppendToolingVolume(volumeMounts []apiv1.Volume) []apiv1.Volume {
 				},
 				DefaultMode: &utils.Execmod,
 			},
-		}})
+		}}
+}
+
+func AppendToolingVolume(volumeMounts []apiv1.Volume) []apiv1.Volume {
+	return append(volumeMounts, mkToolingVolume())
 }
 
 func RunPodCmdRaw(restConfig *rest.Config, kubeClientset *kubernetes.Clientset, namespace string, podName string, containerName string, cmdArgs []string) (*bytes.Buffer, error) {

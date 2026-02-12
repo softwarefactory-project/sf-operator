@@ -5,10 +5,12 @@ package controllers
 
 import (
 	"errors"
+	"os"
 	"strings"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	apiv1 "k8s.io/api/core/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 func (r *SFKubeContext) _DeleteSecretOrError(name string) error {
@@ -68,9 +70,19 @@ func (r *SFKubeContext) rotateKeystorePassword() error {
 	oldPassword := string(secret.Data["zuul-keystore-password"])
 	newPassword := string(tmpSecret.Data["zuul-keystore-password-new"])
 
+	WaitFor(r.EnsureKazooPod)
+	defer r.DeleteKazooPod()
+
 	// Perform rotation
-	if _, err := r.RunPodCmd("zuul-scheduler-0", "zuul-scheduler", []string{"python3", "/usr/local/bin/rotate-keystore.py", oldPassword, newPassword}); err != nil {
+	if _, err := r.RunPodCmd("zuul-kazoo", "zuul-kazoo", []string{"python3", "/usr/local/bin/rotate-keystore.py", oldPassword, newPassword}); err != nil {
 		return err
+	}
+	keys, err := r.PodExecBytes("zuul-kazoo", "zuul-kazoo", []string{"cat", "/var/lib/zuul/keys-backup.json"})
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't read previous keys")
+	} else {
+		os.WriteFile("zuul-keys.backup", keys.Bytes(), 0600)
+		os.WriteFile("zuul-keys.password", []byte(oldPassword), 0600)
 	}
 
 	// Update secret

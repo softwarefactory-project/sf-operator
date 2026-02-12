@@ -145,6 +145,8 @@ func (r *SFKubeContext) mkKazooPod() *apiv1.Pod {
 			Volumes: []apiv1.Volume{
 				base.MkVolumeSecret("zuul-config"),
 				base.MkVolumeSecret("zookeeper-client-tls"),
+				mkToolingVolume(),
+				base.MkEmptyDirVolume("zuul-tmp"),
 			},
 			Containers: []apiv1.Container{
 				{
@@ -156,11 +158,18 @@ func (r *SFKubeContext) mkKazooPod() *apiv1.Pod {
 							Name:      "zuul-config",
 							MountPath: "/etc/zuul",
 							ReadOnly:  true,
-						},
-						{
+						}, {
 							Name:      "zookeeper-client-tls",
 							MountPath: "/tls/client",
 							ReadOnly:  true,
+						}, {
+							Name:      "tooling-vol",
+							SubPath:   "rotate-keystore.py",
+							MountPath: "/usr/local/bin/rotate-keystore.py",
+							ReadOnly:  true,
+						}, {
+							Name:      "zuul-tmp",
+							MountPath: "/var/lib/zuul",
 						},
 					},
 					SecurityContext: base.MkSecurityContext(false, r.IsOpenShift),
@@ -279,12 +288,6 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 				Name:      "tooling-vol",
 				SubPath:   "reconnect-zk.py",
 				MountPath: "/usr/local/bin/reconnect-zk.py",
-				ReadOnly:  true,
-			},
-			apiv1.VolumeMount{
-				Name:      "tooling-vol",
-				SubPath:   "rotate-keystore.py",
-				MountPath: "/usr/local/bin/rotate-keystore.py",
 				ReadOnly:  true,
 			},
 		)

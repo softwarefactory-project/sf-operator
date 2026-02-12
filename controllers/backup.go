@@ -102,7 +102,11 @@ func (r *SFKubeContext) createZuulKeypairBackup(backupDir string) error {
 	r.PodExecM("zuul-kazoo", "zuul-kazoo", backupZuulCMD)
 
 	// Take output of the backup
-	commandBuffer := r.PodExecBytes("zuul-kazoo", "zuul-kazoo", backupZuulPrintCMD)
+	commandBuffer, err := r.PodExecBytes("zuul-kazoo", "zuul-kazoo", backupZuulPrintCMD)
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't read backup")
+		return err
+	}
 
 	// write stdout to file
 	if err := os.WriteFile(zuulBackupPath, commandBuffer.Bytes(), 0640); err != nil {
@@ -142,7 +146,11 @@ func (r *SFKubeContext) createMySQLBackup(backupDir string) error {
 	}
 
 	// just create Zuul DB backup
-	commandBuffer := r.PodExecBytes(pod.Name, MariaDBIdent, backupZuulCMD)
+	commandBuffer, err := r.PodExecBytes(pod.Name, MariaDBIdent, backupZuulCMD)
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't read backup")
+		return err
+	}
 
 	// write stdout to file
 	if err := os.WriteFile(mariadbBackupPath, commandBuffer.Bytes(), 0640); err != nil {

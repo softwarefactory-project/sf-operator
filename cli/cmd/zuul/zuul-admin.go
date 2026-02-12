@@ -37,6 +37,6 @@ func CreateAuthToken(env *sfop.SFKubeContext, authConfig string, tenant string, 
 		"--user", user,
 		"--expires-in", strconv.Itoa(expiry),
 	}
-	token := env.PodExecBytes("zuul-scheduler-0", "zuul-scheduler", createAuthTokenCmd)
+	token, _ := env.PodExecBytes("zuul-scheduler-0", "zuul-scheduler", createAuthTokenCmd)
 	return token.String()
 }

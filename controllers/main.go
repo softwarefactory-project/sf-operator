@@ -124,7 +124,7 @@ func RotateSecrets(cliNS string, kubeContext string, dryRun bool, crPath string)
 	sfCtrl.EnsureToolingVolume()
 
 	if err := env.DoRotateSecrets(); err != nil {
-		return nil
+		return err
 	}
 	return env.StandaloneReconcile(sf)
 }
