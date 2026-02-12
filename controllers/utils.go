@@ -411,30 +411,16 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 		return r.GetM(name, &current) && utils.MapEquals(&current.ObjectMeta.Annotations, &annotations)
 	}
 
-	if secretReady("ca-cert") && secretReady("zookeeper-client-tls") && secretReady("zookeeper-server-tls") {
+	if secretReady("zookeeper-client-tls") && secretReady("zookeeper-server-tls") {
 		return
 	}
 
 	// Ensure any previous secret are removed, this is because Secret Update doesn't work as-is (Type is immutable, and removing Data keys fails, for example:
 	//   Secret "zookeeper-server-tls" is invalid: [data[tls.crt]: Required value, data[tls.key]: Required value]
-	r.DeleteSecret("ca-cert")
 	r.DeleteSecret("zookeeper-client-tls")
 	r.DeleteSecret("zookeeper-server-tls")
 
-	caCert, caPrivKey, caPEM, caPrivKeyPEM := cert.X509CA()
-	certificateCASecret := apiv1.Secret{
-		Data: map[string][]byte{
-			"ca.crt":  caPEM.Bytes(),
-			"tls.crt": caPEM.Bytes(),
-			"tls.key": caPrivKeyPEM.Bytes(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "ca-cert",
-			Namespace:   r.Ns,
-			Annotations: annotations,
-		},
-	}
-	r.CreateR(&certificateCASecret)
+	caCert, caPrivKey, caPEM, _ := cert.X509CA()
 
 	// client cert
 	clientDNSNames := []string{

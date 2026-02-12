@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	LocalCACertSecretName = "ca-cert"
 	// Valid for 30 years, which should be way more than the expected runtime of a deployment.
 	validity = 30
 )

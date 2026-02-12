@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
-	"github.com/softwarefactory-project/sf-operator/controllers/libs/cert"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
@@ -93,6 +92,8 @@ func (r *SFController) cleanup() {
 	if r.cr.Spec.Zuul.Executor.Standalone == nil && !r.GetM("zookeeper-client-tls", &zkTLS) {
 		r.nukeZKClients()
 	}
+
+	r.DeleteSecret("ca-cert")
 }
 
 // Manually kill all the ZK process in last resort
@@ -275,9 +276,7 @@ func (r *SFController) deployStandaloneExectorStep(services map[string]bool) map
 	// Zuul' connections secrets
 
 	// Validate the Secrets are available
-	for _, sn := range []string{
-		ZuulKeystorePasswordName, cert.LocalCACertSecretName,
-		"zuul-ssh-key", "zookeeper-client-tls"} {
+	for _, sn := range []string{ZuulKeystorePasswordName, "zuul-ssh-key", "zookeeper-client-tls"} {
 		_, err := r.GetSecret(sn)
 		if err != nil {
 			logging.LogE(err, "Unable to find the Secret named "+sn)
