@@ -65,7 +65,7 @@ From your MicroShift machine:
 
 ```shell
 cd sf-operator
-hack/microshit/setup-microshift.sh localhost
+hack/microshift/setup-microshift.sh localhost
 
 ℹ️  This command logs into /home/fboucher/.cache/setup-microshift.log
 
@@ -90,5 +90,5 @@ Once the deployment has ended successfully, you are now ready to deploy and hack
 Note that the script can also be run from a remote machine with (where <remote-machine> is the RHEL machine):
 
 ```sh
-hack/microshit/setup-microshift.sh <remote-machine> <remote-user>
+hack/microshift/setup-microshift.sh <remote-machine> <remote-user>
 ```
