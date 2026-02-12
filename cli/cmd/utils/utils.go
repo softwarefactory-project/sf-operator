@@ -25,13 +25,15 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"go.uber.org/zap/zapcore"
 	"io/fs"
 	"math/big"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
+
+	"go.uber.org/zap/zapcore"
 
 	apiroutev1 "github.com/openshift/api/route/v1"
 	controllers "github.com/softwarefactory-project/sf-operator/controllers"
@@ -73,6 +75,7 @@ func GetCLIContext(command *cobra.Command) *controllers.SFKubeContext {
 	namespace, _ := command.Flags().GetString("namespace")
 	kubeContext, _ := command.Flags().GetString("kube-context")
 
+	// TODO: handle dry-run here!
 	ctx, err := controllers.MkSFKubeContext("", namespace, kubeContext, false)
 	if err != nil {
 		logging.LogE(err, "Error creating Kubernetes client")
@@ -83,7 +86,8 @@ func GetCLIContext(command *cobra.Command) *controllers.SFKubeContext {
 
 // GetCLICRContext setup the SFKubeContext and read the CR from the args.
 func GetCLICRContext(command *cobra.Command, args []string) (*controllers.SFKubeContext, sfv1.SoftwareFactory) {
-	env := GetCLIContext(command)
+	SetLogger(command)
+
 	if len(args) == 0 {
 		ctrl.Log.Error(errors.New("no custom resource provided"), "You need to pass the CR!")
 		os.Exit(1)
@@ -97,10 +101,27 @@ func GetCLICRContext(command *cobra.Command, args []string) (*controllers.SFKube
 		os.Exit(1)
 	}
 
+	kubeConfig := filepath.Dir(crPath) + "/kubeconfig"
+	if _, err := os.Stat(kubeConfig); err == nil {
+		ctrl.Log.Info("Using default kubeconfig", "path", kubeConfig)
+	} else {
+		kubeConfig = ""
+	}
+
+	namespace, _ := command.Flags().GetString("namespace")
+	kubeContext, _ := command.Flags().GetString("kube-context")
+
+	// TODO: handle dry-run here!
+	env, err := controllers.MkSFKubeContext(kubeConfig, namespace, kubeContext, false)
+	if err != nil {
+		logging.LogE(err, "Error creating Kubernetes client")
+		os.Exit(1)
+	}
+
 	// Discover the cr owner.
 	env.GetStandaloneOwner()
 
-	return env, sf
+	return &env, sf
 }
 
 func GetCRUDSubcommands() (*cobra.Command, *cobra.Command, *cobra.Command) {

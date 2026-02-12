@@ -427,15 +427,9 @@ const (
 	Openshift
 )
 
-func KubernetesDistribution(kubeConfig *rest.Config) K8sDist {
-
-	// Get Config
-	if kubeConfig == nil {
-		kubeConfig = ctrl.GetConfigOrDie()
-	}
-
+func KubernetesDistribution(restClient rest.Interface) K8sDist {
 	// Create a DiscoveryClient for a given config
-	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(kubeConfig)
+	discoveryClient := discovery.NewDiscoveryClient(restClient)
 
 	// Get Api Resources Groups
 	apiList, err := discoveryClient.ServerGroups()
@@ -454,7 +448,7 @@ func KubernetesDistribution(kubeConfig *rest.Config) K8sDist {
 	return Kubernetes
 }
 
-func CheckOpenShift(kubeConfig *rest.Config) bool {
+func CheckOpenShift(restClient rest.Interface) bool {
 
 	// Check if environment variable exists
 	env := os.Getenv("OPENSHIFT_USER")
@@ -471,7 +465,7 @@ func CheckOpenShift(kubeConfig *rest.Config) bool {
 	// Discovering Kubernetes Distribution
 	logging.LogI("OPENSHIFT_USER environment variable is not set, discovering Kubernetes Distribution\n")
 
-	var flavour = KubernetesDistribution(kubeConfig)
+	var flavour = KubernetesDistribution(restClient)
 	switch flavour {
 	case Openshift:
 		logging.LogI("Kubernetes Distribution found: Openshift\n")

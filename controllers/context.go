@@ -65,6 +65,7 @@ func MkSFKubeContext(kubeconfig string, namespace string, kubecontext string, dr
 	if err != nil {
 		return SFKubeContext{}, err
 	}
+	restClient := clientset.CoreV1().RESTClient()
 
 	scheme := InitScheme()
 
@@ -87,14 +88,14 @@ func MkSFKubeContext(kubeconfig string, namespace string, kubecontext string, dr
 	return SFKubeContext{
 		Client:       c,
 		Scheme:       scheme,
-		RESTClient:   clientset.CoreV1().RESTClient(),
+		RESTClient:   restClient,
 		RESTConfig:   restconfig,
 		ClientSet:    clientset,
 		Ns:           namespace,
 		Ctx:          ctx,
 		Cancel:       cancel,
 		Owner:        &apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: ""}},
-		IsOpenShift:  CheckOpenShift(restconfig),
+		IsOpenShift:  CheckOpenShift(restClient),
 		hasProcMount: os.Getenv("HAS_PROC_MOUNT") == "true",
 		DryRun:       dryRun,
 		Standalone:   true,
