@@ -55,7 +55,8 @@ You can generate a pull secret [here](https://cloud.redhat.com/openshift/create/
 ```sh
 export OS_PULL_SECRET="<paste-the-pull-secret-content-here>"
 cat << EOF > ~/openshift-pull-secret.yaml
-openshift_pull_secret: ${OS_PULL_SECRET}
+openshift_pull_secret: |
+  ${OS_PULL_SECRET}
 EOF
 ```
 
