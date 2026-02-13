@@ -28,7 +28,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 
 	serviceAccountName := "config-updater"
 	serviceAccount := apiv1.ServiceAccount{}
-	if !r.GetM(serviceAccountName, &serviceAccount) {
+	if !r.GetOrDie(serviceAccountName, &serviceAccount) {
 		serviceAccount.SetNamespace(r.Ns)
 		serviceAccount.Name = serviceAccountName
 		r.CreateR(&serviceAccount)
@@ -58,7 +58,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 	}
 
 	currentRole := rbacv1.Role{}
-	if !r.GetM(roleName, &currentRole) {
+	if !r.GetOrDie(roleName, &currentRole) {
 		currentRole.SetNamespace(r.Ns)
 		currentRole.Name = roleName
 		currentRole.Annotations = roleAnnotations
@@ -76,7 +76,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 
 	roleBindingName := serviceAccountName
 	rb := rbacv1.RoleBinding{}
-	if !r.GetM(roleBindingName, &rb) {
+	if !r.GetOrDie(roleBindingName, &rb) {
 		rb.SetNamespace(r.Ns)
 		rb.Name = roleBindingName
 		rb.Subjects = []rbacv1.Subject{{Kind: "ServiceAccount", Name: serviceAccountName}}
@@ -91,7 +91,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 	// See: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account
 	var secret apiv1.Secret
 	secretName := "config-update-secrets"
-	if !r.GetM(secretName, &secret) {
+	if !r.GetOrDie(secretName, &secret) {
 		logging.LogI("Creating the config-update service account secret")
 		secret = apiv1.Secret{
 			Type: "kubernetes.io/service-account-token",
@@ -109,7 +109,7 @@ func (r *SFController) SetupBaseSecrets(internalTenantSecretsVersion string) boo
 	// We need to run a new job whenever the version of the secrets changed
 	// thus we include the version of the secrets
 	jobName := "config-base-secret-" + internalTenantSecretsVersion
-	found := r.GetM(jobName, &job)
+	found := r.GetOrDie(jobName, &job)
 
 	extraCmdVars := []apiv1.EnvVar{
 		base.MkEnvVar("HOME", "/tmp"),
@@ -169,7 +169,7 @@ func (r *SFController) SetupConfigJob() bool {
 
 	// Get the resource version of the keystore password
 	zkp := apiv1.Secret{}
-	r.GetM("zuul-keystore-password", &zkp)
+	r.GetOrDie("zuul-keystore-password", &zkp)
 
 	// This ensure we trigger the base secret creation job when the setting change
 	extraSettingsChecksum := "ns"
@@ -193,7 +193,7 @@ func (r *SFController) SetupConfigJob() bool {
 	r.InstallTooling()
 
 	// Get the internal tenant version CM and evaluate if we need to trigger actions
-	if !r.GetM(cmName, &zsInternalTenantReconfigure) {
+	if !r.GetOrDie(cmName, &zsInternalTenantReconfigure) {
 		needReconfigureTenant = true
 	} else {
 		if configHash != zsInternalTenantReconfigure.Data["internal-tenant-config-hash"] ||

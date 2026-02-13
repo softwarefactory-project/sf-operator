@@ -15,10 +15,6 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	apiroutev1 "github.com/openshift/api/route/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
@@ -26,18 +22,6 @@ import (
 
 var setupLog = ctrl.Log.WithName("setup")
 var SetupLog = setupLog
-var controllerScheme = runtime.NewScheme()
-
-func init() {
-	InitScheme()
-}
-
-func InitScheme() *runtime.Scheme {
-	utilruntime.Must(clientgoscheme.AddToScheme(controllerScheme))
-	utilruntime.Must(sfv1.AddToScheme(controllerScheme))
-	utilruntime.Must(apiroutev1.AddToScheme(controllerScheme))
-	return controllerScheme
-}
 
 func ReadSFYAML(fp string) (sfv1.SoftwareFactory, error) {
 	var sf sfv1.SoftwareFactory

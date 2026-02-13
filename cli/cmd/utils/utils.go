@@ -324,7 +324,7 @@ func MkHTTPSIngress(ns string, name string, host string, service string, port in
 func EnsureSelfSignCert(env *controllers.SFKubeContext) {
 	name := "self-signed-cert"
 	var secret apiv1.Secret
-	if !env.GetM(name, &secret) {
+	if !env.GetOrDie(name, &secret) {
 		// Generate key
 		var err error
 		var priv *rsa.PrivateKey
@@ -376,7 +376,7 @@ func ReadIngressIP(env *controllers.SFKubeContext, name string) string {
 	maxTries := 25
 	for {
 		var ingress networkv1.Ingress
-		if env.GetM(name, &ingress) {
+		if env.GetOrDie(name, &ingress) {
 			lb := ingress.Status.LoadBalancer.Ingress
 			if len(lb) > 0 {
 				return lb[0].IP
@@ -395,7 +395,7 @@ func ReadIngressIP(env *controllers.SFKubeContext, name string) string {
 func EnsureGatewayIngress(env *controllers.SFKubeContext, fqdn string) {
 	EnsureSelfSignCert(env)
 	ingress := MkHTTPSIngress(env.Ns, "sf-ingress", fqdn, "gateway", 8080, map[string]string{})
-	if !env.GetM(ingress.Name, &ingress) {
+	if !env.GetOrDie(ingress.Name, &ingress) {
 		env.CreateROrDie(&ingress)
 	}
 }

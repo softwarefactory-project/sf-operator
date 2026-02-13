@@ -12,12 +12,14 @@ import (
 	//nolint:golint
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
 
 	"gopkg.in/ini.v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+	. "github.com/softwarefactory-project/sf-operator/controllers/libs/client"
 )
 
 var _ = Describe("Zuul controller", func() {
@@ -47,11 +49,13 @@ var _ = Describe("Zuul controller", func() {
 		It("should handle user provided opendev connection", func() {
 			r := SFController{
 				SFKubeContext: SFKubeContext{
-					Client: k8sClient,
-					Scheme: k8sClient.Scheme(),
-					Ns:     TestName,
-					Ctx:    ctx,
-					Owner:  namespace,
+					KubeClient: KubeClient{
+						Client: k8sClient,
+						Scheme: k8sClient.Scheme(),
+						Ns:     TestName,
+						Ctx:    ctx,
+						Owner:  namespace,
+					},
 				},
 				needOpendev: true,
 			}

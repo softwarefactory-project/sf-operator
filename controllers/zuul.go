@@ -182,7 +182,7 @@ func (r *SFKubeContext) mkKazooPod() *apiv1.Pod {
 // EnsureKazooPod setups a kazoo client pod that can be used to access ZooKeeper directly
 func (r *SFKubeContext) EnsureKazooPod() bool {
 	var current apiv1.Pod
-	if r.GetM("zuul-kazoo", &current) {
+	if r.GetOrDie("zuul-kazoo", &current) {
 		if current.Status.Phase == "Running" {
 			return true
 		}
@@ -194,7 +194,7 @@ func (r *SFKubeContext) EnsureKazooPod() bool {
 
 func (r *SFKubeContext) DeleteKazooPod() {
 	var current apiv1.Pod
-	if r.GetM("zuul-kazoo", &current) {
+	if r.GetOrDie("zuul-kazoo", &current) {
 		r.DeleteR(&current)
 	}
 }
@@ -891,7 +891,7 @@ func (r *SFController) EnsureZuulComponents() map[string]bool {
 	// Ensure executor removed if disabled
 	if r.cr.Spec.Zuul.Executor.Enabled != nil && !*r.cr.Spec.Zuul.Executor.Enabled {
 		zuulExecutor := appsv1.StatefulSet{}
-		if r.GetM("zuul-executor", &zuulExecutor) {
+		if r.GetOrDie("zuul-executor", &zuulExecutor) {
 			logging.LogI("zuul-executor is disabled but running. Deleting the executor ...")
 			r.DeleteR(&zuulExecutor)
 		}
@@ -1037,7 +1037,7 @@ func (r *SFController) EnsureZuulConfigSecret(remoteExecutor bool) *ini.File {
 	if !remoteExecutor {
 		// Set Database DB URI
 		dbSettings := apiv1.Secret{}
-		if !r.GetM(zuulDBConfigSecret, &dbSettings) {
+		if !r.GetOrDie(zuulDBConfigSecret, &dbSettings) {
 			logging.LogI("Waiting for db connection secret")
 			return nil
 		}
@@ -1107,7 +1107,7 @@ func (r *SFController) EnsureZuulConfigSecret(remoteExecutor bool) *ini.File {
 
 func (r *SFController) readSecretContent(name string) string {
 	var secret apiv1.Secret
-	if !r.GetM(name, &secret) {
+	if !r.GetOrDie(name, &secret) {
 		// Loosely return empty string when not found
 		return ""
 	}

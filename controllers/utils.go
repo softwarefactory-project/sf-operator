@@ -80,30 +80,9 @@ func (r *SFKubeContext) setOwnerReference(controlled metav1.Object) error {
 	return err
 }
 
-// GetM gets a resource, returning if it was found
-func (r *SFKubeContext) GetM(name string, obj client.Object) bool {
-	err := r.Client.Get(r.Ctx,
-		client.ObjectKey{
-			Name:      name,
-			Namespace: r.Ns,
-		},
-		obj)
-	if errors.IsNotFound(err) {
-		return false
-	} else if err != nil {
-		panic(err.Error())
-	}
-	return true
-}
-
-func (r *SFKubeContext) ListM(list client.ObjectList) error {
-	opts := []client.ListOption{client.InNamespace(r.Ns)}
-	return r.Client.List(r.Ctx, list, opts...)
-}
-
 func (r *SFKubeContext) ReadSecret(name string) map[string][]byte {
 	var sec apiv1.Secret
-	if r.GetM(name, &sec) {
+	if r.GetOrDie(name, &sec) {
 		return sec.Data
 	} else {
 		return make(map[string][]byte)
@@ -180,7 +159,7 @@ func (r *SFKubeContext) UpdateR(obj client.Object) bool {
 func (r *SFKubeContext) GetOrCreate(obj client.Object) bool {
 	name := obj.GetName()
 
-	if !r.GetM(name, obj) {
+	if !r.GetOrDie(name, obj) {
 		r.CreateR(obj)
 		return false
 	}
@@ -288,7 +267,7 @@ func (r *SFKubeContext) PodExecBytes(pod string, container string, command []str
 func (r *SFKubeContext) EnsureConfigMap(baseName string, data map[string]string) apiv1.ConfigMap {
 	name := baseName + "-config-map"
 	var cm apiv1.ConfigMap
-	if !r.GetM(name, &cm) {
+	if !r.GetOrDie(name, &cm) {
 		if !r.DryRun {
 			logging.LogI("Creating config map name: " + name)
 		}
@@ -316,7 +295,7 @@ func (r *SFKubeContext) EnsureConfigMap(baseName string, data map[string]string)
 func (r *SFKubeContext) EnsureSecret(secret *apiv1.Secret) {
 	var current apiv1.Secret
 	name := secret.GetName()
-	if !r.GetM(name, &current) {
+	if !r.GetOrDie(name, &current) {
 		if !r.DryRun {
 			logging.LogI("Creating secret, name: " + name)
 		}
@@ -340,7 +319,7 @@ func (r *SFKubeContext) EnsureSecret(secret *apiv1.Secret) {
 // This function returns the Secret
 func (r *SFKubeContext) ensureSecretFromFunc(name string, getData func() string) apiv1.Secret {
 	var secret apiv1.Secret
-	if !r.GetM(name, &secret) {
+	if !r.GetOrDie(name, &secret) {
 		if !r.DryRun {
 			logging.LogI("Creating secret, name: " + name)
 		}
@@ -361,7 +340,7 @@ func (r *SFKubeContext) EnsureSecretUUID(name string) apiv1.Secret {
 // This function does not support Secret update
 func (r *SFKubeContext) EnsureSSHKeySecret(name string) {
 	var secret apiv1.Secret
-	if !r.GetM(name, &secret) {
+	if !r.GetOrDie(name, &secret) {
 		if !r.DryRun {
 			logging.LogI("Creating ssh key, name: " + name)
 		}
@@ -383,7 +362,7 @@ func (r *SFKubeContext) EnsureService(service *apiv1.Service) {
 		return strings.Join(s[:], "")
 	}
 	name := service.GetName()
-	if !r.GetM(name, &current) {
+	if !r.GetOrDie(name, &current) {
 		if !r.DryRun {
 			logging.LogI("Creating service, name: " + name)
 		}
@@ -414,7 +393,7 @@ func (r *SFController) EnsureZookeeperCertificates(ZookeeperIdent string, Zookee
 
 	secretReady := func(name string) bool {
 		var current apiv1.Secret
-		return r.GetM(name, &current) && utils.MapEquals(&current.ObjectMeta.Annotations, &annotations)
+		return r.GetOrDie(name, &current) && utils.MapEquals(&current.ObjectMeta.Annotations, &annotations)
 	}
 
 	if secretReady("zookeeper-client-tls") && secretReady("zookeeper-server-tls") {
@@ -601,7 +580,7 @@ func (r *SFKubeContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 // DebugStatefulSet disables StatefulSet main container probes
 func (r *SFKubeContext) DebugStatefulSet(name string) {
 	var dep appsv1.StatefulSet
-	if !r.GetM(name, &dep) {
+	if !r.GetOrDie(name, &dep) {
 		panic("Can't find the statefulset")
 	}
 	// Disable probes
@@ -616,7 +595,7 @@ func (r *SFKubeContext) DebugStatefulSet(name string) {
 // GetConfigMap Get ConfigMap by name
 func (r *SFKubeContext) GetConfigMap(name string) (apiv1.ConfigMap, error) {
 	var dep apiv1.ConfigMap
-	if name != "" && r.GetM(name, &dep) {
+	if name != "" && r.GetOrDie(name, &dep) {
 		return dep, nil
 	}
 	return apiv1.ConfigMap{}, fmt.Errorf("configMap named '%s' was not found", name)
@@ -625,7 +604,7 @@ func (r *SFKubeContext) GetConfigMap(name string) (apiv1.ConfigMap, error) {
 // GetSecret Get Secret by name
 func (r *SFKubeContext) GetSecret(name string) (apiv1.Secret, error) {
 	var dep apiv1.Secret
-	if name != "" && r.GetM(name, &dep) {
+	if name != "" && r.GetOrDie(name, &dep) {
 		return dep, nil
 	}
 	return apiv1.Secret{}, fmt.Errorf("secret named '%s' was not found", name)
@@ -732,7 +711,7 @@ func (r *SFKubeContext) reconcileExpandPVCs(serviceName string, newStorageSpec s
 
 func (r *SFKubeContext) canStorageResize(storageName *string) bool {
 	var sc storagev1.StorageClass
-	if storageName == nil || *storageName == "" || !r.GetM(*storageName, &sc) {
+	if storageName == nil || *storageName == "" || !r.GetOrDie(*storageName, &sc) {
 		// This is odd, so let's assume that unknown storage class support expansion
 		return true
 	}
@@ -747,7 +726,7 @@ func (r *SFKubeContext) reconcileExpandPVC(pvcName string, newStorageSpec sfv1.S
 	}
 
 	foundPVC := &apiv1.PersistentVolumeClaim{}
-	if !r.GetM(pvcName, foundPVC) {
+	if !r.GetOrDie(pvcName, foundPVC) {
 		logging.LogI("PVC " + pvcName + " not found")
 		return false
 	}
@@ -857,7 +836,7 @@ func (r *SFController) ensureDeployment(dep appsv1.Deployment, desiredReplicaCou
 	var diffs []string
 	logPrefix := ""
 	logger := logging.LogD
-	if r.GetM(name, &current) {
+	if r.GetOrDie(name, &current) {
 		// Assume a default count of 1 replica
 		currentReplicas := int32(1)
 		if current.Spec.Replicas != nil {
@@ -917,7 +896,7 @@ func (r *SFController) ensureStatefulset(sts appsv1.StatefulSet, desiredReplicaC
 	logPrefix := ""
 	logger := logging.LogD
 
-	if r.GetM(name, &current) {
+	if r.GetOrDie(name, &current) {
 		// Assume a default count of 1 replica
 		currentReplicas := int32(1)
 		if current.Spec.Replicas != nil {

@@ -18,13 +18,10 @@ import (
 	"github.com/fatih/color"
 	"gopkg.in/yaml.v3"
 
-	"k8s.io/client-go/rest"
-	"k8s.io/utils/strings/slices"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/strings/slices"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -32,8 +29,6 @@ import (
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
-
-	discovery "k8s.io/client-go/discovery"
 )
 
 type SFController struct {
@@ -89,7 +84,7 @@ func (r *SFController) cleanup() {
 	// First, ZK is flooded with `io.netty.handler.codec.DecoderException: javax.net.ssl.SSLHandshakeException: Insufficient buffer remaining for AEAD cipher fragment (2). Needs to be more than tag size (16)`
 	// Then, python-kazoo is stuck and zuul services are not responding to sigterm
 	zkTLS := corev1.Secret{}
-	if r.cr.Spec.Zuul.Executor.Standalone == nil && !r.GetM("zookeeper-client-tls", &zkTLS) {
+	if r.cr.Spec.Zuul.Executor.Standalone == nil && !r.GetOrDie("zookeeper-client-tls", &zkTLS) {
 		r.nukeZKClients()
 	}
 
@@ -420,62 +415,6 @@ func (r *SFController) DebugService(debugService string) {
 	}
 }
 
-type K8sDist int
-
-const (
-	Kubernetes K8sDist = iota
-	Openshift
-)
-
-func KubernetesDistribution(restClient rest.Interface) K8sDist {
-	// Create a DiscoveryClient for a given config
-	discoveryClient := discovery.NewDiscoveryClient(restClient)
-
-	// Get Api Resources Groups
-	apiList, err := discoveryClient.ServerGroups()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "command was not able to find the cluster server groups.\nCheck if the provided kubeconfig file is right.")
-		os.Exit(1)
-	}
-
-	// Iterate list for config.openshift.io
-	apiGroups := apiList.Groups
-	for _, element := range apiGroups {
-		if element.Name == "route.openshift.io" {
-			return Openshift
-		}
-	}
-	return Kubernetes
-}
-
-func CheckOpenShift(restClient rest.Interface) bool {
-
-	// Check if environment variable exists
-	env := os.Getenv("OPENSHIFT_USER")
-
-	if env != "" {
-		openshiftUser, err := strconv.ParseBool(env)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "The OPENSHIFT_USER environment variable must be set to true/false, it was set to '%s'\n", env)
-			os.Exit(1)
-		}
-		return openshiftUser
-	}
-
-	// Discovering Kubernetes Distribution
-	logging.LogI("OPENSHIFT_USER environment variable is not set, discovering Kubernetes Distribution\n")
-
-	var flavour = KubernetesDistribution(restClient)
-	switch flavour {
-	case Openshift:
-		logging.LogI("Kubernetes Distribution found: Openshift\n")
-		return true
-	default:
-		logging.LogI("Kubernetes Distribution found: Kubernetes\n")
-		return false
-	}
-}
-
 func HasDuplicate(conns []string) string {
 	for i, conn := range conns {
 		if slices.Contains(conns[i+1:], conn) {
@@ -511,7 +450,7 @@ var controllerCMName = "sf-standalone-owner"
 
 func (r *SFKubeContext) GetStandaloneOwner() bool {
 	var cm corev1.ConfigMap
-	if r.GetM(controllerCMName, &cm) {
+	if r.GetOrDie(controllerCMName, &cm) {
 		r.Owner = &cm
 		return true
 	} else {
@@ -568,7 +507,7 @@ func (r *SFKubeContext) StandaloneReconcile(sf sfv1.SoftwareFactory) error {
 			log.Info("Updating controller configmap ...")
 			marshaledSpec, _ := yaml.Marshal(sf.Spec)
 			var controllerCM corev1.ConfigMap
-			if r.GetM(controllerCMName, &controllerCM) {
+			if r.GetOrDie(controllerCMName, &controllerCM) {
 				controllerCM.Data = map[string]string{
 					"spec": string(marshaledSpec),
 				}

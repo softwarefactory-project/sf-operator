@@ -16,7 +16,7 @@ import (
 func (r *SFKubeContext) _DeleteSecretOrError(name string) error {
 	// Delete and recreate
 	var secret apiv1.Secret
-	if !r.GetM(name, &secret) {
+	if !r.GetOrDie(name, &secret) {
 		return errors.New("missing secret: " + name)
 	}
 	r.DeleteR(&secret)
@@ -27,10 +27,10 @@ func (r *SFKubeContext) _DeleteSecretOrError(name string) error {
 func (r *SFKubeContext) rotateZookeeperTLSSecrets() error {
 	var secretClient apiv1.Secret
 	var secretServer apiv1.Secret
-	if !r.GetM("zookeeper-server-tls", &secretServer) {
+	if !r.GetOrDie("zookeeper-server-tls", &secretServer) {
 		return errors.New("missing zookeeper server secret")
 	}
-	if !r.GetM("zookeeper-client-tls", &secretClient) {
+	if !r.GetOrDie("zookeeper-client-tls", &secretClient) {
 		return errors.New("missing zookeeper client secret")
 	}
 	r.DeleteR(&secretClient)
@@ -58,10 +58,10 @@ func (r *SFKubeContext) rotateZuulAuthenticatorSecret() error {
 func (r *SFKubeContext) rotateKeystorePassword() error {
 	// Check resources
 	var secret apiv1.Secret
-	if r.GetM("zuul-keystore-password-new", &secret) {
+	if r.GetOrDie("zuul-keystore-password-new", &secret) {
 		return errors.New("existing zuul-keystore-password-new found")
 	}
-	if !r.GetM("zuul-keystore-password", &secret) {
+	if !r.GetOrDie("zuul-keystore-password", &secret) {
 		return errors.New("missing zuul-keystore-password secret")
 	}
 	tmpSecret := r.EnsureSecretUUID("zuul-keystore-password-new")
@@ -97,7 +97,7 @@ func (r *SFKubeContext) rotateKeystorePassword() error {
 
 func (r *SFKubeContext) DoRotateSecrets() error {
 	var podList apiv1.PodList
-	if err := r.ListM(&podList); err != nil {
+	if err := r.List(&podList); err != nil {
 		return err
 	}
 	for _, pod := range podList.Items {
