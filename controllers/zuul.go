@@ -133,6 +133,8 @@ func getZuulImage(service string) string {
 		return base.ZuulMergerImage()
 	case "zuul-web":
 		return base.ZuulWebImage()
+	case "zuul-launcher":
+		return base.ZuulLauncherImage()
 	default:
 		panic("unsupported zuul service")
 	}
@@ -200,6 +202,46 @@ func (r *SFKubeContext) DeleteKazooPod() {
 	if r.GetOrDie("zuul-kazoo", &current) {
 		r.DeleteR(&current)
 	}
+}
+
+func (r *SFController) EnsureZuulLauncher(cfg *ini.File) bool {
+	sections := utils.IniGetSectionNamesByPrefix(cfg, "connection")
+
+	// Check if Corporate Certificate exists
+	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
+
+	annotations := map[string]string{
+		"zuul-common-config":         utils.IniSectionsChecksum(cfg, commonIniConfigSections),
+		"zuul-component-config":      utils.IniSectionsChecksum(cfg, sections),
+		"serial":                     "1",
+		"zuul-logging":               utils.Checksum([]byte(r.getZuulLoggingString("zuul-launcher"))),
+		"corporate-ca-certs-version": getCMVersion(corporateCM, corporateCMExists),
+	}
+
+	zl := base.MkDeployment("zuul-launcher", r.Ns, "", r.cr.Spec.ExtraLabels, r.IsOpenShift)
+	zuulContainer := r.mkZuulContainer("zuul-launcher", corporateCMExists)
+	annotations["limits"] = base.UpdateContainerLimit(r.cr.Spec.Zuul.Launcher.Limits, &zuulContainer)
+	zl.Spec.Template.Spec.Containers = []apiv1.Container{zuulContainer}
+	zl.Spec.Template.Spec.Volumes = mkZuulVolumes("zuul-launcher", r, corporateCMExists)
+
+	zlFluentBitLabels := append(zuulFluentBitLabels, logging.FluentBitLabel{Key: "CONTAINER", Value: "zuul-launcher"})
+	extraLoggingEnvVars := logging.SetupLogForwarding("zuul-web", r.cr.Spec.FluentBitLogForwarding, zlFluentBitLabels, annotations)
+	zl.Spec.Template.Spec.Containers[0].Env = append(zl.Spec.Template.Spec.Containers[0].Env, extraLoggingEnvVars...)
+
+	zl.Spec.Template.ObjectMeta.Annotations = annotations
+
+	if !r.IsOpenShift {
+		zl.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To[int64](1001)
+	}
+	zl.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
+
+	current, changed := r.ensureDeployment(zl, nil)
+	if changed {
+		return false
+	}
+	isDeploymentReady := r.IsDeploymentReady(current)
+	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-launcher", isDeploymentReady)
+	return isDeploymentReady
 }
 
 func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) apiv1.Container {
@@ -297,6 +339,15 @@ func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) a
 		envs = append(envs, r.getTenantsEnvs()...)
 	}
 
+	if service == "zuul-launcher" {
+		for _, conn := range r.cr.Spec.Zuul.KubernetesProviders {
+			volumeMounts = append(volumeMounts, apiv1.VolumeMount{
+				Name:      "k8s-" + conn.Secret,
+				MountPath: "/var/lib/k8s-" + conn.Name,
+			})
+		}
+	}
+
 	volumeMounts = append(volumeMounts, mkZuulLoggingMount(service))
 	volumeMounts = append(volumeMounts, mkZuulConnectionsSecretsMount(r)...)
 
@@ -356,6 +407,19 @@ func mkZuulVolumes(service string, r *SFController, corporateCMExists bool) []ap
 				}
 				volumes = append(volumes, keyVol)
 				added = append(added, conn.Sshkey)
+			}
+		}
+		if service == "zuul-launcher" {
+			for _, conn := range r.cr.Spec.Zuul.KubernetesProviders {
+				volumes = append(volumes, apiv1.Volume{
+					Name: "k8s-" + conn.Secret,
+					VolumeSource: apiv1.VolumeSource{
+						Secret: &apiv1.SecretVolumeSource{
+							SecretName:  conn.Secret,
+							DefaultMode: &utils.Readmod,
+						},
+					},
+				})
 			}
 		}
 		return volumes
@@ -438,6 +502,7 @@ func (r *SFController) computeLoggingConfig() map[string]string {
 	zuulSchedulerLogLevel := sfv1.InfoLogLevel
 	zuulWebLogLevel := sfv1.InfoLogLevel
 	zuulMergerLogLevel := sfv1.InfoLogLevel
+	zuulLauncherLogLevel := sfv1.InfoLogLevel
 
 	if r.cr.Spec.Zuul.Executor.LogLevel != "" {
 		zuulExecutorLogLevel = r.cr.Spec.Zuul.Executor.LogLevel
@@ -450,6 +515,9 @@ func (r *SFController) computeLoggingConfig() map[string]string {
 	}
 	if r.cr.Spec.Zuul.Merger.LogLevel != "" {
 		zuulMergerLogLevel = r.cr.Spec.Zuul.Merger.LogLevel
+	}
+	if r.cr.Spec.Zuul.Launcher.LogLevel != "" {
+		zuulLauncherLogLevel = r.cr.Spec.Zuul.Launcher.LogLevel
 	}
 
 	var zeloggingParams = logging.CreateForwarderConfigTemplateParams("zuul.executor", r.cr.Spec.FluentBitLogForwarding)
@@ -495,6 +563,17 @@ func (r *SFController) computeLoggingConfig() map[string]string {
 			ExtraKeys     []logging.FluentBitLabel
 			LoggingParams logging.TemplateLoggingParams
 		}{zmloggingExtraKeys, zmloggingParams})
+
+	var zlloggingParams = logging.CreateForwarderConfigTemplateParams("zuul.launcher", r.cr.Spec.FluentBitLogForwarding)
+	var zlloggingExtraKeys = logging.CreateBaseLoggingExtraKeys("zuul-launcher", "zuul", "zuul-launcher", r.Ns)
+	// Change logLevel to what we actually want
+	zlloggingParams.LogLevel = string(zuulLauncherLogLevel)
+	loggingData["zuul-launcher-logging.yaml"], _ = utils.ParseString(
+		zuulLoggingConfig,
+		struct {
+			ExtraKeys     []logging.FluentBitLabel
+			LoggingParams logging.TemplateLoggingParams
+		}{zlloggingExtraKeys, zlloggingParams})
 
 	return loggingData
 }
@@ -923,6 +1002,7 @@ func (r *SFController) EnsureZuulComponents() map[string]bool {
 		zuulServices["Executor"] = r.EnsureZuulExecutor(cfg)
 	}
 	zuulServices["Web"] = r.EnsureZuulWeb(cfg)
+	zuulServices["Launcher"] = r.EnsureZuulLauncher(cfg)
 	zuulServices["Merger"] = r.EnsureZuulMerger(cfg)
 
 	componentStatus["Zuul"] = true
@@ -966,6 +1046,13 @@ func (r *SFController) EnsureZuulConfigSecret(remoteExecutor bool) *ini.File {
 
 	for _, conn := range r.cr.Spec.Zuul.ElasticSearchConns {
 		r.AddElasticSearchConnection(cfgINI, conn)
+	}
+
+	for _, conn := range r.cr.Spec.Zuul.KubernetesProviders {
+		section := "connection " + conn.Name
+		cfgINI.NewSection(section)
+		cfgINI.Section(section).NewKey("driver", "kubernetes")
+		cfgINI.Section(section).NewKey("kubeconfig_file", "/var/lib/k8s-"+conn.Name+"/kubeconfig")
 	}
 
 	for _, conn := range r.cr.Spec.Zuul.SMTPConns {

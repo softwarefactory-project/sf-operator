@@ -231,6 +231,12 @@ type ElasticSearchConnection struct {
 	BasicAuthSecret *string `json:"basicAuthSecret,omitempty"`
 }
 
+type KubernetesProvider struct {
+	Name string `json:"name"`
+	// Name of the secret which contains the `kubeconfig`
+	Secret string `json:"secret"`
+}
+
 // The description of an OpenIDConnect authenticator, see [Zuul's authentication documentation](https://zuul-ci.org/docs/zuul/latest/configuration.html#authentication)
 type ZuulOIDCAuthenticatorSpec struct {
 	// The [name of the authenticator in Zuul's configuration](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-auth%20%3Cauthenticator%20name%3E)
@@ -313,7 +319,22 @@ type ZuulExecutorSpec struct {
 }
 
 type ZuulWebSpec struct {
-	// Specify the Log Level of the zuul-web launcher service.
+	// Specify the Log Level of the zuul-web service.
+	// Valid values are:
+	// "INFO" (default),
+	// "WARN",
+	// "DEBUG".
+	// Changing this value will restart the service.
+	// +optional
+	LogLevel LogLevel `json:"logLevel,omitempty"`
+	// Memory/CPU Limit
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
+	Limits *LimitsSpec `json:"limits"`
+}
+
+type ZuulLauncherSpec struct {
+	// Specify the Log Level of the zuul-launcher service.
 	// Valid values are:
 	// "INFO" (default),
 	// "WARN",
@@ -408,6 +429,8 @@ type ZuulSpec struct {
 	PagureConns []PagureConnection `json:"pagureconns,omitempty"`
 	// The list of ElasticSearch-based connections to add to Zuul's configuration
 	ElasticSearchConns []ElasticSearchConnection `json:"elasticsearchconns,omitempty"`
+
+	KubernetesProviders []KubernetesProvider `json:"kubernetesProviders,omitempty"`
 	// The list of SMTP-based connections to add to Zuul's configuration
 	SMTPConns []SMTPConnection `json:"smtpconns,omitempty"`
 	// Configuration of the executor microservices
@@ -418,6 +441,8 @@ type ZuulSpec struct {
 	Web ZuulWebSpec `json:"web,omitempty"`
 	// Configuration of the merger microservice
 	Merger ZuulMergerSpec `json:"merger,omitempty"`
+	// Configuration of the launcher microservice
+	Launcher ZuulLauncherSpec `json:"launcher,omitempty"`
 }
 
 func GetGitHubConnectionsSecretName(spec *ZuulSpec) []string {

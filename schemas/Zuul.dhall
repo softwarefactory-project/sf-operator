@@ -6,6 +6,8 @@
     , gitconns : Optional (List (./GitConn.dhall).Type)
     , githubconns : Optional (List (./GithubConn.dhall).Type)
     , gitlabconns : Optional (List (./GitlabConn.dhall).Type)
+    , kubernetesProviders : Optional (List (./KubernetesProvider.dhall).Type)
+    , launcher : Optional (./ZuulLauncher.dhall).Type
     , merger : Optional (./ZuulMerger.dhall).Type
     , oidcAuthenticators : Optional (List (./ZuulOidcAuthenticators.dhall).Type)
     , pagureconns : Optional (List (./PagureConn.dhall).Type)
@@ -21,6 +23,8 @@
   , gitconns = None (List (./GitConn.dhall).Type)
   , githubconns = None (List (./GithubConn.dhall).Type)
   , gitlabconns = None (List (./GitlabConn.dhall).Type)
+  , kubernetesProviders = None (List (./KubernetesProvider.dhall).Type)
+  , launcher = None (./ZuulLauncher.dhall).Type
   , merger = None (./ZuulMerger.dhall).Type
   , oidcAuthenticators = None (List (./ZuulOidcAuthenticators.dhall).Type)
   , pagureconns = None (List (./PagureConn.dhall).Type)

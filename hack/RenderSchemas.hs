@@ -84,6 +84,7 @@ splitModels hierarchy def
         -- Zuul and Nodepool attributes are moved into dedicated models
         [ModelName "Zuul", ModelName x]
             | "conns" `Text.isSuffixOf` x -> Just $ ModelName $ adjustName $ Text.replace "conns" "Conn" x
+            | "Providers" `Text.isSuffixOf` x -> Just $ ModelName $ adjustName $ Text.replace "Providers" "Provider" x
             | otherwise -> Just $ ModelName $ "Zuul" <> adjustName x
         [ModelName "Nodepool", ModelName x] ->
             Just $ ModelName $ "Nodepool" <> adjustName x

@@ -862,6 +862,60 @@ spec:
                       - secrets
                       type: object
                     type: array
+                  kubernetesProviders:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        secret:
+                          description: Name of the secret which contains the `kubeconfig`
+                          type: string
+                      required:
+                      - name
+                      - secret
+                      type: object
+                    type: array
+                  launcher:
+                    description: Configuration of the launcher microservice
+                    properties:
+                      limits:
+                        default:
+                          cpu: 500m
+                          memory: 2Gi
+                        description: Memory/CPU Limit
+                        properties:
+                          cpu:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            default: 500m
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          memory:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            default: 2Gi
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        required:
+                        - cpu
+                        - memory
+                        type: object
+                      logLevel:
+                        description: |-
+                          Specify the Log Level of the zuul-launcher service.
+                          Valid values are:
+                          "INFO" (default),
+                          "WARN",
+                          "DEBUG".
+                          Changing this value will restart the service.
+                        enum:
+                        - INFO
+                        - WARN
+                        - DEBUG
+                        type: string
+                    type: object
                   merger:
                     description: Configuration of the merger microservice
                     properties:
@@ -1219,7 +1273,7 @@ spec:
                         type: object
                       logLevel:
                         description: |-
-                          Specify the Log Level of the zuul-web launcher service.
+                          Specify the Log Level of the zuul-web service.
                           Valid values are:
                           "INFO" (default),
                           "WARN",

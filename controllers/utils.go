@@ -999,7 +999,6 @@ func (r *SFController) ensureStatefulset(sts appsv1.StatefulSet, desiredReplicaC
 			diffs = append(diffs, "terminationGracePeriodSeconds changed")
 			needUpdate = true
 		}
-		// TODO does this need to be done before the call to injectStorageNodeAffinity?
 		if needUpdate {
 			current.Spec.Template = *sts.Spec.Template.DeepCopy()
 		}

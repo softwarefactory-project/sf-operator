@@ -1,0 +1,1 @@
+{ Type = { name : Text, secret : Text }, default = {=} }
