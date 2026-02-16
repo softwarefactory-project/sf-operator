@@ -1,0 +1,28 @@
+---
+- hosts: "controllers"
+  vars:
+    version: "{{ zuul.tag }}"
+  tasks:
+  - name: Install dependencies
+    become: true
+    package:
+      name: podman
+
+  - name: "Podman Login to {{ registry_address }}"
+    command: podman login -u="{{ username }}" -p="{{ password }}" quay.io
+    no_log: true
+
+  - name: Build image
+    command: podman build -t quay.io/software-factory/sf-operator .
+
+  - name: Tag image
+    command: |
+      podman tag  quay.io/software-factory/sf-operator:{{ tag_version }} quay.io/software-factory/sf-operator:latest
+
+  - name: Push image
+    command: |
+      podman push quay.io/software-factory/sf-operator:{{ tag_version }}
+
+  - name: Push latest tag
+    command: |
+      podman push quay.io/software-factory/sf-operator:latest
