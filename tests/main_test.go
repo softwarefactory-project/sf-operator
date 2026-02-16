@@ -83,7 +83,7 @@ func readSecretValue(name string, key string) string {
 func readCommandArgs(pod string, container string, args []string) string {
 	var buf bytes.Buffer
 	if err := sfctx.PodExecOut(pod, container, args, &buf); err != nil {
-		panic(fmt.Sprintf("Command failed: kubectl exec %s -c %s -- %s", pod, container, strings.Join(args, " ")))
+		panic(fmt.Sprintf("Command failed: kubectl exec %s -c %s -- %s\n output: %s", pod, container, strings.Join(args, " "), buf.String()))
 	}
 	return buf.String()
 }
