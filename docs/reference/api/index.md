@@ -101,6 +101,21 @@ _Appears in:_
 | `forwardInputPort` _integer_ | The (optional) port of the forward input, defaults to 24224. | {24224}|
 
 
+#### GatewaySpec
+
+
+
+GatewaySpec defines extra gateway config if needed
+
+_Appears in:_
+- [SoftwareFactorySpec](#softwarefactoryspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `extraConfigurationConfigMap` _string_ | Name of a configmap containing extra httpd configuration file(s). the default gateway config is prefixed by "99-", meaning it is possible to control whether the extra config files are loaded first or not. | -|
+| `extraStaticFilesConfigMap` _string_ | Optional configmap containing file(s) to mount in /var/www/html/ - it is implied these static files are to be used with any extra config added above. | -|
+
+
 #### GerritConnection
 
 
@@ -459,6 +474,7 @@ _Appears in:_
 | `gitserver` _[GitServerSpec](#gitserverspec)_ | Git server spec | -|
 | `codesearch` _[CodesearchSpec](#codesearchspec)_ | Codesearch service spec | -|
 | `hostaliases` _[HostAlias](#hostalias) array_ | HostAliases | -|
+| `gateway` _[GatewaySpec](#gatewayspec)_ | Gateway spec | -|
 
 
 

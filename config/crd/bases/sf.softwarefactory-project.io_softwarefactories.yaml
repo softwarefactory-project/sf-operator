@@ -167,6 +167,23 @@ spec:
                   The fully qualified domain name to use with the deployment. Relevant services will be served
                   at https://`service`.`FQDN`
                 type: string
+              gateway:
+                description: Gateway spec
+                properties:
+                  extraConfigurationConfigMap:
+                    description: Name of a configmap containing extra httpd configuration
+                      file(s). the default gateway config is prefixed by "99-", meaning
+                      it is possible to control whether the extra config files are
+                      loaded first or not.
+                    type: string
+                  extraStaticFilesConfigMap:
+                    description: Optional configmap containing file(s) to mount in
+                      /var/www/html/ - it is implied these static files are to be
+                      used with any extra config added above.
+                    type: string
+                required:
+                - extraConfigurationConfigMap
+                type: object
               gitserver:
                 description: Git server spec
                 properties:
