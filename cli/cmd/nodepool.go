@@ -95,7 +95,7 @@ func CreateNamespaceForNodepool(sfEnv *controllers.SFKubeContext, nodepoolContex
 func ensureNodepoolKubeProvidersSecrets(env *controllers.SFKubeContext, kubeconfig []byte) {
 
 	var secret apiv1.Secret
-	if !env.GetM(controllers.NodepoolProvidersSecretsName, &secret) {
+	if !env.GetOrDie(controllers.NodepoolProvidersSecretsName, &secret) {
 		// Initialize the secret data
 		secret.Name = controllers.NodepoolProvidersSecretsName
 		secret.Data = make(map[string][]byte)
@@ -132,7 +132,7 @@ func ensureNodepoolKubeProvidersSecrets(env *controllers.SFKubeContext, kubeconf
 
 func getBuilderSSHKey(sfEnv *controllers.SFKubeContext, pubKey string) {
 	var secret apiv1.Secret
-	if sfEnv.GetM("nodepool-builder-ssh-key", &secret) {
+	if sfEnv.GetOrDie("nodepool-builder-ssh-key", &secret) {
 		if pubKey == "" {
 			fmt.Println(string(secret.Data["pub"]))
 		} else {
@@ -150,7 +150,7 @@ func ensureNodepoolRole(env *controllers.SFKubeContext) {
 	var role rbacv1.Role
 	var roleBinding rbacv1.RoleBinding
 
-	if !env.GetM(nodepoolRole, &role) {
+	if !env.GetOrDie(nodepoolRole, &role) {
 		role.Name = nodepoolRole
 		role.Rules = []rbacv1.PolicyRule{
 			{
@@ -167,7 +167,7 @@ func ensureNodepoolRole(env *controllers.SFKubeContext) {
 		env.CreateROrDie(&role)
 	}
 
-	if !env.GetM(nodepoolRoleBinding, &roleBinding) {
+	if !env.GetOrDie(nodepoolRoleBinding, &roleBinding) {
 		roleBinding.Name = nodepoolRoleBinding
 		roleBinding.Subjects = []rbacv1.Subject{
 			{
@@ -184,7 +184,7 @@ func ensureNodepoolRole(env *controllers.SFKubeContext) {
 
 func ensureNodepoolServiceAccountSecret(env *controllers.SFKubeContext) string {
 	var secret apiv1.Secret
-	if !env.GetM(nodepoolToken, &secret) {
+	if !env.GetOrDie(nodepoolToken, &secret) {
 		secret.Name = nodepoolToken
 		secret.ObjectMeta.Annotations = map[string]string{
 			"kubernetes.io/service-account.name": nodepoolServiceAccount,
@@ -199,7 +199,7 @@ func ensureNodepoolServiceAccountSecret(env *controllers.SFKubeContext) string {
 			break
 		}
 		time.Sleep(time.Second)
-		env.GetM(nodepoolToken, &secret)
+		env.GetOrDie(nodepoolToken, &secret)
 	}
 	if token == nil {
 		ctrl.Log.Error(errors.New("query timeout"), "Error getting nodepool service account token")

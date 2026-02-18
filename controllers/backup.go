@@ -5,6 +5,7 @@ package controllers
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -44,7 +45,13 @@ func (r *SFKubeContext) createSecretBackup(backupDir string, cr sfv1.SoftwareFac
 
 	for _, secName := range append(SecretsToBackup, CRSecrets(cr)...) {
 		secret := apiv1.Secret{}
-		r.GetM(secName, &secret)
+		exist, err := r.Get(secName, &secret)
+		if err != nil {
+			return err
+		}
+		if !exist {
+			return errors.New(secName + ": missing secret")
+		}
 
 		// create new map with important content
 		cleanSecret := apiv1.Secret{
@@ -134,7 +141,13 @@ func (r *SFKubeContext) createMySQLBackup(backupDir string) error {
 	}
 
 	pod := apiv1.Pod{}
-	r.GetM(dbBackupPod, &pod)
+	exist, err := r.Get(dbBackupPod, &pod)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return errors.New(dbBackupPod + ": missing backup pod")
+	}
 
 	// NOTE: We use option: --single-transaction to avoid error:
 	// "The user specified as a definer ('mariadb.sys'@'localhost') does not exist" when using LOCK TABLES
@@ -207,7 +220,13 @@ func (r *SFKubeContext) restoreSecret(backupDir string, cr sfv1.SoftwareFactory)
 func (r *SFKubeContext) restoreDB(backupDir string) error {
 	ctrl.Log.Info("Restoring DB...")
 	pod := apiv1.Pod{}
-	r.GetM(dbBackupPod, &pod)
+	exist, err := r.Get(dbBackupPod, &pod)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return errors.New(dbBackupPod + ": missing backup pod")
+	}
 
 	dropDBCMD := []string{
 		"mysql",

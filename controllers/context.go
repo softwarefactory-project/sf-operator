@@ -4,7 +4,6 @@
 package controllers
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -14,91 +13,27 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kclient "github.com/softwarefactory-project/sf-operator/controllers/libs/client"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 )
 
 type SFKubeContext struct {
-	Client       client.Client
-	Scheme       *runtime.Scheme
-	RESTClient   rest.Interface
-	RESTConfig   *rest.Config
-	ClientSet    *kubernetes.Clientset
-	Ns           string
-	Ctx          context.Context
-	Cancel       context.CancelFunc
-	Owner        client.Object
-	IsOpenShift  bool
-	Standalone   bool
-	DryRun       bool
+	kclient.KubeClient
 	hasProcMount bool
 }
 
 func MkSFKubeContext(kubeconfig string, namespace string, kubecontext string, dryRun bool) (SFKubeContext, error) {
-	if kubeconfig != "" {
-		if _, err := os.Stat(kubeconfig); err != nil {
-			return SFKubeContext{}, fmt.Errorf("%s: missing kubeconfig", kubeconfig)
-		}
-	} else {
-		kubeconfig = os.Getenv("KUBECONFIG")
-	}
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	if kubeconfig != "" {
-		loadingRules.ExplicitPath = kubeconfig
-	}
-	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{
-		CurrentContext: kubecontext,
-	})
-	restconfig, err := config.ClientConfig()
+	client, err := kclient.MkKubeClient(kubeconfig, kubecontext, namespace, dryRun)
 	if err != nil {
 		return SFKubeContext{}, err
 	}
-
-	clientset, err := kubernetes.NewForConfig(restconfig)
-	if err != nil {
-		return SFKubeContext{}, err
-	}
-	restClient := clientset.CoreV1().RESTClient()
-
-	scheme := InitScheme()
-
-	c, err := client.New(restconfig, client.Options{Scheme: scheme})
-	if err != nil {
-		return SFKubeContext{}, err
-	}
-
-	if namespace == "" {
-		rawConfig, err := config.RawConfig()
-		if err != nil {
-			return SFKubeContext{}, err
-		}
-		if kubecontext == "" {
-			kubecontext = rawConfig.CurrentContext
-		}
-		namespace = rawConfig.Contexts[kubecontext].Namespace
-	}
-	ctx, cancel := context.WithCancel(context.TODO())
 	return SFKubeContext{
-		Client:       c,
-		Scheme:       scheme,
-		RESTClient:   restClient,
-		RESTConfig:   restconfig,
-		ClientSet:    clientset,
-		Ns:           namespace,
-		Ctx:          ctx,
-		Cancel:       cancel,
-		Owner:        &apiv1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: ""}},
-		IsOpenShift:  CheckOpenShift(restClient),
+		KubeClient:   client,
 		hasProcMount: os.Getenv("HAS_PROC_MOUNT") == "true",
-		DryRun:       dryRun,
-		Standalone:   true,
 	}, nil
 }
 
@@ -215,7 +150,7 @@ func (r *SFKubeContext) EnsureNamespaceOrDie(name string) {
 }
 func (r *SFKubeContext) EnsureServiceAccountOrDie(name string) {
 	var sa apiv1.ServiceAccount
-	found := r.GetM(name, &sa)
+	found := r.GetOrDie(name, &sa)
 	if !found {
 		sa.Name = name
 		r.CreateROrDie(&sa)

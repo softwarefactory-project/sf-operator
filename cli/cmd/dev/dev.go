@@ -43,7 +43,7 @@ var devWipeAllowedArgs = []string{"gerrit", "sf"}
 
 func ensureGatewayRoute(env *controllers.SFKubeContext, fqdn string) {
 	route := cliutils.MkHTTPSRoute("sf-gateway", env.Ns, fqdn, "gateway", "/", 8080, map[string]string{})
-	exists := env.GetM("gateway", &apiroutev1.Route{})
+	exists := env.GetOrDie("gateway", &apiroutev1.Route{})
 	if !exists {
 		env.CreateROrDie(&route)
 	}

@@ -94,7 +94,7 @@ func (g *GerritCMDContext) ensureSecretOrDie(
 	name string, secretGenerator func(string, string) apiv1.Secret) apiv1.Secret {
 	secret := apiv1.Secret{}
 
-	if !g.env.GetM(name, &secret) {
+	if !g.env.GetOrDie(name, &secret) {
 		secret = secretGenerator(name, g.env.Ns)
 		g.env.CreateROrDie(&secret)
 	}
@@ -103,14 +103,14 @@ func (g *GerritCMDContext) ensureSecretOrDie(
 
 func (g *GerritCMDContext) ensureServiceOrDie(service apiv1.Service) {
 	var serv apiv1.Service
-	if !g.env.GetM(service.Name, &serv) {
+	if !g.env.GetOrDie(service.Name, &serv) {
 		g.env.CreateROrDie(&service)
 	}
 }
 
 func (g *GerritCMDContext) ensureJobCompletedOrDie(job batchv1.Job) {
 	var curJob batchv1.Job
-	if !g.env.GetM(job.Name, &curJob) {
+	if !g.env.GetOrDie(job.Name, &curJob) {
 		g.env.CreateROrDie(&job)
 	}
 	for range 60 {
@@ -119,7 +119,7 @@ func (g *GerritCMDContext) ensureJobCompletedOrDie(job batchv1.Job) {
 		}
 		time.Sleep(2 * time.Second)
 		// refresh curJob
-		g.env.GetM(job.Name, &curJob)
+		g.env.GetOrDie(job.Name, &curJob)
 	}
 	ctrl.Log.Error(errors.New("timeout reached"), "Error waiting for job '"+job.Name+"' to complete")
 	os.Exit(1)
@@ -127,7 +127,7 @@ func (g *GerritCMDContext) ensureJobCompletedOrDie(job batchv1.Job) {
 
 func (g *GerritCMDContext) ensureRouteOrDie(route apiroutev1.Route) {
 	var rte apiroutev1.Route
-	if !g.env.GetM(route.Name, &rte) {
+	if !g.env.GetOrDie(route.Name, &rte) {
 		g.env.CreateROrDie(&route)
 	}
 }
@@ -135,7 +135,7 @@ func (g *GerritCMDContext) ensureRouteOrDie(route apiroutev1.Route) {
 func (g *GerritCMDContext) ensureConfigMapOrDie(name string, data map[string]string) {
 	cmName := name + "-config-map"
 	var cm apiv1.ConfigMap
-	if !g.env.GetM(cmName, &cm) {
+	if !g.env.GetOrDie(cmName, &cm) {
 		ctrl.Log.Info(name)
 		cm = apiv1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: g.env.Ns},
@@ -342,7 +342,7 @@ func (g *GerritCMDContext) ensureGerritPostInitJobOrDie() {
 
 func (g *GerritCMDContext) getStatefulSetOrDie(name string) (bool, appsv1.StatefulSet) {
 	sts := appsv1.StatefulSet{}
-	b := g.env.GetM(name, &sts)
+	b := g.env.GetOrDie(name, &sts)
 	return b, sts
 }
 
@@ -393,7 +393,7 @@ func (g *GerritCMDContext) ensureGerritRouteOrDie() {
 func (g *GerritCMDContext) ensureGerritIngressOrDie() {
 	cliutils.EnsureSelfSignCert(g.env)
 	ingress := cliutils.MkHTTPSIngress(g.env.Ns, "gerrit-ingress", "gerrit."+g.fqdn, gerritHTTPDPortName, gerritHTTPDPort, map[string]string{})
-	if !g.env.GetM(ingress.Name, &ingress) {
+	if !g.env.GetOrDie(ingress.Name, &ingress) {
 		g.env.CreateROrDie(&ingress)
 	}
 }
@@ -522,7 +522,7 @@ func GetAdminRepoURL(env *controllers.SFKubeContext, fqdn string, repoName strin
 	var (
 		gerritAPIKey apiv1.Secret
 	)
-	if !env.GetM("gerrit-admin-api-key", &gerritAPIKey) {
+	if !env.GetOrDie("gerrit-admin-api-key", &gerritAPIKey) {
 		ctrl.Log.Error(errors.New("secret 'gerrit-admin-api-key' does not exist"), "Cannot clone repo as admin")
 		os.Exit(1)
 	}

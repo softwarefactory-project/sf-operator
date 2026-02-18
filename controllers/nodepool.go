@@ -233,7 +233,7 @@ func (r *SFController) setProviderSecretsVolumeMounts() ([]apiv1.VolumeMount, ap
 		nodepoolProvidersSecrets apiv1.Secret
 		volumeMount              []apiv1.VolumeMount
 	)
-	exists := r.GetM(NodepoolProvidersSecretsName, &nodepoolProvidersSecrets)
+	exists := r.GetOrDie(NodepoolProvidersSecretsName, &nodepoolProvidersSecrets)
 	if exists {
 		if data, ok := nodepoolProvidersSecrets.Data["clouds.yaml"]; ok && len(data) > 0 {
 			volumeMount = append(volumeMount, apiv1.VolumeMount{

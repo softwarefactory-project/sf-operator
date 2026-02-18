@@ -46,7 +46,7 @@ func (r *SFKubeContext) copySecrets(eCR sfv1.SoftwareFactory, controlEnv *SFKube
 	secrets := []string{"zuul-keystore-password", "zookeeper-client-tls", "zuul-ssh-key"}
 	for _, secret := range append(secrets, CRSecrets(eCR)...) {
 		var sec apiv1.Secret
-		if !controlEnv.GetM(secret, &sec) {
+		if !controlEnv.GetOrDie(secret, &sec) {
 			return fmt.Errorf("failed to read secret %s", secret)
 		}
 		sec.SetNamespace(r.Ns)

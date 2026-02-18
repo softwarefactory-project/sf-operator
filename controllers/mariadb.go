@@ -289,7 +289,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 			},
 			Data: nil,
 		}
-		if !r.GetM(zuulDBConfigSecret, &zuulDBSecret) {
+		if !r.GetOrDie(zuulDBConfigSecret, &zuulDBSecret) {
 			password := utils.NewUUIDString()
 			zuulDBSecret.Data = map[string][]byte{
 				"username": []byte("zuul"),
