@@ -561,6 +561,15 @@ type LogServerSpec struct {
 	Storage StorageSpec `json:"storage,omitempty"`
 }
 
+// GatewaySpec defines extra gateway config if needed
+type GatewaySpec struct {
+	// Name of a configmap containing extra httpd configuration file(s). the default gateway config is prefixed by "99-", meaning it is possible to control whether the extra config files are loaded first or not.
+	ExtraConfigurationConfigMap string `json:"extraConfigurationConfigMap"`
+	// Optional configmap containing file(s) to mount in /var/www/html/ - it is implied these static files are to be used with any extra config added above.
+	// +kubebuilder:validation:Optional
+	ExtraStaticFilesConfigMap *string `json:"extraStaticFilesConfigMap,omitempty"`
+}
+
 type HostAlias struct {
 	IP        string   `json:"ip"`
 	Hostnames []string `json:"hostnames" mapstructure:"hostnames"`
@@ -615,6 +624,9 @@ type SoftwareFactorySpec struct {
 
 	// HostAliases
 	HostAliases []HostAlias `json:"hostaliases,omitempty"`
+
+	// Gateway spec
+	Gateway *GatewaySpec `json:"gateway,omitempty"`
 }
 
 // BaseStatus struct which defines the observed state for a Controller

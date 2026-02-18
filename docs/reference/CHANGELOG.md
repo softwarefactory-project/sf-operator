@@ -19,6 +19,8 @@ All notable changes to this project will be documented in this file.
     sf-operator apply ./prod/sf.yaml --remote prod/executors/$hostname/sf.yaml
   It is no longer necessary to manually synchronize the zuul ssh key or the zuul connection secrets for example.
 - A new "sf-operator rotate-password" command line is available to perform service secret rotation.
+- A "gateway" section in the CRD allows deployers to specify extra httpd configuration file(s) and
+  static files via config maps.
 
 ### Changed
 

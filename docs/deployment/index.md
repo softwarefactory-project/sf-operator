@@ -11,6 +11,7 @@ and managing a Software Factory Custom Resource through SF-Operator.
 1. [Getting started](./getting_started.md)
 1. [Setting up the config repository](./config_repository.md)
 1. Services documentation
+    - [gateway](./gateway.md)
     - [Nodepool](./nodepool.md)
     - [Zuul](./zuul.md)
     - [Zuul External Executor](./external-executor.md)

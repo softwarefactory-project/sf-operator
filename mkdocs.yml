@@ -83,6 +83,7 @@ nav:
       - Configuration repository: deployment/config_repository.md
       - Services reference:
           - Backing services: deployment/backing_services.md
+          - Gateway: deployment/gateway.md
           - Log server: deployment/logserver.md
           - Nodepool: deployment/nodepool.md
           - Zuul: deployment/zuul.md
