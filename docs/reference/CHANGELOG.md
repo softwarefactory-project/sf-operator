@@ -2,8 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-
 ## [in development]
+
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [v0.0.65] - 2026-02-18
 
 ### Added
 
@@ -20,7 +28,6 @@ All notable changes to this project will be documented in this file.
   the operator can be used like so:
     sf-operator apply ./prod/sf.yaml
 
-### Deprecated
 ### Removed
 
 - Prometheus operator dependency and related resources are no longer provided or managed by the sf-operator.
@@ -34,8 +41,6 @@ All notable changes to this project will be documented in this file.
 - nodepool-builder: fixed default configuration issues in ansible's custom timestamped output callback plugin
   that caused some callback events to throw exceptions, preventing these events from being logged in the image build
   playbook's output.
-
-### Security
 
 ## [v0.0.64] - 2026-01-23
 
