@@ -1,5 +1,5 @@
 ---
-- hosts: "controllers"
+- hosts: controller
   vars:
     version: "{{ zuul.tag }}"
   tasks:
