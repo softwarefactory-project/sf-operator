@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -62,6 +63,8 @@ func main() {
 		ns          string
 		kubeContext string
 		fqdn        string
+		sshKey      string
+		age         string
 
 		rootCmd = &cobra.Command{Short: "SF Operator CLI",
 			Long: `Multi-purpose command line utility related to sf-operator, SF instances management, and development tools.`,
@@ -80,7 +83,35 @@ func main() {
 			Long:  `This command rotates the internal secret used by the services`,
 			Run:   rotateCmd,
 		}
+
+		privRotateCmd = &cobra.Command{
+			Use:   "rotate-projects-private-keys [The path to the CR defining the Software Factory deployment.]",
+			Args:  cobra.ExactArgs(1),
+			Short: "Perform project private keys rotations",
+			Long:  `This command rotates the inrepo secret used by the services`,
+			Run: func(cmd *cobra.Command, args []string) {
+				cliutils.SetLogger(cmd)
+				// how to convert
+				unixAge := int64(0)
+				if age != "" {
+					t, err := time.Parse("2006-01-02", age)
+					if err != nil {
+						fmt.Printf("Invalid age: %s\n", err)
+						os.Exit(1)
+					}
+					unixAge = t.Unix()
+				}
+				env, _ := cliutils.GetCLICRContext(cmd, args)
+				if err := env.RotateProjectPrivateKey(sshKey, unixAge); err != nil {
+					fmt.Printf("Rotation failed: %s\n", err)
+					os.Exit(1)
+				}
+			},
+		}
 	)
+	privRotateCmd.Flags().StringVar(&sshKey, "ssh-key", "", "Admin ssh key used to push inrepo")
+	privRotateCmd.Flags().StringVar(&age, "age", "", "The minimum age of key (YYYY-MM-DD) to be rotated")
+	privRotateCmd.MarkFlagRequired("ssh-key")
 
 	// Flags for the deploy command
 	deployCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Shows what resources will be changed by a deploy operation")
@@ -103,6 +134,7 @@ func main() {
 		zuul.MkZuulCmd(),
 		deployCmd,
 		rotateCmd,
+		privRotateCmd,
 	}
 	for _, c := range subcommands {
 		rootCmd.AddCommand(c)

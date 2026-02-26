@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- A new "rotate-projects-private-keys" command line can be used to rotate the secrets in ZooKeeper.
+
 ### Changed
 ### Deprecated
 ### Removed

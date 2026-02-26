@@ -7,10 +7,12 @@ package controllers
 
 import (
 	_ "embed"
+	"strings"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/utils"
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -165,6 +167,17 @@ func (r *SFController) InstallTooling() {
 	})
 }
 
+// ClearConfigJob force a new config job to update internal repo
+func (r *SFKubeContext) ClearConfigJob() {
+	var jobList batchv1.JobList
+	r.List(&jobList)
+	for _, job := range jobList.Items {
+		if strings.HasPrefix(job.Name, "config-base-secret-") {
+			r.DeleteR(&job)
+		}
+	}
+}
+
 func (r *SFController) SetupConfigJob() bool {
 
 	// Get the resource version of the keystore password
@@ -216,6 +229,9 @@ func (r *SFController) SetupConfigJob() bool {
 		if needReconfigureTenant {
 			logging.LogI("Running tenant-reconfigure for the 'internal' tenant")
 			if r.runZuulInternalTenantReconfigure() {
+				// zuul-web needs to be refreshed too
+				r.DeleteR(&appsv1.Deployment{ObjectMeta: r.MkMeta("zuul-web")})
+
 				// Create an empty ConfigMap to keep note the reconfigure has been already done
 				zsInternalTenantReconfigure.ObjectMeta = metav1.ObjectMeta{
 					Name:      cmName,

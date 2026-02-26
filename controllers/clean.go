@@ -31,7 +31,7 @@ func (r *SFKubeContext) CleanPVCs() {
 }
 
 func (r *SFKubeContext) CleanSFInstance() {
-	r.nukeZKClients()
+	r.nukeZK()
 
 	var cm apiv1.ConfigMap
 	if r.GetOrDie("sf-standalone-owner", &cm) {

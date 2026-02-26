@@ -4,14 +4,71 @@
 package controllers
 
 import (
+	"bytes"
 	"errors"
 	"os"
+	"strconv"
 	"strings"
+
+	_ "embed"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/logging"
 	apiv1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
+
+//go:embed static/rotate-projects-private-keys.py
+var rotateProjectsPrivateKeys string
+
+func (r *SFKubeContext) RotateProjectPrivateKey(sshKey string, unixAge int64) error {
+	var err error
+	WaitFor(r.EnsureKazooPod)
+
+	// Clear config state to ensure the internal git is refreshed
+	r.ClearConfigJob()
+	r.DeleteR(&apiv1.ConfigMap{ObjectMeta: r.MkMeta("zs-internal-tenant-reconfigure")})
+
+	// Copy the rotation script
+	err = r.PodExecIn("zuul-kazoo", "zuul-kazoo", []string{"bash", "-c", "cat > /tmp/rotate-projects-private-keys.py && chmod 755 /tmp/*.py"}, bytes.NewReader([]byte(rotateProjectsPrivateKeys)))
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't install rotation script")
+		return err
+	}
+
+	// Copy the ssh key
+	data, err := os.ReadFile(sshKey)
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't read ssh key")
+		return err
+	}
+	err = r.PodExecIn("zuul-kazoo", "zuul-kazoo", []string{"bash", "-c", "cat > /var/lib/zuul/.ssh_push_key && chmod 0600 /var/lib/zuul/.ssh_push_key"}, bytes.NewReader(data))
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't install ssh key")
+		return err
+	}
+
+	// Copy the tenants config
+	tenants, err := r.PodExecBytes("zuul-scheduler-0", "zuul-scheduler", []string{"cat", "/var/lib/zuul/main.yaml"})
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't read tenants config")
+		return err
+	}
+	err = r.PodExecIn("zuul-kazoo", "zuul-kazoo", []string{"bash", "-c", "cat > /var/lib/zuul/main.yaml"}, bytes.NewReader(tenants.Bytes()))
+	if err != nil {
+		ctrl.Log.Error(err, "Couldn't install tenants config")
+		return err
+	}
+
+	if unixAge == 0 {
+		// max age
+		unixAge = 9223372036854775807
+	}
+	err = r.PodExec("zuul-kazoo", "zuul-kazoo", []string{"env", "PYTHONUNBUFFERED=1", "/tmp/rotate-projects-private-keys.py", "--age", strconv.FormatInt(unixAge, 10)})
+
+	// At that point, zookeeper client needs to refresh
+	r.nukeZKClients()
+	return err
+}
 
 func (r *SFKubeContext) _DeleteSecretOrError(name string) error {
 	// Delete and recreate
@@ -111,7 +168,7 @@ func (r *SFKubeContext) DoRotateSecrets() error {
 		return err
 	}
 	logging.LogI("Killing every kazoo client...")
-	r.nukeZKClients()
+	r.nukeZK()
 
 	logging.LogI("Rotating Zuul Client Authenticator secret...")
 	if err := r.rotateZuulAuthenticatorSecret(); err != nil {

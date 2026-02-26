@@ -172,6 +172,9 @@ func (r *SFKubeContext) mkKazooPod() *apiv1.Pod {
 							MountPath: "/var/lib/zuul",
 						},
 					},
+					Env: []apiv1.EnvVar{
+						base.MkEnvVar("HOME", "/var/lib/zuul"),
+					},
 					SecurityContext: base.MkSecurityContext(false, r.IsOpenShift),
 				},
 			},

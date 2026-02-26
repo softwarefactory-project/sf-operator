@@ -85,7 +85,7 @@ func (r *SFController) cleanup() {
 	// Then, python-kazoo is stuck and zuul services are not responding to sigterm
 	zkTLS := corev1.Secret{}
 	if r.cr.Spec.Zuul.Executor.Standalone == nil && !r.GetOrDie("zookeeper-client-tls", &zkTLS) {
-		r.nukeZKClients()
+		r.nukeZK()
 	}
 
 	r.DeleteSecret("ca-cert")
@@ -109,6 +109,9 @@ func (r *SFKubeContext) nukeZKClients() {
 			}
 		}
 	}
+}
+func (r *SFKubeContext) nukeZK() {
+	r.nukeZKClients()
 	// Delete zookeeper at the end
 	r.DeleteR(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "zookeeper", Namespace: r.Ns}})
 }

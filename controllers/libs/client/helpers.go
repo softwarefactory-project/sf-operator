@@ -11,6 +11,7 @@ package client
 
 import (
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -51,5 +52,12 @@ func (r *KubeClient) List(list client.ObjectList) error {
 func (r *KubeClient) ListOrDie(list client.ObjectList) {
 	if err := r.List(list); err != nil {
 		panic(err)
+	}
+}
+
+func (r *KubeClient) MkMeta(name string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      name,
+		Namespace: r.Ns,
 	}
 }
