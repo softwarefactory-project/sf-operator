@@ -8,6 +8,7 @@ This script is meant to be used by the sf-operator rotate-projects-private-keys 
 
 import itertools
 import base64
+import subprocess
 import textwrap
 import zuul.lib.yamlutil as yaml
 from zuul.lib import encryption
@@ -171,47 +172,67 @@ def do_rotate_inrepo_secret(repo_dir, private_key):
                 if new_key is None:
                     new_key = ProjectKey()
                 data = chunk[1].decrypt(private_key)
+                print(f"[+] Decrypted secret: {data.encode('utf-8')}")
                 chunk[1].encrypt(data.encode("utf-8"), new_key.pub)
+                print(f"[+] Encrypted secret: {chunk[1].render()}")
+                # decrypt the secret again for checking
+                recheck_data = chunk[1].decrypt(new_key.priv)
+                print(f"[+] Rechecked secret: {recheck_data.encode('utf-8')}")
         if has_secret:
             print(f"[+] Re-Encrypting secret(s) in {fp}")
             open(fp, "w").write(render_yaml(chunks))
     return new_key
 
 
-def wait_process(args, cwd=None):
+def wait_process(args, cwd=None, env=None):
     import subprocess
 
-    if subprocess.Popen(args, cwd=cwd).wait() != 0:
+    kw = {"cwd": cwd} if cwd else {}
+    if env is not None:
+        kw["env"] = env
+    if subprocess.Popen(args, **kw).wait() != 0:
         raise RuntimeError("Command failed: " + " ".join(args))
 
 
 def rotate_inrepo_secret(author, ssh_key, git_url, private_key):
-    "Rotate the secrets found in git_url, return the new project key if it was generated"
+    """Rotate the secrets found in git_url, return the new project key if it was generated."""
+    import os
     dest_path = "/tmp/current-repo"
     wait_process(["rm", "-Rf", dest_path])
     print(f"[+] Cloning {git_url} to {dest_path}")
-    git = [
-        "env",
-        "GIT_AUTHOR_NAME=" + author[0],
-        "GIT_AUTHOR_EMAIL=" + author[1],
-        "GIT_COMMITTER_NAME=" + author[0],
-        "GIT_COMMITTER_EMAIL=" + author[1],
-        f"GIT_SSH_COMMAND=ssh -i {ssh_key} -o StrictHostKeyChecking=no",
-        "git",
-    ]
-    wait_process(git + ["clone", "--depth", "1", git_url, dest_path])
+    git_env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": author[0],
+        "GIT_AUTHOR_EMAIL": author[1],
+        "GIT_COMMITTER_NAME": author[0],
+        "GIT_COMMITTER_EMAIL": author[1],
+        "GIT_SSH_COMMAND": f"ssh -i {ssh_key} -o StrictHostKeyChecking=no",
+    }
+    wait_process(
+        ["git", "clone", "--depth", "1", git_url, dest_path],
+        env=git_env,
+    )
     if new_key := do_rotate_inrepo_secret(dest_path, private_key):
         wait_process(
-            git
-            + [
-                "commit",
-                "-a",
-                "-m",
-                "Automatic secret re-encryption",
-            ],
+            ["git", "commit", "-a", "-m", "Automatic secret re-encryption"],
             cwd=dest_path,
+            env=git_env,
         )
-        wait_process(git + ["push"], cwd=dest_path)
+        # Fetch and rebase so the push is a fast-forward (Gerrit often requires it).
+        wait_process(["git", "fetch", "origin"], cwd=dest_path, env=git_env)
+        branch = subprocess.check_output(
+            ["git", "branch", "--show-current"],
+            cwd=dest_path,
+            env=git_env,
+            text=True,
+        ).strip()
+        if branch:
+            wait_process(
+                ["git", "rebase", f"origin/{branch}"],
+                cwd=dest_path,
+                env=git_env,
+            )
+        wait_process(["git", "push"], cwd=dest_path, env=git_env)
         return new_key
 
 
@@ -263,9 +284,9 @@ def usage():
         help="The minimum age of key (in EPOCh second) to be rotated",
         required=True,
     )
-    parser.add_argument("--author", help="The commit author name", default="admin")
+    parser.add_argument("--author", help="The commit author name", default="zuul")
     parser.add_argument(
-        "--email", help="The commit author email", default="root@localhost"
+        "--email", help="The commit author email", default="zuul@sfop.me"
     )
     args = parser.parse_args()
     return (args.age, (args.author, args.email))
