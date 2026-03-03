@@ -233,6 +233,9 @@ func (r *SFController) DeployLogserver() bool {
 			" loopDelay:" + strconv.Itoa(r.cr.Spec.Logserver.LoopDelay),
 		"authorized-key": utils.Checksum(pubKey),
 	}
+	for k, v := range r.cr.Spec.Logserver.PodAnnotations {
+		sts.Spec.Template.ObjectMeta.Annotations[k] = v
+	}
 
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 

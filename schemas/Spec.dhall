@@ -10,6 +10,7 @@
     , logserver : Optional (./Logserver.dhall).Type
     , mariadb : Optional (./Mariadb.dhall).Type
     , nodepool : Optional (./Nodepool.dhall).Type
+    , prometheusMonitorsDisabled : Optional Bool
     , storageDefault : Optional (./StorageDefault.dhall).Type
     , zookeeper : Optional (./Zookeeper.dhall).Type
     , zuul : Optional (./Zuul.dhall).Type
@@ -25,6 +26,7 @@
   , logserver = None (./Logserver.dhall).Type
   , mariadb = None (./Mariadb.dhall).Type
   , nodepool = None (./Nodepool.dhall).Type
+  , prometheusMonitorsDisabled = None Bool
   , storageDefault = None (./StorageDefault.dhall).Type
   , zookeeper = None (./Zookeeper.dhall).Type
   , zuul = None (./Zuul.dhall).Type

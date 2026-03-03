@@ -255,6 +255,13 @@ spec:
                       for pruning every hour
                     minimum: 1
                     type: integer
+                  podAnnotations:
+                    additionalProperties:
+                      type: string
+                    description: Optional annotations to add to the logserver pod
+                      template (e.g. io.kubernetes.cri-o.TrySkipVolumeSELinuxLabel
+                      for CRI-O)
+                    type: object
                   retentionDays:
                     default: 60
                     description: Logs retention time in days. Logs older than this
