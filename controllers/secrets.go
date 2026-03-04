@@ -20,7 +20,7 @@ import (
 //go:embed static/rotate-projects-private-keys.py
 var rotateProjectsPrivateKeys string
 
-func (r *SFKubeContext) RotateProjectPrivateKey(sshKey string, unixAge int64) error {
+func (r *SFKubeContext) RotateProjectPrivateKey(sshKey string, unixAge int64, authorName string, authorMail string) error {
 	var err error
 	WaitFor(r.EnsureKazooPod)
 
@@ -65,7 +65,7 @@ func (r *SFKubeContext) RotateProjectPrivateKey(sshKey string, unixAge int64) er
 		// max age
 		unixAge = 9223372036854775807
 	}
-	return r.PodExec("zuul-kazoo", "zuul-kazoo", []string{"env", "PYTHONUNBUFFERED=1", "/tmp/rotate-projects-private-keys.py", "--age", strconv.FormatInt(unixAge, 10)})
+	return r.PodExec("zuul-kazoo", "zuul-kazoo", []string{"env", "PYTHONUNBUFFERED=1", "/tmp/rotate-projects-private-keys.py", "--age", strconv.FormatInt(unixAge, 10), "--author", authorName, "--email", authorMail})
 }
 
 func (r *SFKubeContext) _DeleteSecretOrError(name string) error {

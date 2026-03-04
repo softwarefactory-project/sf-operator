@@ -101,8 +101,16 @@ func main() {
 					}
 					unixAge = t.Unix()
 				}
+				authorName := ""
+				if env, found := os.LookupEnv("GIT_AUTHOR_NAME"); found {
+					authorName = env
+				}
+				authorMail := ""
+				if env, found := os.LookupEnv("GIT_AUTHOR_EMAIL"); found {
+					authorMail = env
+				}
 				env, _ := cliutils.GetCLICRContext(cmd, args)
-				if err := env.RotateProjectPrivateKey(sshKey, unixAge); err != nil {
+				if err := env.RotateProjectPrivateKey(sshKey, unixAge, authorName, authorMail); err != nil {
 					fmt.Printf("Rotation failed: %s\nThe command is idempotent, feel free to retry. Once satisfied, run a regular deploy command to finish the rotation.\n", err)
 					os.Exit(1)
 				}

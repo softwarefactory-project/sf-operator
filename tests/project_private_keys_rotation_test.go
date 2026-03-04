@@ -38,7 +38,7 @@ var _ = Describe("Project Private Keys Rotation", Ordered, func() {
 		Ω(tmpFile.Close()).Should(BeNil())
 
 		By("Running rotate-projects-private-keys")
-		Ω(sfctx.RotateProjectPrivateKey(tmpFile.Name(), 0)).Should(BeNil())
+		Ω(sfctx.RotateProjectPrivateKey(tmpFile.Name(), 0, "", "")).Should(BeNil())
 
 		By("Reconciling")
 		runReconcile(sf)
