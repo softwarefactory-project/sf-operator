@@ -1456,9 +1456,17 @@ func (r *SFController) DeployZuul() map[string]bool {
 }
 
 func (r *SFController) runZuulInternalTenantReconfigure() bool {
-	err := r.PodExec(
-		"zuul-scheduler-0",
-		"zuul-scheduler",
-		[]string{"zuul-scheduler", "tenant-reconfigure", "internal"})
+	var args []string
+
+	// Check if full reconfigure is needed
+	fullReconfigure := apiv1.ConfigMap{}
+	if r.GetOrDie("zuul-needs-full-reconfigure-config-map", &fullReconfigure) {
+		r.DeleteR(&fullReconfigure)
+		args = []string{"zuul-scheduler", "full-reconfigure"}
+	} else {
+		args = []string{"zuul-scheduler", "tenant-reconfigure", "internal"}
+	}
+
+	err := r.PodExec("zuul-scheduler-0", "zuul-scheduler", args)
 	return err == nil
 }

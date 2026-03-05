@@ -77,15 +77,19 @@ func isOperatorReady(services map[string]bool) bool {
 
 // cleanup ensures removal of legacy resources
 func (r *SFController) cleanup() {
-
-	logging.LogI("Nothing to clean up.")
-
 	// sanity check: if zookeeper certs are missing, the services must be terminated to avoid them from not responding to sigterm.
 	// First, ZK is flooded with `io.netty.handler.codec.DecoderException: javax.net.ssl.SSLHandshakeException: Insufficient buffer remaining for AEAD cipher fragment (2). Needs to be more than tag size (16)`
 	// Then, python-kazoo is stuck and zuul services are not responding to sigterm
 	zkTLS := corev1.Secret{}
 	if r.cr.Spec.Zuul.Executor.Standalone == nil && !r.GetOrDie("zookeeper-client-tls", &zkTLS) {
 		r.nukeZK()
+	}
+
+	// After rotation, the kazoo client needs to be restarted to refresh their internal cache
+	zkRefresh := corev1.ConfigMap{}
+	if r.GetOrDie("zk-clients-need-refresh-config-map", &zkRefresh) {
+		r.nukeZKClients()
+		r.DeleteR(&zkRefresh)
 	}
 
 	r.DeleteSecret("ca-cert")

@@ -103,7 +103,7 @@ func main() {
 				}
 				env, _ := cliutils.GetCLICRContext(cmd, args)
 				if err := env.RotateProjectPrivateKey(sshKey, unixAge); err != nil {
-					fmt.Printf("Rotation failed: %s\n", err)
+					fmt.Printf("Rotation failed: %s\nThe command is idempotent, feel free to retry. Once satisfied, run a regular deploy command to finish the rotation.\n", err)
 					os.Exit(1)
 				}
 			},

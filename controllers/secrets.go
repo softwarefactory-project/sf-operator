@@ -27,6 +27,8 @@ func (r *SFKubeContext) RotateProjectPrivateKey(sshKey string, unixAge int64) er
 	// Clear config state to ensure the internal git is refreshed
 	r.ClearConfigJob()
 	r.DeleteR(&apiv1.ConfigMap{ObjectMeta: r.MkMeta("zs-internal-tenant-reconfigure")})
+	r.EnsureConfigMap("zk-clients-need-refresh", map[string]string{})
+	r.EnsureConfigMap("zuul-needs-full-reconfigure", map[string]string{})
 
 	// Copy the rotation script
 	err = r.PodExecIn("zuul-kazoo", "zuul-kazoo", []string{"bash", "-c", "cat > /tmp/rotate-projects-private-keys.py && chmod 755 /tmp/*.py"}, bytes.NewReader([]byte(rotateProjectsPrivateKeys)))
@@ -63,11 +65,7 @@ func (r *SFKubeContext) RotateProjectPrivateKey(sshKey string, unixAge int64) er
 		// max age
 		unixAge = 9223372036854775807
 	}
-	err = r.PodExec("zuul-kazoo", "zuul-kazoo", []string{"env", "PYTHONUNBUFFERED=1", "/tmp/rotate-projects-private-keys.py", "--age", strconv.FormatInt(unixAge, 10)})
-
-	// At that point, zookeeper client needs to refresh
-	r.nukeZKClients()
-	return err
+	return r.PodExec("zuul-kazoo", "zuul-kazoo", []string{"env", "PYTHONUNBUFFERED=1", "/tmp/rotate-projects-private-keys.py", "--age", strconv.FormatInt(unixAge, 10)})
 }
 
 func (r *SFKubeContext) _DeleteSecretOrError(name string) error {
