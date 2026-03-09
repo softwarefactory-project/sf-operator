@@ -18,7 +18,7 @@ You will need to install the following tools on your dev machine:
 - kubectl
 - git
 - git-review
-- golang >= 1.21
+- golang >= 1.25
 - make
 - ansible-core
 - jq
