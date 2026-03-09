@@ -29,6 +29,7 @@ var SecretsToBackup = []string{
 	"zookeeper-server-tls",
 	"nodepool-builder-ssh-key",
 	"zuul-ssh-key",
+	"zuul-spare-ssh-key",
 	"zuul-keystore-password",
 	"zuul-auth-secret",
 	"logserver-keys",
