@@ -84,12 +84,19 @@ def parse_yaml(txt):
     "Split a yaml document into raw lines and pkcs1-oaep chunk."
     pos = 0
     lines = txt.split("\n")
+    name = ""
     while pos < len(lines):
         line = lines[pos]
+        if line.strip().startswith("name:"):
+            try:
+                name = line.split(":")[1].strip()
+            except IndexError:
+                name = ""
         pos += 1
         if line.rstrip().endswith("!encrypted/pkcs1-oaep"):
             yield ("raw", line)
             indent = len(lines[pos]) - len(lines[pos].lstrip())
+            is_ssh = "ssh_private_key:" in line
 
             # Read all the lines in the indent layout and yield a secret chunk
             secret = []
@@ -99,7 +106,10 @@ def parse_yaml(txt):
                 if len(line) < indent or line[indent - 1] not in [" ", "\t"]:
                     break
                 secret.append(line[indent:])
-            yield ("sec", PKCS(indent, "\n".join(secret)))
+            yield (
+                "ssh" if (is_ssh and name == "site_sflogs") else "sec",
+                PKCS(indent, "\n".join(secret)),
+            )
         yield ("raw", line)
 
 
@@ -107,7 +117,7 @@ def render_yaml(xs):
     "Render a list of yaml chunk back into its original form."
     output = []
     for tag, val in xs:
-        if tag == "sec":
+        if tag in ["sec", "ssh"]:
             output.append(val.render())
         else:
             output.append(val)
@@ -152,7 +162,7 @@ def yaml_walk(root):
                 yield (base / f)
 
 
-def do_rotate_inrepo_secret(repo_dir, private_key):
+def do_rotate_inrepo_secret(repo_dir, private_key, logserver_key):
     "Re-encrypt secret and return the new project key if it was generated"
     new_key = None
     root = Path(repo_dir)
@@ -166,12 +176,15 @@ def do_rotate_inrepo_secret(repo_dir, private_key):
         chunks = list(parse_yaml(open(fp).read()))
         has_secret = False
         for chunk in chunks:
-            if chunk[0] == "sec":
+            if chunk[0] in ["sec", "ssh"]:
                 has_secret = True
                 if new_key is None:
                     new_key = ProjectKey()
-                data = chunk[1].decrypt(private_key)
-                chunk[1].encrypt(data.encode("utf-8"), new_key.pub)
+                if chunk[0] == "sec":
+                    data = chunk[1].decrypt(private_key).encode("utf-8")
+                else:
+                    data = logserver_key
+                chunk[1].encrypt(data, new_key.pub)
         if has_secret:
             print(f"[+] Re-Encrypting secret(s) in {fp}")
             open(fp, "w").write(render_yaml(chunks))
@@ -185,7 +198,7 @@ def wait_process(args, cwd=None):
         raise RuntimeError("Command failed: " + " ".join(args))
 
 
-def rotate_inrepo_secret(author, ssh_key, git_url, private_key):
+def rotate_inrepo_secret(author, ssh_key, git_url, private_key, logserver_key):
     "Rotate the secrets found in git_url, return the new project key if it was generated"
     dest_path = "/tmp/current-repo"
     wait_process(["rm", "-Rf", dest_path])
@@ -200,7 +213,7 @@ def rotate_inrepo_secret(author, ssh_key, git_url, private_key):
         "git",
     ]
     wait_process(git + ["clone", "--depth", "1", git_url, dest_path])
-    if new_key := do_rotate_inrepo_secret(dest_path, private_key):
+    if new_key := do_rotate_inrepo_secret(dest_path, private_key, logserver_key):
         wait_process(
             git
             + [
@@ -267,8 +280,9 @@ def usage():
     parser.add_argument(
         "--email", help="The commit author email", default="root@localhost"
     )
+    parser.add_argument("--logserver-key", required=True)
     args = parser.parse_args()
-    return (args.age, (args.author, args.email))
+    return (args.age, base64.b64decode(args.logserver_key), (args.author, args.email))
 
 
 def main():
@@ -276,7 +290,7 @@ def main():
     projects = get_projects(tenants)
 
     # TODO: make these a command line argument
-    (leaked_before, author) = usage()
+    (leaked_before, logserver_key, author) = usage()
     ssh_key = "/var/lib/zuul/.ssh_push_key"
 
     from zuul.zk import ZooKeeperClient
@@ -327,7 +341,9 @@ def main():
         else:
             giturl = get_giturl(connections[conn], project)
             try:
-                new_key = rotate_inrepo_secret(author, ssh_key, giturl, private_key)
+                new_key = rotate_inrepo_secret(
+                    author, ssh_key, giturl, private_key, logserver_key
+                )
             except Exception as e:
                 print(f"[E] Failed to rotate inrepo secrets {e}")
                 continue
