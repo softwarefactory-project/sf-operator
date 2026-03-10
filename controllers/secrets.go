@@ -5,6 +5,7 @@ package controllers
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"os"
 	"strconv"
@@ -61,11 +62,14 @@ func (r *SFKubeContext) RotateProjectPrivateKey(sshKey string, unixAge int64, au
 		return err
 	}
 
+	// Grab the logserver key
+	logserverKey := base64.StdEncoding.EncodeToString([]byte(r.ReadSecretValue("zuul-ssh-key", "priv")))
+
 	if unixAge == 0 {
 		// max age
 		unixAge = 9223372036854775807
 	}
-	return r.PodExec("zuul-kazoo", "zuul-kazoo", []string{"env", "PYTHONUNBUFFERED=1", "/tmp/rotate-projects-private-keys.py", "--age", strconv.FormatInt(unixAge, 10), "--author", authorName, "--email", authorMail})
+	return r.PodExec("zuul-kazoo", "zuul-kazoo", []string{"env", "PYTHONUNBUFFERED=1", "/tmp/rotate-projects-private-keys.py", "--age", strconv.FormatInt(unixAge, 10), "--author", authorName, "--email", authorMail, "--logserver-key", logserverKey})
 }
 
 func (r *SFKubeContext) _DeleteSecretOrError(name string) error {
