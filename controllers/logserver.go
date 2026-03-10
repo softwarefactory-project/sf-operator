@@ -52,7 +52,10 @@ type LogServerReconciler struct {
 
 func (r *SFController) DeployLogserver() bool {
 
-	r.EnsureSSHKeySecret(logserverIdent + "-keys")
+	// This is the server key
+	r.EnsureSSHKeySecret("logserver-keys")
+	// This is the client key
+	uploaderKey := r.EnsureSSHKeySecret("logserver-uploader-keys")
 
 	cmData := make(map[string]string)
 	cmData["logserver.conf"] = logserverConf
@@ -148,11 +151,9 @@ func (r *SFController) DeployLogserver() bool {
 	sshdContainer.LivenessProbe = base.MkReadinessTCPProbe(sshdPort)
 	sshdContainer.StartupProbe = base.MkReadinessTCPProbe(sshdPort)
 
-	pubKey, err := r.GetSecretDataFromKey("zuul-ssh-key", "pub")
-	if err != nil {
-		return false
-	}
-	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
+	zuulPubKey := r.ReadSecretValue("zuul-ssh-key", "pub")
+	uploaderPubKey := string(uploaderKey.Data["pub"])
+	pubKeyB64 := base64.StdEncoding.EncodeToString([]byte(zuulPubKey + "\n" + uploaderPubKey))
 
 	sshdContainer.Env = []apiv1.EnvVar{
 		base.MkEnvVar("AUTHORIZED_KEY", pubKeyB64),
@@ -231,7 +232,7 @@ func (r *SFController) DeployLogserver() bool {
 		"config-hash": utils.Checksum([]byte(logserverConf)),
 		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Logserver.RetentionDays) +
 			" loopDelay:" + strconv.Itoa(r.cr.Spec.Logserver.LoopDelay),
-		"authorized-key": utils.Checksum(pubKey),
+		"authorized-key": utils.Checksum(uploaderKey.Data["pub"]),
 	}
 
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
