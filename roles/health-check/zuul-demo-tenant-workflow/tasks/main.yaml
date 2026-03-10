@@ -5,27 +5,10 @@
   vars:
     tenant_name: "demo-tenant"
 
+
 # The demo-project repository is not part of the sf-operator git tree.
 # It is created by the development environment (e.g. hack/deploy.sh) to
 # simulate a real project.
-# Ensure demo-project is on latest origin so the pushed change can be
-# submitted as fast-forward (Gerrit submit is fast forward only).
-- name: Fetch and rebase demo-project on latest origin for fast-forward submit
-  ansible.builtin.shell: |
-    git fetch origin
-    if ! git diff --quiet || ! git diff --cached --quiet; then
-      git stash push --include-untracked -m "zuul-demo-tenant-workflow"
-      stashed=1
-    fi
-    git rebase origin/$(git symbolic-ref --short HEAD)
-    if [ -n "${stashed:-}" ]; then
-      git stash pop || true
-    fi
-  args:
-    chdir: "{{ demo_project_path }}"
-  tags:
-    - skip_ansible_lint
-
 - name: Update the demo-job to sleep 1 second
   ansible.builtin.replace:
     path: "{{ demo_project_path }}/playbooks/run.yaml"

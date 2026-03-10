@@ -6,9 +6,6 @@ package sf_test
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -103,55 +100,6 @@ func ensureDelete(obj client.Object) {
 	err := sfctx.Client.Delete(sfctx.Ctx, obj)
 	if err != nil && !apierrors.IsNotFound(err) {
 		panic(fmt.Sprintf("Couldn't delete %v", obj))
-	}
-}
-
-// Git helpers for integration tests (clone, commit, push via Gerrit REST API).
-
-// getGerritAdminRepoURL returns the HTTPS URL for cloning/pushing a repo as Gerrit admin
-// (same as deploy/demo-tenant-config). Works without port-forward.
-func getGerritAdminRepoURL(repoName string) string {
-	apiKey := readSecretValue("gerrit-admin-api-key", "gerrit-admin-api-key")
-	return fmt.Sprintf("https://admin:%s@gerrit.%s/a/%s", apiKey, sf.Spec.FQDN, repoName)
-}
-
-// cloneRepo clones the given HTTPS URL (e.g. from getGerritAdminRepoURL) with SSL verify disabled for dev.
-func cloneRepo(destDir string, url string) {
-	if err := os.MkdirAll(filepath.Dir(destDir), 0755); err != nil {
-		panic(fmt.Sprintf("mkdir for clone dest: %v", err))
-	}
-	env := append(os.Environ(), "GIT_SSL_NO_VERIFY=true")
-	cmd := exec.Command("git", "clone", "--depth", "1", "-c", "http.sslVerify=false", url, destDir)
-	cmd.Env = env
-	if out, err := cmd.CombinedOutput(); err != nil {
-		panic(fmt.Sprintf("git clone failed: %v\n%s", err, out))
-	}
-}
-
-func createCommitWithIdentity(repoDir string, message string, name string, email string) {
-	env := append(os.Environ(),
-		"GIT_AUTHOR_NAME="+name,
-		"GIT_AUTHOR_EMAIL="+email,
-		"GIT_COMMITTER_NAME="+name,
-		"GIT_COMMITTER_EMAIL="+email,
-	)
-	add := exec.Command("git", "-C", repoDir, "add", "-A")
-	add.Env = env
-	if out, err := add.CombinedOutput(); err != nil {
-		panic(fmt.Sprintf("git add failed: %v\n%s", err, out))
-	}
-	commit := exec.Command("git", "-C", repoDir, "commit", "-m", message)
-	commit.Env = env
-	if out, err := commit.CombinedOutput(); err != nil {
-		panic(fmt.Sprintf("git commit failed: %v\n%s", err, out))
-	}
-}
-
-func gitPush(repoDir string) {
-	cmd := exec.Command("git", "-C", repoDir, "push")
-	cmd.Env = os.Environ()
-	if out, err := cmd.CombinedOutput(); err != nil {
-		panic(fmt.Sprintf("git push failed: %v\n%s", err, out))
 	}
 }
 

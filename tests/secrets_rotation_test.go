@@ -77,10 +77,9 @@ var _ = Describe("Secret Rotations", Ordered, func() {
 		newAuth := readSecretValue("zuul-db-connection", "password")
 		Ω(zuulConf).Should(ContainSubstring(newAuth))
 
-		By("Checking zuul-web works (can still query builds from DB after rotation)")
-		Ω(builds).ShouldNot(BeEmpty(), "builds API response (before rotation) should not be empty")
+		By("Checking zuul-web works")
 		newBuilds := readZuulCommand("curl zuul-web:9000/api/tenant/demo-tenant/builds")
-		Ω(newBuilds).ShouldNot(BeEmpty(), "builds API response (after rotation) should not be empty")
+		Ω(newBuilds).Should(Equal(builds))
 	})
 
 	It("zuul-zk works", func() {

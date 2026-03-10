@@ -12,7 +12,6 @@ go test -timeout 0 -v ./tests/... -args --ginkgo.v
 - Run a specific test:
 ```
 go test -v ./tests/... -args --ginkgo.v --ginkgo.focus "Secret Rotations"
-go test -v ./tests/... -args --ginkgo.v --ginkgo.focus "Logserver"
 ```
 
 - List the available tests:
