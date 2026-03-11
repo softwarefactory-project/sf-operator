@@ -5,10 +5,19 @@
   vars:
     tenant_name: "demo-tenant"
 
-
 # The demo-project repository is not part of the sf-operator git tree.
 # It is created by the development environment (e.g. hack/deploy.sh) to
 # simulate a real project.
+# Ensure demo-project is on latest origin so the pushed change can be
+# submitted as fast-forward (Gerrit submit is fast forward only).
+- name: Fetch and reset demo-project to latest origin for fast-forward submit
+  ansible.builtin.shell: |
+    git fetch origin && git reset --hard origin/$(git symbolic-ref --short HEAD)
+  args:
+    chdir: "{{ demo_project_path }}"
+  tags:
+    - skip_ansible_lint
+
 - name: Update the demo-job to sleep 1 second
   ansible.builtin.replace:
     path: "{{ demo_project_path }}/playbooks/run.yaml"
