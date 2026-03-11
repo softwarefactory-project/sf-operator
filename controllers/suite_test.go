@@ -25,6 +25,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,6 +36,7 @@ import (
 
 	opv1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	sfv1 "github.com/softwarefactory-project/sf-operator/api/v1"
+	. "github.com/softwarefactory-project/sf-operator/controllers/libs/client"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -44,6 +47,7 @@ var k8sClient client.Client
 var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
+var sfctx SFKubeContext
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -103,6 +107,25 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "unit-test",
+			Namespace: "unit-test",
+		},
+	}
+	err = k8sClient.Create(ctx, namespace)
+	Expect(err).To(Not(HaveOccurred()))
+
+	sfctx = SFKubeContext{
+		KubeClient: KubeClient{
+			Client: k8sClient,
+			Scheme: k8sClient.Scheme(),
+			Ns:     "unit-test",
+			Ctx:    ctx,
+			Owner:  namespace,
+		},
+	}
 
 })
 
