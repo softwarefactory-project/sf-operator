@@ -79,7 +79,7 @@ doc-check: mkdocs build-api-doc ## Build documentation and fail on warnings
 	$(MKDOCS) build --site-dir ./_site --strict
 
 .PHONY: test
-test: manifests generate fmt vet envtest vendor-crds ## Run tests.
+test: manifests generate fmt vet envtest ## Run tests.
 	CGO_ENABLED=1 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -race ./controllers/... -coverprofile cover.out
 
 .PHONY: integration-test
@@ -142,12 +142,6 @@ staticcheck:
 	(test -f $(LOCALBIN)/staticcheck && [[ "$(shell $(LOCALBIN)/staticcheck --version)" =~ "$(STATICCHECK_VERSION)" ]] ) || GOBIN=$(LOCALBIN) go install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
 	mkdir -p $(GOBIN)
 	test -L $(GOBIN)/staticcheck || ln -s $(LOCALBIN)/staticcheck $(GOBIN)/staticcheck
-
-# TODO: remove this when the last stable version doesn't use the prometheus operator
-.PHONY: vendor-crds
-vendor-crds:
-	@mkdir -p config/crd/vendor/
-	@(test -f config/crd/vendor/monitoring.yaml || curl -Lo config/crd/vendor/monitoring.yaml https://github.com/prometheus-operator/prometheus-operator/releases/download/v0.82.2/stripped-down-crds.yaml)
 
 .PHONY: render-dhall-schemas
 render-dhall-schemas:
