@@ -162,14 +162,21 @@ def yaml_walk(root):
                 yield (base / f)
 
 
-def do_rotate_inrepo_secret(repo_dir, private_key, logserver_key):
+def yaml_walks(roots):
+    for root in roots:
+        if Path(root).is_file():
+            yield root
+        else:
+            yield from yaml_walk(root)
+
+
+def do_rotate_inrepo_secret(repo_dir, extras, private_key, logserver_key):
     "Re-encrypt secret and return the new project key if it was generated"
     new_key = None
     root = Path(repo_dir)
-    for fp in itertools.chain(
-        [root / "zuul.yaml", root / ".zuul.yaml"],
-        yaml_walk(root / ".zuul.d"),
-        yaml_walk(root / "zuul.d"),
+    for fp in yaml_walks(
+        [root / "zuul.yaml", root / ".zuul.yaml", root / ".zuul.d", root / "zuul.d"]
+        + list(map(lambda extra: root / extra, extras))
     ):
         if not fp.exists():
             continue
@@ -198,7 +205,7 @@ def wait_process(args, cwd=None):
         raise RuntimeError("Command failed: " + " ".join(args))
 
 
-def rotate_inrepo_secret(author, ssh_key, git_url, private_key, logserver_key):
+def rotate_inrepo_secret(author, ssh_key, git_url, extras, private_key, logserver_key):
     "Rotate the secrets found in git_url, return the new project key if it was generated"
     dest_path = "/tmp/current-repo"
     wait_process(["rm", "-Rf", dest_path])
@@ -213,7 +220,9 @@ def rotate_inrepo_secret(author, ssh_key, git_url, private_key, logserver_key):
         "git",
     ]
     wait_process(git + ["clone", "--depth", "1", git_url, dest_path])
-    if new_key := do_rotate_inrepo_secret(dest_path, private_key, logserver_key):
+    if new_key := do_rotate_inrepo_secret(
+        dest_path, extras, private_key, logserver_key
+    ):
         wait_process(
             git
             + [
@@ -242,14 +251,18 @@ def get_projects(tenants):
     projects = dict()
     for tenant in tenants:
         for source, projs in tenant.get("tenant", {}).get("source", {}).items():
-            projects.setdefault(source, [])
+            projects.setdefault(source, dict(projs=[], extras={}))
             default_include = frozenset(["secret"])
             for conf in projs.get("config-projects", []) + projs.get(
                 "untrusted-projects", []
             ):
                 for proj in tp._getProjects(Source(), conf, default_include):
                     if "secret" in proj.load_classes:
-                        projects[source].append(proj.project)
+                        if extras := list(proj.extra_config_files) + list(
+                            proj.extra_config_dirs
+                        ):
+                            projects[source]["extras"][proj.project] = extras
+                        projects[source]["projs"].append(proj.project)
     return projects
 
 
@@ -334,15 +347,18 @@ def main():
     for path, conn, project, private_key in to_be_rotated:
         if conn not in projects or conn not in connections:
             delete(path, f"unknown project source connection {conn}")
-        elif project not in projects[conn]:
+        elif project not in projects[conn]["projs"]:
             delete(path, f"unknown project {project} in {conn}")
         elif conn == "git-server":
             delete(path, "internal repo will be handled in reconcile")
+        elif project == "zuul/zuul-jobs":
+            delete(path, "zuul-jobs do not have secrets")
         else:
             giturl = get_giturl(connections[conn], project)
+            extras = projects[conn]["extras"].get(project, [])
             try:
                 new_key = rotate_inrepo_secret(
-                    author, ssh_key, giturl, private_key, logserver_key
+                    author, ssh_key, giturl, extras, private_key, logserver_key
                 )
             except Exception as e:
                 print(f"[E] Failed to rotate inrepo secrets {e}")
