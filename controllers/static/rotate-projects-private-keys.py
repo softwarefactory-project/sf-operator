@@ -104,13 +104,18 @@ def parse_yaml(txt):
                 line = lines[pos]
                 pos += 1
                 if len(line) < indent or line[indent - 1] not in [" ", "\t"]:
+                    # This line is not part of the current secret.
+                    # It might be the beginning of another secret if they are next to each others.
+                    # So we go back one position so that it will be handled next
+                    pos -= 1
                     break
                 secret.append(line[indent:])
             yield (
                 "ssh" if (is_ssh and name == "site_sflogs") else "sec",
                 PKCS(indent, "\n".join(secret)),
             )
-        yield ("raw", line)
+        else:
+            yield ("raw", line)
 
 
 def render_yaml(xs):
