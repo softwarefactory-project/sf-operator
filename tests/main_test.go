@@ -6,6 +6,9 @@ package sf_test
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -96,11 +99,68 @@ func readCommand(pod string, container string, command string) string {
 	}
 }
 
+func runOrDie(name string, arg ...string) {
+	cmd := exec.Command(name, arg...)
+
+	if out, err := cmd.CombinedOutput(); err != nil {
+		panic(fmt.Sprintf("%s %v failed: %v\n%s", name, arg, err, out))
+	}
+}
+
 func ensureDelete(obj client.Object) {
 	err := sfctx.Client.Delete(sfctx.Ctx, obj)
 	if err != nil && !apierrors.IsNotFound(err) {
 		panic(fmt.Sprintf("Couldn't delete %v", obj))
 	}
+}
+
+func getStableVersion() string {
+	return os.Getenv("SF_STABLE_VERSION")
+}
+
+// Git helpers for integration tests (clone, commit, push via Gerrit REST API).
+
+// getGerritAdminRepoURL returns the HTTPS URL for cloning/pushing a repo as Gerrit admin
+// (same as deploy/demo-tenant-config). Works without port-forward.
+func getGerritAdminRepoURL(repoName string) string {
+	apiKey := readSecretValue("gerrit-admin-api-key", "gerrit-admin-api-key")
+	return fmt.Sprintf("https://admin:%s@gerrit.%s/a/%s", apiKey, sf.Spec.FQDN, repoName)
+}
+
+// cloneRepo clones the given HTTPS URL (e.g. from getGerritAdminRepoURL) with SSL verify disabled for dev.
+func cloneRepo(destDir string, url string) {
+	if err := os.MkdirAll(filepath.Dir(destDir), 0755); err != nil {
+		panic(fmt.Sprintf("mkdir for clone dest: %v", err))
+	}
+	runOrDie("env", "GIT_SSL_NO_VERIFY=true", "git", "clone", "--depth", "1", "-c", "http.sslVerify=false", url, destDir)
+}
+
+func resetRepo(repoDir string) {
+	runOrDie("git", "-C", repoDir, "fetch", "origin")
+	runOrDie("git", "-C", repoDir, "reset", "--hard", "origin/master")
+}
+
+func createCommitWithIdentity(repoDir string, message string, name string, email string) {
+	env := append(os.Environ(),
+		"GIT_AUTHOR_NAME="+name,
+		"GIT_AUTHOR_EMAIL="+email,
+		"GIT_COMMITTER_NAME="+name,
+		"GIT_COMMITTER_EMAIL="+email,
+	)
+	add := exec.Command("git", "-C", repoDir, "add", "-A")
+	add.Env = env
+	if out, err := add.CombinedOutput(); err != nil {
+		panic(fmt.Sprintf("git add failed: %v\n%s", err, out))
+	}
+	commit := exec.Command("git", "-C", repoDir, "commit", "-m", message)
+	commit.Env = env
+	if out, err := commit.CombinedOutput(); err != nil {
+		panic(fmt.Sprintf("git commit failed: %v\n%s", err, out))
+	}
+}
+
+func gitPush(repoDir string) {
+	runOrDie("git", "-C", repoDir, "push")
 }
 
 var _ = Describe("Test Env", Ordered, func() {
