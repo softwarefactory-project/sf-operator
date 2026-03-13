@@ -559,6 +559,9 @@ type LogServerSpec struct {
 	LoopDelay int `json:"loopDelay,omitempty"`
 	// Storage-related settings
 	Storage StorageSpec `json:"storage,omitempty"`
+	// Optional annotations to add to the logserver pod template (e.g. io.kubernetes.cri-o.TrySkipVolumeSELinuxLabel for CRI-O)
+	// +optional
+	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 }
 
 // GatewaySpec defines extra gateway config if needed
