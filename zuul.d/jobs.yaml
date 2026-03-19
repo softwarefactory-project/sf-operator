@@ -117,7 +117,7 @@
     parent: sf-operator-microshift
     run: playbooks/upgrade.yaml
     vars:
-      sf_operator_stable_version: v0.0.64
+      sf_operator_stable_version: v0.0.65
 
 - job:
     name: sf-operator-microshift-integration
@@ -156,4 +156,4 @@
     run: playbooks/minikube-upgrade.yaml
     vars:
       with_loki: false
-      sf_operator_stable_version: v0.0.64
+      sf_operator_stable_version: v0.0.65
