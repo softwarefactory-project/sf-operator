@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - A new "rotate-projects-private-keys" command line can be used to rotate the secrets in ZooKeeper.
+- Logserver: support for optional `spec.logserver.podAnnotations` to add annotations to the logserver pod template
+  (e.g. `io.kubernetes.cri-o.TrySkipVolumeSELinuxLabel` for CRI-O).
+
 
 ### Changed
 ### Deprecated

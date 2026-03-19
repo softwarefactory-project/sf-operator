@@ -225,15 +225,16 @@ func (r *SFController) DeployLogserver() bool {
 	statsExporter := sfmonitoring.MkNodeExporterSideCarContainer(logserverIdent, volumeMountsStatsExporter, r.IsOpenShift)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, statsExporter)
 
-	// Increase serial each time you need to enforce a deployment change/pod restart between operator versions
-	sts.Spec.Template.ObjectMeta.Annotations = map[string]string{
-		"fqdn":        r.cr.Spec.FQDN,
-		"serial":      "8",
-		"config-hash": utils.Checksum([]byte(logserverConf)),
-		"purgeLogConfig": "retentionDays:" + strconv.Itoa(r.cr.Spec.Logserver.RetentionDays) +
-			" loopDelay:" + strconv.Itoa(r.cr.Spec.Logserver.LoopDelay),
-		"authorized-key": utils.Checksum(uploaderKey.Data["pub"]),
+	sts.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+	for k, v := range r.cr.Spec.Logserver.PodAnnotations {
+		sts.Spec.Template.ObjectMeta.Annotations[k] = v
 	}
+	sts.Spec.Template.ObjectMeta.Annotations["fqdn"] = r.cr.Spec.FQDN
+	sts.Spec.Template.ObjectMeta.Annotations["serial"] = "8"
+	sts.Spec.Template.ObjectMeta.Annotations["config-hash"] = utils.Checksum([]byte(logserverConf))
+	sts.Spec.Template.ObjectMeta.Annotations["purgeLogConfig"] = "retentionDays:" + strconv.Itoa(r.cr.Spec.Logserver.RetentionDays) +
+		" loopDelay:" + strconv.Itoa(r.cr.Spec.Logserver.LoopDelay)
+	sts.Spec.Template.ObjectMeta.Annotations["authorized-key"] = utils.Checksum(uploaderKey.Data["pub"])
 
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
