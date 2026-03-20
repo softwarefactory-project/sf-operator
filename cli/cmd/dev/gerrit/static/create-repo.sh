@@ -31,6 +31,7 @@ resources:
           submit = group ${REPO_NAME}-ptl
           read = group ${REPO_NAME}-core
           read = group Registered Users
+          push = group Service Users
         [access "refs/meta/config"]
           read = group ${REPO_NAME}-core
           read = group Registered Users

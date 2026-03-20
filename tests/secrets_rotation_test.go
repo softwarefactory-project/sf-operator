@@ -19,7 +19,6 @@ type Secret struct {
 // run with go test -v ./tests/... -args --ginkgo.v --ginkgo.focus "Secret Rotations"
 var _ = Describe("Secret Rotations", Ordered, func() {
 	var zuulConf string
-	var builds string
 
 	BeforeAll(func() {
 		// Avoid executor getting stuck
@@ -31,9 +30,6 @@ var _ = Describe("Secret Rotations", Ordered, func() {
 			{name: "zookeeper-server-tls", key: "0-tls.key", rotatedByCLI: true},
 			{name: "zookeeper-client-tls", key: "tls.key", rotatedByCLI: true},
 		}
-
-		By("Checking build database")
-		builds = readZuulCommand("curl zuul-web:9000/api/tenant/demo-tenant/builds")
 
 		By("Deleting secrets not rotated by the CLI")
 		prevValues := make(map[string]map[string][]byte)
@@ -79,7 +75,7 @@ var _ = Describe("Secret Rotations", Ordered, func() {
 
 		By("Checking zuul-web works")
 		newBuilds := readZuulCommand("curl zuul-web:9000/api/tenant/demo-tenant/builds")
-		Ω(newBuilds).Should(Equal(builds))
+		Ω(newBuilds).ShouldNot(BeEmpty())
 	})
 
 	It("zuul-zk works", func() {

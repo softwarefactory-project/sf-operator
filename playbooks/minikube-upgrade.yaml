@@ -15,3 +15,5 @@
       command: make integration-tests
       args:
         chdir: "{{ zuul.project.src_dir }}"
+      environment:
+        SF_STABLE_VERSION: "{{ sf_operator_stable_version }}"
