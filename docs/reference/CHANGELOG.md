@@ -5,17 +5,22 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
-
-- A new "rotate-projects-private-keys" command line can be used to rotate the secrets in ZooKeeper.
-- Logserver: support for optional `spec.logserver.podAnnotations` to add annotations to the logserver pod template
-  (e.g. `io.kubernetes.cri-o.TrySkipVolumeSELinuxLabel` for CRI-O).
-
-
 ### Changed
 ### Deprecated
 ### Removed
 ### Fixed
 ### Security
+
+## [v0.0.66] - 2026-03-20
+
+### Added
+
+- A new "rotate-projects-private-keys" command line can be used to rotate the secrets in ZooKeeper.
+- Logserver: support for optional `spec.logserver.podAnnotations` to add annotations to the logserver pod template
+  (e.g. `io.kubernetes.cri-o.TrySkipVolumeSELinuxLabel` for CRI-O).
+- A new logserver-uploader-keys is provided for dedicated access to the logserver. Previously the tenants were configured to
+  use the main zuul-ssh-key for uploading logs. In the future, only the uploader-keys will be authorized.
+
 
 ## [v0.0.65] - 2026-02-18
 
