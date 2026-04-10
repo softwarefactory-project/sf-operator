@@ -25,6 +25,8 @@
         - sf-operator-publish
     periodic:
       jobs:
-        - sf-operator-minikube
+        - sf-operator-minikube-integration
+        - sf-operator-minikube-upgrade
         - sf-operator-microshift-integration
         - sf-operator-microshift-upgrade
+        - sf-operator-go-test
