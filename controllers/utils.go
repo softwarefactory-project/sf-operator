@@ -33,6 +33,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -1058,5 +1059,30 @@ func WaitFor(ensureFun func() bool, linear bool) bool {
 			duration = time.Second * time.Duration(attempt)
 		}
 		time.Sleep(duration)
+	}
+}
+
+// EnsurePodDisruptionBudget ensures a PodDisruptionBudget exists
+// The PodDisruptionBudget is updated if needed
+func (r *SFKubeContext) EnsurePodDisruptionBudget(pdb *policyv1.PodDisruptionBudget) {
+	var current policyv1.PodDisruptionBudget
+	name := pdb.GetName()
+
+	if !r.GetOrDie(name, &current) {
+		if !r.DryRun {
+			logging.LogI("Creating PodDisruptionBudget, name: " + name)
+		}
+		r.CreateR(pdb)
+	} else {
+		if !reflect.DeepEqual(current.Spec, pdb.Spec) || !utils.MapEquals(&current.ObjectMeta.Annotations, &pdb.ObjectMeta.Annotations) {
+			if r.DryRun {
+				logging.LogI("[Dry Run] Would update PodDisruptionBudget, name: " + name + ". Reason: Spec or Annotations have changed")
+			} else {
+				logging.LogI("Updating PodDisruptionBudget, name: " + name)
+			}
+			current.Spec = pdb.Spec
+			current.ObjectMeta.Annotations = pdb.ObjectMeta.Annotations
+			r.UpdateR(&current)
+		}
 	}
 }

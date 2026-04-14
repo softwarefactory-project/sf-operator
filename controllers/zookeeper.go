@@ -41,6 +41,7 @@ const zkServerPort = 2888
 
 const ZookeeperIdent = "zookeeper"
 const ZookeeperReplicas = 3
+const ZookeeperMaxUnavailable = 1
 
 const zkPIMountPath = "/config-scripts"
 
@@ -175,8 +176,14 @@ func (r *SFController) DeployZookeeper() bool {
 		StorageClassName: storageConfig.StorageClassName,
 		ExtraAnnotations: storageConfig.ExtraAnnotations,
 	}
+	pdb := base.MkPodDisruptionBudget(ZookeeperIdent, r.Ns, ZookeeperMaxUnavailable, map[string]string{"app": "sf", "run": ZookeeperIdent}, nil)
+	r.EnsurePodDisruptionBudget(&pdb)
 	zk := r.mkHeadlessStatefulSet(
 		ZookeeperIdent, base.ZookeeperImage(), storageConfig, apiv1.ReadWriteOnce, r.cr.Spec.ExtraLabels, r.IsOpenShift)
+	zk.Spec.UpdateStrategy = appsv1.StatefulSetUpdateStrategy{
+		Type: appsv1.RollingUpdateStatefulSetStrategyType,
+	}
+	zk.Spec.PodManagementPolicy = appsv1.OrderedReadyPodManagement
 	// We overwrite the VolumeClaimTemplates set by MkHeadlessStatefulSet to keep the previous volume name
 	// Previously the default PVC created by MkHeadlessStatefulSet was not used by Zookeeper (not mounted). So to avoid having two Volumes
 	// and to ensure data persistence during the upgrade we keep the previous naming 'ZookeeperIdent + "-data"' and we discard the one

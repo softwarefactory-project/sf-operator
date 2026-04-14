@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
   While the process handles snapshotting Zookeeper's data and restoring it to all pods after the extra replicas rollout, you are **strongly** advised
   to perform a backup with the sf-operator CLI before upgrading to avoid accidental data loss.
   PKI certificates will be recreated to reflect the new ensemble setup.
+- Added `PodDisruptionBudget` and `RollingUpdate` strategy to the Zookeeper controller, in accordance with zookeeper
+  being now deployed as a 3-replica ensemble (see below).
 
 ### Deprecated
 ### Removed
