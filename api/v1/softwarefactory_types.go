@@ -498,6 +498,11 @@ type ZookeeperSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={"memory": "2Gi", "cpu": "500m"}
 	Limits *LimitsSpec `json:"limits"`
+	// Enable node anti-affinity, defaults to false so as not to fail on minikube deployments. This should
+	// be set to true on production deployments with at least 3 nodes available.
+	// +kubebuilder:default:=false
+	// +optional
+	NodeAntiAffinityEnabled *bool `json:"nodeAntiAffinityEnabled,omitempty"`
 }
 
 type CodesearchSpec struct {

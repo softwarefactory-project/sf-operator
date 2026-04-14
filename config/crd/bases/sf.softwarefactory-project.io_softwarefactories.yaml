@@ -510,6 +510,12 @@ spec:
                     - cpu
                     - memory
                     type: object
+                  nodeAntiAffinityEnabled:
+                    default: false
+                    description: |-
+                      Enable node anti-affinity, defaults to false so as not to fail on minikube deployments. This should
+                      be set to true on production deployments with at least 3 nodes available.
+                    type: boolean
                   storage:
                     properties:
                       className:
