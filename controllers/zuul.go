@@ -200,6 +200,10 @@ func (r *SFKubeContext) DeleteKazooPod() {
 	if r.GetOrDie("zuul-kazoo", &current) {
 		r.DeleteR(&current)
 	}
+	WaitFor(func() bool {
+		var wait apiv1.Pod
+		return !r.GetOrDie("zuul-kazoo", &wait)
+	}, false)
 }
 
 func (r *SFController) mkZuulContainer(service string, corporateCMExists bool) apiv1.Container {
@@ -1062,7 +1066,7 @@ func (r *SFController) EnsureZuulConfigSecret(remoteExecutor bool) *ini.File {
 		}
 	} else {
 		for i := range ZookeeperReplicas {
-			zkHost = zkHost + fmt.Sprintf("%s-%d.%s-headless.%s:2281,", ZookeeperIdent, i, ZookeeperIdent, r.Ns)
+			zkHost = zkHost + fmt.Sprintf("%s-%d.%s-headless.%s.svc.cluster.local:2281,", ZookeeperIdent, i, ZookeeperIdent, r.Ns)
 		}
 	}
 	zkHost = strings.TrimSuffix(zkHost, ",")

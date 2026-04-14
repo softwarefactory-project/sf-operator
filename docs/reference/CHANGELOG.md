@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+- Deploy zookeeper as a 3-replica ensemble to ensure high availability. Ensure you have enough resources on the cluster to deploy 3 zookeeper pods.
+  While the process handles snapshotting Zookeeper's data and restoring it to all pods after the extra replicas rollout, you are **strongly** advised
+  to perform a backup with the sf-operator CLI before upgrading to avoid accidental data loss.
+  PKI certificates will be recreated to reflect the new ensemble setup.
+
 ### Deprecated
 ### Removed
 ### Fixed

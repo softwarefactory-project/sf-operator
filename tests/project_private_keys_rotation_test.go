@@ -5,7 +5,6 @@ package sf_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -24,13 +23,8 @@ var _ = Describe("Project Private Keys Rotation", Ordered, func() {
 	var testSecretPassword string
 	var secretsContentAfter []byte
 
-	ensureNoConfigError := func() {
-		By("Ensuring tenant have no config errors")
-		Ω(getConfigErrors("internal")).Should(Equal([]any{}))
-		Ω(getConfigErrors("demo-tenant")).Should(Equal([]any{}))
-	}
-
 	It("ensures no config errors", func() {
+		By("Ensuring tenants have no config errors")
 		ensureNoConfigError()
 	})
 
@@ -135,19 +129,6 @@ var _ = Describe("Project Private Keys Rotation", Ordered, func() {
 		Ω(decrypted).Should(Equal(testSecretPassword), "secret plaintext after rotation must still match testSecretPassword")
 	})
 })
-
-// getConfigErrors returns the JSON array of config-errors for the tenant from zuul-web.
-func getConfigErrors(tenant string) []interface{} {
-	out := readZuulCommand("curl -s zuul-web:9000/api/tenant/" + tenant + "/config-errors")
-	out = strings.TrimSpace(out)
-	if out == "" {
-		return nil
-	}
-	var list []interface{}
-	err := json.Unmarshal([]byte(out), &list)
-	Ω(err).Should(BeNil(), "config-errors response should be valid JSON: %s", out)
-	return list
-}
 
 // replacePlaceholdersInSecretYaml replaces "<name>" -> "test-secret", "<fieldname>" -> "password".
 func replacePlaceholdersInSecretYaml(encryptedOut string) string {

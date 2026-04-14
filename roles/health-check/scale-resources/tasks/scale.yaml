@@ -21,5 +21,5 @@
     -o jsonpath='{.status.readyReplicas}'
   register: _scale_ready
   until: _scale_ready.stdout | int == service.replicas
-  retries: 6
-  delay: 10
+  retries: 10
+  delay: 30
