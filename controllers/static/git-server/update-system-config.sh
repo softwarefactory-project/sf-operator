@@ -209,23 +209,27 @@ cat << EOF > roles/add-k8s-hosts/tasks/main.yaml
     ansible_connection: kubectl
     ansible_kubectl_container: zuul-scheduler
     ansible_kubectl_pod: "zuul-scheduler-0"
+    ansible_kubectl_kubeconfig: "{{ ansible_env.HOME }}/.kube/config"
 
 - name: Fetch nodepool-launcher Pod info
   command: "kubectl get pod -o=custom-columns=NAME:.metadata.name --no-headers --selector=run=nodepool-launcher"
   register: nodepool_launcher_info
+  environment:
+    KUBECONFIG: "{{ ansible_env.HOME }}/.kube/config"
 
 - ansible.builtin.add_host:
     name: "nodepool-launcher"
     ansible_connection: kubectl
     ansible_kubectl_pod: "{{ nodepool_launcher_info.stdout }}"
     ansible_kubectl_container: launcher
+    ansible_kubectl_kubeconfig: "{{ ansible_env.HOME }}/.kube/config"
 
 - ansible.builtin.add_host:
     name: "nodepool-builder"
     ansible_connection: kubectl
     ansible_kubectl_container: nodepool-builder
     ansible_kubectl_pod: "nodepool-builder-0"
-
+    ansible_kubectl_kubeconfig: "{{ ansible_env.HOME }}/.kube/config"
 EOF
 
 mkdir -p roles/setup-k8s-config/tasks
@@ -249,6 +253,8 @@ cat << EOF > roles/setup-k8s-config/tasks/main.yaml
     - "kubectl config set-credentials local-token --token={{ k8s_config['token'] }}"
     - "kubectl config set-context local-context --cluster=local --user=local-token --namespace={{ k8s_config['namespace'] }}"
     - "kubectl config use-context local-context"
+  environment:
+    KUBECONFIG: "{{ ansible_env.HOME }}/.kube/config"
 EOF
 
 git add zuul.d playbooks roles

@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
+
+- Zuul is updated to version 14.1.0 with several fixes.
+
 ### Deprecated
 ### Removed
 ### Fixed
