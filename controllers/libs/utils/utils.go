@@ -22,7 +22,6 @@ import (
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/ini.v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // GetEnvVarValue returns the value of the named env var. Return an empty string when not found.
@@ -36,9 +35,6 @@ func GetEnvVarValue(varName string) (string, error) {
 
 func Int32Ptr(i int32) *int32 { return &i }
 func BoolPtr(b bool) *bool    { return &b }
-func IntOrStringPtr(i int32) *intstr.IntOrString {
-	return &intstr.IntOrString{Type: intstr.Int, IntVal: i}
-}
 
 var Execmod int32 = 493 // decimal for 0755 octal
 var Readmod int32 = 292 // decimal for 0444 octal

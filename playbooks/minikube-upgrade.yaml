@@ -6,53 +6,10 @@
       args:
         chdir: "{{ zuul.project.src_dir }}"
 
-    - name: Create backup dirs
-      ansible.builtin.file:
-        path: ~/zuul-output/logs/backups/{{ item }}
-        state: directory
-      loop:
-        - "stable"
-        - "upgrade"
-
-    - name: Prepare a backup
-      ansible.builtin.shell: |
-        set -o pipefail
-        go run main.go {{ cli_global_flags }} SF backup --namespace sf --backup_dir ~/zuul-output/logs/backups/stable/ playbooks/files/sf.yaml
-      args:
-        chdir: "{{ zuul.project.src_dir }}"
-
     - name: Deploy current version
       command: ./hack/deploy.sh
       args:
         chdir: "{{ zuul.project.src_dir }}"
-
-    - name: Create a new backup
-      ansible.builtin.shell: |
-        set -o pipefail
-        go run main.go {{ cli_global_flags }} SF backup --namespace sf --backup_dir ~/zuul-output/logs/backups/upgrade/ playbooks/files/sf.yaml
-      args:
-        chdir: "{{ zuul.project.src_dir }}"
-
-    - name: Compare Zuul keys
-      block:
-        - name: get stable zuul.keys
-          ansible.builtin.stat:
-            path: ~/zuul-output/logs/backups/stable/zuul/zuul.keys
-          register: stable_keys
-        - name: get post-upgrade zuul.keys
-          ansible.builtin.stat:
-            path: ~/zuul-output/logs/backups/upgrade/zuul/zuul.keys
-          register: upgrade_keys
-        - name: compute checksum (stable)
-          ansible.builtin.set_fact:
-            stable_sha1: "{{ stable_keys.stat.checksum }}"
-        - name: compute checksum (post-upgrade)
-          ansible.builtin.set_fact:
-            upgrade_sha1: "{{ upgrade_keys.stat.checksum }}"
-        - name: Compare checksums
-          ansible.builtin.fail:
-            msg: "Keys changed during upgrade :("
-          when: stable_sha1 != upgrade_sha1
 
     - name: Validate upgrade to latest release
       command: make integration-tests

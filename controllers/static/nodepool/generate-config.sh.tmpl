@@ -9,7 +9,7 @@ set -ex
 NODEPOOL_CONFIG_FILE="${NODEPOOL_CONFIG_FILE:-nodepool.yaml}"
 
 # TODO the nodepool containers need hostname to figure out the actual domain. For now it is safe to assume
-# the base domain to be svc.cluster.local but other defaults exist.
+# the base domain to be svc.local.cluster but other defaults exist.
 # DOMAIN=$(hostname -d)
 
 # Generate the default tenants configuration file

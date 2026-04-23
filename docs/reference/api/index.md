@@ -549,7 +549,6 @@ _Appears in:_
 | --- | --- | --- |
 | `storage` _[StorageSpec](#storagespec)_ |  | -|
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
-| `nodeAntiAffinityEnabled` _boolean_ | Enable node anti-affinity, defaults to false so as not to fail on minikube deployments. This should be set to true on production deployments with at least 3 nodes available. | {false}|
 
 
 #### ZuulExecutorSpec

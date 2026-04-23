@@ -8,9 +8,7 @@ This script is meant to be used by the sf-operator rotate-projects-private-keys 
 
 import itertools
 import base64
-import sys
 import textwrap
-
 import zuul.lib.yamlutil as yaml
 from zuul.lib import encryption
 from pathlib import Path
@@ -315,24 +313,10 @@ def main():
 
     from zuul.zk import ZooKeeperClient
     from zuul.lib.keystorage import KeyStorage
-    from kazoo.exceptions import ConnectionLoss
-    import os
     import urllib.parse
-    import time
 
     zk_client = ZooKeeperClient.fromConfig(config)
-    waitForClientCounter = 0
-    while waitForClientCounter < 100:
-        waitForClientCounter += 1
-        try:
-            zk_client.connect()
-            break
-        except ConnectionLoss:
-            print(f"[E] Zookeeper connection loss, retrying to connect (attempt {waitForClientCounter}/100)...")
-            time.sleep(1)
-    if waitForClientCounter >= 100:
-        print("[E] Could not establish connection to Zookeeper :(")
-        sys.exit(1)
+    zk_client.connect()
 
     def delete(path, reason):
         print(f"[+] Deleting {path} because {reason}")

@@ -18,7 +18,5 @@ spec:
         controlPlanePublicZKHostname: ""
         controlPlanePublicZKHostnames:
           - zookeeper-0.zookeeper-headless.sf.svc.cluster.local
-          - zookeeper-1.zookeeper-headless.sf.svc.cluster.local
-          - zookeeper-2.zookeeper-headless.sf.svc.cluster.local
         controlPlanePublicGSHostname: git-server.sf
         publicHostname: zuul-executor-headless.ext-ze

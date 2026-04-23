@@ -6,19 +6,6 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
-
-- Deploy zookeeper as a 3-replica ensemble to ensure high availability. Ensure you have enough resources on the cluster to deploy 3 zookeeper pods.
-  While the upgrade process handles snapshotting Zookeeper's data and restoring it to all pods after the extra replicas rollout,
-  **You are strongly advised to backup your zookeeper data before upgrading to avoid accidental data loss.**
-  The PKI certificates will be recreated to reflect the new ensemble setup, and the zookeeper statefulset will be re-rolled out with its updated
-  configuration.
-  It is advised to shut down any zookeeper clients (specifically zuul executors) prior to the upgrade to avoid connection loss exceptions.
-- Added `PodDisruptionBudget` and `RollingUpdate` strategy to the Zookeeper controller, in accordance with zookeeper
-  being now deployed as a 3-replica ensemble.
-- Added a PodAntiAffinity toggle for Zookeeper in the Custom Resource Definition (disabled by default). If enabled, the Zookeeper
-  statefulset will be configured so that its pods spawn on distinct worker nodes. Make sure your deployment cluster has at least three
-  available nodes, otherwise Software Factory will fail to reconcile when the toggle is enabled.
-
 ### Deprecated
 ### Removed
 ### Fixed

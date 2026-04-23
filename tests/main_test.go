@@ -5,7 +5,6 @@ package sf_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -169,29 +168,3 @@ var _ = Describe("Test Env", Ordered, func() {
 		Ω(sfctx.Ns).ShouldNot(BeEmpty())
 	})
 })
-
-// getConfigErrors returns the JSON array of config-errors for the tenant from zuul-web.
-func getConfigErrors(tenant string) []interface{} {
-	out := readZuulCommand("curl -s zuul-web:9000/api/tenant/" + tenant + "/config-errors")
-	out = strings.TrimSpace(out)
-	if out == "" {
-		return nil
-	}
-	var list []interface{}
-	err := json.Unmarshal([]byte(out), &list)
-	Ω(err).Should(BeNil(), "config-errors response should be valid JSON: %s", out)
-	return list
-}
-
-func readZuulCommand(command string) string {
-	return readCommand("zuul-scheduler-0", "zuul-scheduler", command)
-}
-
-func readZuulCommandArgs(args []string) string {
-	return readCommandArgs("zuul-scheduler-0", "zuul-scheduler", args)
-}
-
-func ensureNoConfigError() {
-	Ω(getConfigErrors("internal")).Should(Equal([]any{}))
-	Ω(getConfigErrors("demo-tenant")).Should(Equal([]any{}))
-}
