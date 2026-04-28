@@ -35,7 +35,10 @@ func deployCmd(kmd *cobra.Command, args []string) {
 		fmt.Printf("usage: deploy <path-to-cr>\n")
 		os.Exit(1)
 	}
-	controllers.Standalone(ns, kubeContext, dryRun, crPath, remotePath)
+	if err := controllers.Standalone(ns, kubeContext, dryRun, crPath, remotePath); err != nil {
+		fmt.Printf("Deployment failed: %s\n", err)
+		os.Exit(1)
+	}
 }
 
 func rotateCmd(kmd *cobra.Command, args []string) {
