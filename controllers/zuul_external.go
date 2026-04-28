@@ -50,6 +50,7 @@ func (r *SFKubeContext) copySecrets(eCR sfv1.SoftwareFactory, controlEnv *SFKube
 			return fmt.Errorf("failed to read secret %s", secret)
 		}
 		sec.SetNamespace(r.Ns)
+		sec.SetResourceVersion("")
 		r.EnsureSecret(&sec)
 	}
 	return nil
