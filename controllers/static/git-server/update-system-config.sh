@@ -166,7 +166,7 @@ cat << EOF > playbooks/config/update.yaml
     - name: "Update zuul tenant config"
       command: /usr/local/bin/generate-zuul-tenant-yaml.sh "{{ config_ref }}"
     - name: "Reconfigure the scheduler"
-      command: zuul-scheduler full-reconfigure
+      command: zuul-scheduler smart-reconfigure
 
 - hosts: nodepool-launcher
   vars:
