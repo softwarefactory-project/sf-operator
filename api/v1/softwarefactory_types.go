@@ -301,6 +301,10 @@ type ZuulExecutorSpec struct {
 	// +kubebuilder:default:=250
 	// +kubebuilder:validation:Minimum:=-1
 	DiskLimitPerJob int `json:"diskLimitPerJob,omitempty"`
+	// the [ansible setup playbook timeout](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.ansible_setup_timeout)
+	// +kubebuilder:default:=60
+	// +kubebuilder:validation:Minimum:=0
+	AnsibleSetupTimeout int `json:"ansibleSetupTimeout,omitempty"`
 	// +kubebuilder:default:=7200
 	// +kubebuilder:validation:Minimum:=1
 	TerminationGracePeriodSeconds int64 `json:"TerminationGracePeriodSeconds,omitempty"`

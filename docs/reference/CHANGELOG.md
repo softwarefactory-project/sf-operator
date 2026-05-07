@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- Zuul Executor: add support for "ansible_setup_timeout" setting in CRD.
+
 ### Changed
 
 - Zuul is updated to version 14.1.0 with several fixes.

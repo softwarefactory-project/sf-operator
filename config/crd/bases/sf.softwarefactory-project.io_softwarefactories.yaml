@@ -577,6 +577,11 @@ spec:
                         format: int64
                         minimum: 1
                         type: integer
+                      ansibleSetupTimeout:
+                        default: 60
+                        description: the [ansible setup playbook timeout](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.ansible_setup_timeout)
+                        minimum: 0
+                        type: integer
                       diskLimitPerJob:
                         default: 250
                         description: the [disk_limit_per_job](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.disk_limit_per_job)
