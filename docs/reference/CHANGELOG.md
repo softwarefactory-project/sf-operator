@@ -6,14 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 ### Changed
-
-- Zuul is updated to version 14.1.0 with several fixes.
-- The Go version in go.mod is bumped to 1.25.10. Backward compatibility with earlier versions is not guaranteed.
-
 ### Deprecated
 ### Removed
 ### Fixed
 ### Security
+
+## [v0.0.67] - 2026-05-11
+
+### Changed
+
+- Zuul is updated to version 14.1.0 with several fixes.
+- The Go version in go.mod is bumped to 1.25.10. Backward compatibility with earlier versions is not guaranteed.
 
 ## [v0.0.66] - 2026-03-20
 
