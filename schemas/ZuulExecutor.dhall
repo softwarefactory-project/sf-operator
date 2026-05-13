@@ -1,6 +1,7 @@
 { Type =
     { TerminationGracePeriodSeconds : Optional Natural
     , diskLimitPerJob : Optional Integer
+    , ansibleSetupTimeout : Optional Integer
     , enabled : Optional Bool
     , limits : Optional (./Limits.dhall).Type
     , logLevel : Optional Text
@@ -16,6 +17,7 @@
 , default =
   { TerminationGracePeriodSeconds = None Natural
   , diskLimitPerJob = None Integer
+  , ansibleSetupTimeout = None Integer
   , enabled = None Bool
   , limits = None (./Limits.dhall).Type
   , logLevel = None Text

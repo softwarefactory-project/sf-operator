@@ -1012,6 +1012,10 @@ func (r *SFController) EnsureZuulConfigSecret(remoteExecutor bool) *ini.File {
 		}
 		cfgINI.Section("executor").NewKey("disk_limit_per_job", strconv.Itoa(size))
 	}
+	if r.cr.Spec.Zuul.Executor.AnsibleSetupTimeout != 0 {
+		ansibleSetupTimeout := int(r.cr.Spec.Zuul.Executor.AnsibleSetupTimeout)
+		cfgINI.Section("executor").NewKey("ansible_setup_timeout", strconv.Itoa(ansibleSetupTimeout))
+	}
 
 	// Enable prometheus metrics
 	for _, srv := range []string{"web", "executor", "scheduler", "merger"} {
