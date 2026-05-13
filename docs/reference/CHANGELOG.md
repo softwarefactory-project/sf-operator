@@ -5,16 +5,17 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
-
-- Zuul Executor: add support for "ansible_setup_timeout" setting in CRD.
-
 ### Changed
 ### Deprecated
 ### Removed
 ### Fixed
 ### Security
 
-## [v0.0.67] - 2026-05-11
+## [v0.0.67] - 2026-05-13
+
+### Added
+
+- Zuul Executor: add support for "ansible_setup_timeout" setting in CRD.
 
 ### Changed
 
