@@ -52,6 +52,7 @@
     - name: Start minikube
       command: >-
           minikube start
+          --driver=podman
           --kubernetes-version={{ kubernetes_version }}
           --embed-certs
           --container-runtime=cri-o
