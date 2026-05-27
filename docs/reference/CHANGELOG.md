@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+
+- Improved logserver SSH key rotation: refactored authorized_keys reconciliation logic and added `logserver-uploader-spare-keys` secret support to allow long-running jobs to maintain access during key rotation without service interruption.
+
 ### Changed
 ### Deprecated
 ### Removed

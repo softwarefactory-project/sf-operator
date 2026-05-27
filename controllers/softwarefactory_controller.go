@@ -36,6 +36,7 @@ type SFController struct {
 	cr            sfv1.SoftwareFactory
 	configBaseURL string
 	needOpendev   bool
+	logserverKeys string
 }
 
 func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
@@ -450,6 +451,7 @@ func MkSFController(r SFKubeContext, cr sfv1.SoftwareFactory) SFController {
 		cr:            cr,
 		configBaseURL: resolveConfigBaseURL(cr),
 		needOpendev:   !slices.Contains(conns, "opendev.org"),
+		logserverKeys: "unknown",
 	}
 }
 

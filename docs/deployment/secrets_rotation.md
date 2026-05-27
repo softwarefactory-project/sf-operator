@@ -34,3 +34,34 @@ Most services need to restart to acknowledge a secret rotation; make sure to pla
 | zuul-keystore-password | zuul, zookeeper | ✅ | **high** if zookeeper is accessible to the attacker, **low** if not - allows to decrypt secrets and private keys known to zuul |
 | zuul-ssh-key | zuul, nodepool-builder | ❌ | **high** - Grants access to job nodes as the zuul user; allows tampering with jobs' execution and/or results |
 
+## Logserver keys rotation
+
+[Read more about logserver secrets](./logserver.md#ssh-access-and-key-management)
+
+**Key Rotation Workflow:**
+
+Rotation follows this approach to ensure zero downtime: switch CI jobs to the spare key, wait for long-running jobs to finish, then replace the primary key with the spare, regenerate spare key.
+
+1. Update required playbooks to use `logserver-uploader-spare-keys` private key for CI jobs to upload logs to logserver instead of `logserver-uploader-keys` private key.
+Both keys are now authorized - old jobs continue working, new jobs use the new key.
+
+2. After all long-running jobs complete, delete `logserver-uploader-keys`
+
+    ```bash
+    kubectl delete secret logserver-uploader-keys
+    ```
+
+3. Create `logserver-uploader-keys` secret from the current spare keys
+
+    ```bash
+    kubectl get secret logserver-uploader-spare-keys -o yaml | \
+    sed 's/logserver-uploader-spare-keys/logserver-uploader-keys/' | \
+    kubectl apply -f -
+    ```
+
+4. Regenerate new `logserver-uploader-spare-keys` by deleting it and re-deploying
+
+    ```bash
+    kubectl delete secret logserver-uploader-spare-keys
+    # next re-deploy sf-operator to create a new spare keys automatically
+    ```

@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"strconv"
+	"strings"
 
 	v1 "github.com/softwarefactory-project/sf-operator/api/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -17,6 +18,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/base"
 	"github.com/softwarefactory-project/sf-operator/controllers/libs/conds"
@@ -56,6 +58,7 @@ func (r *SFController) DeployLogserver() bool {
 	r.EnsureSSHKeySecret("logserver-keys")
 	// This is the client key
 	uploaderKey := r.EnsureSSHKeySecret("logserver-uploader-keys")
+	uploaderSpareKey := r.EnsureSSHKeySecret("logserver-uploader-spare-keys")
 
 	cmData := make(map[string]string)
 	cmData["logserver.conf"] = logserverConf
@@ -153,7 +156,17 @@ func (r *SFController) DeployLogserver() bool {
 
 	zuulPubKey := r.ReadSecretValue("zuul-ssh-key", "pub")
 	uploaderPubKey := string(uploaderKey.Data["pub"])
-	pubKeyB64 := base64.StdEncoding.EncodeToString([]byte(zuulPubKey + "\n" + uploaderPubKey))
+	uploaderSparePubKey := string(uploaderSpareKey.Data["pub"])
+
+	var pubKeys []string
+	var pubKeysClear string
+	for _, key := range []string{zuulPubKey, uploaderPubKey, uploaderSparePubKey} {
+		if key != "" {
+			pubKeys = append(pubKeys, key)
+		}
+	}
+	pubKeysClear = strings.Join(pubKeys, "\n")
+	pubKeyB64 := base64.StdEncoding.EncodeToString([]byte(pubKeysClear))
 
 	sshdContainer.Env = []apiv1.EnvVar{
 		base.MkEnvVar("AUTHORIZED_KEY", pubKeyB64),
@@ -234,7 +247,6 @@ func (r *SFController) DeployLogserver() bool {
 	sts.Spec.Template.ObjectMeta.Annotations["config-hash"] = utils.Checksum([]byte(logserverConf))
 	sts.Spec.Template.ObjectMeta.Annotations["purgeLogConfig"] = "retentionDays:" + strconv.Itoa(r.cr.Spec.Logserver.RetentionDays) +
 		" loopDelay:" + strconv.Itoa(r.cr.Spec.Logserver.LoopDelay)
-	sts.Spec.Template.ObjectMeta.Annotations["authorized-key"] = utils.Checksum(uploaderKey.Data["pub"])
 
 	sts.Spec.Template.Spec.HostAliases = base.CreateHostAliases(r.cr.Spec.HostAliases)
 
@@ -246,6 +258,19 @@ func (r *SFController) DeployLogserver() bool {
 	pvcReadiness := r.reconcileExpandPVC(logserverIdent+"-"+logserverIdent+"-0", r.cr.Spec.Logserver.Storage)
 
 	isReady := r.IsStatefulSetReady(current) && !stsUpdated && pvcReadiness
+
+	// When sts is ready, we can consider logserver ready and we can update the keys
+	// Reconcile SSH keys dynamically without pod restart
+	if isReady && r.logserverKeys != pubKeyB64 {
+		keysUpdated := r.reconcileLogserverKeys(pubKeysClear)
+		if keysUpdated {
+			r.logserverKeys = pubKeyB64
+		} else {
+			log.FromContext(r.Ctx).Error(nil, "Failed to update logserver SSH keys, will retry on next reconciliation")
+			isReady = false
+		}
+	}
+
 	conds.UpdateConditions(&r.cr.Status.Conditions, logserverIdent, isReady)
 
 	return isReady

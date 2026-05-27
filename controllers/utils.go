@@ -579,6 +579,53 @@ func (r *SFKubeContext) IsDeploymentReady(dep *appsv1.Deployment) bool {
 	return false
 }
 
+// reconcileLogserverKeys updates authorized_keys in the running logserver pod
+// without triggering a restart.
+// Returns true if keys are synchronized (either already up-to-date or successfully updated).
+// Returns false if the pod is not running or if synchronization failed.
+func (r *SFController) reconcileLogserverKeys(pubKeyClear string) bool {
+	podName := logserverIdent + "-0"
+
+	// Check if pod is running
+	var pod apiv1.Pod
+	if !r.GetOrDie(podName, &pod) || pod.Status.Phase != apiv1.PodRunning {
+		return false
+	}
+
+	// Read current authorized_keys from pod
+	// We don't care if this fails, we'll attempt to update the keys anyway, but if it works we can avoid an unnecessary update
+	var currentKeys bytes.Buffer
+	err := r.PodExecOut(podName, sshdPortName,
+		[]string{"cat", "/tmp/home/.ssh/authorized_keys"}, &currentKeys)
+	if err != nil {
+		logging.LogI("Failed to read authorized_keys from logserver pod, will attempt to update anyway: " + err.Error())
+	}
+
+	// Compare byte slices directly
+	if bytes.Equal(currentKeys.Bytes(), []byte(pubKeyClear)) {
+		logging.LogI("Logserver authorized_keys is up to date")
+		return true
+	}
+
+	// Keys differ - update them
+	logging.LogI("Updating logserver authorized_keys without restart")
+
+	// Write new keys to authorized_keys atomically via temp file
+	cmd := []string{"sh", "-c",
+		"mkdir -p /tmp/home/.ssh && " +
+			"cat > /tmp/home/.ssh/authorized_keys.tmp && " +
+			"chmod 400 /tmp/home/.ssh/authorized_keys.tmp && " +
+			"mv /tmp/home/.ssh/authorized_keys.tmp /tmp/home/.ssh/authorized_keys"}
+	err = r.PodExecIn(podName, sshdPortName, cmd, strings.NewReader(pubKeyClear))
+	if err != nil {
+		logging.LogE(err, "Failed to update authorized_keys in logserver pod")
+		return false
+	}
+
+	logging.LogI("Logserver authorized_keys updated successfully")
+	return true
+}
+
 // DebugStatefulSet disables StatefulSet main container probes
 func (r *SFKubeContext) DebugStatefulSet(name string) {
 	var dep appsv1.StatefulSet
