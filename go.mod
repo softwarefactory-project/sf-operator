@@ -1,6 +1,6 @@
 module github.com/softwarefactory-project/sf-operator
 
-go 1.25.10
+go 1.25.11
 
 require (
 	github.com/fatih/color v1.17.0
@@ -14,7 +14,7 @@ require (
 	github.com/operator-framework/api v0.26.0
 	github.com/spf13/cobra v1.8.1
 	go.uber.org/zap v1.27.0
-	golang.org/x/crypto v0.51.0
+	golang.org/x/crypto v0.52.0
 	golang.org/x/exp v0.0.0-20240716175740-e3f259677ff7
 	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/yaml.v2 v2.4.0
