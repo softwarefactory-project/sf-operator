@@ -33,6 +33,8 @@ var SecretsToBackup = []string{
 	"zuul-keystore-password",
 	"zuul-auth-secret",
 	"logserver-keys",
+	"logserver-uploader-keys",
+	"logserver-uploader-spare-keys",
 }
 
 func (r *SFKubeContext) createSecretBackup(backupDir string, cr sfv1.SoftwareFactory) error {
