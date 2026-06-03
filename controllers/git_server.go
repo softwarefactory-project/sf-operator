@@ -370,7 +370,7 @@ func (r *SFController) DeployGitServer() bool {
 	svcRW := base.MkServicePod(GitServerIdentRW, r.Ns, GitServerIdent+"-0", []int32{gsGitPortRW}, gsGitPortName, r.cr.Spec.ExtraLabels)
 	r.EnsureService(&svcRW)
 
-	ready := r.IsStatefulSetReady(current)
+	ready := r.waitStatefulset(current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, GitServerIdent, ready)
 
 	return ready

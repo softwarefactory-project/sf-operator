@@ -257,7 +257,7 @@ func (r *SFController) DeployLogserver() bool {
 
 	pvcReadiness := r.reconcileExpandPVC(logserverIdent+"-"+logserverIdent+"-0", r.cr.Spec.Logserver.Storage)
 
-	isReady := r.IsStatefulSetReady(current) && !stsUpdated && pvcReadiness
+	isReady := !stsUpdated && pvcReadiness && r.waitStatefulset(current)
 
 	// When sts is ready, we can consider logserver ready and we can update the keys
 	// Reconcile SSH keys dynamically without pod restart

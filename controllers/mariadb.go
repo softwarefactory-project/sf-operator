@@ -278,7 +278,7 @@ GRANT ALL ON *.* TO root@'%%' WITH GRANT OPTION;`,
 
 	var zuulDBSecret apiv1.Secret
 
-	stsReady := r.IsStatefulSetReady(current)
+	stsReady := r.waitStatefulset(current)
 
 	postReady := false
 	if stsReady {

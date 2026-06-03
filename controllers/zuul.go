@@ -621,7 +621,7 @@ func (r *SFController) EnsureZuulScheduler(cfg *ini.File) bool {
 		return false
 	}
 
-	ready := r.IsStatefulSetReady(current)
+	ready := r.waitStatefulset(current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-scheduler", ready)
 
 	if ready {
@@ -797,7 +797,7 @@ func (r *SFController) EnsureZuulMerger(cfg *ini.File) bool {
 
 	pvcReadiness := r.reconcileExpandPVCs("zuul-merger", r.cr.Spec.Zuul.Merger.Storage)
 
-	ready := r.IsStatefulSetReady(current) && pvcReadiness
+	ready := pvcReadiness && r.waitStatefulset(current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, service, ready)
 
 	return ready

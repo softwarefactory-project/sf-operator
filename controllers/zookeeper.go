@@ -260,7 +260,7 @@ func (r *SFController) DeployZookeeper() bool {
 		pvcReadiness = pvcReadiness && r.reconcileExpandPVC(pvcName, r.cr.Spec.Zookeeper.Storage)
 	}
 
-	isReady := r.IsStatefulSetReady(current) && pvcReadiness
+	isReady := pvcReadiness && r.waitStatefulset(current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, ZookeeperIdent, isReady)
 
 	return isReady

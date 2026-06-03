@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Zuul Executor: wait until the grace period is over for the statefulset to be ready. This is to ensure progressive rollout where the sf-operator can now safely proceed one executors at a time without interrupting the production.
+- Improved statefulset readiness deployment to wait for the grace period and bail out early in case of crash back loop.
 
 ### Deprecated
 ### Removed

@@ -133,7 +133,7 @@ func (r *SFController) DeployHoundSearch() bool {
 		houndSearchIdent+"-data-"+houndSearchIdent+"-0",
 		r.cr.Spec.Codesearch.Storage)
 
-	isReady := r.IsStatefulSetReady(current) && pvcReadiness
+	isReady := pvcReadiness && r.waitStatefulset(current)
 	conds.UpdateConditions(&r.cr.Status.Conditions, houndSearchIdent, isReady)
 
 	return isReady
