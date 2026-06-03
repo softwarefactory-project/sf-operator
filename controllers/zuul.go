@@ -727,7 +727,7 @@ func (r *SFController) EnsureZuulExecutor(cfg *ini.File) bool {
 
 	pvcReadiness := r.reconcileExpandPVCs("zuul-executor", r.cr.Spec.Zuul.Executor.Storage)
 
-	ready := r.IsStatefulSetReady(current) && pvcReadiness
+	ready := r.waitStatefulset(current) && pvcReadiness
 	conds.UpdateConditions(&r.cr.Status.Conditions, "zuul-executor", ready)
 
 	return ready

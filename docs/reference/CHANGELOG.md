@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 - Improved logserver SSH key rotation: refactored authorized_keys reconciliation logic and added `logserver-uploader-spare-keys` secret support to allow long-running jobs to maintain access during key rotation without service interruption.
 
 ### Changed
+
+- Zuul Executor: wait until the grace period is over for the statefulset to be ready. This is to ensure progressive rollout where the sf-operator can now safely proceed one executors at a time without interrupting the production.
+
 ### Deprecated
 ### Removed
 ### Fixed

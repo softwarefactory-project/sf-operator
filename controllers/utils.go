@@ -934,6 +934,36 @@ func (r *SFController) ensureDeployment(dep appsv1.Deployment, desiredReplicaCou
 	return &current, false
 }
 
+// hasCrashLoopBackOff helper function to bail out in case a pod is in CrashLoopBackOff
+func (r *SFKubeContext) hasCrashLoopBackOff(sts *appsv1.StatefulSet) bool {
+	if sts.Spec.Selector == nil {
+		return false
+	}
+	var podList apiv1.PodList
+	matchLabels := sts.Spec.Selector.MatchLabels
+	labelSelector := labels.SelectorFromSet(labels.Set(matchLabels))
+	listOpts := []client.ListOption{
+		client.MatchingLabelsSelector{Selector: labelSelector},
+		client.InNamespace(r.Ns),
+	}
+	if err := r.Client.List(r.Ctx, &podList, listOpts...); err != nil {
+		return false
+	}
+	for _, pod := range podList.Items {
+		for _, cs := range pod.Status.ContainerStatuses {
+			if cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff" {
+				return true
+			}
+		}
+		for _, cs := range pod.Status.InitContainerStatuses {
+			if cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // ensureStatefulSet ensures that a StatefulSet object is as expected.
 // The function takes the expected StatefulSet and returns a tuple with the current object on
 // the cluster and a boolean indicating whether the function performed a create or update on the object.
@@ -993,6 +1023,42 @@ func (r *SFController) ensureStatefulset(sts appsv1.StatefulSet, desiredReplicaC
 		return &current, true
 	}
 	return &current, false
+}
+
+// waitStatefulset until grace period for the sts to become ready.
+func (r *SFController) waitStatefulset(sts *appsv1.StatefulSet) bool {
+	name := sts.ObjectMeta.Name
+	pollInterval := 5 * time.Second
+	timeout := time.Duration(getGracePeriod(*sts)) * time.Second
+	deadline := time.Now().Add(timeout)
+	var crashLoopFirstSeen time.Time
+
+	for time.Now().Before(deadline) {
+		r.GetOrDie(name, sts)
+
+		if r.IsStatefulSetReady(sts) {
+			return true
+		}
+
+		if r.hasCrashLoopBackOff(sts) {
+			if crashLoopFirstSeen.IsZero() {
+				crashLoopFirstSeen = time.Now()
+			}
+			if time.Since(crashLoopFirstSeen) > 30*time.Second {
+				logging.LogE(
+					fmt.Errorf("pod in CrashLoopBackOff for statefulset %s", name),
+					"Bailing out - pod stuck in CrashLoopBackOff for more than 30 seconds")
+				return false
+			}
+		} else {
+			crashLoopFirstSeen = time.Time{}
+		}
+
+		time.Sleep(pollInterval)
+	}
+
+	logging.LogI(fmt.Sprintf("Statefulset %q not ready after %s", name, timeout))
+	return false
 }
 
 // CorporateCAConfigMapExists check if the ConfigMap named "corporate-ca-certs" exists
