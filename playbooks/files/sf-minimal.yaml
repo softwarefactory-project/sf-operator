@@ -1,6 +1,0 @@
-apiVersion: sf.softwarefactory-project.io/v1
-kind: SoftwareFactory
-metadata:
-  name: my-sf
-spec:
-  fqdn: "sfop.me"
