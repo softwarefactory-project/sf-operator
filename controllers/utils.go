@@ -526,7 +526,6 @@ func (r *SFKubeContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 		return true
 	}
 
-	logging.LogI("Waiting for statefulset, name: " + dep.ObjectMeta.GetName())
 	rolloutOk := base.IsStatefulSetRolloutDone(dep)
 	if rolloutOk {
 		_replicas := dep.Spec.Replicas
@@ -547,7 +546,6 @@ func (r *SFKubeContext) IsStatefulSetReady(dep *appsv1.StatefulSet) bool {
 			return true
 		}
 	}
-	logging.LogI("statefulset rollout not ok, name: " + dep.ObjectMeta.GetName())
 	return false
 }
 
@@ -1028,9 +1026,10 @@ func (r *SFController) ensureStatefulset(sts appsv1.StatefulSet, desiredReplicaC
 // waitStatefulset until grace period for the sts to become ready.
 func (r *SFController) waitStatefulset(sts *appsv1.StatefulSet) bool {
 	name := sts.ObjectMeta.Name
-	pollInterval := 5 * time.Second
+	pollInterval := 2 * time.Second
 	timeout := time.Duration(getGracePeriod(*sts)) * time.Second
 	deadline := time.Now().Add(timeout)
+	logWaiting := true
 	var crashLoopFirstSeen time.Time
 
 	for time.Now().Before(deadline) {
@@ -1052,6 +1051,11 @@ func (r *SFController) waitStatefulset(sts *appsv1.StatefulSet) bool {
 			}
 		} else {
 			crashLoopFirstSeen = time.Time{}
+		}
+
+		if logWaiting {
+			logging.LogI("Waiting for statefulset, name: " + sts.ObjectMeta.GetName())
+			logWaiting = false
 		}
 
 		time.Sleep(pollInterval)
