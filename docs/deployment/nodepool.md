@@ -39,11 +39,15 @@ The spec is constantly evolving during alpha development and should be considere
 
 ## Setting up providers secrets
 
-Currently the SF Operator supports OpenStack (`clouds.yaml`) and Kubernetes (`kube.config`) configuration files. These files are used by Nodepool to manage resources on its providers.
+Currently the SF Operator supports OpenStack (`clouds.yaml`), Kubernetes (`kube.config`) and AWS (`aws.config`) configuration files. These files are used by Nodepool to manage resources on its providers.
 They are managed by the SF Operator in a secret called `nodepool-providers-secrets`.
 
 ```sh
-kubectl create secret generic nodepool-providers-secrets --from-file=clouds.yaml=<path-to>/clouds.yaml --from-file=kube.config=<path-to>/kube.config --dry-run=client -o yaml | kubectl apply -f -
+kubectl create secret generic nodepool-providers-secrets \
+  --from-file=clouds.yaml=<path-to>/clouds.yaml          \
+  --from-file=kube.config=<path-to>/kube.config          \
+  --from-file=aws.config=<path-to>/aws.config            \
+  --dry-run=client -o yaml | kubectl apply -f -
 ```
 
 Then wait until your deployment becomes ready again:

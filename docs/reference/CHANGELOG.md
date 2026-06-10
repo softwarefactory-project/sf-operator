@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Improved logserver SSH key rotation: refactored authorized_keys reconciliation logic and added `logserver-uploader-spare-keys` secret support to allow long-running jobs to maintain access during key rotation without service interruption.
+- Support for aws.config key in nodepool-providers-secrets.
 
 ### Changed
 

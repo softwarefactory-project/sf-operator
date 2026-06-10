@@ -252,6 +252,15 @@ func (r *SFController) setProviderSecretsVolumeMounts() ([]apiv1.VolumeMount, ap
 				ReadOnly:  true,
 			})
 		}
+
+		if data, ok := nodepoolProvidersSecrets.Data["aws.config"]; ok && len(data) > 0 {
+			volumeMount = append(volumeMount, apiv1.VolumeMount{
+				Name:      "nodepool-providers-secrets",
+				SubPath:   "aws.config",
+				MountPath: "/var/lib/nodepool/.aws/config",
+				ReadOnly:  true,
+			})
+		}
 	}
 	return volumeMount, nodepoolProvidersSecrets, exists
 }
