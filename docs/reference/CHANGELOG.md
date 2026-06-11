@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 ## [in development]
 
 ### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [v0.0.68] - 2026-06-11
+
+### Added
 
 - Improved logserver SSH key rotation: refactored authorized_keys reconciliation logic and added `logserver-uploader-spare-keys` secret support to allow long-running jobs to maintain access during key rotation without service interruption.
 - Support for aws.config key in nodepool-providers-secrets.
@@ -13,11 +22,6 @@ All notable changes to this project will be documented in this file.
 
 - Zuul Executor: wait until the grace period is over for the statefulset to be ready. This is to ensure progressive rollout where the sf-operator can now safely proceed one executors at a time without interrupting the production.
 - Improved statefulset readiness deployment to wait for the grace period and bail out early in case of crash back loop.
-
-### Deprecated
-### Removed
-### Fixed
-### Security
 
 ## [v0.0.67] - 2026-05-13
 
