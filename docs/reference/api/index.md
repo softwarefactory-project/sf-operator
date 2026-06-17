@@ -569,6 +569,7 @@ _Appears in:_
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 | `diskLimitPerJob` _integer_ | the [disk_limit_per_job](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.disk_limit_per_job) | {250}|
 | `ansibleSetupTimeout` _integer_ | the [ansible setup playbook timeout](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.ansible_setup_timeout) | {60}|
+| `zone` _string_ | The (optional) nodepool [executor-zone](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.zone) setting | -|
 | `TerminationGracePeriodSeconds` _integer_ |  | {7200}|
 
 

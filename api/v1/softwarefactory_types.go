@@ -305,6 +305,8 @@ type ZuulExecutorSpec struct {
 	// +kubebuilder:default:=60
 	// +kubebuilder:validation:Minimum:=0
 	AnsibleSetupTimeout int `json:"ansibleSetupTimeout,omitempty"`
+	// The (optional) nodepool [executor-zone](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.zone) setting
+	Zone string `json:"zone,omitempty"`
 	// +kubebuilder:default:=7200
 	// +kubebuilder:validation:Minimum:=1
 	TerminationGracePeriodSeconds int64 `json:"TerminationGracePeriodSeconds,omitempty"`

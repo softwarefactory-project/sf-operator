@@ -13,6 +13,7 @@
           , controlPlanePublicZKHostnames : Optional (List Text)
           }
     , storage : Optional (./Storage.dhall).Type
+    , zone : Optional Text
     }
 , default =
   { TerminationGracePeriodSeconds = None Natural
@@ -29,5 +30,6 @@
         , controlPlanePublicZKHostnames : Optional (List Text)
         }
   , storage = None (./Storage.dhall).Type
+  , zone = None Text
   }
 }
