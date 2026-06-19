@@ -1016,8 +1016,8 @@ func (r *SFController) EnsureZuulConfigSecret(remoteExecutor bool) *ini.File {
 		ansibleSetupTimeout := int(r.cr.Spec.Zuul.Executor.AnsibleSetupTimeout)
 		cfgINI.Section("executor").NewKey("ansible_setup_timeout", strconv.Itoa(ansibleSetupTimeout))
 	}
-	if r.cr.Spec.Zuul.Executor.Zone != "" {
-		cfgINI.Section("executor").NewKey("zone", r.cr.Spec.Zuul.Executor.Zone)
+	if r.cr.Spec.Zuul.Executor.Standalone != nil && r.cr.Spec.Zuul.Executor.Standalone.Zone != "" {
+		cfgINI.Section("executor").NewKey("zone", r.cr.Spec.Zuul.Executor.Standalone.Zone)
 	}
 
 	// Enable prometheus metrics

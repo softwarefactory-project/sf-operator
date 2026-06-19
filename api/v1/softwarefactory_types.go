@@ -272,6 +272,8 @@ type StandaloneZuulExecutorSpec struct {
 	ControlPlanePublicGSHostname string `json:"controlPlanePublicGSHostname"`
 	// This is the public host or IP address reachable from zuul-web
 	PublicHostName string `json:"publicHostname"`
+	// The (optional) nodepool [executor-zone](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.zone) setting
+	Zone string `json:"zone,omitempty"`
 }
 
 // Spec for the pool of executor microservices
@@ -305,8 +307,6 @@ type ZuulExecutorSpec struct {
 	// +kubebuilder:default:=60
 	// +kubebuilder:validation:Minimum:=0
 	AnsibleSetupTimeout int `json:"ansibleSetupTimeout,omitempty"`
-	// The (optional) nodepool [executor-zone](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.zone) setting
-	Zone string `json:"zone,omitempty"`
 	// +kubebuilder:default:=7200
 	// +kubebuilder:validation:Minimum:=1
 	TerminationGracePeriodSeconds int64 `json:"TerminationGracePeriodSeconds,omitempty"`

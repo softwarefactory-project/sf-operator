@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- Zuul.Executor.Zone setting to configure the nodepool executor-zone.
+- Zuul.Executor.Standalone.Zone setting to configure the nodepool executor-zone.
 
 ### Changed
 ### Deprecated

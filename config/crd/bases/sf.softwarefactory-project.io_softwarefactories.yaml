@@ -652,6 +652,10 @@ spec:
                             description: This is the public host or IP address reachable
                               from zuul-web
                             type: string
+                          zone:
+                            description: The (optional) nodepool [executor-zone](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.zone)
+                              setting
+                            type: string
                         required:
                         - controlPlanePublicGSHostname
                         - controlPlanePublicZKHostname
@@ -677,10 +681,6 @@ spec:
                         required:
                         - size
                         type: object
-                      zone:
-                        description: The (optional) nodepool [executor-zone](https://zuul-ci.org/docs/zuul/latest/configuration.html#attr-executor.zone)
-                          setting
-                        type: string
                     type: object
                   gerritconns:
                     description: The list of Gerrit-based connections to add to Zuul's
