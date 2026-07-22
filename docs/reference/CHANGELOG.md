@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Zuul.Executor.Standalone.Zone setting to configure the nodepool executor-zone.
+- sf.spec.corporate-ca: add support for custom CA config map name.
 
 ### Changed
 ### Deprecated

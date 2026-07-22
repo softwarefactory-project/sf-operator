@@ -352,7 +352,7 @@ func (r *SFController) DeployNodepoolBuilder(statsdExporterVolume apiv1.Volume, 
 
 	// Create the corporate CM based Volume when the Corporate CM exists
 	if corporateCMExists {
-		volumes = append(volumes, base.MkVolumeCM("nodepool-builder-corporate-ca-certs", CorporateCACerts))
+		volumes = append(volumes, base.MkVolumeCM("nodepool-builder-corporate-ca-certs", r.GetCorporateCACerts()))
 	}
 
 	nodeExporterVolumeMount := []apiv1.VolumeMount{
@@ -593,7 +593,7 @@ func (r *SFController) DeployNodepoolLauncher(statsdExporterVolume apiv1.Volume,
 	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
 
 	if corporateCMExists {
-		volumes = append(volumes, base.MkVolumeCM("nodepool-launcher-corporate-ca-certs", CorporateCACerts))
+		volumes = append(volumes, base.MkVolumeCM("nodepool-launcher-corporate-ca-certs", r.GetCorporateCACerts()))
 	}
 
 	volumeMounts := append(initialVolumeMounts, []apiv1.VolumeMount{

@@ -39,6 +39,15 @@ type SFController struct {
 	logserverKeys string
 }
 
+func (r *SFController) GetCorporateCACerts() string {
+	// TODO: rework the "CA Exist" logic to fail when the CorportateCACert value is provided but the CM doesn't exist.
+	if r.cr.Spec.CorporateCACerts != "" {
+		return r.cr.Spec.CorporateCACerts
+	} else {
+		return "corporate-ca-certs"
+	}
+}
+
 func messageGenerator(isReady bool, goodmsg string, badmsg string) string {
 	if isReady {
 		return color.GreenString(goodmsg)

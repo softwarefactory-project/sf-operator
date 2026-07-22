@@ -157,6 +157,10 @@ spec:
                 - name
                 - zuul-connection-name
                 type: object
+              corporate-ca:
+                description: The optional name of a config map to setup local CA in
+                  the containers.
+                type: string
               extraLabels:
                 additionalProperties:
                   type: string

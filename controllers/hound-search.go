@@ -96,7 +96,7 @@ func (r *SFController) DeployHoundSearch() bool {
 	if corporateCMExists {
 		sts.Spec.Template.Spec.Volumes = append(
 			sts.Spec.Template.Spec.Volumes,
-			base.MkVolumeCM("hound-search-ca-certs", CorporateCACerts),
+			base.MkVolumeCM("hound-search-ca-certs", r.GetCorporateCACerts()),
 			base.MkEmptyDirVolume("hound-search-ca"))
 	}
 

@@ -592,6 +592,9 @@ type SoftwareFactorySpec struct {
 	// at https://`service`.`FQDN`
 	FQDN string `json:"fqdn"`
 
+	// The optional name of a config map to setup local CA in the containers.
+	CorporateCACerts string `json:"corporate-ca,omitempty"`
+
 	// Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http)
 	FluentBitLogForwarding *FluentBitForwarderSpec `json:"FluentBitLogForwarding,omitempty"`
 

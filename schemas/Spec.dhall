@@ -1,5 +1,6 @@
 { Type =
     { fqdn : Text
+    , corporate-ca : Optional Text
     , FluentBitLogForwarding : Optional (./FluentBitLogForwarding.dhall).Type
     , codesearch : Optional (./Codesearch.dhall).Type
     , config-location : Optional (./ConfigLocation.dhall).Type
@@ -15,7 +16,8 @@
     , zuul : Optional (./Zuul.dhall).Type
     }
 , default =
-  { FluentBitLogForwarding = None (./FluentBitLogForwarding.dhall).Type
+  { corporate-ca = None Text
+  , FluentBitLogForwarding = None (./FluentBitLogForwarding.dhall).Type
   , codesearch = None (./Codesearch.dhall).Type
   , config-location = None (./ConfigLocation.dhall).Type
   , extraLabels = None (./ExtraLabels.dhall).Type

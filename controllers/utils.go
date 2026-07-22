@@ -47,7 +47,6 @@ import (
 )
 
 const (
-	CorporateCACerts            = "corporate-ca-certs"
 	UpdateCATrustAnchorsPath    = "/usr/share/pki/ca-trust-source/anchors/"
 	TrustedCAExtractedMountPath = "/etc/pki/ca-trust/extracted"
 	UpdateCATrustCommand        = "set -x && update-ca-trust extract -o " + TrustedCAExtractedMountPath
@@ -1066,8 +1065,8 @@ func (r *SFController) waitStatefulset(sts *appsv1.StatefulSet) bool {
 }
 
 // CorporateCAConfigMapExists check if the ConfigMap named "corporate-ca-certs" exists
-func (r *SFKubeContext) CorporateCAConfigMapExists() (apiv1.ConfigMap, bool) {
-	cm, err := r.GetConfigMap(CorporateCACerts)
+func (r *SFController) CorporateCAConfigMapExists() (apiv1.ConfigMap, bool) {
+	cm, err := r.GetConfigMap(r.GetCorporateCACerts())
 	return cm, err == nil
 }
 

@@ -462,6 +462,7 @@ _Appears in:_
 | Field | Description | Default Value |
 | --- | --- | --- |
 | `fqdn` _string_ | The fully qualified domain name to use with the deployment. Relevant services will be served at https://`service`.`FQDN` | -|
+| `corporate-ca` _string_ | The optional name of a config map to setup local CA in the containers. | -|
 | `FluentBitLogForwarding` _[FluentBitForwarderSpec](#fluentbitforwarderspec)_ | Enable log forwarding to a [Fluent Bit HTTP input](https://docs.fluentbit.io/manual/pipeline/inputs/http) | -|
 | `storageDefault` _[StorageDefaultSpec](#storagedefaultspec)_ | Default setting to use by Persistent Volume Claims | -|
 | `extraLabels` _object (keys:string, values:string)_ | Whether you need to add extra labels on all managed resources | -|

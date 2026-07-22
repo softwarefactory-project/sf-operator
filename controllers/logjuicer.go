@@ -15,7 +15,7 @@ func (r *SFController) AddCorporateCA(spec *apiv1.PodSpec) string {
 	corporateCM, corporateCMExists := r.CorporateCAConfigMapExists()
 	if corporateCMExists {
 		for fileName := range corporateCM.Data {
-			spec.Volumes = append(spec.Volumes, base.MkVolumeCM("certs", CorporateCACerts))
+			spec.Volumes = append(spec.Volumes, base.MkVolumeCM("certs", r.GetCorporateCACerts()))
 			spec.Containers[0].VolumeMounts = append(spec.Containers[0].VolumeMounts, apiv1.VolumeMount{
 				Name:      "certs",
 				MountPath: "/certs",
