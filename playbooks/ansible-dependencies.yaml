@@ -5,3 +5,9 @@
       ansible.builtin.shell: type ansible-galaxy || pip install --user ansible-core
     - name: install required collections
       ansible.builtin.shell: ansible-galaxy collection install community.general community.crypto ansible.posix kubernetes.core
+    - name: Prevent couldn't resolve module/action 'zuul_return'.
+      ansible.builtin.shell: |
+        mkdir -p playbooks/library
+        touch playbooks/library/zuul_return.py
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
