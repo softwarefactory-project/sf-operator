@@ -42,7 +42,7 @@ func CRSecrets(cr sfv1.SoftwareFactory) []string {
 	return secrets
 }
 
-func (r *SFKubeContext) copySecrets(eCR sfv1.SoftwareFactory, controlEnv *SFKubeContext) error {
+func (r *SFController) copySecrets(eCR sfv1.SoftwareFactory, controlEnv *SFKubeContext) error {
 	secrets := []string{"zuul-keystore-password", "zookeeper-client-tls", "zuul-ssh-key"}
 	for _, secret := range append(secrets, CRSecrets(eCR)...) {
 		var sec apiv1.Secret
@@ -53,6 +53,23 @@ func (r *SFKubeContext) copySecrets(eCR sfv1.SoftwareFactory, controlEnv *SFKube
 		sec.SetResourceVersion("")
 		r.EnsureSecret(&sec)
 	}
+
+	if caCert := r.GetCorporateCACerts(); caCert != "" {
+		var cm apiv1.ConfigMap
+		if controlEnv.GetOrDie(caCert, &cm) {
+			// TODO: until corporate ca cert is enforced, then we only copy when set.
+			var rcm apiv1.ConfigMap
+			if r.GetOrDie(caCert, &rcm) {
+				rcm.Data = cm.Data
+				r.UpdateR(&rcm)
+			} else {
+				cm.SetNamespace(r.Ns)
+				cm.SetResourceVersion("")
+				r.CreateR(&cm)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -78,7 +95,7 @@ func (r *SFKubeContext) setupFingerLB() {
 	r.EnsureService(&svc)
 }
 
-func (r *SFKubeContext) setupRemoteExecutorConfig(crPath string, eCR sfv1.SoftwareFactory) error {
+func (r *SFController) setupRemoteExecutorConfig(crPath string, eCR sfv1.SoftwareFactory) error {
 	if _, err := os.Stat(crPath); err != nil {
 		return fmt.Errorf("missing control plane resource %s", crPath)
 	}

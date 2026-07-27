@@ -73,7 +73,8 @@ func Standalone(cliNS string, kubeContext string, dryRun bool, crPath string, re
 			os.Exit(1)
 		}
 		env.EnsureStandaloneOwner(sf.Spec)
-		if err := env.setupRemoteExecutorConfig(copyFrom, sf); err != nil {
+		r := MkSFController(env, sf)
+		if err := r.setupRemoteExecutorConfig(copyFrom, sf); err != nil {
 			ctrl.Log.Error(err, "unable to setup remote executor config")
 			os.Exit(1)
 		}
