@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - Zuul.Executor.Standalone.Zone setting to configure the nodepool executor-zone.
 - sf.spec.corporate-ca: add support for custom CA config map name.
+- Backport of AWS nested-virtualization to nodepool from zuul-launcher
 
 ### Changed
 ### Deprecated
