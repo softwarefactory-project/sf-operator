@@ -20,12 +20,12 @@ images:
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=e2dd68f95f5e0bdee28e71a3a901efef9f225d2f
     - name: nodepool-launcher
       container: quay.io/software-factory/nodepool-launcher
-      version: 11.0.0-20250925-5
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-launcher.container?id=02fda42b1e8dd2bef6a44ad48173f47dbc2523f3
+      version: 11.0.0-20250925-8
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-launcher.container?id=4d218f4db45245e0879f71309e5defed569fee0a
     - name: nodepool-builder
       container: quay.io/software-factory/nodepool-builder
-      version: 11.0.0-20250925-5
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-builder.container?id=02fda42b1e8dd2bef6a44ad48173f47dbc2523f3
+      version: 11.0.0-20250925-8
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-builder.container?id=4d218f4db45245e0879f71309e5defed569fee0a
     - name: zookeeper
       container: quay.io/software-factory/zookeeper
       version: 3.9.4-20250925-2
