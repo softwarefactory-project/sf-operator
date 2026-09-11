@@ -195,10 +195,13 @@ cat << EOF > playbooks/config/update.yaml
       command: kubectl get pod hound-search-0
       register: houndsearch_pod_get
       ignore_errors: true
+      environment:
+        KUBECONFIG: "{{ ansible_env.HOME }}/.kube/config"
     - name: Force hound-search restart by deleting the pod
       command: kubectl delete pod hound-search-0
       when: houndsearch_pod_get.rc == 0
-
+      environment:
+        KUBECONFIG: "{{ ansible_env.HOME }}/.kube/config"
 EOF
 
 mkdir -p roles/add-k8s-hosts/tasks

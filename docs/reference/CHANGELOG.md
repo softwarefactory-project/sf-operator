@@ -14,6 +14,9 @@ All notable changes to this project will be documented in this file.
 ### Deprecated
 ### Removed
 ### Fixed
+
+- Hound config-update tasks unable to reload hound's config from Zuul's tenant file.
+
 ### Security
 
 ## [v0.0.68] - 2026-06-11
