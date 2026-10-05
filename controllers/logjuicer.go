@@ -63,6 +63,8 @@ func (r *SFController) EnsureLogJuicer() bool {
 	}
 	dep.Spec.Template.Spec.Containers[0].Env = []apiv1.EnvVar{
 		base.MkEnvVar("LOGJUICER_BASE_URL", "/logjuicer/"),
+		// Redirect internal url directly to the service to skip the external route
+		base.MkEnvVar("LOGJUICER_URL_REWRITE", "https://"+r.cr.Spec.FQDN+"/zuul/|http://zuul-web:9000/;https://"+r.cr.Spec.FQDN+"/logs/|http://logserver:8080/logs/"),
 	}
 	dep.Spec.Template.Spec.Containers[0].Ports = []apiv1.ContainerPort{
 		base.MkContainerPort(port, ident),

@@ -11,6 +11,9 @@ All notable changes to this project will be documented in this file.
 - Backport of AWS nested-virtualization to nodepool from zuul-launcher
 
 ### Changed
+
+- LogJuicer now query the services directly without going through the external route.
+
 ### Deprecated
 ### Removed
 ### Fixed
