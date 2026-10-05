@@ -3,6 +3,7 @@
 , ElasticsearchConn = ./ElasticsearchConn.dhall
 , ExtraLabels = ./ExtraLabels.dhall
 , FluentBitLogForwarding = ./FluentBitLogForwarding.dhall
+, Gateway = ./Gateway.dhall
 , GerritConn = ./GerritConn.dhall
 , GitConn = ./GitConn.dhall
 , GithubConn = ./GithubConn.dhall

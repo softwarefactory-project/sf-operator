@@ -1,10 +1,11 @@
 { Type =
     { fqdn : Text
-    , corporate-ca : Optional Text
     , FluentBitLogForwarding : Optional (./FluentBitLogForwarding.dhall).Type
     , codesearch : Optional (./Codesearch.dhall).Type
     , config-location : Optional (./ConfigLocation.dhall).Type
+    , corporate-ca : Optional Text
     , extraLabels : Optional (./ExtraLabels.dhall).Type
+    , gateway : Optional (./Gateway.dhall).Type
     , gitserver : Optional (./Gitserver.dhall).Type
     , hostaliases : Optional (List (./Hostaliases.dhall).Type)
     , logjuicer : Optional (./Storage.dhall).Type
@@ -16,11 +17,12 @@
     , zuul : Optional (./Zuul.dhall).Type
     }
 , default =
-  { corporate-ca = None Text
-  , FluentBitLogForwarding = None (./FluentBitLogForwarding.dhall).Type
+  { FluentBitLogForwarding = None (./FluentBitLogForwarding.dhall).Type
   , codesearch = None (./Codesearch.dhall).Type
   , config-location = None (./ConfigLocation.dhall).Type
+  , corporate-ca = None Text
   , extraLabels = None (./ExtraLabels.dhall).Type
+  , gateway = None (./Gateway.dhall).Type
   , gitserver = None (./Gitserver.dhall).Type
   , hostaliases = None (List (./Hostaliases.dhall).Type)
   , logjuicer = None (./Storage.dhall).Type
