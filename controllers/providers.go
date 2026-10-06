@@ -9,6 +9,7 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	cliapi "k8s.io/client-go/tools/clientcmd/api"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -155,7 +156,7 @@ func (r *SFKubeContext) ensureKubeProvidersSecrets(kubeconfig []byte) {
 	}
 }
 
-func (r *SFKubeContext) SetupK8SProvider(providerEnv *SFKubeContext) error {
+func (r *SFKubeContext) SetupK8SProvider(providerEnv *SFKubeContext, name string) error {
 	providerEnv.EnsureNamespaceOrDie(providerEnv.Ns)
 	providerEnv.EnsureServiceAccountOrDie("zuul-launcher-sa")
 	providerEnv.EnsureSARole("zuul-launcher-sa")
@@ -167,5 +168,14 @@ func (r *SFKubeContext) SetupK8SProvider(providerEnv *SFKubeContext) error {
 		return err
 	}
 	r.ensureKubeProvidersSecrets(kconfig)
+	if name != "" {
+		r.EnsureSecret(&apiv1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name + "-kubeconfig",
+				Namespace: r.Ns,
+			},
+			Data: map[string][]byte{"kubeconfig": kconfig},
+		})
+	}
 	return nil
 }

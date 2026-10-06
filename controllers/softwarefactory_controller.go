@@ -116,7 +116,7 @@ func (r *SFKubeContext) nukeZKClients() {
 
 			// Ensure the process are killed
 			r.PodExec(pod.Name, cName, []string{"kill", "-9", "1"})
-			if cName == "zuul-web" || cName == "zuul-weeder" || cName == "nodepool-launcher" {
+			if cName == "zuul-web" || cName == "zuul-weeder" || cName == "zuul-launcher" || cName == "nodepool-launcher" {
 				r.DeleteR(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: cName, Namespace: r.Ns}})
 			} else {
 				r.DeleteR(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: cName, Namespace: r.Ns}})

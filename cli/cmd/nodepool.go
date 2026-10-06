@@ -56,7 +56,7 @@ func CreateNamespaceForNodepool(sfEnv *controllers.SFKubeContext, nodepoolContex
 		logging.LogE(err, "Could not create nodepool kube client")
 		os.Exit(1)
 	}
-	sfEnv.SetupK8SProvider(&npEnv)
+	sfEnv.SetupK8SProvider(&npEnv, "")
 }
 
 func getBuilderSSHKey(sfEnv *controllers.SFKubeContext, pubKey string) {

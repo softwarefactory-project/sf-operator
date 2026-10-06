@@ -6,6 +6,10 @@ images:
       container: quay.io/software-factory/zuul-scheduler
       version: 14.3.0-20250925-10
       source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=f931aa62605bf7ac76c271b3bc42f6c66bd98c86
+    - name: zuul-launcher
+      container: quay.io/software-factory/zuul-launcher
+      version: 14.3.0-20250925-10
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-launcher.container?id=f931aa62605bf7ac76c271b3bc42f6c66bd98c86
     - name: zuul-executor
       container: quay.io/software-factory/zuul-executor
       version: 14.3.0-20250925-10

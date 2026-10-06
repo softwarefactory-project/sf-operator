@@ -225,6 +225,21 @@ _Appears in:_
 | `hostnames` _string array_ |  | -|
 
 
+#### KubernetesProvider
+
+
+
+
+
+_Appears in:_
+- [ZuulSpec](#zuulspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `name` _string_ |  | -|
+| `secret` _string_ | Name of the secret which contains the `kubeconfig` | -|
+
+
 #### LEServer
 
 _Underlying type:_ _string_
@@ -251,6 +266,7 @@ _Appears in:_
 - [NodepoolLauncherSpec](#nodepoollauncherspec)
 - [ZookeeperSpec](#zookeeperspec)
 - [ZuulExecutorSpec](#zuulexecutorspec)
+- [ZuulLauncherSpec](#zuullauncherspec)
 - [ZuulMergerSpec](#zuulmergerspec)
 - [ZuulSchedulerSpec](#zuulschedulerspec)
 - [ZuulWebSpec](#zuulwebspec)
@@ -271,6 +287,7 @@ _Appears in:_
 - [NodepoolBuilderSpec](#nodepoolbuilderspec)
 - [NodepoolLauncherSpec](#nodepoollauncherspec)
 - [ZuulExecutorSpec](#zuulexecutorspec)
+- [ZuulLauncherSpec](#zuullauncherspec)
 - [ZuulMergerSpec](#zuulmergerspec)
 - [ZuulSchedulerSpec](#zuulschedulerspec)
 - [ZuulWebSpec](#zuulwebspec)
@@ -574,6 +591,21 @@ _Appears in:_
 | `TerminationGracePeriodSeconds` _integer_ |  | {7200}|
 
 
+#### ZuulLauncherSpec
+
+
+
+
+
+_Appears in:_
+- [ZuulSpec](#zuulspec)
+
+| Field | Description | Default Value |
+| --- | --- | --- |
+| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-launcher service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
+| `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
+
+
 #### ZuulMergerSpec
 
 
@@ -658,11 +690,13 @@ _Appears in:_
 | `gitconns` _[GitConnection](#gitconnection) array_ | The list of Git-based connections to add to Zuul's configuration | -|
 | `pagureconns` _[PagureConnection](#pagureconnection) array_ | The list of Pagure-based connections to add to Zuul's configuration | -|
 | `elasticsearchconns` _[ElasticSearchConnection](#elasticsearchconnection) array_ | The list of ElasticSearch-based connections to add to Zuul's configuration | -|
+| `kubernetesProviders` _[KubernetesProvider](#kubernetesprovider) array_ |  | -|
 | `smtpconns` _[SMTPConnection](#smtpconnection) array_ | The list of SMTP-based connections to add to Zuul's configuration | -|
 | `executor` _[ZuulExecutorSpec](#zuulexecutorspec)_ | Configuration of the executor microservices | -|
 | `scheduler` _[ZuulSchedulerSpec](#zuulschedulerspec)_ | Configuration of the scheduler microservice | -|
 | `web` _[ZuulWebSpec](#zuulwebspec)_ | Configuration of the web microservice | -|
 | `merger` _[ZuulMergerSpec](#zuulmergerspec)_ | Configuration of the merger microservice | -|
+| `launcher` _[ZuulLauncherSpec](#zuullauncherspec)_ | Configuration of the launcher microservice | -|
 
 
 #### ZuulWebSpec
@@ -676,7 +710,7 @@ _Appears in:_
 
 | Field | Description | Default Value |
 | --- | --- | --- |
-| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-web launcher service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
+| `logLevel` _[LogLevel](#loglevel)_ | Specify the Log Level of the zuul-web service. Valid values are: "INFO" (default), "WARN", "DEBUG". Changing this value will restart the service. | INFO|
 | `limits` _[LimitsSpec](#limitsspec)_ | Memory/CPU Limit | {map[cpu:500m memory:2Gi]}|
 
 

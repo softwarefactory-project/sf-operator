@@ -79,6 +79,10 @@ func ZuulWebImage() string {
 	return getImage("zuul-web")
 }
 
+func ZuulLauncherImage() string {
+	return getImage("zuul-launcher")
+}
+
 func NodepoolBuilderImage() string {
 	return getImage("nodepool-builder")
 }
