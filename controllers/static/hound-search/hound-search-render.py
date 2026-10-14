@@ -106,8 +106,8 @@ def get_git_urls(conn, repo):
                 "{path}{anchor}"
             anchor = "#L{line}"
     elif conn["driver"] == "github":
-        uri = f"http://github.com/{repo}"
-        gitweb = f"http://github.com/{repo}/blob/{{rev}}/" + "{path}{anchor}"
+        uri = f"https://github.com/{repo}"
+        gitweb = f"https://github.com/{repo}/blob/{{rev}}/" + "{path}{anchor}"
         anchor = "#L{line}"
     elif conn["driver"] == "pagure":
         uri = base_url + f"/{repo}"

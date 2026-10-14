@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Hound config-update tasks unable to reload hound's config from Zuul's tenant file.
+- Hound github.com links to use `https` scheme instaed of `http`.
 
 ### Security
 
