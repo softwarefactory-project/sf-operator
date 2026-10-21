@@ -4,32 +4,32 @@
 images:
     - name: zuul-scheduler
       container: quay.io/software-factory/zuul-scheduler
-      version: 14.3.0-20250925-10
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=f931aa62605bf7ac76c271b3bc42f6c66bd98c86
+      version: 14.3.0-20250925-11
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-scheduler.container?id=9532c018f83006884b4e6e46424ed4e53eec2245
     - name: zuul-launcher
       container: quay.io/software-factory/zuul-launcher
-      version: 14.3.0-20250925-10
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-launcher.container?id=f931aa62605bf7ac76c271b3bc42f6c66bd98c86
+      version: 14.3.0-20250925-11
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-launcher.container?id=9532c018f83006884b4e6e46424ed4e53eec2245
     - name: zuul-executor
       container: quay.io/software-factory/zuul-executor
-      version: 14.3.0-20250925-10
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=f931aa62605bf7ac76c271b3bc42f6c66bd98c86
+      version: 14.3.0-20250925-11
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-executor.container?id=9532c018f83006884b4e6e46424ed4e53eec2245
     - name: zuul-merger
       container: quay.io/software-factory/zuul-merger
-      version: 14.3.0-20250925-10
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=f931aa62605bf7ac76c271b3bc42f6c66bd98c86
+      version: 14.3.0-20250925-11
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-merger.container?id=9532c018f83006884b4e6e46424ed4e53eec2245
     - name: zuul-web
       container: quay.io/software-factory/zuul-web
-      version: 14.3.0-20250925-10
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=f931aa62605bf7ac76c271b3bc42f6c66bd98c86
+      version: 14.3.0-20250925-11
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/zuul-web.container?id=9532c018f83006884b4e6e46424ed4e53eec2245
     - name: nodepool-launcher
       container: quay.io/software-factory/nodepool-launcher
-      version: 11.0.0-20250925-8
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-launcher.container?id=4d218f4db45245e0879f71309e5defed569fee0a
+      version: 11.0.0-20250925-10
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-launcher.container?id=9532c018f83006884b4e6e46424ed4e53eec2245
     - name: nodepool-builder
       container: quay.io/software-factory/nodepool-builder
-      version: 11.0.0-20250925-8
-      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-builder.container?id=4d218f4db45245e0879f71309e5defed569fee0a
+      version: 11.0.0-20250925-10
+      source: https://softwarefactory-project.io/cgit/containers/tree/images-sf/master/containers/rendered/nodepool-builder.container?id=9532c018f83006884b4e6e46424ed4e53eec2245
     - name: zookeeper
       container: quay.io/software-factory/zookeeper
       version: 3.9.4-20250925-2

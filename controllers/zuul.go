@@ -103,7 +103,7 @@ func enableZuulLocalSource(template *apiv1.PodTemplateSpec, zuulSourceHostPath s
 	template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts,
 		apiv1.VolumeMount{
 			Name:      "host-mount",
-			MountPath: "/usr/local/lib/python3.11/site-packages/zuul",
+			MountPath: "/usr/local/lib/python3.12/site-packages/zuul",
 		})
 	if withInitContainer {
 		template.Spec.InitContainers[0].SecurityContext = base.MkSecurityContext(true, openshiftUser)

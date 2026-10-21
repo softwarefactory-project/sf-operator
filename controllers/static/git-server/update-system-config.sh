@@ -171,7 +171,7 @@ cat << EOF > playbooks/config/update.yaml
 - hosts: nodepool-launcher
   vars:
     config_ref: "{{ zuul.newrev | default('origin/master') }}"
-    ansible_python_interpreter: /usr/bin/python3.11
+    ansible_python_interpreter: /usr/bin/python3.12
   tasks:
     - name: "Update nodepool-launcher config"
       command: /usr/local/bin/generate-config.sh "{{ config_ref }}"
@@ -179,7 +179,7 @@ cat << EOF > playbooks/config/update.yaml
 - hosts: nodepool-builder
   vars:
     config_ref: "{{ zuul.newrev | default('origin/master') }}"
-    ansible_python_interpreter: /usr/bin/python3.11
+    ansible_python_interpreter: /usr/bin/python3.12
   tasks:
     - name: "Update nodepool-builder config"
       command: /usr/local/bin/generate-config.sh "{{ config_ref }}"

@@ -23,6 +23,8 @@ All notable changes to this project will be documented in this file.
 
 ### Security
 
+- Bumped zuul-*, nodepool-* containers to versions with temporary workarounds to address the potential TLS compromission of intermediate CA certs.
+
 ## [v0.0.68] - 2026-06-11
 
 ### Added
