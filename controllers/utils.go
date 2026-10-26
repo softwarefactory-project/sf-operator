@@ -109,11 +109,9 @@ func (r *SFKubeContext) CreateR(obj client.Object) {
 	}
 }
 
-// DeleteR delete a resource.
-func (r *SFKubeContext) DeleteR(obj client.Object) {
+func (r *SFKubeContext) doDeleteR(obj client.Object, opts []client.DeleteOption) {
 	var err error
 	msg := "Deleting object, name: " + obj.GetName()
-	opts := []client.DeleteOption{}
 	if r.DryRun {
 		msg += " (server dry run)"
 		opts = append(opts, client.DryRunAll)
@@ -123,6 +121,18 @@ func (r *SFKubeContext) DeleteR(obj client.Object) {
 	if err != nil && !errors.IsNotFound(err) {
 		panic(err.Error())
 	}
+}
+
+// ForceDeleteR delete a resource without waiting.
+func (r *SFKubeContext) ForceDeleteR(obj client.Object) {
+	r.doDeleteR(obj, []client.DeleteOption{
+		client.GracePeriodSeconds(0),
+	})
+}
+
+// DeleteR delete a resource.
+func (r *SFKubeContext) DeleteR(obj client.Object) {
+	r.doDeleteR(obj, []client.DeleteOption{})
 }
 
 func (r *SFController) DeleteSecret(name string) {
@@ -1016,7 +1026,7 @@ func (r *SFController) ensureStatefulset(sts appsv1.StatefulSet, desiredReplicaC
 	} else {
 		current := sts
 		r.CreateR(&current)
-		return &current, true
+		return &current, false
 	}
 	return &current, false
 }

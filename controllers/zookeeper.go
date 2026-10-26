@@ -243,6 +243,10 @@ func (r *SFController) DeployZookeeper() bool {
 	replicaCount := int32(ZookeeperReplicas)
 	current, changed := r.ensureStatefulset(zk, &replicaCount)
 	if changed {
+		// When zookeeper is updated, clients like zuul-executor may get stuck with a kazoo.exceptions.SessionExpiredError
+		// Thus we need to terminate every user.
+		// This should not be necessary once ZK is deployed in HA mode.
+		r.nukeZKClients()
 		return false
 	}
 

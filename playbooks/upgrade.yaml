@@ -31,7 +31,7 @@
         chdir: "{{ zuul.project.src_dir }}"
 
     - name: Deploy current version
-      command: ./hack/deploy.sh
+      shell: ./hack/deploy.sh 2>&1 | tee ~/zuul-output/logs/sf-operator.log
       args:
         chdir: "{{ zuul.project.src_dir }}"
 

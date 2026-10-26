@@ -32,7 +32,13 @@ def sshkey_scan(port: str, hostname: str) -> bytes:
 
 
 def get_logserver_fingerprint() -> str:
-    return " ".join(sshkey_scan("2222", "logserver").decode().split()[1:])
+    raw = sshkey_scan("2222", "logserver").decode().split("\n")
+    # Remove comments
+    filtered = "".join(filter(lambda x: x and x[0] != '#', raw))
+    # Drop hostname (old version of ssh-keyscan returns the given hostname,
+    # and new version returns the real hostname). In the secret we set the
+    # right one.
+    return " ".join(filtered.split()[1:])
 
 
 def mk_incluster_k8s_config():
