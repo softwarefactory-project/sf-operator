@@ -10,7 +10,7 @@
   block:
     - name: Generate initial CR
       ansible.builtin.template:
-        src: "{{ project_dir }}/playbooks/files/sf.yaml.j2"
+        src: "../../../playbooks/files/sf.yaml.j2"
         dest: "{{ cr_temp_dir.path }}/sf-initial.yaml"
       vars:
         fqdn: "test-initial.sf.io"
@@ -43,7 +43,7 @@
 
     - name: Generate updated CR
       ansible.builtin.template:
-        src: "{{ project_dir }}/playbooks/files/sf.yaml.j2"
+        src: "../../../playbooks/files/sf.yaml.j2"
         dest: "{{ cr_temp_dir.path }}/sf-updated.yaml"
       vars:
         fqdn: "test-updated.sf.io"

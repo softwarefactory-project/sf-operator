@@ -20,8 +20,8 @@
       ansible.builtin.include_role:
         name: create-hostaliases-cr
       loop:
-        - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/ext-ze.yaml"
-        - "{{ '~/' + zuul.project.src_dir + '/playbooks' | realpath | default(playbook_dir) }}/files/sf.yaml"
+        - "files/ext-ze.yaml"
+        - "files/sf.yaml"
       loop_control:
         loop_var: yaml_file
 

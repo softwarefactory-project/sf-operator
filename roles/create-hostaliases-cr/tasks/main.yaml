@@ -8,5 +8,5 @@
   when: "'spec' in yaml_data"
   ansible.builtin.copy:
     content: "{{ yaml_data | combine({'spec': {'hostaliases': hostaliases }}, recursive=True) | to_nice_yaml(indent=2) }}"
-    dest: "{{ yaml_file }}"
+    dest: "~/{{ zuul.project.src_dir }}/playbooks/{{ yaml_file }}"
     mode: '0644'
